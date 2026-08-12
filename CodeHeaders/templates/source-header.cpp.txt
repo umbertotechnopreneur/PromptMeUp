@@ -1,0 +1,11 @@
+// -----------------------------------------------------------------------------
+// Project:    {{PROJECT_NAME}}
+// File:       {{FILE_NAME}}
+// Purpose:    {{FILE_PURPOSE}}
+// Copyright:  (c) {{COPYRIGHT_YEARS}} {{COPYRIGHT_HOLDER}}
+// Author:     {{AUTHOR}}
+// Repository: {{PUBLIC_REPOSITORY_URL_OR_OMIT_LINE}}
+// License:    {{LICENSE_NAME}}
+// SPDX-License-Identifier: {{SPDX_LICENSE_IDENTIFIER}}
+// Open source: https://umbertogiacobbi.biz/opensource
+// -----------------------------------------------------------------------------

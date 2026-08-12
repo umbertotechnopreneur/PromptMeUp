@@ -1,0 +1,21 @@
+id: connection-test
+version: 1
+description: Bounded prompt used by setup and --test-ai to verify the configured OpenAI connection.
+tags:
+  - diagnostics
+  - connection
+metadata:
+  expected.en: PromptMeUp connection confirmed.
+  expected.it: Connessione PromptMeUp confermata.
+  expected.fr: Connexion PromptMeUp confirmée.
+  expected.de: PromptMeUp-Verbindung bestätigt.
+  expected.es: Conexión de PromptMeUp confirmada.
+  expected.vi: Kết nối PromptMeUp đã được xác nhận.
+  max-output-tokens: "96"
+texts:
+  en: "Reply with exactly: PromptMeUp connection confirmed."
+  it: "Rispondi esattamente: Connessione PromptMeUp confermata."
+  fr: "Répondez exactement : Connexion PromptMeUp confirmée."
+  de: "Antworte exakt: PromptMeUp-Verbindung bestätigt."
+  es: "Responde exactamente: Conexión de PromptMeUp confirmada."
+  vi: "Chỉ trả lời chính xác: Kết nối PromptMeUp đã được xác nhận."

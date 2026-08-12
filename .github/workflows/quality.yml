@@ -1,0 +1,55 @@
+name: Manual quality gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promptmeup-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore PromptMeUp.slnx
+
+      - name: Verify dotnet formatting
+        run: dotnet format PromptMeUp.slnx --verify-no-changes --no-restore
+
+      - name: Verify XML method comments
+        run: pwsh -NoProfile -File ./scripts/check-xml-comments.ps1
+
+  build:
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore PromptMeUp.slnx
+
+      - name: Build with warnings as errors
+        run: dotnet build PromptMeUp.slnx --configuration Release --no-restore --warnaserror

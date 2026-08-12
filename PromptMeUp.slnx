@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PromptMeUp/PromptMeUp.csproj" />
+  <Project Path="PromptMeUp.Tests/PromptMeUp.Tests.csproj" />
+</Solution>

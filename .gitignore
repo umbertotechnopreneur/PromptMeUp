@@ -1,0 +1,31 @@
+# Build and IDE output
+bin/
+obj/
+artifacts/
+.vs/
+out/
+
+# Local configuration and secrets
+.env
+.env.*
+appsettings.local.json
+*.user
+*.suo
+
+# Logs and generated files
+*.log
+*.cache
+*.db
+*.db-shm
+*.db-wal
+TestResults/
+*.trx
+coverage/
+coverage.*
+
+# OS and editor noise
+Thumbs.db
+.DS_Store
+
+# Local JavaScript dependencies
+node_modules/

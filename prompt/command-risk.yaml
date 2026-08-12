@@ -1,0 +1,23 @@
+id: command-risk
+version: 1
+description: Reviews a user-proposed PowerShell command before the mandatory local authorization gate.
+tags:
+  - safety
+  - command
+metadata:
+  response-format: json
+  score-min: "0"
+  score-max: "100"
+texts:
+  en: |-
+    Review the PowerShell command supplied by the user. Return only a JSON object with: score (integer 0-100), level (low, medium, high, or critical), and description_markdown. The description must be short, factual Markdown using only headings, lists, bold, plain text, and links. Mention destructive, privileged, network, secret, persistence, and broad-filesystem effects. Never claim the command is safe with certainty.
+  it: |-
+    Analizza il comando PowerShell fornito dall'utente. Restituisci solo un oggetto JSON con: score (intero 0-100), level (low, medium, high o critical) e description_markdown. La descrizione deve essere Markdown breve e fattuale usando solo titoli, liste, grassetto, testo semplice e link. Evidenzia effetti distruttivi, privilegiati, di rete, sui segreti, sulla persistenza e su aree estese del filesystem. Non dichiarare mai con certezza che il comando è sicuro.
+  fr: |-
+    Analysez la commande PowerShell fournie. Retournez uniquement un objet JSON contenant score (entier 0-100), level (low, medium, high ou critical) et description_markdown. La description doit être courte et factuelle, en Markdown limité aux titres, listes, gras, texte et liens. Signalez les effets destructifs, privilégiés, réseau, secrets, persistance et système de fichiers étendu. Ne garantissez jamais la sécurité.
+  de: |-
+    Prüfe den angegebenen PowerShell-Befehl. Gib ausschließlich ein JSON-Objekt mit score (Ganzzahl 0-100), level (low, medium, high oder critical) und description_markdown zurück. Die Beschreibung muss kurz und sachlich sein und nur Überschriften, Listen, Fettdruck, Text und Links verwenden. Weise auf destruktive, privilegierte, Netzwerk-, Geheimnis-, Persistenz- und weitreichende Dateisystemeffekte hin. Garantiere niemals Sicherheit.
+  es: |-
+    Revisa el comando de PowerShell proporcionado. Devuelve solo un objeto JSON con score (entero 0-100), level (low, medium, high o critical) y description_markdown. La descripción debe ser breve y factual, con Markdown limitado a títulos, listas, negrita, texto y enlaces. Señala efectos destructivos, privilegiados, de red, secretos, persistencia y sistema de archivos amplio. Nunca garantices que sea seguro.
+  vi: |-
+    Hãy đánh giá lệnh PowerShell do người dùng cung cấp. Chỉ trả về một đối tượng JSON gồm score (số nguyên 0-100), level (low, medium, high hoặc critical) và description_markdown. Phần mô tả phải ngắn gọn, đúng sự thật và chỉ dùng tiêu đề, danh sách, chữ đậm, văn bản và liên kết Markdown. Nêu rõ tác động phá hủy, đặc quyền, mạng, bí mật, duy trì và phạm vi hệ thống tệp rộng. Không bao giờ đảm bảo chắc chắn rằng lệnh an toàn.

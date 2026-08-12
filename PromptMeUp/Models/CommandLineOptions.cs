@@ -1,0 +1,34 @@
+﻿// SPDX-License-Identifier: MIT
+
+namespace PromptMeUp.Models;
+
+public enum AppCommand
+{
+    Main,
+    Help,
+    Version,
+    Setup,
+    Status,
+    Query,
+    Chat,
+    TestAi,
+    Costs,
+    ThirdParty,
+    InstallFont,
+    Path
+}
+
+public sealed record CommandLineOptions(
+    AppCommand Command,
+    string? Query,
+    string? Language,
+    bool NoAnimation,
+    bool NoEmoji,
+    bool Yes,
+    bool DryRun,
+    string? PathAction);
+
+public sealed record CommandLineParseResult(CommandLineOptions? Options, string? Error)
+{
+    public bool Succeeded => Options is not null && Error is null;
+}
