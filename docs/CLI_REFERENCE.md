@@ -29,12 +29,15 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | `--costs` | — | Forces a pricing refresh, optionally refreshes organization costs, and renders the cost dashboard. |
 | `--status` | — | Shows local configuration and storage readiness. |
 | `--third-party` | — | Shows direct runtime packages, versions, and licenses. |
+| `--where` | `-where` | Prints the exact running executable and directory, then offers the native file manager or a change-directory command. |
 | `--path [install\|remove\|status]` | `--path=<action>` | Manages only the current executable directory in the persistent user PATH. |
 | `--install-font` | — | Runs the opt-in JetBrainsMono Nerd Font helper through an existing Oh My Posh installation. |
 | `--help` | `-h`, `/?` | Shows the command reference. |
 | `--version` | `-v` | Shows the application, .NET, and runtime versions. |
 
 Only one top-level command can be selected per invocation.
+
+`hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
 
 ## Global options
 

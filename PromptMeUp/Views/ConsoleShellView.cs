@@ -143,7 +143,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void RenderFooter(string command)
     {
         _console.WriteLine();
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.1";
         var invocation = command.Equals("main", StringComparison.OrdinalIgnoreCase)
             ? "hm"
             : $"hm {command}";
@@ -235,7 +235,7 @@ public sealed class ConsoleShellView : IConsoleShellView
 
     /// <summary>Identifies commands that actively read navigation or confirmation keys.</summary>
     private static bool IsInteractiveInvocation(string command) =>
-        command is "main" or "setup" or "chat" or "path" or "install-font";
+        command is "main" or "setup" or "chat" or "where" or "path" or "install-font";
 
     /// <summary>Formats small per-request USD amounts without hiding sub-cent costs.</summary>
     private static string FormatCost(decimal? value) => value.HasValue

@@ -221,6 +221,67 @@ function Escape-XmlAttribute {
     return [System.Security.SecurityElement]::Escape($Value)
 }
 
+function ConvertTo-PerUserHarvest {
+    param(
+        [Parameter(Mandatory)][string]$HarvestPath,
+        [Parameter(Mandatory)][string]$Architecture
+    )
+
+    [xml]$document = Get-Content -Raw -LiteralPath $HarvestPath
+    $namespace = 'http://schemas.microsoft.com/wix/2006/wi'
+    $namespaceManager = [System.Xml.XmlNamespaceManager]::new($document.NameTable)
+    $namespaceManager.AddNamespace('w', $namespace)
+
+    $components = @($document.SelectNodes('//w:Component', $namespaceManager))
+    foreach ($component in $components) {
+        $component.SetAttribute(
+            'Guid',
+            (ConvertTo-StableGuid "$PackageIdentifier|$Architecture|payload|$($component.Id)"))
+
+        foreach ($file in @($component.SelectNodes('w:File', $namespaceManager))) {
+            $file.RemoveAttribute('KeyPath')
+        }
+
+        $registryValue = $document.CreateElement('RegistryValue', $namespace)
+        $registryValue.SetAttribute('Id', "reg_$($component.Id)")
+        $registryValue.SetAttribute('Root', 'HKCU')
+        $registryValue.SetAttribute('Key', 'Software\Umberto Giacobbi\PromptMeUp\Components')
+        $registryValue.SetAttribute('Name', "$Architecture-$($component.Id)")
+        $registryValue.SetAttribute('Type', 'integer')
+        $registryValue.SetAttribute('Value', '1')
+        $registryValue.SetAttribute('KeyPath', 'yes')
+        $component.AppendChild($registryValue) | Out-Null
+    }
+
+    $installDirectory = $document.SelectSingleNode('//w:DirectoryRef[@Id="INSTALLFOLDER"]', $namespaceManager)
+    $userDirectories = @($installDirectory) + @($installDirectory.SelectNodes('.//w:Directory', $namespaceManager))
+    foreach ($directory in $userDirectories) {
+        $component = $directory.SelectSingleNode('w:Component', $namespaceManager)
+        if ($null -eq $component) {
+            throw "Harvested user directory '$($directory.Id)' has no direct component for uninstall cleanup."
+        }
+
+        $removeFolder = $document.CreateElement('RemoveFolder', $namespace)
+        $removeFolder.SetAttribute('Id', "remove_$($directory.Id)")
+        $removeFolder.SetAttribute('Directory', [string]$directory.Id)
+        $removeFolder.SetAttribute('On', 'uninstall')
+        $component.AppendChild($removeFolder) | Out-Null
+    }
+
+    $settings = [System.Xml.XmlWriterSettings]::new()
+    $settings.Encoding = [System.Text.UTF8Encoding]::new($false)
+    $settings.Indent = $true
+    $settings.NewLineChars = [Environment]::NewLine
+    $settings.NewLineHandling = [System.Xml.NewLineHandling]::Replace
+    $writer = [System.Xml.XmlWriter]::Create($HarvestPath, $settings)
+    try {
+        $document.Save($writer)
+    }
+    finally {
+        $writer.Dispose()
+    }
+}
+
 function New-MsiInstaller {
     param(
         [Parameter(Mandatory)][string]$Architecture,
@@ -255,6 +316,7 @@ function New-MsiInstaller {
         '-sreg',
         '-var', 'var.PublishDir',
         '-out', $harvestPath)
+    ConvertTo-PerUserHarvest -HarvestPath $harvestPath -Architecture $Architecture
 
     $productCode = ConvertTo-StableGuid "$PackageIdentifier|$Architecture|$Version|product"
     $upgradeCode = ConvertTo-StableGuid "$PackageIdentifier|$Architecture|upgrade"
@@ -270,7 +332,8 @@ function New-MsiInstaller {
            UpgradeCode="$upgradeCode">
     <Package InstallerVersion="500"
              Compressed="yes"
-             InstallScope="perMachine"
+             InstallScope="perUser"
+             InstallPrivileges="limited"
              Description="Ask from the terminal and explicitly approve every command before it runs." />
     <MajorUpgrade DowngradeErrorMessage="A newer version of PromptMeUp is already installed."
                   Schedule="afterInstallInitialize" />
@@ -280,8 +343,10 @@ function New-MsiInstaller {
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFiles64Folder">
-        <Directory Id="INSTALLFOLDER" Name="PromptMeUp" />
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsFolder" Name="Programs">
+          <Directory Id="INSTALLFOLDER" Name="PromptMeUp" />
+        </Directory>
       </Directory>
     </Directory>
 
@@ -293,8 +358,8 @@ function New-MsiInstaller {
                      Action="set"
                      Part="last"
                      Permanent="no"
-                     System="yes" />
-        <RegistryValue Root="HKLM"
+                     System="no" />
+        <RegistryValue Root="HKCU"
                        Key="Software\Umberto Giacobbi\PromptMeUp"
                        Name="InstallPath"
                        Type="string"
@@ -319,7 +384,7 @@ function New-MsiInstaller {
     Invoke-ExternalCommand $WixTools.Candle @(
         '-nologo', '-wx', '-arch', 'x64', '-out', $productObject, $productPath)
     Invoke-ExternalCommand $WixTools.Light @(
-        '-nologo', '-wx', '-ext', 'WixUIExtension', '-cultures:en-us', '-spdb', '-out', $msiPath, $productObject, $payloadObject)
+        '-nologo', '-wx', '-sice:ICE64', '-sice:ICE91', '-ext', 'WixUIExtension', '-cultures:en-us', '-spdb', '-out', $msiPath, $productObject, $payloadObject)
 
     return [pscustomobject]@{
         Architecture = $Architecture
@@ -456,6 +521,7 @@ $packageDirectory = Join-Path $releaseRoot 'packages'
 $publishRoot = Join-Path $releaseRoot 'publish'
 $stageRoot = Join-Path $releaseRoot 'stage'
 $installerWorkRoot = Join-Path $releaseRoot 'installer'
+$smokeDataRoot = Join-Path $releaseRoot 'smoke-data'
 $manifestDirectory = Join-Path $releaseRoot "winget\$PackageIdentifier\$Version"
 
 Write-Step 'Release artifact plan'
@@ -514,8 +580,9 @@ foreach ($architecture in $PortableArchitectures) {
         Write-Step "Smoke test staged $runtime executable"
         $previousDataDirectory = $env:PROMPTMEUP_DATA_DIR
         try {
-            $env:PROMPTMEUP_DATA_DIR = Join-Path $releaseRoot "smoke-data\$runtime"
+            $env:PROMPTMEUP_DATA_DIR = Join-Path $smokeDataRoot $runtime
             Invoke-ExternalCommand (Join-Path $stageDirectory 'hm.exe') @('--version', '--no-animation', '--no-emoji')
+            Invoke-ExternalCommand (Join-Path $stageDirectory 'hm.exe') @('-where', '--no-animation', '--no-emoji')
         }
         finally {
             $env:PROMPTMEUP_DATA_DIR = $previousDataDirectory
@@ -577,6 +644,14 @@ $summary = [ordered]@{
     wingetManifestDirectory = [System.IO.Path]::GetRelativePath($releaseRoot, $manifestDirectory)
 }
 $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $releaseRoot 'release.json') -Encoding utf8NoBOM
+
+Write-Step 'Remove successful-build intermediates'
+foreach ($intermediateDirectory in @($publishRoot, $stageRoot, $installerWorkRoot, $smokeDataRoot)) {
+    if (Test-Path -LiteralPath $intermediateDirectory) {
+        Assert-ReleasePath $intermediateDirectory
+        Remove-Item -LiteralPath $intermediateDirectory -Recurse -Force
+    }
+}
 
 Write-Step 'Artifacts ready'
 Get-ChildItem -LiteralPath $packageDirectory -File |

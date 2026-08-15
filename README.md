@@ -106,7 +106,10 @@ hm --setup
 | `hm --status` | Show setup, key readiness, database, logs, prompt resources, and price-cache state. |
 | `hm --language fr` | Use `it`, `en`, `fr`, `de`, `es`, or `vi` for this invocation. |
 | `hm --third-party` | Show a polished list of direct runtime dependencies and licenses. |
-| `hm --path status` | Inspect the portable PATH entry. |
+| `hm --where` / `hm -where` | Show the exact `hm` executable path, then offer Explorer or a change-directory command. |
+| `hm --path status` | Inspect whether the current executable directory is in the user `PATH`. |
+| `hm --path install` | Add the current executable directory to the user `PATH`. |
+| `hm --path remove` | Remove the current executable directory from the user `PATH`. |
 | `hm --install-font --dry-run` | Preview the optional JetBrainsMono Nerd Font helper. |
 
 Inside chat:
@@ -148,14 +151,14 @@ Linux and macOS builds include `hm-path.sh`, which maintains one clearly marked 
 
 ### Windows release artifacts
 
-The release builder produces self-contained portable ZIP archives for WinGet (`win-x64` and `win-arm64`), a traditional machine-wide x64 MSI, SHA-256 checksums, and a validated multi-file WinGet manifest:
+The release builder produces self-contained portable ZIP archives for WinGet (`win-x64` and `win-arm64`), a traditional per-user x64 MSI, SHA-256 checksums, and a validated multi-file WinGet manifest:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
 ```
 
-Generated files stay below `artifacts/release/<version>/` and are ignored by Git. The MSI is an optional Windows distribution surface; the ZIP archives remain the canonical portable build. See [Windows release packaging](docs/WINDOWS_PACKAGING.md) for prerequisites, local WinGet testing, and publication-time URLs.
+Generated files stay below `artifacts/release/<version>/` and are ignored by Git. Both Windows installation routes add the directory containing `hm.exe` to the current user's `PATH`; neither requires a machine-wide PATH change. The MSI is an optional Windows distribution surface; the ZIP archives remain the canonical portable build. See [Windows release packaging](docs/WINDOWS_PACKAGING.md) for prerequisites, local WinGet testing, and publication-time URLs.
 
 ## Premium terminal details, optional font
 

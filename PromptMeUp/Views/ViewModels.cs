@@ -53,6 +53,7 @@ public enum MainMenuAction
     Status,
     Setup,
     TestAi,
+    Where,
     Path,
     InstallFont,
     ThirdParty,

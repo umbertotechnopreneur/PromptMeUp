@@ -72,4 +72,16 @@ public sealed class CommandLineParserTests
         Assert.Equal("vi", result.Options.Language);
         Assert.True(result.Options.Yes);
     }
+
+    /// <summary>Verifies that the requested single-dash where alias selects the executable-location command.</summary>
+    [Theory]
+    [InlineData("-where")]
+    [InlineData("--where")]
+    public void Parse_WhereAliases_SelectWhereCommand(string argument)
+    {
+        var result = new CommandLineParser().Parse([argument]);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(AppCommand.Where, result.Options!.Command);
+    }
 }

@@ -14,6 +14,7 @@ public enum AppCommand
     TestAi,
     Costs,
     ThirdParty,
+    Where,
     InstallFont,
     Path
 }

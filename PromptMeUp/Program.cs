@@ -95,6 +95,7 @@ internal static class Program
         services.AddSingleton<ICommandRiskAssessmentService, CommandRiskAssessmentService>();
         services.AddSingleton<ICommandExecutionService, CommandExecutionService>();
         services.AddSingleton<IPortablePathService, PortablePathService>();
+        services.AddSingleton<IExecutableLocationService, ExecutableLocationService>();
         services.AddSingleton<INerdFontInstallerService, NerdFontInstallerService>();
 
         services.AddHttpClient<IOpenAiService, OpenAiService>(client =>
@@ -119,6 +120,7 @@ internal static class Program
         services.AddSingleton<ICommandAuthorizationView, CommandAuthorizationView>();
         services.AddSingleton<IThirdPartyView, ThirdPartyView>();
         services.AddSingleton<IPortablePathView, PortablePathView>();
+        services.AddSingleton<IExecutableLocationView, ExecutableLocationView>();
         services.AddSingleton<INerdFontView, NerdFontView>();
 
         services.AddSingleton<IAuthorizedCommandWorkflow, AuthorizedCommandWorkflow>();

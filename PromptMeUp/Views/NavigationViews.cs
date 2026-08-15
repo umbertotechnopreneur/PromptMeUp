@@ -31,6 +31,7 @@ public sealed class HelpView(IAnsiConsole console, ILocalizationService text) : 
         Add(table, "--test-ai", text.Text("Help.Test"));
         Add(table, "--costs", text.Text("Help.Costs"));
         Add(table, "--third-party", text.Text("Help.ThirdParty"));
+        Add(table, "--where, -where", text.Text("Help.Where"));
         Add(table, "--path [install|remove|status]", text.Text("Help.Path"));
         Add(table, "--install-font [--dry-run]", text.Text("Help.Font"));
         Add(table, "--language, -l <code>", text.Text("Help.Language"));
@@ -65,6 +66,7 @@ public sealed class MainMenuView(IAnsiConsole console, ILocalizationService text
                 MainMenuAction.Status,
                 MainMenuAction.Setup,
                 MainMenuAction.TestAi,
+                MainMenuAction.Where,
                 MainMenuAction.Path,
                 MainMenuAction.InstallFont,
                 MainMenuAction.ThirdParty,
@@ -79,11 +81,82 @@ public sealed class MainMenuView(IAnsiConsole console, ILocalizationService text
         MainMenuAction.Status => text.Text("Main.Status"),
         MainMenuAction.Setup => text.Text("Main.Setup"),
         MainMenuAction.TestAi => text.Text("Main.Test"),
+        MainMenuAction.Where => text.Text("Main.Where"),
         MainMenuAction.Path => text.Text("Path.Title"),
         MainMenuAction.InstallFont => text.Text("Main.Font"),
         MainMenuAction.ThirdParty => text.Text("ThirdParty.Title"),
         _ => text.Text("Main.Exit")
     };
+}
+
+public interface IExecutableLocationView
+{
+    ExecutableLocationAction RenderAndSelect(ExecutableLocationInfo location, bool interactive);
+
+    bool ConfirmOpen(ExecutableLocationInfo location);
+
+    void RenderResult(ExecutableLocationInfo location, ExecutableLocationAction action);
+}
+
+public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationService text) : IExecutableLocationView
+{
+    /// <summary>Shows the exact executable location and selects a safe next action when input is interactive.</summary>
+    public ExecutableLocationAction RenderAndSelect(ExecutableLocationInfo location, bool interactive)
+    {
+        ArgumentNullException.ThrowIfNull(location);
+        TerminalTheme.WriteHeading(console, text.Text("Where.Title"));
+        var locationGrid = new Grid();
+        locationGrid.AddColumn(new GridColumn().NoWrap());
+        locationGrid.AddColumn();
+        locationGrid.AddRow(
+            new Markup($"[grey]{Markup.Escape(text.Text("Where.Executable"))}[/]"),
+            new Text(location.ExecutablePath));
+        locationGrid.AddRow(
+            new Markup($"[grey]{Markup.Escape(text.Text("Where.Directory"))}[/]"),
+            new Text(location.DirectoryPath));
+        console.Write(locationGrid);
+        console.WriteLine();
+
+        if (!interactive)
+        {
+            return ExecutableLocationAction.ShowChangeDirectoryCommand;
+        }
+
+        return console.Prompt(
+            new SelectionPrompt<ExecutableLocationAction>()
+                .Title(Markup.Escape(text.Text("Where.Action")))
+                .UseConverter(action => action == ExecutableLocationAction.OpenContainingFolder
+                    ? text.Text("Where.Open")
+                    : text.Text("Where.ShowCd"))
+                .AddChoices(
+                    ExecutableLocationAction.ShowChangeDirectoryCommand,
+                    ExecutableLocationAction.OpenContainingFolder));
+    }
+
+    /// <summary>Previews the exact file-manager invocation and requests explicit authorization.</summary>
+    public bool ConfirmOpen(ExecutableLocationInfo location)
+    {
+        ArgumentNullException.ThrowIfNull(location);
+        console.MarkupLine($"[grey]{Markup.Escape(text.Text("Where.OpenPreview"))}:[/] {Markup.Escape(location.OpenFolderPreview)}");
+        return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Where.Confirm")))
+        {
+            DefaultValue = false
+        });
+    }
+
+    /// <summary>Reports the authorized file-manager launch or a command that changes the calling terminal manually.</summary>
+    public void RenderResult(ExecutableLocationInfo location, ExecutableLocationAction action)
+    {
+        ArgumentNullException.ThrowIfNull(location);
+        if (action == ExecutableLocationAction.OpenContainingFolder)
+        {
+            console.MarkupLine($"[green]{Markup.Escape(text.Text("Where.Opened"))}[/]");
+            return;
+        }
+
+        console.MarkupLine($"[grey]{Markup.Escape(text.Text("Where.ChangeDirectoryHint"))}[/]");
+        console.WriteLine(location.ChangeDirectoryCommand);
+    }
 }
 
 public interface IThirdPartyView

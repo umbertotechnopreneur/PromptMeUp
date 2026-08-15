@@ -25,6 +25,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IAiConversationWorkflow _conversationWorkflow;
     private readonly IActivityAuditService _audit;
     private readonly IPortablePathService _pathService;
+    private readonly IExecutableLocationService _executableLocation;
     private readonly INerdFontInstallerService _fontInstaller;
     private readonly ILocalizationService _text;
     private readonly IConsoleShellView _shell;
@@ -35,6 +36,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IMainMenuView _mainMenuView;
     private readonly IThirdPartyView _thirdPartyView;
     private readonly IPortablePathView _pathView;
+    private readonly IExecutableLocationView _executableLocationView;
     private readonly INerdFontView _fontView;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
@@ -50,6 +52,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IAiConversationWorkflow conversationWorkflow,
         IActivityAuditService audit,
         IPortablePathService pathService,
+        IExecutableLocationService executableLocation,
         INerdFontInstallerService fontInstaller,
         ILocalizationService text,
         IConsoleShellView shell,
@@ -60,6 +63,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IMainMenuView mainMenuView,
         IThirdPartyView thirdPartyView,
         IPortablePathView pathView,
+        IExecutableLocationView executableLocationView,
         INerdFontView fontView,
         AppPaths paths,
         ILogger<PromptMeUpApplication> logger)
@@ -73,6 +77,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _conversationWorkflow = conversationWorkflow;
         _audit = audit;
         _pathService = pathService;
+        _executableLocation = executableLocation;
         _fontInstaller = fontInstaller;
         _text = text;
         _shell = shell;
@@ -83,6 +88,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _mainMenuView = mainMenuView;
         _thirdPartyView = thirdPartyView;
         _pathView = pathView;
+        _executableLocationView = executableLocationView;
         _fontView = fontView;
         _paths = paths;
         _logger = logger;
@@ -201,6 +207,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             case AppCommand.ThirdParty:
                 _thirdPartyView.Render();
                 return 0;
+            case AppCommand.Where:
+                return await RunWhereAsync(cancellationToken).ConfigureAwait(false);
             case AppCommand.InstallFont:
                 EnsureInteractiveUnlessPreauthorized(options.Yes || options.DryRun);
                 return await RunFontAsync(options, cancellationToken).ConfigureAwait(false);
@@ -317,6 +325,29 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         return 0;
     }
 
+    /// <summary>Shows the running hm location and optionally opens its containing folder after exact authorization.</summary>
+    private async Task<int> RunWhereAsync(CancellationToken cancellationToken)
+    {
+        var location = _executableLocation.Resolve();
+        var action = _executableLocationView.RenderAndSelect(location, IsInteractive);
+        if (action == ExecutableLocationAction.OpenContainingFolder)
+        {
+            if (!_executableLocationView.ConfirmOpen(location))
+            {
+                _executableLocationView.RenderResult(location, ExecutableLocationAction.ShowChangeDirectoryCommand);
+                await TryAuditAsync("where", "cancelled", null, new { location.ExecutablePath }).ConfigureAwait(false);
+                return 0;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            _executableLocation.OpenContainingFolder(location);
+        }
+
+        _executableLocationView.RenderResult(location, action);
+        await TryAuditAsync("where", "completed", null, new { action, location.ExecutablePath }).ConfigureAwait(false);
+        return 0;
+    }
+
     /// <summary>Runs the optional Nerd Font helper only after preview and authorization.</summary>
     private async Task<int> RunFontAsync(CommandLineOptions options, CancellationToken cancellationToken)
     {
@@ -383,6 +414,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                     case MainMenuAction.TestAi:
                         EnsureAiReady(settings);
                         await _conversationWorkflow.RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.Where:
+                        await RunWhereAsync(cancellationToken).ConfigureAwait(false);
                         break;
                     case MainMenuAction.Path:
                         await RunPathAsync(new CommandLineOptions(AppCommand.Path, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
@@ -487,7 +521,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         var assembly = Assembly.GetExecutingAssembly().GetName();
         _shell.RenderVersion(
-            assembly.Version?.ToString(3) ?? "0.1.0",
+            assembly.Version?.ToString(3) ?? "0.1.1",
             Environment.Version.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
     }

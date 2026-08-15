@@ -11,17 +11,19 @@ This archive tracks completed development tasks for reference and review.
 - Added `Esc` current-flow cancellation, fail-closed authorization cancellation, and `Ctrl+C` application shutdown; exact `/run` without a command now fails locally instead of reaching the model.
 - Removed confirmed-unused PowerShell helpers and redundant contract members, automated the multi-platform quality gate, and documented post-commit/push cleanup.
 
-Validation: preflight, restore, format verification, XML comments, Release build with 0 warnings/errors, 52/52 tests, read-only CLI commands in disposable data directories, and live `Esc` / `Ctrl+C` prompt smokes passed.
+Validation: preflight, restore, format verification, XML comments, Release build with 0 warnings/errors, 55/55 integrated tests, read-only CLI commands in disposable data directories, and live `Esc` / `Ctrl+C` prompt smokes passed.
 
 ## 2026-08-16 — Windows release artifact builder
 
 - Added one PowerShell entry point with a read-only plan mode, bounded release output, and fail-fast prerequisite checks.
 - Added deterministic self-contained `win-x64` and `win-arm64` ZIP archives for WinGet, multi-file schema 1.12 manifests, package hashes, and a machine-readable release summary.
-- Added an optional machine-wide x64 MSI built and ICE-validated with WiX Toolset 3.14, including upgrade metadata and installer-owned system PATH registration.
-- Added current-architecture executable smoke testing and excluded helper scripts, secrets, local data, logs, symbols, and build intermediates from distributable payloads.
+- Added an optional per-user x64 MSI built and ICE-validated with WiX Toolset 3.14, including upgrade metadata, `%LOCALAPPDATA%\Programs\PromptMeUp` installation, and installer-owned user PATH registration.
+- Added `hm --where` / `hm -where` with exact executable reporting, a copyable change-directory command, and an explicitly previewed and confirmed native file-manager action in all six UI languages.
+- Added current-architecture version and executable-location smoke testing and excluded helper scripts, secrets, local data, logs, symbols, and build intermediates from distributable payloads.
+- Added successful-build cleanup so `artifacts/release/<version>` retains only packages, checksums, WinGet manifests, and the release summary needed for user testing.
 - Documented local WinGet installation, direct MSI testing, prerequisites, output layout, and the portable-first product boundary.
 
-Validation: release generation and `winget validate` passed; ZIP hashes were stable across repeated builds; MSI decompilation confirmed x64 metadata, payload, upgrade codes, and PATH registration; preflight, restore, format verification, XML comments, Release build with warnings as errors, and 15/15 tests passed.
+Validation: release `0.1.1` generation and `winget validate` passed; MSI tables confirmed `LocalAppDataFolder`, installer-owned child-directory cleanup, and user PATH registration; a silent upgrade from `0.1.0` returned exit code `0`, removed the old ProductCode, installed `0.1.1`, and left no machine PATH entry; packaged and installed `hm -where` smokes passed; the integrated quality gate passed 55/55 tests.
 
 ## 2026-08-12 — Initial PromptMeUp product foundation
 

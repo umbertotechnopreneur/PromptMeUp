@@ -33,6 +33,7 @@ These instructions apply to every change in this repository.
 
 - Read this file and `.github/copilot-instructions.md` before editing.
 - Preserve unrelated working-tree changes and keep changes scoped and reviewable.
+- Obtain explicit user authorization before creating any Git branch or worktree.
 - Use PowerShell 7 as `pwsh -NoProfile` for Windows automation.
 - Use `apply_patch` for deliberate tracked-file edits and avoid broad formatting churn.
 - Fail fast on invalid input and unsupported state; do not conceal failures with silent fallbacks.

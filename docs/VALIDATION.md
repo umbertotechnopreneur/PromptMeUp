@@ -25,6 +25,7 @@ dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- -
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- --version --no-animation --no-emoji
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- --status --language vi --no-animation --no-emoji
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- --third-party --language fr --no-animation --no-emoji
+dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- -where --no-animation --no-emoji
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- --path=status --no-animation --no-emoji
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- --install-font --dry-run --no-animation --no-emoji
 ```
@@ -81,7 +82,7 @@ pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
 ```
 
-Confirm that both portable ZIPs contain only `hm.exe`, `prompt/*.yaml`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; the current-architecture executable reports the requested package version; `winget validate` succeeds; the x64 MSI passes WiX validation; and every checksum in `SHA256SUMS.txt` matches its package. Do not install either distribution format on the host during routine validation.
+Confirm that both portable ZIPs contain only `hm.exe`, `prompt/*.yaml`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; the current-architecture executable reports the requested package version; `winget validate` succeeds; and every checksum in `SHA256SUMS.txt` matches its package. In Windows Sandbox or another disposable environment, confirm that a non-admin MSI install targets `%LOCALAPPDATA%\Programs\PromptMeUp`, registers only the current-user `PATH`, `hm -where` resolves that installed binary, and uninstall removes the installed files and installer-owned PATH entry. Do not install either distribution format or mutate the host `PATH` during routine validation.
 
 ## Post-publication cleanup
 

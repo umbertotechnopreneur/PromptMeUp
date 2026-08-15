@@ -4,15 +4,15 @@
 
 ## Outputs
 
-For version `0.1.0`, the default output is `artifacts/release/0.1.0/`:
+For version `0.1.1`, the default output is `artifacts/release/0.1.1/`:
 
 ```text
 packages/
-  PromptMeUp-0.1.0-win-x64.zip
-  PromptMeUp-0.1.0-win-arm64.zip
-  PromptMeUp-0.1.0-win-x64.msi
+  PromptMeUp-0.1.1-win-x64.zip
+  PromptMeUp-0.1.1-win-arm64.zip
+  PromptMeUp-0.1.1-win-x64.msi
   SHA256SUMS.txt
-winget/UmbertoGiacobbi.PromptMeUp/0.1.0/
+winget/UmbertoGiacobbi.PromptMeUp/0.1.1/
   UmbertoGiacobbi.PromptMeUp.yaml
   UmbertoGiacobbi.PromptMeUp.installer.yaml
   UmbertoGiacobbi.PromptMeUp.locale.en-US.yaml
@@ -21,7 +21,11 @@ release.json
 
 The ZIP archives contain only `hm.exe`, the required `prompt` YAML resources, `LICENSE`, and `THIRD_PARTY_NOTICES.md`. They are self-contained and do not require a separate .NET runtime. The WinGet manifest declares PowerShell 7 as a package dependency because approved command execution uses `pwsh`.
 
-The x64 MSI uses WiX Toolset 3.14, installs under `Program Files`, adds the installation directory to the system `PATH`, supports silent Windows Installer switches, and removes its PATH entry on uninstall. The MSI therefore requires elevation. Native ARM64 remains available through the portable WinGet archive; WiX 3.14 cannot produce an ARM64 MSI.
+After a successful build, publish, staging, WiX, and smoke-test intermediates are removed automatically. They remain only when a build fails, where they are useful for diagnosis. The completed release directory therefore contains only the packages, WinGet manifests, checksums, and `release.json` needed for testing or publication.
+
+The x64 MSI uses WiX Toolset 3.14, installs under `%LOCALAPPDATA%\Programs\PromptMeUp`, adds the installation directory to the current user's `PATH`, supports silent Windows Installer switches, and removes its PATH entry on uninstall. It is a per-user package and does not require elevation or modify the machine `PATH`. Native ARM64 remains available through the portable WinGet archive; WiX 3.14 cannot produce an ARM64 MSI.
+
+WiX treats every validation warning as an error. The build suppresses ICE64 for the shared `%LOCALAPPDATA%\Programs` parent because PromptMeUp must never claim or remove that directory, and ICE91 because the package is exclusively per-user. The harvested `PromptMeUp` installation directory and its descendants still receive explicit uninstall cleanup; all other enabled ICE checks remain strict.
 
 ## Prerequisites
 
@@ -52,7 +56,7 @@ The default manifest URLs point to `http://127.0.0.1:8765`. This is only for loc
 
 ```powershell
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 `
-  -ArtifactBaseUrl 'https://github.com/umbertotechnopreneur/PromptMeUp/releases/download/v0.1.0'
+  -ArtifactBaseUrl 'https://github.com/umbertotechnopreneur/PromptMeUp/releases/download/v0.1.1'
 ```
 
 The requested version must use three numeric parts because Windows Installer compares only numeric MSI versions. If `-Version` is omitted, the script reads `Version` from `PromptMeUp.csproj`.
@@ -62,7 +66,7 @@ The requested version must use three numeric parts because Windows Installer com
 Start a temporary local file server in the package directory and leave it running:
 
 ```powershell
-Set-Location .\artifacts\release\0.1.0\packages
+Set-Location .\artifacts\release\0.1.1\packages
 python -m http.server 8765 --bind 127.0.0.1
 ```
 
@@ -75,18 +79,28 @@ winget settings --enable LocalManifestFiles
 Return to the repository in a normal, non-administrator terminal and install the local manifest for the current user:
 
 ```powershell
-winget install --manifest .\artifacts\release\0.1.0\winget\UmbertoGiacobbi.PromptMeUp\0.1.0 --scope user
+winget install --manifest .\artifacts\release\0.1.1\winget\UmbertoGiacobbi.PromptMeUp\0.1.1 --scope user
 ```
 
 Open a new terminal so it receives the updated PATH, then verify without using an API key:
 
 ```powershell
 hm --version --no-animation --no-emoji
+hm -where
 hm --status --no-animation --no-emoji
 winget list --id UmbertoGiacobbi.PromptMeUp --exact
 ```
 
-Do not run `hm --path install` for a WinGet-managed copy; WinGet owns installation, PATH registration, upgrades, and removal. Uninstall the test from the normal terminal:
+WinGet adds the archive directory to the current user's `PATH` because the manifest declares `ArchiveBinariesDependOnPath: true`. PromptMeUp can also inspect, remove, or restore that same user entry. Save the resolved executable path before testing removal, because a new terminal will no longer resolve `hm` until the entry is restored:
+
+```powershell
+$hmExecutable = (Get-Command hm -CommandType Application).Source
+hm --path status
+hm --path remove
+& $hmExecutable --path install
+```
+
+Each changing action shows an exact preview and requires confirmation unless `--yes` is supplied. Open a new terminal after a change. Uninstall the local package from a normal terminal:
 
 ```powershell
 winget uninstall --id UmbertoGiacobbi.PromptMeUp --exact --scope user
@@ -100,16 +114,33 @@ winget settings --disable LocalManifestFiles
 
 ## Test the MSI
 
-The standard installer supports normal Windows Installer behavior:
+The standard per-user installer supports normal Windows Installer behavior from a non-administrator terminal:
 
 ```powershell
-msiexec.exe /i .\artifacts\release\0.1.0\packages\PromptMeUp-0.1.0-win-x64.msi
+msiexec.exe /i .\artifacts\release\0.1.1\packages\PromptMeUp-0.1.1-win-x64.msi
 ```
 
 For an unattended test in Windows Sandbox or another disposable environment:
 
 ```powershell
-msiexec.exe /i .\artifacts\release\0.1.0\packages\PromptMeUp-0.1.0-win-x64.msi /qn /norestart
+msiexec.exe /i .\artifacts\release\0.1.1\packages\PromptMeUp-0.1.1-win-x64.msi /qn /norestart
+```
+
+After installation, open a new terminal and verify both the installed command and the application-managed user PATH controls:
+
+```powershell
+$hmExecutable = (Get-Command hm -CommandType Application).Source
+hm --version --no-animation --no-emoji
+hm -where
+hm --path status
+hm --path remove
+& $hmExecutable --path install
+```
+
+Uninstalling the MSI removes its user PATH entry and installed files:
+
+```powershell
+msiexec.exe /x .\artifacts\release\0.1.1\packages\PromptMeUp-0.1.1-win-x64.msi
 ```
 
 The build never reads or packages `OPENAI_API_KEY`, `OPENAI_ADMIN_KEY`, settings, databases, logs, or the local application-data directory. Code signing is intentionally separate and must happen before final SHA-256 calculation and WinGet manifest generation.

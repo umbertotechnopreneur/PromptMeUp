@@ -80,6 +80,12 @@ public sealed class CommandLineParser : ICommandLineParser
                         return Failure(thirdPartyError);
                     }
                     break;
+                case "--where" or "-where":
+                    if (!TrySelect(AppCommand.Where, ref command, ref commandWasSelected, out var whereError))
+                    {
+                        return Failure(whereError);
+                    }
+                    break;
                 case "--install-font":
                     if (!TrySelect(AppCommand.InstallFont, ref command, ref commandWasSelected, out var fontError))
                     {
