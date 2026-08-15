@@ -15,12 +15,14 @@ public sealed class SetupView : ISetupView
 {
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
+    private readonly IConsoleShellView _shell;
 
     /// <summary>Creates the interactive setup form.</summary>
-    public SetupView(IAnsiConsole console, ILocalizationService text)
+    public SetupView(IAnsiConsole console, ILocalizationService text, IConsoleShellView shell)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
+        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
     }
 
     /// <summary>Collects a complete configuration while keeping entered secrets outside the settings model.</summary>
@@ -155,7 +157,7 @@ public sealed class SetupView : ISetupView
                     .DefaultValue(endpoint)
                     .Validate(value => OpenAiEndpointPolicy.IsAllowed(value)
                         ? ValidationResult.Success()
-                        : ValidationResult.Error("[red]Use the official https://api.openai.com/v1/responses endpoint.[/]")));
+                        : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.EndpointError"))}[/]")));
         }
 
         var settings = current with
@@ -203,8 +205,10 @@ public sealed class SetupView : ISetupView
     /// <summary>Marks one compact wizard stage while retaining every earlier terminal interaction.</summary>
     private void BeginStage(int stage, string title, string? subtitle = null)
     {
-        _console.WriteLine();
-        TerminalTheme.WriteRule(_console, "⚙ Setup", TerminalTheme.Accent);
+        TerminalTheme.WriteRule(
+            _console,
+            TerminalTheme.IconPrefix(_shell.Options, "⚙", "~") + _text.Text("Main.Setup"),
+            TerminalTheme.Accent);
         _console.MarkupLine(
             $"[{TerminalTheme.Muted}]{stage:00}[/]  [bold {TerminalTheme.Info}]{Markup.Escape(title)}[/]");
         if (!string.IsNullOrWhiteSpace(subtitle))
@@ -226,7 +230,13 @@ public sealed class SetupView : ISetupView
     {
         var color = configured ? "green" : "yellow";
         var state = configured ? _text.Text("Status.Ready") : _text.Text("Status.Missing");
-        _console.MarkupLine($"[{color}]●[/] {Markup.Escape(_text.Text(statusKey))}: [bold]{Markup.Escape(state)}[/]");
+        _console.Write(TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(
+                TerminalTheme.IconPrefix(_shell.Options, "●", "+") + _text.Text(statusKey),
+                state,
+                color)
+        ], preferredPairs: 1, width: _console.Profile.Width));
         var change = _console.Prompt(new ConfirmationPrompt(
             Markup.Escape(_text.Text(changeKey)))
         {
@@ -242,7 +252,7 @@ public sealed class SetupView : ISetupView
                 .Secret(mask: null)
                 .Validate(value => OpenAiKeyPolicy.IsPlausible(value)
                     ? ValidationResult.Success()
-                    : ValidationResult.Error("[red]The key must start with sk- and contain no whitespace.[/]")));
+                    : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.KeyError"))}[/]")));
     }
 
     /// <summary>Displays product-oriented model choices and returns the selected identifier.</summary>
@@ -271,14 +281,14 @@ public sealed class SetupView : ISetupView
                 .DefaultValue(current)
                 .Validate(value => value >= minimum && value <= maximum
                     ? ValidationResult.Success()
-                    : ValidationResult.Error($"[red]Enter a value from {minimum:N0} to {maximum:N0}.[/]")));
+                    : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.RangeError", minimum, maximum))}[/]")));
 
     /// <summary>Renders the setup choices as a compact borderless summary before saving.</summary>
     private void RenderSummary(AppSettings settings, bool hasApiKey, bool hasAdminKey)
     {
         var grid = new Grid();
-        grid.AddColumn(new GridColumn().NoWrap());
-        grid.AddColumn();
+        grid.AddColumn(new GridColumn().RightAligned().NoWrap());
+        grid.AddColumn(new GridColumn().LeftAligned());
         var yes = _text.Text("Common.Yes");
         var no = _text.Text("Common.No");
         var ready = _text.Text("Status.Ready");
@@ -288,42 +298,32 @@ public sealed class SetupView : ISetupView
             _text.Text("Setup.Language"),
             SupportedLanguages.All.First(item => item.Code == settings.Language).NativeName);
         AddSummaryRow(grid, _text.Text("Setup.AiEnabled"), settings.AiEnabled ? yes : no);
-        AddSummaryRow(
-            grid,
-            _text.Text("Status.ApiKey"),
-            $"{(hasApiKey ? ready : missing)} · {_text.Text("Status.AdminKey")}: {(hasAdminKey ? ready : missing)}");
-        AddSummaryRow(
-            grid,
-            _text.Text("Setup.Model"),
-            $"{settings.Model} · {_text.Text($"Reasoning.{settings.ReasoningEffort}")} · {_text.Text(settings.OutputDetail switch
-            {
-                "compact" => "Setup.Compact",
-                "detailed" => "Setup.Detailed",
-                _ => "Setup.Balanced"
-            })}");
-        AddSummaryRow(
-            grid,
-            _text.Text("Setup.Custom"),
-            $"{(string.IsNullOrWhiteSpace(settings.CustomInstruction) ? no : yes)} · " +
-            $"{_text.Text("Setup.Location")}: {(settings.IncludeWindowsLocation ? yes : no)}");
-        AddSummaryRow(
-            grid,
-            _text.Text("Setup.CommandReview"),
-            $"{(settings.ReviewCommandsWithAi ? yes : no)} · " +
-            $"{_text.Text("Setup.PromptCaching")}: {(settings.PromptCachingEnabled ? yes : no)}");
-        AddSummaryRow(
-            grid,
-            _text.Text("Setup.MemoryLimits"),
-            $"{_text.Text("Setup.MaxTurns")}: {settings.MaxConversationTurns:N0} · " +
-            $"{_text.Text("Setup.MaxContext")}: {settings.MaxContextPercent}%\n" +
-            $"{_text.Text("Setup.MaxMessage")}: {settings.MaxMessageCharacters:N0} · " +
-            $"{_text.Text("Setup.MaxCommandOutput")}: {settings.MaxCommandOutputCharacters:N0} · " +
-            $"{_text.Text("Setup.CommandTimeout")}: {settings.CommandTimeoutSeconds:N0}");
+        AddSummaryRow(grid, _text.Text("Status.ApiKey"), hasApiKey ? ready : missing);
+        AddSummaryRow(grid, _text.Text("Status.AdminKey"), hasAdminKey ? ready : missing);
+        AddSummaryRow(grid, _text.Text("Setup.Model"), settings.Model);
+        AddSummaryRow(grid, _text.Text("Setup.Reasoning"), _text.Text($"Reasoning.{settings.ReasoningEffort}"));
+        AddSummaryRow(grid, _text.Text("Setup.Detail"), _text.Text(settings.OutputDetail switch
+        {
+            "compact" => "Setup.Compact",
+            "detailed" => "Setup.Detailed",
+            _ => "Setup.Balanced"
+        }));
+        AddSummaryRow(grid, _text.Text("Setup.Custom"), string.IsNullOrWhiteSpace(settings.CustomInstruction) ? no : yes);
+        AddSummaryRow(grid, _text.Text("Setup.Location"), settings.IncludeWindowsLocation ? yes : no);
+        AddSummaryRow(grid, _text.Text("Setup.CommandReview"), settings.ReviewCommandsWithAi ? yes : no);
+        AddSummaryRow(grid, _text.Text("Setup.PromptCaching"), settings.PromptCachingEnabled ? yes : no);
+        AddSummaryRow(grid, _text.Text("Setup.MaxTurns"), settings.MaxConversationTurns.ToString("N0", _text.Culture));
+        AddSummaryRow(grid, _text.Text("Setup.MaxContext"), $"{settings.MaxContextPercent}%");
+        AddSummaryRow(grid, _text.Text("Setup.MaxMessage"), settings.MaxMessageCharacters.ToString("N0", _text.Culture));
+        AddSummaryRow(grid, _text.Text("Setup.MaxCommandOutput"), settings.MaxCommandOutputCharacters.ToString("N0", _text.Culture));
+        AddSummaryRow(grid, _text.Text("Setup.CommandTimeout"), settings.CommandTimeoutSeconds.ToString("N0", _text.Culture));
         _console.Write(grid);
         _console.WriteLine();
     }
 
     /// <summary>Adds one escaped label/value pair to the setup summary grid.</summary>
     private static void AddSummaryRow(Grid grid, string label, string value) =>
-        grid.AddRow(new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(label)}[/]"), new Text(value, Style.Parse(TerminalTheme.Primary)));
+        grid.AddRow(
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(label)}:[/]"),
+            new Text(value, Style.Parse(TerminalTheme.Primary)));
 }

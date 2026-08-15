@@ -21,50 +21,34 @@ public sealed class StatusView(
     public void Render(AppStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
-        TerminalTheme.WriteHeading(console, text.Text("Status.Title"));
-        var configuration = CreateGrid(
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, "🪞", "=") + text.Text("Status.Title"),
+            TerminalTheme.Accent);
+        var configuration = TerminalTheme.PairGrid(
         [
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "⚙", "~")} {text.Text("Status.Setup")}", status.Settings.SetupCompleted ? text.Text("Status.Completed") : text.Text("Status.Required"), status.Settings.SetupCompleted ? TerminalTheme.Success : "yellow"),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "🌐", "@")} {text.Text("Status.Language")}", status.Settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "🧠", "AI")} {text.Text("Status.Model")}", status.Settings.Model),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "🔑", "K")} {text.Text("Status.ApiKey")}", status.HasApiKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasApiKey ? TerminalTheme.Success : "yellow"),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "🔐", "K")} {text.Text("Status.AdminKey")}", status.HasAdminKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasAdminKey ? TerminalTheme.Success : "yellow"),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "↻", "~")} {text.Text("Status.Pricing")}", status.LastPricingSync?.ToLocalTime().ToString("g", text.Culture) ?? text.Text("Costs.Unavailable"), TerminalTheme.Info)
-        ], console.Profile.Width);
-        console.Write(TerminalTheme.Panel(configuration, $"{TerminalTheme.Icon(shell.Options, "🪞", "=")} {text.Text("Status.Configuration")}"));
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "◈", "#") + text.Text("Status.Setup"), status.Settings.SetupCompleted ? text.Text("Status.Completed") : text.Text("Status.Required"), status.Settings.SetupCompleted ? TerminalTheme.Success : "yellow"),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🌐", "@") + text.Text("Status.Language"), status.Settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🧠", "AI") + text.Text("Status.Model"), status.Settings.Model),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🔑", "K") + text.Text("Status.ApiKey"), status.HasApiKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasApiKey ? TerminalTheme.Success : "yellow"),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🔐", "K") + text.Text("Status.AdminKey"), status.HasAdminKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasAdminKey ? TerminalTheme.Success : "yellow"),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "↻", "~") + text.Text("Status.Pricing"), status.LastPricingSync?.ToLocalTime().ToString("g", text.Culture) ?? text.Text("Costs.Unavailable"), TerminalTheme.Info)
+        ], preferredPairs: 3, width: console.Profile.Width);
+        TerminalTheme.WriteRule(console, $"{TerminalTheme.IconPrefix(shell.Options, "⚙", "~")}{text.Text("Status.Configuration")}", TerminalTheme.Accent);
+        console.Write(configuration);
         console.WriteLine();
 
-        var localData = CreateGrid(
+        var localData = TerminalTheme.PairGrid(
         [
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "▣", "#")} {text.Text("Status.Database")}", status.DatabasePath),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "▤", "#")} {text.Text("Status.Logs")}", status.LogsDirectory),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "✦", "*")} {text.Text("Status.Prompts")}", $"{status.PromptCount} · {status.PromptDirectory}")
-        ], console.Profile.Width);
-        console.Write(TerminalTheme.Panel(localData, $"{TerminalTheme.Icon(shell.Options, "💾", "#")} {text.Text("Status.LocalData")}"));
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "▣", "#") + text.Text("Status.Database"), status.DatabasePath),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "▤", "#") + text.Text("Status.Logs"), status.LogsDirectory),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "✦", "*") + text.Text("Status.Prompts"), $"{status.PromptCount} · {status.PromptDirectory}")
+        ], preferredPairs: 1, width: console.Profile.Width);
+        TerminalTheme.WriteRule(console, $"{TerminalTheme.IconPrefix(shell.Options, "💾", "#")}{text.Text("Status.LocalData")}", TerminalTheme.Accent);
+        console.Write(localData);
+        console.WriteLine();
     }
 
-    /// <summary>Builds an adaptive metrics grid that stays readable at narrow terminal widths.</summary>
-    private static Grid CreateGrid(IReadOnlyList<IRenderable> metrics, int width)
-    {
-        var columns = width >= 112 ? 3 : width >= 72 ? 2 : 1;
-        var grid = new Grid();
-        for (var column = 0; column < columns; column++)
-        {
-            grid.AddColumn();
-        }
-
-        for (var offset = 0; offset < metrics.Count; offset += columns)
-        {
-            var row = new IRenderable[columns];
-            for (var column = 0; column < columns; column++)
-            {
-                row[column] = offset + column < metrics.Count ? metrics[offset + column] : new Text(string.Empty);
-            }
-            grid.AddRow(row);
-        }
-
-        return grid;
-    }
 }
 
 public interface ICostsView
@@ -81,17 +65,22 @@ public sealed class CostsView(
     public void Render(CostOverview overview)
     {
         ArgumentNullException.ThrowIfNull(overview);
-        TerminalTheme.WriteHeading(console, text.Text("Costs.Title"), text.Text("Costs.Subtitle"));
-        var metrics = CreateGrid(
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, "💳", "$") + text.Text("Costs.Title"),
+            TerminalTheme.Accent);
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Costs.Subtitle"))}[/]");
+        var metrics = TerminalTheme.PairGrid(
         [
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "💵", "$")} {text.Text("Costs.TodayEstimate")}", FormatUsd(overview.EstimatedCostTodayUsd), TerminalTheme.Success),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "📅", "#")} {text.Text("Costs.MonthEstimate")}", FormatUsd(overview.EstimatedCostCurrentMonthUsd), TerminalTheme.Info),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "🏢", "#")} {text.Text("Costs.ApiCost")}", overview.ActualOrganizationCostCurrentMonthUsd.HasValue ? FormatUsd(overview.ActualOrganizationCostCurrentMonthUsd.Value) : text.Text("Costs.Unavailable")),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "↗", "+")} {text.Text("Costs.Requests")}", overview.RequestsToday.ToString("N0", text.Culture)),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "◌", "~")} {text.Text("Costs.Tokens")}", overview.TotalTokensToday.ToString("N0", text.Culture)),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(shell.Options, "↻", "~")} {text.Text("Costs.LastSync")}", overview.LastPricingSync?.ToLocalTime().ToString("g", text.Culture) ?? text.Text("Costs.Unavailable"))
-        ], console.Profile.Width);
-        console.Write(TerminalTheme.Panel(metrics, $"{TerminalTheme.Icon(shell.Options, "📈", "=")} {text.Text("Costs.Overview")}"));
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(shell.Options, "💵", "$")}{text.Text("Costs.TodayEstimate")}", FormatUsd(overview.EstimatedCostTodayUsd), TerminalTheme.Success),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(shell.Options, "📅", "#")}{text.Text("Costs.MonthEstimate")}", FormatUsd(overview.EstimatedCostCurrentMonthUsd), TerminalTheme.Info),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(shell.Options, "🏢", "#")}{text.Text("Costs.ApiCost")}", overview.ActualOrganizationCostCurrentMonthUsd.HasValue ? FormatUsd(overview.ActualOrganizationCostCurrentMonthUsd.Value) : text.Text("Costs.Unavailable")),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(shell.Options, "↗", "+")}{text.Text("Costs.Requests")}", overview.RequestsToday.ToString("N0", text.Culture)),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(shell.Options, "◌", "~")}{text.Text("Costs.Tokens")}", overview.TotalTokensToday.ToString("N0", text.Culture)),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(shell.Options, "↻", "~")}{text.Text("Costs.LastSync")}", overview.LastPricingSync?.ToLocalTime().ToString("g", text.Culture) ?? text.Text("Costs.Unavailable"))
+        ], preferredPairs: 3, width: console.Profile.Width);
+        TerminalTheme.WriteRule(console, $"{TerminalTheme.IconPrefix(shell.Options, "📈", "=")}{text.Text("Costs.Overview")}", TerminalTheme.Accent);
+        console.Write(metrics);
         console.WriteLine();
 
         var table = new Table()
@@ -118,29 +107,6 @@ public sealed class CostsView(
         console.Write(table);
     }
 
-    /// <summary>Builds an adaptive metrics grid that keeps cost summaries legible on narrow terminals.</summary>
-    private static Grid CreateGrid(IReadOnlyList<IRenderable> metrics, int width)
-    {
-        var columns = width >= 112 ? 3 : width >= 72 ? 2 : 1;
-        var grid = new Grid();
-        for (var column = 0; column < columns; column++)
-        {
-            grid.AddColumn();
-        }
-
-        for (var offset = 0; offset < metrics.Count; offset += columns)
-        {
-            var row = new IRenderable[columns];
-            for (var column = 0; column < columns; column++)
-            {
-                row[column] = offset + column < metrics.Count ? metrics[offset + column] : new Text(string.Empty);
-            }
-            grid.AddRow(row);
-        }
-
-        return grid;
-    }
-
     /// <summary>Assigns a semantic band from the official input-plus-output price per million tokens.</summary>
     private static CostBand Classify(AiModelPrice price)
     {
@@ -158,15 +124,15 @@ public sealed class CostsView(
     /// <summary>Renders a high-contrast semantic chip for a model pricing band.</summary>
     private IRenderable CostChip(CostBand band)
     {
-        var (icon, fallback, label, foreground, background) = band switch
+        var (icon, fallback, label, color) = band switch
         {
-            CostBand.Cheap => ("🌱", "$", text.Text("Costs.Cheap"), "black", TerminalTheme.Success),
-            CostBand.Affordable => ("✓", "+", text.Text("Costs.Affordable"), "black", TerminalTheme.Info),
-            CostBand.Premium => ("◆", "*", text.Text("Costs.Premium"), "black", TerminalTheme.Accent),
-            _ => ("⚠", "!", text.Text("Costs.Extreme"), TerminalTheme.Primary, "red")
+            CostBand.Cheap => ("🌱", "$", text.Text("Costs.Cheap"), TerminalTheme.Success),
+            CostBand.Affordable => ("✓", "+", text.Text("Costs.Affordable"), TerminalTheme.Info),
+            CostBand.Premium => ("◆", "*", text.Text("Costs.Premium"), TerminalTheme.Accent),
+            _ => ("⚠", "!", text.Text("Costs.Extreme"), "red")
         };
         return new Markup(
-            $"[{foreground} on {background}] {Markup.Escape(TerminalTheme.Icon(shell.Options, icon, fallback))} {Markup.Escape(label)} [/]");
+            $"[bold {color}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, icon, fallback))}{Markup.Escape(label)}[/]");
     }
 
     /// <summary>Formats USD amounts using invariant decimal notation.</summary>

@@ -39,16 +39,15 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(assessment);
         var color = RiskColor(assessment.Level);
-        _console.WriteLine();
         TerminalTheme.WriteSection(
             _console,
-            $"{TerminalTheme.Icon(_shell.Options, "🚦", ">")} {_text.Text("Command.Preview")}",
+            $"{TerminalTheme.IconPrefix(_shell.Options, "🚦", ">")}{_text.Text("Command.Preview")}",
             command,
             TerminalTheme.Info);
         _console.MarkupLine(
-            $"[bold {color.ToMarkup()}]{Markup.Escape(RiskIcon(assessment.Level))} {Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(assessment.Level.ToString().ToUpperInvariant())}[/]");
-        var reviewIcon = TerminalTheme.Icon(_shell.Options, assessment.UsedAi ? "🤖" : "🛡", assessment.UsedAi ? "AI" : "!");
-        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(reviewIcon)} {Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
+            $"[bold {color.ToMarkup()}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/]");
+        var reviewIcon = TerminalTheme.IconPrefix(_shell.Options, assessment.UsedAi ? "🤖" : "🛡", assessment.UsedAi ? "AI" : "!");
+        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(reviewIcon)}{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
         _console.WriteLine();
         _markdown.Render(assessment.DescriptionMarkdown);
         if (!string.IsNullOrWhiteSpace(assessment.Advisory))
@@ -76,9 +75,8 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     {
         ArgumentNullException.ThrowIfNull(result);
         var outputColor = result.ExitCode == 0 && !result.TimedOut ? "green" : "yellow";
-        var resultIcon = TerminalTheme.Icon(_shell.Options, outputColor == "green" ? "✅" : "⚠", outputColor == "green" ? "+" : "!");
-        _console.WriteLine();
-        TerminalTheme.WriteRule(_console, $"{resultIcon} {_text.Text("Command.Output")}", outputColor);
+        var resultIcon = TerminalTheme.IconPrefix(_shell.Options, outputColor == "green" ? "✅" : "⚠", outputColor == "green" ? "+" : "!");
+        TerminalTheme.WriteRule(_console, $"{resultIcon}{_text.Text("Command.Output")}", outputColor);
         if (!string.IsNullOrWhiteSpace(result.StandardOutput))
         {
             _console.MarkupLine($"[{TerminalTheme.Muted}]STDOUT[/]");
@@ -92,7 +90,8 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
 
         if (!string.IsNullOrWhiteSpace(result.StandardError))
         {
-            _console.MarkupLine("[bold red]⚠ STDERR[/]");
+            var errorIcon = TerminalTheme.IconPrefix(_shell.Options, "⚠", "!");
+            _console.MarkupLine($"[bold red]{Markup.Escape(errorIcon)}STDERR[/]");
             foreach (var line in result.StandardError.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
             {
                 _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
@@ -101,10 +100,20 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
             _console.WriteLine();
         }
 
-        _console.MarkupLine(
-            $"[{TerminalTheme.Muted}]↳[/] [bold {outputColor}]{(result.ExitCode?.ToString() ?? "timeout")}[/]  " +
-            $"[{TerminalTheme.Muted}]⏱[/] [bold {TerminalTheme.Primary}]{result.ElapsedMilliseconds} ms[/]  " +
-            $"[{TerminalTheme.Muted}]✂[/] [bold {TerminalTheme.Primary}]{(result.OutputTruncated ? _text.Text("Common.Yes") : _text.Text("Common.No"))}[/]");
+        var metadata = TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(
+                TerminalTheme.IconPrefix(_shell.Options, "↳", ">") + _text.Text("Command.ExitCode"),
+                result.ExitCode?.ToString() ?? _text.Text("Command.Timeout"),
+                outputColor),
+            TerminalTheme.CompactMetric(
+                TerminalTheme.IconPrefix(_shell.Options, "⏱", "t") + _text.Text("Command.Elapsed"),
+                $"{result.ElapsedMilliseconds} ms"),
+            TerminalTheme.CompactMetric(
+                TerminalTheme.IconPrefix(_shell.Options, "✂", "#") + _text.Text("Command.Truncated"),
+                result.OutputTruncated ? _text.Text("Common.Yes") : _text.Text("Common.No"))
+        ], preferredPairs: 3, width: _console.Profile.Width);
+        _console.Write(metadata);
         _console.WriteLine();
     }
 
@@ -121,10 +130,10 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     /// <summary>Maps each risk level to a recognisable, accessible command-review indicator.</summary>
     private string RiskIcon(CommandRiskLevel level) => level switch
     {
-        CommandRiskLevel.Low => TerminalTheme.Icon(_shell.Options, "🟢", "+"),
-        CommandRiskLevel.Medium => TerminalTheme.Icon(_shell.Options, "🟡", "!"),
-        CommandRiskLevel.High => TerminalTheme.Icon(_shell.Options, "🟠", "!!"),
-        CommandRiskLevel.Critical => TerminalTheme.Icon(_shell.Options, "🔴", "x"),
-        _ => TerminalTheme.Icon(_shell.Options, "⚪", "?")
+        CommandRiskLevel.Low => TerminalTheme.IconPrefix(_shell.Options, "🟢", "+"),
+        CommandRiskLevel.Medium => TerminalTheme.IconPrefix(_shell.Options, "🟡", "!"),
+        CommandRiskLevel.High => TerminalTheme.IconPrefix(_shell.Options, "🟠", "!!"),
+        CommandRiskLevel.Critical => TerminalTheme.IconPrefix(_shell.Options, "🔴", "x"),
+        _ => TerminalTheme.IconPrefix(_shell.Options, "⚪", "?")
     };
 }

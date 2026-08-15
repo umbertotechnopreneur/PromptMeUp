@@ -147,7 +147,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var input = _chatView.ReadMessage().Trim();
+            var input = _chatView.ReadMessage(settings.MaxMessageCharacters).Trim();
             if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
             {
                 _shell.RenderMuted(_text.Text("Chat.Exit"));
@@ -384,7 +384,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 cancellationToken)).ConfigureAwait(false);
         var assistantUpdate = memory.Add("assistant", response.Text);
         await AuditPruningAsync(sessionId, assistantUpdate.PrunedMessages, cancellationToken).ConfigureAwait(false);
-        _chatView.RenderAssistant(response.Text, animate: false, cancellationToken);
+        _chatView.RenderAssistant(response.Text, animate: true, cancellationToken);
         var turnCost = response.EstimatedCostUsd ?? 0m;
         RenderTurnSnapshot(response, settings, runningCost + turnCost);
         return new TurnResult(response, turnCost);

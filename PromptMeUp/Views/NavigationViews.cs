@@ -19,20 +19,30 @@ public sealed class HelpView(
     /// <summary>Renders the public CLI contract as grouped, scannable Spectre surfaces.</summary>
     public void Render()
     {
-        TerminalTheme.WriteHeading(console, text.Text("Help.Title"), text.Text("Help.Usage"));
-        var exampleIcon = TerminalTheme.Icon(shell.Options, "⚡", ">");
-        console.Write(TerminalTheme.Panel(
-            new Rows(
-                new Markup($"[bold {TerminalTheme.Primary}]hm[/] [{TerminalTheme.Muted}]\"how do I undo the last local git commit?\"[/]"),
-                new Markup($"[bold {TerminalTheme.Primary}]hm --chat[/] [{TerminalTheme.Muted}]{Markup.Escape(text.Text("Help.Chat"))}[/]")),
-            $"{exampleIcon} {text.Text("Help.Examples")}"));
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, "⌨", ">") + text.Text("Help.Title"),
+            TerminalTheme.Accent);
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Help.Usage"))}[/]");
+        var exampleIcon = TerminalTheme.IconPrefix(shell.Options, "⚡", ">");
+        TerminalTheme.WriteRule(console, $"{exampleIcon}{text.Text("Help.Examples")}", TerminalTheme.Accent);
+        var examples = new Grid();
+        examples.AddColumn(new GridColumn().RightAligned().NoWrap());
+        examples.AddColumn(new GridColumn().LeftAligned());
+        examples.AddRow(
+            new Markup($"[bold {TerminalTheme.Primary}]hm[/]"),
+            new Markup($"[{TerminalTheme.Muted}]\"{Markup.Escape(text.Text("Help.ExamplePrompt"))}\"[/]"));
+        examples.AddRow(
+            new Markup($"[bold {TerminalTheme.Primary}]hm --chat[/]"),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Help.Chat"))}[/]"));
+        console.Write(examples);
         console.WriteLine();
 
         RenderGroup(
             "💬",
             "Help.Group.Ai",
             [
-                ("--query, -q <text>", text.Text("Help.Query")),
+                (text.Text("Help.QuerySyntax"), text.Text("Help.Query")),
                 ("--chat", text.Text("Help.Chat")),
                 ("--test-ai", text.Text("Help.Test"))
             ]);
@@ -53,7 +63,7 @@ public sealed class HelpView(
                 ("--setup", text.Text("Help.Setup")),
                 ("--path [install|remove|status]", text.Text("Help.Path")),
                 ("--install-font [--dry-run]", text.Text("Help.Font")),
-                ("--language, -l <code>", text.Text("Help.Language"))
+                (text.Text("Help.LanguageSyntax"), text.Text("Help.Language"))
             ]);
         RenderGroup(
             "🛡",
@@ -73,7 +83,7 @@ public sealed class HelpView(
     {
         ArgumentNullException.ThrowIfNull(entries);
         var table = new Table().Border(TableBorder.None).HideHeaders();
-        table.AddColumn(new TableColumn("command").NoWrap());
+        table.AddColumn(new TableColumn("command").RightAligned().NoWrap());
         table.AddColumn(new TableColumn("description"));
         foreach (var (command, description) in entries)
         {
@@ -82,9 +92,11 @@ public sealed class HelpView(
                 new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(description)}[/]"));
         }
 
-        console.Write(TerminalTheme.Panel(
-            table,
-            $"{TerminalTheme.Icon(shell.Options, icon, ">")} {text.Text(titleKey)}"));
+        TerminalTheme.WriteRule(
+            console,
+            $"{TerminalTheme.IconPrefix(shell.Options, icon, ">")}{text.Text(titleKey)}",
+            TerminalTheme.Accent);
+        console.Write(table);
         console.WriteLine();
     }
 }
@@ -100,9 +112,15 @@ public sealed class MainMenuView(
     IConsoleShellView shell) : IMainMenuView
 {
     /// <summary>Returns one action from the branded interactive command center.</summary>
-    public MainMenuAction Select() => console.Prompt(
-        new SelectionPrompt<MainMenuAction>()
-            .Title($"[bold {TerminalTheme.Primary}]{Markup.Escape(text.Text("Main.Title"))}[/]\n[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Main.Choose"))}[/]")
+    public MainMenuAction Select()
+    {
+        TerminalTheme.WriteRule(
+            console,
+            $"{TerminalTheme.IconPrefix(shell.Options, "🎛", ">")}{text.Text("Main.Title")}",
+            TerminalTheme.Accent);
+        return console.Prompt(
+            new SelectionPrompt<MainMenuAction>()
+            .Title($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Main.Choose"))}[/]")
             .PageSize(12)
             .HighlightStyle(new Style(Color.MediumPurple2))
             .UseConverter(Label)
@@ -118,6 +136,7 @@ public sealed class MainMenuView(
                 MainMenuAction.InstallFont,
                 MainMenuAction.ThirdParty,
                 MainMenuAction.Exit));
+    }
 
     /// <summary>Maps menu actions to localized labels with portable icon fallbacks.</summary>
     private string Label(MainMenuAction action) => action switch
@@ -137,7 +156,7 @@ public sealed class MainMenuView(
 
     /// <summary>Formats one menu label with a high-contrast leading visual cue.</summary>
     private string MenuLabel(string icon, string fallback, string label) =>
-        $"[{TerminalTheme.Info}]{Markup.Escape(TerminalTheme.Icon(shell.Options, icon, fallback))}[/] [bold {TerminalTheme.Primary}]{Markup.Escape(label)}[/]";
+        $"[{TerminalTheme.Info}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, icon, fallback))}[/][bold {TerminalTheme.Primary}]{Markup.Escape(label)}[/]";
 }
 
 public interface IExecutableLocationView
@@ -149,22 +168,24 @@ public interface IExecutableLocationView
     void RenderResult(ExecutableLocationInfo location, ExecutableLocationAction action);
 }
 
-public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationService text) : IExecutableLocationView
+public sealed class ExecutableLocationView(
+    IAnsiConsole console,
+    ILocalizationService text,
+    IConsoleShellView shell) : IExecutableLocationView
 {
     /// <summary>Shows the exact executable location and selects a safe next action when input is interactive.</summary>
     public ExecutableLocationAction RenderAndSelect(ExecutableLocationInfo location, bool interactive)
     {
         ArgumentNullException.ThrowIfNull(location);
-        TerminalTheme.WriteHeading(console, text.Text("Where.Title"));
-        var locationGrid = new Grid();
-        locationGrid.AddColumn(new GridColumn().NoWrap());
-        locationGrid.AddColumn();
-        locationGrid.AddRow(
-            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.Executable"))}[/]"),
-            new Text(location.ExecutablePath));
-        locationGrid.AddRow(
-            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.Directory"))}[/]"),
-            new Text(location.DirectoryPath));
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, "⌖", "@") + text.Text("Where.Title"),
+            TerminalTheme.Accent);
+        var locationGrid = TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(text.Text("Where.Executable"), location.ExecutablePath),
+            TerminalTheme.CompactMetric(text.Text("Where.Directory"), location.DirectoryPath)
+        ], preferredPairs: 1, width: console.Profile.Width);
         console.Write(locationGrid);
         console.WriteLine();
 
@@ -176,10 +197,9 @@ public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationSe
         return console.Prompt(
             new SelectionPrompt<ExecutableLocationAction>()
                 .Title(Markup.Escape(text.Text("Where.Action")))
-                .UseConverter(action => action == ExecutableLocationAction.OpenContainingFolder
-                    ? text.Text("Where.Open")
-                    : text.Text("Where.ShowCd"))
+                .UseConverter(ActionLabel)
                 .AddChoices(
+                    ExecutableLocationAction.DoNothing,
                     ExecutableLocationAction.ShowChangeDirectoryCommand,
                     ExecutableLocationAction.OpenContainingFolder));
     }
@@ -188,7 +208,11 @@ public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationSe
     public bool ConfirmOpen(ExecutableLocationInfo location)
     {
         ArgumentNullException.ThrowIfNull(location);
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.OpenPreview"))}:[/] [{TerminalTheme.Primary}]{Markup.Escape(location.OpenFolderPreview)}[/]");
+        console.Write(TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(text.Text("Where.OpenPreview"), location.OpenFolderPreview)
+        ], preferredPairs: 1, width: console.Profile.Width));
+        console.WriteLine();
         return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Where.Confirm")))
         {
             DefaultValue = false
@@ -199,6 +223,11 @@ public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationSe
     public void RenderResult(ExecutableLocationInfo location, ExecutableLocationAction action)
     {
         ArgumentNullException.ThrowIfNull(location);
+        if (action == ExecutableLocationAction.DoNothing)
+        {
+            return;
+        }
+
         if (action == ExecutableLocationAction.OpenContainingFolder)
         {
             console.MarkupLine($"[green]{Markup.Escape(text.Text("Where.Opened"))}[/]");
@@ -208,6 +237,15 @@ public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationSe
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.ChangeDirectoryHint"))}[/]");
         console.WriteLine(location.ChangeDirectoryCommand);
     }
+
+    /// <summary>Converts executable-location actions into localized, intentionally ordered menu labels.</summary>
+    private string ActionLabel(ExecutableLocationAction action) => action switch
+    {
+        ExecutableLocationAction.DoNothing => text.Text("Where.None"),
+        ExecutableLocationAction.ShowChangeDirectoryCommand => text.Text("Where.ShowCd"),
+        ExecutableLocationAction.OpenContainingFolder => text.Text("Where.Open"),
+        _ => throw new InvalidOperationException("Unsupported executable-location action.")
+    };
 }
 
 public interface IThirdPartyView
@@ -215,7 +253,10 @@ public interface IThirdPartyView
     void Render();
 }
 
-public sealed class ThirdPartyView(IAnsiConsole console, ILocalizationService text) : IThirdPartyView
+public sealed class ThirdPartyView(
+    IAnsiConsole console,
+    ILocalizationService text,
+    IConsoleShellView shell) : IThirdPartyView
 {
     private static readonly (string Package, string Version, string License)[] Packages =
     [
@@ -234,7 +275,11 @@ public sealed class ThirdPartyView(IAnsiConsole console, ILocalizationService te
     /// <summary>Renders direct runtime dependencies and their declared licenses.</summary>
     public void Render()
     {
-        TerminalTheme.WriteHeading(console, text.Text("ThirdParty.Title"), text.Text("ThirdParty.Subtitle"));
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, "⚖", "=") + text.Text("ThirdParty.Title"),
+            TerminalTheme.Accent);
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("ThirdParty.Subtitle"))}[/]");
         var table = new Table().Border(TableBorder.Rounded).BorderStyle(Style.Parse(TerminalTheme.Divider));
         table.AddColumn(text.Text("ThirdParty.Package"));
         table.AddColumn(text.Text("ThirdParty.Version"));
@@ -244,6 +289,7 @@ public sealed class ThirdPartyView(IAnsiConsole console, ILocalizationService te
             table.AddRow(Markup.Escape(package.Package), Markup.Escape(package.Version), Markup.Escape(package.License));
         }
         console.Write(table);
+        console.WriteLine();
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("ThirdParty.FullNotices"))}[/]");
     }
 }
@@ -257,11 +303,19 @@ public interface IPortablePathView
     void RenderResult(PortablePathResult result);
 }
 
-public sealed class PortablePathView(IAnsiConsole console, ILocalizationService text) : IPortablePathView
+public sealed class PortablePathView(
+    IAnsiConsole console,
+    ILocalizationService text,
+    IConsoleShellView shell) : IPortablePathView
 {
     /// <summary>Collects an install, remove, or status PATH action.</summary>
-    public PortablePathAction SelectAction() => console.Prompt(
-        new SelectionPrompt<PortablePathAction>()
+    public PortablePathAction SelectAction()
+    {
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, "↔", "<>") + text.Text("Path.Title"),
+            TerminalTheme.Accent);
+        return console.Prompt(new SelectionPrompt<PortablePathAction>()
             .Title(Markup.Escape(text.Text("Path.Action")))
             .UseConverter(action => action switch
             {
@@ -270,17 +324,23 @@ public sealed class PortablePathView(IAnsiConsole console, ILocalizationService 
                 _ => text.Text("Path.Status")
             })
             .AddChoices(PortablePathAction.Status, PortablePathAction.Install, PortablePathAction.Remove));
+    }
 
     /// <summary>Shows the exact persistent target and asks before a mutating PATH operation.</summary>
     public bool PreviewAndConfirm(PortablePathPlan plan, bool preauthorized)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        TerminalTheme.WriteHeading(console, text.Text("Path.Title"));
-        TerminalTheme.WriteBlock(
+        TerminalTheme.WriteRule(
             console,
-            plan.Preview,
-            $"Target: {plan.PersistenceTarget}\nDirectory: {plan.ExecutableDirectory}",
+            TerminalTheme.IconPrefix(shell.Options, "↔", "<>") + text.Text("Path.Title"),
             TerminalTheme.Accent);
+        console.MarkupLine($"[bold {TerminalTheme.Info}]{Markup.Escape(PreviewText(plan.Action))}[/]");
+        console.Write(TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(text.Text("Path.Target"), DisplayTarget(plan.PersistenceTarget)),
+            TerminalTheme.CompactMetric(text.Text("Path.Directory"), plan.ExecutableDirectory)
+        ], preferredPairs: 1, width: console.Profile.Width));
+        console.WriteLine();
         if (plan.Action == PortablePathAction.Status || !plan.RequiresChange)
         {
             return false;
@@ -297,7 +357,28 @@ public sealed class PortablePathView(IAnsiConsole console, ILocalizationService 
     {
         ArgumentNullException.ThrowIfNull(result);
         var message = result.IsPresent ? text.Text("Path.Present") : text.Text("Path.Missing");
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, result.IsPresent ? "✅" : "⚠", result.IsPresent ? "+" : "!") + text.Text("Path.Title"),
+            result.IsPresent ? TerminalTheme.Success : "yellow");
         console.MarkupLine($"[{(result.IsPresent ? "green" : "yellow")}]{Markup.Escape(message)}[/]");
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(result.PersistenceTarget)} · {Markup.Escape(result.ExecutableDirectory)}[/]");
+        console.Write(TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(text.Text("Path.Target"), DisplayTarget(result.PersistenceTarget)),
+            TerminalTheme.CompactMetric(text.Text("Path.Directory"), result.ExecutableDirectory)
+        ], preferredPairs: 1, width: console.Profile.Width));
     }
+
+    /// <summary>Returns the localized intent of one portable PATH operation without altering its exact target data.</summary>
+    private string PreviewText(PortablePathAction action) => action switch
+    {
+        PortablePathAction.Install => text.Text("Path.Preview.Install"),
+        PortablePathAction.Remove => text.Text("Path.Preview.Remove"),
+        _ => text.Text("Path.Preview.Status")
+    };
+
+    /// <summary>Localizes the Windows target description while preserving literal Unix profile paths.</summary>
+    private string DisplayTarget(string target) => target.Equals("Windows user PATH", StringComparison.Ordinal)
+        ? text.Text("Path.WindowsUserTarget")
+        : target;
 }

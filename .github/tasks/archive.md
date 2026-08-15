@@ -2,6 +2,35 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-08-16 — PromptMeUp 0.1.4 premium UI audit installer
+
+- Bumped the product and current packaging examples from `0.1.3` to `0.1.4` for the completed cross-screen terminal UI audit.
+- Built and independently checksum-verified the self-contained x64/ARM64 ZIPs, x64 MSI, release manifest, and validated WinGet manifests.
+- Upgraded the local per-user installation to `0.1.4` without closing the existing `hm` session or requiring a reboot.
+- Verified the installed binary and Windows Installer registration, exactly one user PATH entry, zero machine PATH entries, and an unchanged machine PATH.
+
+Validation: full repository gate passed with 74/74 tests and zero build warnings/errors; installed version is `0.1.4.0`; MSI SHA-256 is `6B6A857CC458D37100E024111BF7D7DFC67C49D8434A853A4C0D39126FFAB62C`.
+
+## 2026-08-16 — Cross-screen terminal UI audit
+
+- Audited every terminal view for decorative cards, icon spacing, separator width, alignment, semantic colors, completed progress residue, and hard-coded user-facing copy.
+- Centralized frameless right-label/left-value grids and applied them to status, session, setup, About, PATH, executable location, costs, and command-result metadata.
+- Standardized emoji spacing and ASCII fallbacks, 80%-width section rules, semantic success/warning states, and clean Nerd Font dry-run/unsupported results.
+- Localized setup validation, help placeholders, PATH previews, font states, and all command-line parser errors in Italian, English, French, German, Spanish, and Vietnamese.
+- Added regression coverage for frameless status and command-result grids, localized font dry runs, localized parser errors, chat guidance, and Markdown-safe teletype output.
+
+Validation: full repository gate passed with 74/74 tests, zero build warnings/errors, complete XML summaries, static view scan, and isolated help, status, PATH, font dry-run, and localized-error smoke tests.
+
+## 2026-08-16 — Premium terminal hierarchy and chat feedback
+
+- Removed the remaining decorative cards, standardized 80%-width separators with intentional leading whitespace, and guaranteed one visible space after every icon.
+- Rebuilt status and session summaries as frameless label-value grids with right-aligned labels, left-aligned values, responsive status rows, and at most two session rows on standard wide terminals.
+- Stacked active progress beneath its status text and made the complete progress surface disappear when work ends.
+- Added a localized five-command chat guide, bounded prompt validation, used/maximum/remaining character feedback, consistent automatic user turns, and a Markdown-safe teletype response effect.
+- Switched cost bands to semantic foreground colors, localized command risk and execution metadata, improved the command-center hierarchy, and added a default `Non fare nulla` executable-location action.
+
+Validation: full repository gate passed with 70/70 tests, zero build warnings/errors, XML summaries complete, and isolated status plus executable-location smoke tests passed.
+
 ## 2026-08-16 — PromptMeUp 0.1.3 frameless UX installer
 
 - Bumped the product and documented packaging examples from `0.1.2` to `0.1.3` for the frameless command-review refinement.

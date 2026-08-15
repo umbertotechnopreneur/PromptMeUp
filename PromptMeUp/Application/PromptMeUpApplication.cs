@@ -98,12 +98,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(args);
+        _text.SetLanguage(SupportedLanguages.ResolveSystemLanguage());
         var parse = _parser.Parse(args);
         if (!parse.Succeeded)
         {
-            _text.SetLanguage(SupportedLanguages.ResolveSystemLanguage());
-            _shell.RenderHeader("invalid", null, false);
-            _shell.RenderError(parse.Error ?? "Invalid command line.");
+            _shell.RenderHeader("?", null, false);
+            _shell.RenderError(parse.Error ?? _text.Text("Cli.Invalid"));
             _helpView.Render();
             _shell.RenderFooter("invalid");
             return 2;
@@ -330,6 +330,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         var location = _executableLocation.Resolve();
         var action = _executableLocationView.RenderAndSelect(location, IsInteractive);
+        if (action == ExecutableLocationAction.DoNothing)
+        {
+            await TryAuditAsync("where", "cancelled", null, new { location.ExecutablePath }).ConfigureAwait(false);
+            return 0;
+        }
+
         if (action == ExecutableLocationAction.OpenContainingFolder)
         {
             if (!_executableLocationView.ConfirmOpen(location))
@@ -521,7 +527,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         var assembly = Assembly.GetExecutingAssembly().GetName();
         _shell.RenderVersion(
-            assembly.Version?.ToString(3) ?? "0.1.3",
+            assembly.Version?.ToString(3) ?? "0.1.4",
             Environment.Version.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
     }

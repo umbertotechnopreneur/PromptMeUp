@@ -39,9 +39,8 @@ public sealed class CommandSuggestionView(
         }
         entries.AddRange(suggestions.Select(command => new MenuEntry(CommandSuggestionAction.SelectCommand, command)));
 
-        var icon = TerminalTheme.Icon(shell.Options, "🧭", ">");
-        console.WriteLine();
-        TerminalTheme.WriteRule(console, $"{icon} {text.Text("CommandMenu.Title")}", TerminalTheme.Accent);
+        var icon = TerminalTheme.IconPrefix(shell.Options, "🧭", ">");
+        TerminalTheme.WriteRule(console, $"{icon}{text.Text("CommandMenu.Title")}", TerminalTheme.Accent);
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("CommandMenu.Hint"))}[/]");
         console.WriteLine();
         var selected = console.Prompt(
@@ -58,11 +57,11 @@ public sealed class CommandSuggestionView(
     private string Label(MenuEntry entry) => entry.Action switch
     {
         CommandSuggestionAction.DoNotExecute =>
-            $"[bold yellow]{Markup.Escape(TerminalTheme.Icon(shell.Options, "🛑", "x"))} {Markup.Escape(text.Text("CommandMenu.None"))}[/]",
+            $"[bold yellow]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "🛑", "x"))}{Markup.Escape(text.Text("CommandMenu.None"))}[/]",
         CommandSuggestionAction.StartChat =>
-            $"[bold {TerminalTheme.Accent}]{Markup.Escape(TerminalTheme.Icon(shell.Options, "💬", ">"))} {Markup.Escape(text.Text("CommandMenu.StartChat"))}[/]",
+            $"[bold {TerminalTheme.Accent}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "💬", ">"))}{Markup.Escape(text.Text("CommandMenu.StartChat"))}[/]",
         CommandSuggestionAction.SelectCommand when entry.Command is not null =>
-            $"[bold {TerminalTheme.Info}]{Markup.Escape(TerminalTheme.Icon(shell.Options, "⌘", ">"))} {Markup.Escape(entry.Command.Label)}[/] " +
+            $"[bold {TerminalTheme.Info}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "⌘", ">"))}{Markup.Escape(entry.Command.Label)}[/] " +
             $"[{TerminalTheme.Muted}]{Markup.Escape(entry.Command.Command)}[/]",
         _ => throw new InvalidOperationException("Unsupported command suggestion menu entry.")
     };

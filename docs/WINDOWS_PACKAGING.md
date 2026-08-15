@@ -4,15 +4,15 @@
 
 ## Outputs
 
-For version `0.1.3`, the default output is `artifacts/release/0.1.3/`:
+For version `0.1.4`, the default output is `artifacts/release/0.1.4/`:
 
 ```text
 packages/
-  PromptMeUp-0.1.3-win-x64.zip
-  PromptMeUp-0.1.3-win-arm64.zip
-  PromptMeUp-0.1.3-win-x64.msi
+  PromptMeUp-0.1.4-win-x64.zip
+  PromptMeUp-0.1.4-win-arm64.zip
+  PromptMeUp-0.1.4-win-x64.msi
   SHA256SUMS.txt
-winget/UmbertoGiacobbi.PromptMeUp/0.1.3/
+winget/UmbertoGiacobbi.PromptMeUp/0.1.4/
   UmbertoGiacobbi.PromptMeUp.yaml
   UmbertoGiacobbi.PromptMeUp.installer.yaml
   UmbertoGiacobbi.PromptMeUp.locale.en-US.yaml
@@ -56,7 +56,7 @@ The default manifest URLs point to `http://127.0.0.1:8765`. This is only for loc
 
 ```powershell
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 `
-  -ArtifactBaseUrl 'https://github.com/umbertotechnopreneur/PromptMeUp/releases/download/v0.1.3'
+  -ArtifactBaseUrl 'https://github.com/umbertotechnopreneur/PromptMeUp/releases/download/v0.1.4'
 ```
 
 The requested version must use three numeric parts because Windows Installer compares only numeric MSI versions. If `-Version` is omitted, the script reads `Version` from `PromptMeUp.csproj`.
@@ -66,7 +66,7 @@ The requested version must use three numeric parts because Windows Installer com
 Start a temporary local file server in the package directory and leave it running:
 
 ```powershell
-Set-Location .\artifacts\release\0.1.3\packages
+Set-Location .\artifacts\release\0.1.4\packages
 python -m http.server 8765 --bind 127.0.0.1
 ```
 
@@ -79,7 +79,7 @@ winget settings --enable LocalManifestFiles
 Return to the repository in a normal, non-administrator terminal and install the local manifest for the current user:
 
 ```powershell
-winget install --manifest .\artifacts\release\0.1.3\winget\UmbertoGiacobbi.PromptMeUp\0.1.3 --scope user
+winget install --manifest .\artifacts\release\0.1.4\winget\UmbertoGiacobbi.PromptMeUp\0.1.4 --scope user
 ```
 
 Open a new terminal so it receives the updated PATH, then verify without using an API key:
@@ -117,13 +117,13 @@ winget settings --disable LocalManifestFiles
 The standard per-user installer supports normal Windows Installer behavior from a non-administrator terminal:
 
 ```powershell
-msiexec.exe /i .\artifacts\release\0.1.3\packages\PromptMeUp-0.1.3-win-x64.msi
+msiexec.exe /i .\artifacts\release\0.1.4\packages\PromptMeUp-0.1.4-win-x64.msi
 ```
 
 For an unattended test in Windows Sandbox or another disposable environment:
 
 ```powershell
-msiexec.exe /i .\artifacts\release\0.1.3\packages\PromptMeUp-0.1.3-win-x64.msi /qn /norestart
+msiexec.exe /i .\artifacts\release\0.1.4\packages\PromptMeUp-0.1.4-win-x64.msi /qn /norestart
 ```
 
 After installation, open a new terminal and verify both the installed command and the application-managed user PATH controls:
@@ -140,7 +140,7 @@ hm --path remove
 Uninstalling the MSI removes its user PATH entry and installed files:
 
 ```powershell
-msiexec.exe /x .\artifacts\release\0.1.3\packages\PromptMeUp-0.1.3-win-x64.msi
+msiexec.exe /x .\artifacts\release\0.1.4\packages\PromptMeUp-0.1.4-win-x64.msi
 ```
 
 The build never reads or packages `OPENAI_API_KEY`, `OPENAI_ADMIN_KEY`, settings, databases, logs, or the local application-data directory. Code signing is intentionally separate and must happen before final SHA-256 calculation and WinGet manifest generation.

@@ -11,7 +11,6 @@ internal static class TerminalTheme
     internal const string Info = "deepskyblue1";
     internal const string Primary = "white";
     internal const string Muted = "grey78";
-    internal const string Subtle = "grey63";
     internal const string Divider = "grey58";
     internal const string Success = "springgreen2";
 
@@ -24,41 +23,54 @@ internal static class TerminalTheme
         return options.NoEmoji ? fallback : icon;
     }
 
-    /// <summary>Creates a compact high-contrast label and value metric for a grid or panel.</summary>
-    internal static IRenderable Metric(string label, string value, string valueColor = Primary) => new Markup(
-        $"[{Muted}]{Markup.Escape(label)}[/]\n[bold {valueColor}]{Markup.Escape(value)}[/]");
+    /// <summary>Returns an icon followed by a non-breaking space so labels never touch their visual cue.</summary>
+    internal static string IconPrefix(ConsoleRenderOptions options, string icon, string fallback) =>
+        $"{Icon(options, icon, fallback)}\u00A0";
 
     /// <summary>Creates one compact label-value metric for a dense, frameless session summary.</summary>
-    internal static IRenderable CompactMetric(string label, string value, string valueColor = Primary) => new Markup(
-        $"[{Muted}]{Markup.Escape(label)}:[/] [bold {valueColor}]{Markup.Escape(value)}[/]");
+    internal static CompactTerminalMetric CompactMetric(string label, string value, string valueColor = Primary) =>
+        new(label, value, valueColor);
 
-    /// <summary>Creates a lightweight bordered panel that groups related information without filling the terminal.</summary>
-    internal static Panel Panel(IRenderable content, string header, string borderColor = Divider)
+    /// <summary>Builds a frameless responsive grid of right-aligned labels and left-aligned values.</summary>
+    internal static Grid PairGrid(
+        IReadOnlyList<CompactTerminalMetric> metrics,
+        int preferredPairs,
+        int width,
+        bool preservePairCount = false)
     {
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentException.ThrowIfNullOrWhiteSpace(header);
-        var panel = new Panel(content)
+        ArgumentNullException.ThrowIfNull(metrics);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(preferredPairs);
+        var responsivePairs = width >= 112 ? 3 : width >= 72 ? 2 : 1;
+        var pairs = preservePairCount ? preferredPairs : Math.Min(preferredPairs, responsivePairs);
+        var grid = new Grid();
+        for (var pair = 0; pair < pairs; pair++)
         {
-            Border = BoxBorder.Rounded,
-            BorderStyle = Style.Parse(borderColor),
-            Padding = new Padding(1, 0, 1, 0)
-        };
-        panel.Header = new PanelHeader($"[bold {Accent}]{Markup.Escape(header)}[/]", Justify.Left);
-        return panel;
-    }
-
-    /// <summary>Writes one frameless section heading with optional readable context and deliberate whitespace.</summary>
-    internal static void WriteHeading(IAnsiConsole console, string title, string? subtitle = null)
-    {
-        ArgumentNullException.ThrowIfNull(console);
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        console.MarkupLine($"[bold {Accent}]{Markup.Escape(title)}[/]");
-        if (!string.IsNullOrWhiteSpace(subtitle))
-        {
-            console.MarkupLine($"[{Muted}]{Markup.Escape(subtitle)}[/]");
+            grid.AddColumn(new GridColumn().RightAligned().NoWrap());
+            grid.AddColumn(new GridColumn().LeftAligned());
         }
 
-        console.WriteLine();
+        for (var offset = 0; offset < metrics.Count; offset += pairs)
+        {
+            var row = new IRenderable[pairs * 2];
+            for (var pair = 0; pair < pairs; pair++)
+            {
+                if (offset + pair < metrics.Count)
+                {
+                    var metric = metrics[offset + pair];
+                    row[pair * 2] = new Markup($"[{Muted}]{Markup.Escape(metric.Label)}:[/]");
+                    row[(pair * 2) + 1] = new Markup($"[bold {metric.ValueColor}]{Markup.Escape(metric.Value)}[/]");
+                }
+                else
+                {
+                    row[pair * 2] = new Text(string.Empty);
+                    row[(pair * 2) + 1] = new Text(string.Empty);
+                }
+            }
+
+            grid.AddRow(row);
+        }
+
+        return grid;
     }
 
     /// <summary>Writes an accessible 80%-width divider with a concise section label.</summary>
@@ -68,6 +80,7 @@ internal static class TerminalTheme
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         var targetWidth = Math.Max(1, (int)Math.Floor(console.Profile.Width * 0.8d));
         var dividerWidth = Math.Max(1, targetWidth - title.Length - 1);
+        console.WriteLine();
         console.MarkupLine(
             $"[bold {color}]{Markup.Escape(title)}[/] [{Divider}]{new string('─', dividerWidth)}[/]");
     }
@@ -102,3 +115,5 @@ internal static class TerminalTheme
         console.WriteLine();
     }
 }
+
+internal sealed record CompactTerminalMetric(string Label, string Value, string ValueColor);

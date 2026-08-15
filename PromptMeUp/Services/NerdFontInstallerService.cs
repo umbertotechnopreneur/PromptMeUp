@@ -69,7 +69,7 @@ public sealed class NerdFontInstallerService : INerdFontInstallerService
         }
 
         _logger.LogInformation("Nerd Font installation completed. Font={Font}", FontName);
-        return new FontInstallResult(true, false, FontName, string.IsNullOrWhiteSpace(output) ? "Font installation completed." : output);
+        return new FontInstallResult(true, false, FontName, output);
     }
 
     /// <summary>Checks whether a command resolves without relying on shell aliases.</summary>

@@ -63,9 +63,8 @@ public sealed class ConsoleShellView : IConsoleShellView
         var invocation = command.Equals("main", StringComparison.OrdinalIgnoreCase)
             ? "hm"
             : $"hm {command}";
-        var icon = TerminalTheme.Icon(Options, "✦", "*");
-        _console.WriteLine();
-        TerminalTheme.WriteRule(_console, $"{icon} PromptMeUp", TerminalTheme.Accent);
+        var icon = TerminalTheme.IconPrefix(Options, "✦", "*");
+        TerminalTheme.WriteRule(_console, $"{icon}PromptMeUp", TerminalTheme.Accent);
         _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Tagline"))}[/]");
         _console.MarkupLine(
             $"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Footer.Command"))}:[/] [bold {TerminalTheme.Primary}]{Markup.Escape(invocation)}[/]");
@@ -78,7 +77,6 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void RenderRuntimeStatus(ShellRuntimeStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
-        _console.WriteLine();
         var turnCost = status.PromptCostUsd.HasValue || status.ResponseCostUsd.HasValue
             ? FormatCost((status.PromptCostUsd ?? 0m) + (status.ResponseCostUsd ?? 0m))
             : _text.Text("Costs.Unavailable");
@@ -88,17 +86,17 @@ public sealed class ConsoleShellView : IConsoleShellView
         var cache = status.CachedInputTokens > 0 || status.CacheWriteTokens > 0
             ? $"{FormatTokens(status.CachedInputTokens)} / {FormatTokens(status.CacheWriteTokens)}"
             : _text.Text("Costs.Unavailable");
-        var icon = TerminalTheme.Icon(Options, "📊", "=");
+        var icon = TerminalTheme.IconPrefix(Options, "📊", "=");
         RenderSessionSnapshot(
-            $"{icon} {_text.Text("Shell.Session")}",
+            $"{icon}{_text.Text("Shell.Session")}",
             [
-                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "🧠", "AI")} {_text.Text("Shell.Model")}", status.Model),
-                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "◌", "~")} {_text.Text("Shell.Context")}", context, TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "↘", "in")} {_text.Text("Shell.Input")}", FormatTokens(status.InputTokens), TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "↗", "out")} {_text.Text("Shell.Output")}", FormatTokens(status.OutputTokens), TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "◈", "$")} {_text.Text("Shell.TurnCost")}", turnCost, TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "✓", "+")} {_text.Text("Shell.SessionCost")}", FormatCost(status.RunningCostUsd), TerminalTheme.Success),
-                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "▣", "#")} {_text.Text("Shell.Cache")}", cache)
+                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🧠", "AI")}{_text.Text("Shell.Model")}", status.Model),
+                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◌", "~")}{_text.Text("Shell.Context")}", context, TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↘", "in")}{_text.Text("Shell.Input")}", FormatTokens(status.InputTokens), TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↗", "out")}{_text.Text("Shell.Output")}", FormatTokens(status.OutputTokens), TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◈", "$")}{_text.Text("Shell.TurnCost")}", turnCost, TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "✓", "+")}{_text.Text("Shell.SessionCost")}", FormatCost(status.RunningCostUsd), TerminalTheme.Success),
+                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "▣", "#")}{_text.Text("Shell.Cache")}", cache)
             ]);
         _console.WriteLine();
     }
@@ -113,22 +111,10 @@ public sealed class ConsoleShellView : IConsoleShellView
             return await action().ConfigureAwait(false);
         }
 
-        var spinner = new SpinnerColumn(Spinner.Known.Dots12)
-        {
-            Style = Style.Parse(TerminalTheme.Accent),
-            CompletedText = TerminalTheme.Icon(Options, "✓", "OK"),
-            CompletedStyle = Style.Parse(TerminalTheme.Success)
-        };
-        var progressBar = new ProgressBarColumn
-        {
-            CompletedStyle = Style.Parse(TerminalTheme.Success),
-            IndeterminateStyle = Style.Parse(TerminalTheme.Info),
-            RemainingStyle = Style.Parse(TerminalTheme.Divider)
-        };
         return await _console.Progress()
-            .AutoClear(false)
-            .HideCompleted(false)
-            .Columns(spinner, new TaskDescriptionColumn(), progressBar)
+            .AutoClear(true)
+            .HideCompleted(true)
+            .Columns(new StackedProgressColumn())
             .StartAsync(async context =>
             {
                 var task = context.AddTask(Markup.Escape(message), autoStart: true);
@@ -150,7 +136,11 @@ public sealed class ConsoleShellView : IConsoleShellView
 
     /// <summary>Shows a sanitized frameless error without exposing exception internals.</summary>
     public void RenderError(string message) =>
-        TerminalTheme.WriteBlock(_console, "ERROR", message, "red");
+        TerminalTheme.WriteSection(
+            _console,
+            TerminalTheme.IconPrefix(Options, "❌", "x") + _text.Text("Common.Error"),
+            message,
+            "red");
 
     /// <summary>Shows a short frameless informational message.</summary>
     public void RenderNotice(string message)
@@ -158,13 +148,13 @@ public sealed class ConsoleShellView : IConsoleShellView
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         _console.WriteLine();
         _console.MarkupLine(
-            $"[bold {TerminalTheme.Info}]{TerminalTheme.Icon(Options, "ℹ", "i")} INFO[/]  [{TerminalTheme.Primary}]{Markup.Escape(message)}[/]");
+            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}INFO[/]  [{TerminalTheme.Primary}]{Markup.Escape(message)}[/]");
         _console.WriteLine();
     }
 
     /// <summary>Shows one successful operation message using the shared terminal palette.</summary>
     public void RenderSuccess(string message) =>
-        _console.MarkupLine($"[green]{Markup.Escape(message)}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(message)}[/]");
 
     /// <summary>Shows one recoverable warning using the shared terminal palette.</summary>
     public void RenderWarning(string message) =>
@@ -175,37 +165,47 @@ public sealed class ConsoleShellView : IConsoleShellView
         _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(message)}[/]");
 
     /// <summary>Shows a compact section heading for a focused command workflow.</summary>
-    public void RenderSectionTitle(string message) =>
-        _console.MarkupLine($"[bold deepskyblue1]{Markup.Escape(message)}[/]");
+    public void RenderSectionTitle(string message)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        TerminalTheme.WriteRule(
+            _console,
+            TerminalTheme.IconPrefix(Options, "↻", "~") + message,
+            TerminalTheme.Info);
+    }
 
     /// <summary>Reads one required text value using a localized passive-view prompt.</summary>
     public string ReadText(string prompt) =>
         _console.Prompt(new TextPrompt<string>(Markup.Escape(prompt)));
 
-    /// <summary>Renders product, runtime, source, and safety details as a compact About box.</summary>
+    /// <summary>Renders product, runtime, source, and safety details as a compact frameless About section.</summary>
     public void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier)
     {
         const string repositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
         const string websiteUrl = "https://umbertogiacobbi.biz";
-        var icon = TerminalTheme.Icon(Options, "✨", "*");
-        var details = new Grid();
-        details.AddColumn();
-        details.AddColumn();
-        details.AddRow(
-            TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "◆", "*")} {_text.Text("Shell.Application")}", $"v{applicationVersion}", TerminalTheme.Accent),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "⚙", "~")} {_text.Text("Shell.Runtime")}", $".NET {runtimeVersion}", TerminalTheme.Info));
-        details.AddRow(
-            TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "🖥", "OS")} {_text.Text("Shell.Platform")}", runtimeIdentifier),
-            TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "⚖", "=")} {_text.Text("About.License")}", "MIT", TerminalTheme.Success));
-        var links = new Rows(
-            new Markup(
-                $"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("About.Repository"))}[/]\n" +
-                $"[link={repositoryUrl}]{Markup.Escape(repositoryUrl)}[/]"),
-            new Markup(
-                $"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("About.Website"))}[/]\n" +
-                $"[link={websiteUrl}]{Markup.Escape(websiteUrl)}[/]"),
-            new Markup($"[{TerminalTheme.Info}]{Markup.Escape(_text.Text("About.Note"))}[/]"));
-        _console.Write(TerminalTheme.Panel(new Rows(details, new Text(string.Empty), links), $"{icon} {_text.Text("About.Title")}"));
+        var icon = TerminalTheme.IconPrefix(Options, "✨", "*");
+        var details = TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◆", "*")}{_text.Text("Shell.Application")}", $"v{applicationVersion}", TerminalTheme.Accent),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚙", "~")}{_text.Text("Shell.Runtime")}", $".NET {runtimeVersion}", TerminalTheme.Info),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🖥", "OS")}{_text.Text("Shell.Platform")}", runtimeIdentifier),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚖", "=")}{_text.Text("About.License")}", "MIT", TerminalTheme.Success)
+        ], preferredPairs: 2, width: _console.Profile.Width);
+        var links = new Grid();
+        links.AddColumn(new GridColumn().RightAligned().NoWrap());
+        links.AddColumn(new GridColumn().LeftAligned());
+        links.AddRow(
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("About.Repository"))}:[/]"),
+            new Markup($"[link={repositoryUrl}]{Markup.Escape(repositoryUrl)}[/]"));
+        links.AddRow(
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("About.Website"))}:[/]"),
+            new Markup($"[link={websiteUrl}]{Markup.Escape(websiteUrl)}[/]"));
+        TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("About.Title")}", TerminalTheme.Accent);
+        _console.Write(details);
+        _console.WriteLine();
+        _console.Write(links);
+        _console.WriteLine();
+        _console.MarkupLine($"[{TerminalTheme.Info}]{Markup.Escape(_text.Text("About.Note"))}[/]");
     }
 
     /// <summary>Writes one layout separator line through the passive console boundary.</summary>
@@ -225,14 +225,14 @@ public sealed class ConsoleShellView : IConsoleShellView
             var stateIcon = settings.AiEnabled && hasApiKey
                 ? TerminalTheme.Icon(Options, "●", "+")
                 : TerminalTheme.Icon(Options, "!", "!");
-            var dashboardIcon = TerminalTheme.Icon(Options, "🪞", "=");
+            var dashboardIcon = TerminalTheme.IconPrefix(Options, "🪞", "=");
             RenderSessionSnapshot(
-                $"{dashboardIcon} {_text.Text("Shell.Session")}",
+                $"{dashboardIcon}{_text.Text("Shell.Session")}",
                 [
-                    TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "🌐", "@")} {_text.Text("Status.Language")}", settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
-                    TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "🧠", "AI")} {_text.Text("Status.Model")}", settings.Model),
-                    TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "⚙", "~")} {_text.Text($"Shell.Thinking")}", _text.Text($"Reasoning.{settings.ReasoningEffort}"), TerminalTheme.Info),
-                    TerminalTheme.CompactMetric($"{stateIcon} AI", state, stateColor)
+                    TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(Options, "🌐", "@") + _text.Text("Status.Language"), settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
+                    TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🧠", "AI")}{_text.Text("Status.Model")}", settings.Model),
+                    TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚙", "~")}{_text.Text($"Shell.Thinking")}", _text.Text($"Reasoning.{settings.ReasoningEffort}"), TerminalTheme.Info),
+                    TerminalTheme.CompactMetric($"{stateIcon}\u00A0AI", state, stateColor)
                 ]);
         }
 
@@ -250,28 +250,15 @@ public sealed class ConsoleShellView : IConsoleShellView
         command is "main" or "setup" or "chat" or "where" or "path" or "install-font";
 
     /// <summary>Renders no more than two compact metric rows beneath a subtle frameless divider.</summary>
-    private void RenderSessionSnapshot(string header, IReadOnlyList<IRenderable> metrics)
+    private void RenderSessionSnapshot(string header, IReadOnlyList<CompactTerminalMetric> metrics)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(header);
         ArgumentNullException.ThrowIfNull(metrics);
-        const int columns = 4;
-        var grid = new Grid();
-        for (var column = 0; column < columns; column++)
-        {
-            grid.AddColumn(new GridColumn().NoWrap());
-        }
-
-        for (var offset = 0; offset < metrics.Count; offset += columns)
-        {
-            var row = new IRenderable[columns];
-            for (var column = 0; column < columns; column++)
-            {
-                row[column] = offset + column < metrics.Count
-                    ? metrics[offset + column]
-                    : new Text(string.Empty);
-            }
-            grid.AddRow(row);
-        }
+        var grid = TerminalTheme.PairGrid(
+            metrics,
+            preferredPairs: 4,
+            width: _console.Profile.Width,
+            preservePairCount: true);
 
         TerminalTheme.WriteRule(_console, header, TerminalTheme.Accent);
         _console.Write(grid);
@@ -280,11 +267,45 @@ public sealed class ConsoleShellView : IConsoleShellView
     /// <summary>Formats small per-request USD amounts without hiding sub-cent costs.</summary>
     private static string FormatCost(decimal value) => $"${value:0.00000000}";
 
-    /// <summary>Formats token counts compactly so context cards remain readable at terminal width.</summary>
+    /// <summary>Formats token counts compactly so context summaries remain readable at terminal width.</summary>
     private static string FormatTokens(long value) => value switch
     {
         >= 1_000_000 => $"{value / 1_000_000d:0.0}M",
         >= 10_000 => $"{value / 1_000d:0.0}K",
         _ => value.ToString("N0")
     };
+
+    private sealed class StackedProgressColumn : ProgressColumn
+    {
+        private readonly SpinnerColumn _spinner = new(Spinner.Known.Dots12)
+        {
+            Style = Style.Parse(TerminalTheme.Accent)
+        };
+        private readonly TaskDescriptionColumn _description = new();
+        private readonly ProgressBarColumn _progressBar = new()
+        {
+            CompletedStyle = Style.Parse(TerminalTheme.Success),
+            IndeterminateStyle = Style.Parse(TerminalTheme.Info),
+            RemainingStyle = Style.Parse(TerminalTheme.Divider)
+        };
+
+        /// <summary>Stacks the active progress bar beneath its spinner and status description.</summary>
+        public override IRenderable Render(RenderOptions options, ProgressTask task, TimeSpan deltaTime)
+        {
+            var layout = new Grid();
+            layout.AddColumn(new GridColumn().NoWrap());
+            layout.AddColumn();
+            layout.AddRow(
+                _spinner.Render(options, task, deltaTime),
+                _description.Render(options, task, deltaTime));
+            layout.AddRow(
+                new Text(string.Empty),
+                _progressBar.Render(options, task, deltaTime));
+            return layout;
+        }
+
+        /// <summary>Keeps the stacked progress surface aligned with the shared 80%-width visual rhythm.</summary>
+        public override int? GetColumnWidth(RenderOptions options) =>
+            Math.Max(20, (int)Math.Floor(options.ConsoleSize.Width * 0.8d));
+    }
 }

@@ -6,7 +6,7 @@
     <RootNamespace>PromptMeUp</RootNamespace>
     <AssemblyName>hm</AssemblyName>
     <PackageId>PromptMeUp.Cli</PackageId>
-    <Version>0.1.3</Version>
+    <Version>0.1.4</Version>
     <Authors>Umberto Giacobbi</Authors>
     <Description>Ask from the terminal, understand the answer, and explicitly approve every command before it runs.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

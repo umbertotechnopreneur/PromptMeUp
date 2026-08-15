@@ -13,16 +13,22 @@ public interface INerdFontView
     void RenderResult(FontInstallResult result);
 }
 
-public sealed class NerdFontView(IAnsiConsole console, ILocalizationService text) : INerdFontView
+public sealed class NerdFontView(
+    IAnsiConsole console,
+    ILocalizationService text,
+    IConsoleShellView shell) : INerdFontView
 {
     /// <summary>Shows the exact opt-in font command and asks for authorization unless --yes was supplied.</summary>
     public bool PreviewAndConfirm(bool dryRun, bool preauthorized)
     {
         var operation = "oh-my-posh font install JetBrainsMono --headless";
-        TerminalTheme.WriteHeading(console, text.Text("Font.Title"));
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, "✎", "#") + text.Text("Font.Title"),
+            TerminalTheme.Accent);
         TerminalTheme.WriteBlock(
             console,
-            dryRun ? "DRY RUN" : text.Text("Command.Preview"),
+            dryRun ? text.Text("Font.DryRun") : text.Text("Command.Preview"),
             operation,
             TerminalTheme.Accent);
         return preauthorized || console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Font.Confirm")))
@@ -35,9 +41,23 @@ public sealed class NerdFontView(IAnsiConsole console, ILocalizationService text
     public void RenderResult(FontInstallResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        console.MarkupLine($"[green]{Markup.Escape(result.DryRun ? text.Text("Font.Preview") : text.Text("Font.Ready", result.FontName))}[/]");
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(result.Message)}[/]");
-        if (!result.DryRun)
+        var message = result.DryRun
+            ? text.Text("Font.Preview")
+            : result.Changed ? text.Text("Font.Ready", result.FontName) : text.Text("Font.Unsupported");
+        var color = result.DryRun ? TerminalTheme.Info : result.Changed ? TerminalTheme.Success : "yellow";
+        var icon = result.DryRun ? "🧪" : result.Changed ? "✅" : "⚠";
+        var fallbackIcon = result.DryRun ? "~" : result.Changed ? "+" : "!";
+        TerminalTheme.WriteRule(
+            console,
+            TerminalTheme.IconPrefix(shell.Options, icon, fallbackIcon) + text.Text("Font.Title"),
+            color);
+        console.MarkupLine($"[bold {color}]{Markup.Escape(message)}[/]");
+        if (result.Changed && !string.IsNullOrWhiteSpace(result.Message))
+        {
+            console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(result.Message)}[/]");
+        }
+
+        if (result.Changed)
         {
             console.MarkupLine($"[yellow]{Markup.Escape(text.Text("Font.TerminalHint"))}[/]");
         }

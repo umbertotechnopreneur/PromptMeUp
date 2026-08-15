@@ -4,6 +4,7 @@ namespace PromptMeUp.Models;
 
 public enum ExecutableLocationAction
 {
+    DoNothing,
     ShowChangeDirectoryCommand,
     OpenContainingFolder
 }
