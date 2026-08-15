@@ -25,8 +25,11 @@ English is required as a guarded fallback. Product prompts should provide all si
 
 Current resources:
 
-- `chat-system.yaml` — bounded general assistant behavior;
+- `chat-system.yaml` — interactive, console-only assistant behavior;
+- `query-system.yaml` — self-contained, single-query console assistance;
 - `connection-test.yaml` — exact localized setup/diagnostic response;
 - `command-risk.yaml` — advisory JSON risk review for a redacted proposed command.
+
+`chat-system` and `query-system` accept only Windows, Linux, and macOS terminal work. They reject image generation and ordinary-text editing, receive a sanitized runtime context at request time, and return the strict `answer_markdown` plus `commands` JSON envelope. A suggested command remains inert until PromptMeUp shows its local preview, risk review, and explicit authorization prompt.
 
 Increase `version` whenever a semantic instruction changes. Stable prompt ID, version, model, and populated instruction hash participate in cache routing. Never put credentials, private paths, account data, or customer content in a tracked prompt resource.

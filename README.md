@@ -45,11 +45,11 @@ PromptMeUp keeps the experience intentionally light:
 
 1. Ask a one-off question with `hm "…"`, or open a short conversation with `hm --chat`.
 2. Continue for a few turns while a bounded in-memory context keeps the thread coherent.
-3. Type `/run <command>` when a proposed command is worth trying.
+3. Pick **Do not execute commands**, continue into chat, or inspect one model-suggested command; nothing runs from the menu.
 4. Review the exact command, its risk score, and a plain-language description.
 5. Approve it yourself. PromptMeUp captures bounded output and can ask the model to explain the result in the next turn.
 
-The fixed status strip keeps the useful numbers visible: provider, model, thinking level, prompt cost, response cost, session cost, context usage, and cache read/write tokens.
+PromptMeUp is deliberately scoped to terminal work: it helps with Windows, macOS, and Linux console tasks. It does not generate images or rewrite, proofread, translate, or compose ordinary prose. A compact session snapshot appears after an AI turn; terminal scrollback is never cleared.
 
 ## Safety is part of the interaction
 
@@ -83,7 +83,7 @@ dotnet build .\PromptMeUp.slnx --configuration Release
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj -- --setup
 ```
 
-The first interactive launch also opens a compact staged setup automatically. Clear headings, whitespace, and color separate each decision without surrounding every section with a box. It lets you choose the interface language, model, thinking level, answer detail, optional instructions, command review, prompt caching, and optional advanced memory limits, then can finish with a small teletype connection test.
+The first interactive launch also opens a compact staged setup automatically. Deliberate whitespace, clear headings, high-contrast color, and focused Spectre panels separate each decision. It lets you choose the interface language, model, thinking level, answer detail, optional instructions, command review, prompt caching, and optional advanced memory limits, then can finish with a formatted connection test and progress indicator.
 
 On Windows, a key entered in setup is written to the current user's `OPENAI_API_KEY` environment variable and made available to the running process. On Linux and macOS it is loaded only for that process; PromptMeUp then tells you to export it through your shell or preferred secret manager. Keys are never stored in SQLite or accepted as command-line arguments.
 
@@ -101,7 +101,7 @@ hm --setup
 | `hm "question"` | Ask one question and close the session. |
 | `hm --chat` | Open a short multi-turn conversation. |
 | `hm --setup` | Reopen the full AI and memory setup. |
-| `hm --test-ai` | Run the localized YAML connection test with teletype output. |
+| `hm --test-ai` | Run the localized YAML connection test with a formatted answer and progress indicator. |
 | `hm --costs` | Refresh and show model pricing, local estimates, and optional organization cost. |
 | `hm --status` | Show setup, key readiness, database, logs, prompt resources, and price-cache state. |
 | `hm --language fr` | Use `it`, `en`, `fr`, `de`, `es`, or `vi` for this invocation. |
@@ -115,7 +115,7 @@ hm --setup
 Inside chat:
 
 - `/run <command>` starts the mandatory review and authorization flow;
-- `/status` shows the current session status strip;
+- `/status` shows the current session snapshot;
 - `/costs` shows the local cost dashboard;
 - `/clear` clears active short-term context but keeps the audit ledger;
 - `/exit` closes the session.
@@ -162,7 +162,7 @@ Generated files stay below `artifacts/release/<version>/` and are ignored by Git
 
 ## Premium terminal details, optional font
 
-Colors, whitespace, progress, borderless tables, and compact status lines work in a normal modern terminal. A Nerd Font adds the intended icon treatment.
+High-contrast color, whitespace, progress, panels, responsive tables, and session snapshots work in a normal modern terminal. Semantic emoji have an ASCII fallback through `--no-emoji`; PromptMeUp does not require a Nerd Font for its own interface.
 
 ```powershell
 hm --install-font --dry-run
@@ -181,7 +181,7 @@ Prompt templates and metadata live in `/prompt` as localized YAML resources. Sta
 
 ## What leaves the computer
 
-When AI is enabled, PromptMeUp sends the selected YAML instruction, configured optional instruction, bounded active conversation, and any explicitly authorized command result used for a follow-up to the configured OpenAI Responses endpoint. The optional command-risk review sends a redacted form of the proposed command. The optional location setting sends coarse culture and time-zone context, not a requested precise position.
+When AI is enabled, PromptMeUp sends the selected YAML instruction, configured optional instruction, bounded active conversation, and any explicitly authorized command result used for a follow-up to the configured OpenAI Responses endpoint. For chat and one-off queries, the instruction also carries a privacy-filtered runtime snapshot: current working directory (with a home directory replaced by `~`), operating-system and shell family, CPU summary, physical-memory summary, and GPU label when the portable runtime can expose it. It excludes user name, host name, network identity, serial numbers, and secrets. The optional command-risk review sends a redacted form of the proposed command. The optional location setting sends coarse culture and time-zone context, not a requested precise position.
 
 Local diagnostic logs, SQLite audit/history, settings, and cached pricing stay in the platform's local application-data directory. Run `hm --status` to see the exact paths. Set `PROMPTMEUP_DATA_DIR` to choose another data directory.
 

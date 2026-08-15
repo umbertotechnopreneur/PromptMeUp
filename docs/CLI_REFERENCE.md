@@ -22,8 +22,8 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 
 | Command | Aliases | Behavior |
 | --- | --- | --- |
-| `--query <text>` | `-q` or positional text | Starts one AI session, renders one answer, and closes the session. |
-| `--chat` | — | Opens a bounded interactive conversation. |
+| `--query <text>` | `-q` or positional text | Starts one AI session, renders one answer, then offers a safe choice to start chat or inspect a cited command. |
+| `--chat` | — | Opens a bounded interactive conversation for Windows, macOS, or Linux console work. |
 | `--setup` | — | Opens the full first-run and AI settings form. |
 | `--test-ai` | — | Runs the localized `connection-test.yaml` prompt and verifies the exact expected response. |
 | `--costs` | — | Forces a pricing refresh, optionally refreshes organization costs, and renders the cost dashboard. |
@@ -32,8 +32,8 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | `--where` | `-where` | Prints the exact running executable and directory, then offers the native file manager or a change-directory command. |
 | `--path [install\|remove\|status]` | `--path=<action>` | Manages only the current executable directory in the persistent user PATH. |
 | `--install-font` | — | Runs the opt-in JetBrainsMono Nerd Font helper through an existing Oh My Posh installation. |
-| `--help` | `-h`, `/?` | Shows the command reference. |
-| `--version` | `-v` | Shows the application, .NET, and runtime versions. |
+| `--help` | `-h`, `/?` | Shows the command reference grouped by AI work, insight, setup, and safety. |
+| `--version` | `-v` | Shows the PromptMeUp About box, application/.NET/platform details, GitHub repository, and creator site. |
 
 Only one top-level command can be selected per invocation.
 
@@ -44,12 +44,14 @@ Only one top-level command can be selected per invocation.
 | Option | Behavior |
 | --- | --- |
 | `--language <code>` / `-l <code>` | Uses `it`, `en`, `fr`, `de`, `es`, or `vi` for this invocation. |
-| `--no-animation` | Disables the test-response teletype effect and other optional animation. |
-| `--no-emoji` | Uses an ASCII banner marker instead of the Nerd Font icon. |
+| `--no-animation` | Disables Spectre progress and other optional animation. |
+| `--no-emoji` | Uses portable ASCII fallbacks for semantic emoji and markers. |
 | `--yes` / `-y` | Preauthorizes only an already reviewed PATH or font operation; it never authorizes chat commands. |
 | `--dry-run` | Previews Nerd Font installation without running Oh My Posh. |
 
 `--dry-run` is accepted only with `--install-font`. Unknown options, unsupported languages, invalid PATH actions, missing values, and conflicting commands return exit code `2` without guessing.
+
+PromptMeUp is scoped to terminal tasks. It does not generate images or rewrite, proofread, translate, or compose ordinary prose. Each AI request receives a privacy-filtered snapshot of the current directory, platform/shell, CPU, memory, and available GPU label so its command guidance matches the machine in use.
 
 ## Chat controls
 
@@ -58,12 +60,14 @@ Only one top-level command can be selected per invocation.
 | `/run <command>` | Performs local and optional AI risk review, displays the exact command, asks for authorization, runs it if approved, and offers its bounded result to the next AI turn. |
 | `/clear` | Clears active in-memory context. Persistent session events remain intact. |
 | `/costs` | Shows the cost dashboard without ending the chat. |
-| `/status` | Reprints the fixed runtime status contract. |
+| `/status` | Reprints the compact session snapshot. |
 | `/exit` | Closes the session and marks its ledger complete. |
 | `Esc` | Cancels the current interactive command; from the command center it exits the current flow. |
 | `Ctrl+C` | Cancels the whole application and returns exit code `130`. |
 
 There is no command that silently approves `/run`. The authorization prompt must be answered in a live terminal for every command.
+
+When an AI answer cites command candidates, PromptMeUp presents a menu whose first and default item is **Do not execute commands**. Picking a candidate only opens the normal exact-preview and authorization flow; it never runs a command by itself.
 
 ## First run and redirected output
 

@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Text.Json;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Services.OpenAi;
@@ -69,6 +70,100 @@ public sealed class OpenAiResponseParserTests
         Assert.Equal(new AiUsageMetrics(0, 0, 0, 0, 0, 0), result.Usage);
     }
 
+    /// <summary>Verifies that a valid structured chat envelope renders its Markdown and exposes only its cited command.</summary>
+    [Fact]
+    public void ParseResponse_StructuredChatEnvelope_MapsMarkdownAndCitedCommand()
+    {
+        const string markdown = "## Branch disponibili\n\n- Usa `git branch -a`.";
+        const string structured = """
+            {
+              "answer_markdown": "## Branch disponibili\n\n- Usa `git branch -a`.",
+              "commands": [
+                { "label": "Elenca i branch", "command": "git branch -a" }
+              ]
+            }
+            """;
+
+        var result = OpenAiResponseParser.ParseResponse(
+            CreateTextResponse(structured),
+            200,
+            1,
+            null,
+            parseStructuredChatResponse: true);
+
+        Assert.Equal(markdown, result.Text);
+        Assert.Equal(
+            [new SuggestedCommand("Elenca i branch", "git branch -a")],
+            result.SuggestedCommands);
+    }
+
+    /// <summary>Verifies that malformed structured chat text fails closed instead of becoming a displayable command response.</summary>
+    [Fact]
+    public void ParseResponse_MalformedStructuredChatEnvelope_FailsClosed()
+    {
+        var exception = Assert.Throws<OpenAiRequestException>(() => OpenAiResponseParser.ParseResponse(
+            CreateTextResponse("{\"answer_markdown\":\"Usa git branch -a\",\"commands\":[}"),
+            200,
+            1,
+            null,
+            parseStructuredChatResponse: true));
+
+        Assert.Equal("invalid_chat_response", exception.ErrorCode);
+        Assert.Equal(200, exception.StatusCode);
+    }
+
+    /// <summary>Verifies that a suggested command absent from the Markdown answer is not exposed for selection.</summary>
+    [Fact]
+    public void ParseResponse_UncitedStructuredCommand_DoesNotSurfaceSuggestion()
+    {
+        const string markdown = "Controlla prima lo stato del repository.";
+        const string structured = """
+            {
+              "answer_markdown": "Controlla prima lo stato del repository.",
+              "commands": [
+                { "label": "Elenca i branch", "command": "git branch -a" }
+              ]
+            }
+            """;
+
+        var result = OpenAiResponseParser.ParseResponse(
+            CreateTextResponse(structured),
+            200,
+            1,
+            null,
+            parseStructuredChatResponse: true);
+
+        Assert.Equal(markdown, result.Text);
+        Assert.Empty(result.SuggestedCommands);
+    }
+
+    /// <summary>Verifies that a command containing a synthetic recognizable credential is never exposed for selection.</summary>
+    [Fact]
+    public void ParseResponse_SecretBearingStructuredCommand_DoesNotSurfaceSuggestion()
+    {
+        var syntheticKey = "sk-" + new string('a', 24);
+        var command = $"Write-Output {syntheticKey}";
+        var markdown = $"Do not run `{command}`.";
+        var structured = JsonSerializer.Serialize(new
+        {
+            answer_markdown = markdown,
+            commands = new[]
+            {
+                new { label = "Print credential", command }
+            }
+        });
+
+        var result = OpenAiResponseParser.ParseResponse(
+            CreateTextResponse(structured),
+            200,
+            1,
+            null,
+            parseStructuredChatResponse: true);
+
+        Assert.Equal(markdown, result.Text);
+        Assert.Empty(result.SuggestedCommands);
+    }
+
     /// <summary>Verifies that a response without text keeps the stable local error contract.</summary>
     [Fact]
     public void ParseResponse_MissingText_ThrowsStableError()
@@ -122,4 +217,21 @@ public sealed class OpenAiResponseParserTests
     [InlineData("{\"error\":null}")]
     public void ReadApiError_InvalidEnvelope_ReturnsNull(string json) =>
         Assert.Null(OpenAiResponseParser.ReadApiError(json));
+
+    /// <summary>Wraps model text in the minimal Responses API envelope consumed by the response parser.</summary>
+    private static string CreateTextResponse(string text) => JsonSerializer.Serialize(new
+    {
+        id = "resp_chat",
+        model = "gpt-5.6-terra",
+        output = new[]
+        {
+            new
+            {
+                content = new[]
+                {
+                    new { type = "output_text", text }
+                }
+            }
+        }
+    });
 }

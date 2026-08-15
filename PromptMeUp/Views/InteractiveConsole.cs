@@ -35,8 +35,11 @@ internal sealed class EscapeAwareAnsiConsole : IAnsiConsole
 
     public RenderPipeline Pipeline => _inner.Pipeline;
 
-    /// <summary>Clears the wrapped console while preserving its cursor semantics.</summary>
-    public void Clear(bool home) => _inner.Clear(home);
+    /// <summary>Intentionally ignores clear requests so every application flow preserves terminal scrollback.</summary>
+    public void Clear(bool home)
+    {
+        _ = home;
+    }
 
     /// <summary>Writes one renderable through the wrapped console.</summary>
     public void Write(IRenderable renderable) => _inner.Write(renderable);

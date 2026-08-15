@@ -36,7 +36,7 @@ public sealed class NerdFontView(IAnsiConsole console, ILocalizationService text
     {
         ArgumentNullException.ThrowIfNull(result);
         console.MarkupLine($"[green]{Markup.Escape(result.DryRun ? text.Text("Font.Preview") : text.Text("Font.Ready", result.FontName))}[/]");
-        console.MarkupLine($"[grey]{Markup.Escape(result.Message)}[/]");
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(result.Message)}[/]");
         if (!result.DryRun)
         {
             console.MarkupLine($"[yellow]{Markup.Escape(text.Text("Font.TerminalHint"))}[/]");

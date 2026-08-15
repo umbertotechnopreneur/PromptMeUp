@@ -44,11 +44,12 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] `Esc` cancels setup without saving and returns to the command center when setup was opened from it.
 - [ ] `Ctrl+C` terminates an active prompt cleanly with exit code `130`.
 - [ ] Saving persists non-secret settings and reports platform-appropriate key guidance.
-- [ ] The optional connection test renders a short user prompt and teletype answer, then rejects an unexpected response.
+- [ ] The optional connection test renders a short user prompt, progress indicator, formatted answer, and token snapshot, then rejects an unexpected response.
 
 ## Chat and command acceptance
 
 - [ ] A one-off query creates and closes one session.
+- [ ] A one-off query and every completed chat turn display total context plus separate provider input/output token counts.
 - [ ] A short chat retains prior turns, displays session cost, and exits cleanly.
 - [ ] `/clear` clears active context and adds an audit event.
 - [ ] `/run Get-Location` shows a low local risk assessment and exact command preview.

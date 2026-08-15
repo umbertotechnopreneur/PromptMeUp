@@ -11,39 +11,82 @@ public interface IHelpView
     void Render();
 }
 
-public sealed class HelpView(IAnsiConsole console, ILocalizationService text) : IHelpView
+public sealed class HelpView(
+    IAnsiConsole console,
+    ILocalizationService text,
+    IConsoleShellView shell) : IHelpView
 {
-    /// <summary>Renders the compact public CLI contract with hm-first examples.</summary>
+    /// <summary>Renders the public CLI contract as grouped, scannable Spectre surfaces.</summary>
     public void Render()
     {
         TerminalTheme.WriteHeading(console, text.Text("Help.Title"), text.Text("Help.Usage"));
-        console.MarkupLine("[bold]hm[/] [grey]\"how do I undo the last local git commit?\"[/]");
-        console.MarkupLine("[bold]hm --chat[/]");
+        var exampleIcon = TerminalTheme.Icon(shell.Options, "⚡", ">");
+        console.Write(TerminalTheme.Panel(
+            new Rows(
+                new Markup($"[bold {TerminalTheme.Primary}]hm[/] [{TerminalTheme.Muted}]\"how do I undo the last local git commit?\"[/]"),
+                new Markup($"[bold {TerminalTheme.Primary}]hm --chat[/] [{TerminalTheme.Muted}]{Markup.Escape(text.Text("Help.Chat"))}[/]")),
+            $"{exampleIcon} {text.Text("Help.Examples")}"));
         console.WriteLine();
-        var table = new Table().Border(TableBorder.None).HideHeaders();
-        table.AddColumn("Switch");
-        table.AddColumn("Description");
-        Add(table, "--setup", text.Text("Help.Setup"));
-        Add(table, "--version, -v", text.Text("Help.Version"));
-        Add(table, "--status", text.Text("Help.Status"));
-        Add(table, "--query, -q <text>", text.Text("Help.Query"));
-        Add(table, "--chat", text.Text("Help.Chat"));
-        Add(table, "--test-ai", text.Text("Help.Test"));
-        Add(table, "--costs", text.Text("Help.Costs"));
-        Add(table, "--third-party", text.Text("Help.ThirdParty"));
-        Add(table, "--where, -where", text.Text("Help.Where"));
-        Add(table, "--path [install|remove|status]", text.Text("Help.Path"));
-        Add(table, "--install-font [--dry-run]", text.Text("Help.Font"));
-        Add(table, "--language, -l <code>", text.Text("Help.Language"));
-        Add(table, "--no-animation | --no-emoji", text.Text("Help.Rendering"));
-        Add(table, "--yes, -y", text.Text("Help.Yes"));
-        Add(table, "--dry-run", text.Text("Help.DryRun"));
-        console.Write(table);
+
+        RenderGroup(
+            "💬",
+            "Help.Group.Ai",
+            [
+                ("--query, -q <text>", text.Text("Help.Query")),
+                ("--chat", text.Text("Help.Chat")),
+                ("--test-ai", text.Text("Help.Test"))
+            ]);
+        RenderGroup(
+            "📊",
+            "Help.Group.Insight",
+            [
+                ("--version, -v", text.Text("Help.Version")),
+                ("--status", text.Text("Help.Status")),
+                ("--costs", text.Text("Help.Costs")),
+                ("--where, -where", text.Text("Help.Where")),
+                ("--third-party", text.Text("Help.ThirdParty"))
+            ]);
+        RenderGroup(
+            "⚙",
+            "Help.Group.Setup",
+            [
+                ("--setup", text.Text("Help.Setup")),
+                ("--path [install|remove|status]", text.Text("Help.Path")),
+                ("--install-font [--dry-run]", text.Text("Help.Font")),
+                ("--language, -l <code>", text.Text("Help.Language"))
+            ]);
+        RenderGroup(
+            "🛡",
+            "Help.Group.Safety",
+            [
+                ("--no-animation | --no-emoji", text.Text("Help.Rendering")),
+                ("--yes, -y", text.Text("Help.Yes")),
+                ("--dry-run", text.Text("Help.DryRun"))
+            ]);
     }
 
-    /// <summary>Adds one escaped switch-description pair.</summary>
-    private static void Add(Table table, string command, string description) =>
-        table.AddRow(new Markup($"[mediumpurple2]{Markup.Escape(command)}[/]"), new Text(description));
+    /// <summary>Renders one cohesive command category without turning the help screen into a flat flag dump.</summary>
+    private void RenderGroup(
+        string icon,
+        string titleKey,
+        IReadOnlyList<(string Command, string Description)> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        var table = new Table().Border(TableBorder.None).HideHeaders();
+        table.AddColumn(new TableColumn("command").NoWrap());
+        table.AddColumn(new TableColumn("description"));
+        foreach (var (command, description) in entries)
+        {
+            table.AddRow(
+                new Markup($"[bold {TerminalTheme.Accent}]{Markup.Escape(command)}[/]"),
+                new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(description)}[/]"));
+        }
+
+        console.Write(TerminalTheme.Panel(
+            table,
+            $"{TerminalTheme.Icon(shell.Options, icon, ">")} {text.Text(titleKey)}"));
+        console.WriteLine();
+    }
 }
 
 public interface IMainMenuView
@@ -51,13 +94,17 @@ public interface IMainMenuView
     MainMenuAction Select();
 }
 
-public sealed class MainMenuView(IAnsiConsole console, ILocalizationService text) : IMainMenuView
+public sealed class MainMenuView(
+    IAnsiConsole console,
+    ILocalizationService text,
+    IConsoleShellView shell) : IMainMenuView
 {
-    /// <summary>Returns one action from the lightweight interactive command center.</summary>
+    /// <summary>Returns one action from the branded interactive command center.</summary>
     public MainMenuAction Select() => console.Prompt(
         new SelectionPrompt<MainMenuAction>()
-            .Title($"[bold]{Markup.Escape(text.Text("Main.Title"))}[/] · {Markup.Escape(text.Text("Main.Choose"))}")
+            .Title($"[bold {TerminalTheme.Primary}]{Markup.Escape(text.Text("Main.Title"))}[/]\n[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Main.Choose"))}[/]")
             .PageSize(12)
+            .HighlightStyle(new Style(Color.MediumPurple2))
             .UseConverter(Label)
             .AddChoices(
                 MainMenuAction.Query,
@@ -72,21 +119,25 @@ public sealed class MainMenuView(IAnsiConsole console, ILocalizationService text
                 MainMenuAction.ThirdParty,
                 MainMenuAction.Exit));
 
-    /// <summary>Maps menu actions to localized product labels.</summary>
+    /// <summary>Maps menu actions to localized labels with portable icon fallbacks.</summary>
     private string Label(MainMenuAction action) => action switch
     {
-        MainMenuAction.Query => text.Text("Main.Query"),
-        MainMenuAction.Chat => text.Text("Main.Chat"),
-        MainMenuAction.Costs => text.Text("Main.Costs"),
-        MainMenuAction.Status => text.Text("Main.Status"),
-        MainMenuAction.Setup => text.Text("Main.Setup"),
-        MainMenuAction.TestAi => text.Text("Main.Test"),
-        MainMenuAction.Where => text.Text("Main.Where"),
-        MainMenuAction.Path => text.Text("Path.Title"),
-        MainMenuAction.InstallFont => text.Text("Main.Font"),
-        MainMenuAction.ThirdParty => text.Text("ThirdParty.Title"),
-        _ => text.Text("Main.Exit")
+        MainMenuAction.Query => MenuLabel("✦", ">", text.Text("Main.Query")),
+        MainMenuAction.Chat => MenuLabel("💬", ">", text.Text("Main.Chat")),
+        MainMenuAction.Costs => MenuLabel("📊", "=", text.Text("Main.Costs")),
+        MainMenuAction.Status => MenuLabel("🪞", "=", text.Text("Main.Status")),
+        MainMenuAction.Setup => MenuLabel("⚙", "~", text.Text("Main.Setup")),
+        MainMenuAction.TestAi => MenuLabel("↻", "~", text.Text("Main.Test")),
+        MainMenuAction.Where => MenuLabel("⌖", "@", text.Text("Main.Where")),
+        MainMenuAction.Path => MenuLabel("↔", "<>", text.Text("Path.Title")),
+        MainMenuAction.InstallFont => MenuLabel("✎", "#", text.Text("Main.Font")),
+        MainMenuAction.ThirdParty => MenuLabel("⚖", "=", text.Text("ThirdParty.Title")),
+        _ => MenuLabel("↩", "x", text.Text("Main.Exit"))
     };
+
+    /// <summary>Formats one menu label with a high-contrast leading visual cue.</summary>
+    private string MenuLabel(string icon, string fallback, string label) =>
+        $"[{TerminalTheme.Info}]{Markup.Escape(TerminalTheme.Icon(shell.Options, icon, fallback))}[/] [bold {TerminalTheme.Primary}]{Markup.Escape(label)}[/]";
 }
 
 public interface IExecutableLocationView
@@ -109,10 +160,10 @@ public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationSe
         locationGrid.AddColumn(new GridColumn().NoWrap());
         locationGrid.AddColumn();
         locationGrid.AddRow(
-            new Markup($"[grey]{Markup.Escape(text.Text("Where.Executable"))}[/]"),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.Executable"))}[/]"),
             new Text(location.ExecutablePath));
         locationGrid.AddRow(
-            new Markup($"[grey]{Markup.Escape(text.Text("Where.Directory"))}[/]"),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.Directory"))}[/]"),
             new Text(location.DirectoryPath));
         console.Write(locationGrid);
         console.WriteLine();
@@ -137,7 +188,7 @@ public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationSe
     public bool ConfirmOpen(ExecutableLocationInfo location)
     {
         ArgumentNullException.ThrowIfNull(location);
-        console.MarkupLine($"[grey]{Markup.Escape(text.Text("Where.OpenPreview"))}:[/] {Markup.Escape(location.OpenFolderPreview)}");
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.OpenPreview"))}:[/] [{TerminalTheme.Primary}]{Markup.Escape(location.OpenFolderPreview)}[/]");
         return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Where.Confirm")))
         {
             DefaultValue = false
@@ -154,7 +205,7 @@ public sealed class ExecutableLocationView(IAnsiConsole console, ILocalizationSe
             return;
         }
 
-        console.MarkupLine($"[grey]{Markup.Escape(text.Text("Where.ChangeDirectoryHint"))}[/]");
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Where.ChangeDirectoryHint"))}[/]");
         console.WriteLine(location.ChangeDirectoryCommand);
     }
 }
@@ -184,7 +235,7 @@ public sealed class ThirdPartyView(IAnsiConsole console, ILocalizationService te
     public void Render()
     {
         TerminalTheme.WriteHeading(console, text.Text("ThirdParty.Title"), text.Text("ThirdParty.Subtitle"));
-        var table = new Table().Border(TableBorder.None);
+        var table = new Table().Border(TableBorder.Rounded).BorderStyle(Style.Parse(TerminalTheme.Divider));
         table.AddColumn(text.Text("ThirdParty.Package"));
         table.AddColumn(text.Text("ThirdParty.Version"));
         table.AddColumn(text.Text("ThirdParty.License"));
@@ -193,7 +244,7 @@ public sealed class ThirdPartyView(IAnsiConsole console, ILocalizationService te
             table.AddRow(Markup.Escape(package.Package), Markup.Escape(package.Version), Markup.Escape(package.License));
         }
         console.Write(table);
-        console.MarkupLine($"[grey]{Markup.Escape(text.Text("ThirdParty.FullNotices"))}[/]");
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("ThirdParty.FullNotices"))}[/]");
     }
 }
 
@@ -247,6 +298,6 @@ public sealed class PortablePathView(IAnsiConsole console, ILocalizationService 
         ArgumentNullException.ThrowIfNull(result);
         var message = result.IsPresent ? text.Text("Path.Present") : text.Text("Path.Missing");
         console.MarkupLine($"[{(result.IsPresent ? "green" : "yellow")}]{Markup.Escape(message)}[/]");
-        console.MarkupLine($"[grey]{Markup.Escape(result.PersistenceTarget)} · {Markup.Escape(result.ExecutableDirectory)}[/]");
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(result.PersistenceTarget)} · {Markup.Escape(result.ExecutableDirectory)}[/]");
     }
 }

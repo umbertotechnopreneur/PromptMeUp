@@ -26,6 +26,9 @@ These instructions apply to every change in this repository.
 - Use `ILogger<T>` in application code; keep Serilog configuration in the composition root.
 - Keep views passive and free of HTTP, SQLite, secret-store, and process-execution behavior.
 - Keep flexible audit/session data valid JSON and normalized usage/cost data in typed columns.
+- Preserve terminal scrollback in every application flow: never call a terminal clear operation. Mark new flows with intentional whitespace and accessible separators instead.
+- Treat contrast as a product requirement: do not render user-facing information in dark grey. Use the shared terminal palette, with bright primary text and only high-contrast muted nuances for secondary metadata.
+- Use Spectre.Console layout primitives purposefully (for example panels, grids, rules, and selection prompts) to convey hierarchy; do not reduce command, help, or status surfaces to undifferentiated text walls.
 - Keep `AGENTS.md` and `.github/copilot-instructions.md` aligned when repository-wide rules change.
 - Do not commit credentials, `.env` files, local databases, logs, build output, private absolute paths, or generated artifacts.
 

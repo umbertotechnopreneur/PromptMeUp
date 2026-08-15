@@ -39,13 +39,15 @@ sequenceDiagram
     User->>App: hm question or chat turn
     App->>Memory: Add bounded user message
     Memory-->>App: Snapshot and prune count
-    App->>OpenAI: YAML instruction + active messages
-    OpenAI-->>App: Text + usage + request id
+    App->>OpenAI: YAML instruction + sanitized runtime snapshot + active messages
+    OpenAI-->>App: Structured Markdown answer + cited command candidates + usage
     App->>SQLite: Redacted request and ordered session events
     App-->>User: Markdown answer + cost/context status
 ```
 
-The Responses request sets `store=false`. `OpenAiService` owns HTTP, auditing, persistence, and pricing; small request-builder and response-parser components isolate the provider protocol and are tested without network access. Stable YAML instructions precede changing conversation content. Prompt cache routing is enabled by default and usage details are read from the provider response.
+The Responses request sets `store=false`. For chat and single queries, the instruction includes only a privacy-filtered runtime context (working directory, platform/shell, CPU, physical memory, and an available GPU label) so terminal guidance matches the active machine; it excludes account, host, network, serial, and secret data. `OpenAiService` owns HTTP, auditing, persistence, and pricing; small request-builder and response-parser components isolate the provider protocol and are tested without network access. Stable YAML instructions precede changing conversation content. Prompt cache routing is enabled by default and usage details are read from the provider response.
+
+The system prompts constrain the assistant to Windows, macOS, and Linux console help. They explicitly exclude image generation and ordinary prose editing. The Responses API uses a strict JSON schema for the rendered Markdown answer and any cited command candidates. The model has no tool or process-execution capability.
 
 ## Command authorization flow
 
@@ -57,7 +59,7 @@ The Responses request sets `store=false`. `OpenAiService` owns HTTP, auditing, p
 6. The execution service rejects missing or expired authorization, starts `pwsh -NoProfile -NonInteractive` as the current user, and applies timeout/output limits. PromptMeUp never requests elevation itself; an authorized command can still request it explicitly and is scored accordingly.
 7. The user sees local stdout/stderr. Recognizable credentials are redacted before audit persistence and before the bounded result becomes a follow-up prompt.
 
-No AI response can create authorization and `--yes` never applies to `/run`.
+No AI response can create authorization and `--yes` never applies to `/run`. A model candidate first appears in a menu whose default is **Do not execute commands**, then must pass this same authorization flow.
 
 ## Persistence
 

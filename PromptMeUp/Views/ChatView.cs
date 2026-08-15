@@ -39,10 +39,17 @@ public sealed class ChatView : IChatView
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
     }
 
-    /// <summary>Draws the chat heading and its small slash-command vocabulary.</summary>
+    /// <summary>Draws the chat heading and its small slash-command vocabulary without clearing prior output.</summary>
     public void RenderIntro()
     {
-        TerminalTheme.WriteHeading(_console, _text.Text("Chat.Title"), _text.Text("Chat.Hint"));
+        var icon = TerminalTheme.Icon(_shell.Options, "💬", ">");
+        _console.WriteLine();
+        var banner = new Rows(
+            new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(_text.Text("Chat.Title"))}[/]"),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.Branding"))}[/]"),
+            new Markup($"[{TerminalTheme.Info}]{Markup.Escape(_text.Text("Chat.Hint"))}[/]"));
+        _console.Write(TerminalTheme.Panel(banner, $"{icon} PromptMeUp"));
+        _console.WriteLine();
     }
 
     /// <summary>Reads one user message without interpreting it as Spectre markup.</summary>
@@ -50,34 +57,24 @@ public sealed class ChatView : IChatView
         new TextPrompt<string>($"[bold mediumpurple2]{Markup.Escape(_text.Text("Chat.You"))} ›[/] ")
             .AllowEmpty());
 
-    /// <summary>Renders one non-interactive user message as a compact frameless block.</summary>
+    /// <summary>Renders one non-interactive user message as a high-contrast compact block.</summary>
     public void RenderUser(string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        TerminalTheme.WriteBlock(_console, $"{_text.Text("Chat.You")} ›", text, TerminalTheme.Accent);
+        var icon = TerminalTheme.Icon(_shell.Options, "👤", ">");
+        TerminalTheme.WriteBlock(_console, $"{icon} {_text.Text("Chat.You")}", text, TerminalTheme.Accent);
     }
 
-    /// <summary>Renders a model response using poor Markdown, with optional bounded teletype animation.</summary>
+    /// <summary>Renders a model response through the Markdown renderer so formatting never degrades into raw source text.</summary>
     public void RenderAssistant(string markdown, bool animate, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(markdown);
-        _console.MarkupLine($"[bold green]{Markup.Escape(_text.Text("Chat.Assistant"))} ›[/]");
-        if (!animate || _shell.Options.NoAnimation || Console.IsOutputRedirected)
-        {
-            _markdown.Render(markdown);
-            return;
-        }
-
-        foreach (var line in markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            foreach (var character in line)
-            {
-                _console.Write(character.ToString());
-                Thread.Sleep(4);
-            }
-            _console.WriteLine();
-        }
+        _ = animate;
+        cancellationToken.ThrowIfCancellationRequested();
+        var icon = TerminalTheme.Icon(_shell.Options, "🤖", "AI");
+        _console.MarkupLine($"[bold {TerminalTheme.Success}]{Markup.Escape(icon)} {Markup.Escape(_text.Text("Chat.Assistant"))}[/]");
+        _markdown.Render(markdown);
+        _console.WriteLine();
     }
 
     /// <summary>Notifies the user when old active-context messages were pruned but remain in the session ledger.</summary>

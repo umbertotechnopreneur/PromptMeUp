@@ -88,6 +88,7 @@ internal static class Program
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
         services.AddSingleton<ISensitiveDataRedactor, SensitiveDataRedactor>();
+        services.AddSingleton<IRuntimeContextService, RuntimeContextService>();
         services.AddSingleton<IPromptCatalogService, YamlPromptCatalogService>();
         services.AddSingleton<IAiCostCalculator, AiCostCalculator>();
         services.AddSingleton<IActivityAuditService, ActivityAuditService>();
@@ -115,6 +116,7 @@ internal static class Program
         services.AddSingleton<IStatusView, StatusView>();
         services.AddSingleton<ICostsView, CostsView>();
         services.AddSingleton<IChatView, ChatView>();
+        services.AddSingleton<ICommandSuggestionView, CommandSuggestionView>();
         services.AddSingleton<IHelpView, HelpView>();
         services.AddSingleton<IMainMenuView, MainMenuView>();
         services.AddSingleton<ICommandAuthorizationView, CommandAuthorizationView>();

@@ -19,7 +19,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
     public PoorMarkdownRenderer(IAnsiConsole console) =>
         _console = console ?? throw new ArgumentNullException(nameof(console));
 
-    /// <summary>Renders headings, lists, bold text, links, and plain paragraphs; HTML and tables stay plain.</summary>
+    /// <summary>Renders a safe, readable Markdown subset with headings, lists, emphasis, links, and fenced code.</summary>
     public void Render(string markdown)
     {
         if (string.IsNullOrWhiteSpace(markdown))
@@ -28,8 +28,32 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             return;
         }
 
+        string? codeLanguage = null;
+        var codeLines = new List<string>();
         foreach (var rawLine in markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
         {
+            var fence = FencePattern().Match(rawLine);
+            if (codeLanguage is not null)
+            {
+                if (fence.Success)
+                {
+                    RenderCodeBlock(codeLanguage, codeLines);
+                    codeLanguage = null;
+                    codeLines.Clear();
+                }
+                else
+                {
+                    codeLines.Add(rawLine);
+                }
+                continue;
+            }
+
+            if (fence.Success)
+            {
+                codeLanguage = fence.Groups[1].Value.Trim();
+                continue;
+            }
+
             var line = rawLine.TrimEnd();
             if (line.Length == 0)
             {
@@ -40,28 +64,69 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             var heading = HeadingPattern().Match(line);
             if (heading.Success)
             {
-                _console.MarkupLine($"[bold deepskyblue1]{RenderInline(heading.Groups[2].Value)}[/]");
+                RenderHeading(heading.Groups[1].Value.Length, heading.Groups[2].Value);
                 continue;
             }
 
             var list = RawListPattern().Match(line);
             if (list.Success)
             {
-                var marker = int.TryParse(list.Groups[2].Value.TrimEnd('.'), out var ordinal)
+                var marker = int.TryParse(list.Groups["ordered"].Value.TrimEnd('.'), out var ordinal)
                     ? $"{ordinal}."
                     : "•";
-                _console.MarkupLine($"  [mediumpurple2]{Markup.Escape(marker)}[/] {RenderInline(list.Groups[3].Value)}");
+                var indent = new string(' ', Math.Min(6, list.Groups["indent"].Value.Length));
+                _console.MarkupLine(
+                    $"{indent}[{TerminalTheme.Accent}]{Markup.Escape(marker)}[/] " +
+                    $"[{TerminalTheme.Primary}]{RenderInline(list.Groups["content"].Value)}[/]");
                 continue;
             }
 
             // Markdown table syntax is intentionally not interpreted by this reduced renderer.
             _console.MarkupLine(line.TrimStart().StartsWith('|')
-                ? Markup.Escape(line)
-                : RenderInline(line));
+                ? $"[{TerminalTheme.Primary}]{Markup.Escape(line)}[/]"
+                : $"[{TerminalTheme.Primary}]{RenderInline(line)}[/]");
+        }
+
+        if (codeLanguage is not null)
+        {
+            RenderCodeBlock(codeLanguage, codeLines);
         }
     }
 
-    /// <summary>Converts only bold spans and validated HTTP links into Spectre markup.</summary>
+    /// <summary>Renders one heading level with a stable visual hierarchy for a terminal viewport.</summary>
+    private void RenderHeading(int level, string text)
+    {
+        var inline = RenderInline(text);
+        switch (level)
+        {
+            case 1:
+                _console.Write(new Rule($"[bold {TerminalTheme.Accent}]{inline}[/]")
+                {
+                    Justification = Justify.Left,
+                    Style = Style.Parse(TerminalTheme.Divider)
+                });
+                break;
+            case 2:
+                _console.MarkupLine($"[bold {TerminalTheme.Info}]◆[/] [bold {TerminalTheme.Primary}]{inline}[/]");
+                break;
+            default:
+                _console.MarkupLine($"[{TerminalTheme.Accent}]▸[/] [bold {TerminalTheme.Primary}]{inline}[/]");
+                break;
+        }
+    }
+
+    /// <summary>Renders one literal fenced-code block without allowing its content to become Spectre markup.</summary>
+    private void RenderCodeBlock(string language, IReadOnlyList<string> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        var label = string.IsNullOrWhiteSpace(language) ? "code" : language;
+        var content = string.Join(Environment.NewLine, lines);
+        var panel = TerminalTheme.Panel(new Text(content, Style.Parse(TerminalTheme.Primary)), label);
+        _console.Write(panel);
+        _console.WriteLine();
+    }
+
+    /// <summary>Converts only bold spans, inline code, and validated HTTP links into Spectre markup.</summary>
     private static string RenderInline(string source)
     {
         var builder = new StringBuilder();
@@ -69,19 +134,25 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
         foreach (Match match in InlinePattern().Matches(source))
         {
             builder.Append(Markup.Escape(source[cursor..match.Index]));
-            if (match.Groups[1].Success)
+            if (match.Groups["bold"].Success)
             {
                 builder.Append("[bold]")
-                    .Append(Markup.Escape(match.Groups[1].Value))
+                    .Append(Markup.Escape(match.Groups["bold"].Value))
                     .Append("[/]");
             }
-            else if (Uri.TryCreate(match.Groups[3].Value, UriKind.Absolute, out var uri)
+            else if (match.Groups["code"].Success)
+            {
+                builder.Append("[black on grey85] ")
+                    .Append(Markup.Escape(match.Groups["code"].Value))
+                    .Append(" [/]");
+            }
+            else if (Uri.TryCreate(match.Groups["url"].Value, UriKind.Absolute, out var uri)
                      && uri.Scheme is "http" or "https")
             {
                 builder.Append("[link=")
                     .Append(Markup.Escape(uri.AbsoluteUri))
                     .Append(']')
-                    .Append(Markup.Escape(match.Groups[2].Value))
+                    .Append(Markup.Escape(match.Groups["linkText"].Value))
                     .Append("[/]");
             }
             else
@@ -101,11 +172,15 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
     private static partial Regex HeadingPattern();
 
     /// <summary>Recognizes unordered and numbered list markers.</summary>
-    [GeneratedRegex(@"^\s*(?:([-*])|(\d+\.))\s+(.+)$")]
+    [GeneratedRegex(@"^(?<indent>\s*)(?:(?<unordered>[-*])|(?<ordered>\d+\.))\s+(?<content>.+)$")]
     private static partial Regex RawListPattern();
 
-    /// <summary>Recognizes bold spans and Markdown HTTP links without enabling arbitrary markup.</summary>
-    [GeneratedRegex(@"\*\*(.+?)\*\*|\[([^\]\r\n]+)\]\((https?://[^\s)]+)\)", RegexOptions.IgnoreCase)]
+    /// <summary>Recognizes a fenced code-block delimiter with an optional language label.</summary>
+    [GeneratedRegex(@"^\s*```([^\s`]*)\s*$")]
+    private static partial Regex FencePattern();
+
+    /// <summary>Recognizes bold spans, inline code, and Markdown HTTP links without enabling arbitrary markup.</summary>
+    [GeneratedRegex(@"\*\*(?<bold>.+?)\*\*|`(?<code>[^`\r\n]+)`|\[(?<linkText>[^\]\r\n]+)\]\((?<url>https?://[^\s)]+)\)", RegexOptions.IgnoreCase)]
     private static partial Regex InlinePattern();
 
 }

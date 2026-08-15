@@ -45,6 +45,7 @@ public sealed class OpenAiService : IOpenAiService
     private readonly HttpClient _http;
     private readonly IEnvironmentSecretService _secrets;
     private readonly IPromptCatalogService _prompts;
+    private readonly IRuntimeContextService _runtimeContext;
     private readonly IDatabaseService _database;
     private readonly IAiCostCalculator _costCalculator;
     private readonly IActivityAuditService _audit;
@@ -56,6 +57,7 @@ public sealed class OpenAiService : IOpenAiService
         HttpClient http,
         IEnvironmentSecretService secrets,
         IPromptCatalogService prompts,
+        IRuntimeContextService runtimeContext,
         IDatabaseService database,
         IAiCostCalculator costCalculator,
         IActivityAuditService audit,
@@ -65,6 +67,7 @@ public sealed class OpenAiService : IOpenAiService
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
         _prompts = prompts ?? throw new ArgumentNullException(nameof(prompts));
+        _runtimeContext = runtimeContext ?? throw new ArgumentNullException(nameof(runtimeContext));
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
         _audit = audit ?? throw new ArgumentNullException(nameof(audit));
@@ -91,7 +94,11 @@ public sealed class OpenAiService : IOpenAiService
         }
 
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
-        var instructions = OpenAiRequestBuilder.BuildInstructions(prompt, settings, language);
+        var instructions = OpenAiRequestBuilder.BuildInstructions(
+            prompt,
+            settings,
+            language,
+            _runtimeContext.GetCurrent());
         return await SendCoreAsync(
             prompt,
             conversationId,
@@ -155,7 +162,11 @@ public sealed class OpenAiService : IOpenAiService
         ArgumentNullException.ThrowIfNull(settings);
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
         return OpenAiRequestBuilder.EstimateContext(
-            OpenAiRequestBuilder.BuildInstructions(prompt, settings, language),
+            OpenAiRequestBuilder.BuildInstructions(
+                prompt,
+                settings,
+                language,
+                _runtimeContext.GetCurrent()),
             messages,
             settings.Model);
     }
@@ -277,7 +288,8 @@ public sealed class OpenAiService : IOpenAiService
                 responseJson,
                 (int)response.StatusCode,
                 stopwatch.ElapsedMilliseconds,
-                providerRequestId);
+                providerRequestId,
+                IsStructuredAssistantPrompt(prompt));
             var price = await ResolvePriceAsync(parsed.Model, settings.Model, cancellationToken).ConfigureAwait(false);
             var final = parsed with
             {
@@ -323,6 +335,11 @@ public sealed class OpenAiService : IOpenAiService
                     usage = final.Usage,
                     context = final.ContextUsage,
                     cost = final.CostBreakdown,
+                    suggestedCommands = final.SuggestedCommands.Select(command => new
+                    {
+                        label = _redactor.Redact(command.Label),
+                        command = _redactor.Redact(command.Command)
+                    }).ToArray(),
                     providerRequestId = final.ProviderRequestId
                 }).ConfigureAwait(false);
             _logger.LogInformation(
@@ -442,6 +459,11 @@ public sealed class OpenAiService : IOpenAiService
     /// <summary>Reads a provider response header without assuming it is present.</summary>
     private static string? ReadHeader(HttpResponseMessage response, string name) =>
         response.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
+
+    /// <summary>Identifies assistant prompts that request the typed user-facing response envelope.</summary>
+    private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
+        string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase);
 
 }
 

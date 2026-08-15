@@ -8,9 +8,9 @@ namespace PromptMeUp.Tests;
 
 public sealed class OpenAiRequestBuilderTests
 {
-    /// <summary>Verifies that a long GPT-5.6 prefix uses an explicit breakpoint ahead of conversation messages.</summary>
+    /// <summary>Verifies that a long GPT-5.6 chat prefix combines a stable breakpoint with growing-history checkpoints.</summary>
     [Fact]
-    public void BuildBody_LongGpt56Instruction_UsesExplicitCacheBreakpoint()
+    public void BuildBody_LongGpt56ChatInstruction_UsesImplicitCachingAfterExplicitPrefix()
     {
         var prompt = CreatePrompt();
         var instructions = new string('x', 4_096);
@@ -34,10 +34,26 @@ public sealed class OpenAiRequestBuilderTests
         Assert.Equal("developer", prefix.GetProperty("role").GetString());
         Assert.Equal(instructions, breakpoint.GetProperty("text").GetString());
         Assert.Equal("explicit", breakpoint.GetProperty("prompt_cache_breakpoint").GetProperty("mode").GetString());
+        Assert.Equal("implicit", root.GetProperty("prompt_cache_options").GetProperty("mode").GetString());
         Assert.Equal("30m", root.GetProperty("prompt_cache_options").GetProperty("ttl").GetString());
         Assert.Equal(
             root.GetProperty("prompt_cache_key").GetString(),
             secondBody.RootElement.GetProperty("prompt_cache_key").GetString());
+    }
+
+    /// <summary>Verifies that a long one-shot query caches only its stable instruction and not the unique user suffix.</summary>
+    [Fact]
+    public void BuildBody_LongGpt56QueryInstruction_UsesExplicitOnlyCaching()
+    {
+        using var body = BuildJson(
+            CreatePrompt("query-system"),
+            AppSettings.Default,
+            [new ChatMessage("user", "unique question")],
+            new string('x', 4_096));
+
+        Assert.Equal(
+            "explicit",
+            body.RootElement.GetProperty("prompt_cache_options").GetProperty("mode").GetString());
     }
 
     /// <summary>Verifies that a short GPT-5.6 prefix keeps automatic caching without an explicit breakpoint.</summary>
@@ -105,6 +121,53 @@ public sealed class OpenAiRequestBuilderTests
         Assert.Equal($"Base instruction.{Environment.NewLine}{Environment.NewLine}Prefer tables.", result);
     }
 
+    /// <summary>Verifies that the single-query prompt receives the sanitized runtime facts and the approved custom instruction.</summary>
+    [Fact]
+    public void BuildInstructions_QueryPrompt_AppendsRuntimeContext()
+    {
+        var settings = AppSettings.Default with { CustomInstruction = "Prefer concise diagnostics." };
+        var runtimeContext = new RuntimeContext(
+            "~/workspace",
+            "Windows 11",
+            "Windows console; prefer PowerShell 7 syntax and paths",
+            "16 logical processor(s), X64",
+            "32.0 GiB physical memory",
+            "NVIDIA RTX");
+
+        var result = OpenAiRequestBuilder.BuildInstructions(
+            CreatePrompt("query-system"),
+            settings,
+            "en",
+            runtimeContext);
+
+        Assert.Contains("Prefer concise diagnostics.", result, StringComparison.Ordinal);
+        Assert.Contains("Runtime context supplied by PromptMeUp", result, StringComparison.Ordinal);
+        Assert.Contains("Current working directory (sanitized): ~/workspace", result, StringComparison.Ordinal);
+        Assert.Contains("GPU: NVIDIA RTX", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>Verifies that both user-facing assistant surfaces request the strict answer-and-command envelope.</summary>
+    [Theory]
+    [InlineData("chat-system")]
+    [InlineData("query-system")]
+    public void BuildBody_AssistantPrompt_UsesStructuredResponseFormat(string promptId)
+    {
+        using var body = BuildJson(
+            CreatePrompt(promptId),
+            AppSettings.Default,
+            [new ChatMessage("user", "question")],
+            "instruction");
+
+        var format = body.RootElement.GetProperty("text").GetProperty("format");
+
+        Assert.Equal("json_schema", format.GetProperty("type").GetString());
+        Assert.True(format.GetProperty("strict").GetBoolean());
+        Assert.Equal("promptmeup_chat_response_v1", format.GetProperty("name").GetString());
+        Assert.Contains(
+            "commands",
+            format.GetProperty("schema").GetProperty("required").EnumerateArray().Select(value => value.GetString()));
+    }
+
     /// <summary>Verifies that context estimation keeps instruction, conversation, and latest-user counters distinct.</summary>
     [Fact]
     public void EstimateContext_MultipleMessages_SeparatesCounters()
@@ -135,8 +198,8 @@ public sealed class OpenAiRequestBuilderTests
         JsonDocument.Parse(JsonSerializer.Serialize(OpenAiRequestBuilder.BuildBody(prompt, settings, messages, instructions, 900)));
 
     /// <summary>Creates a minimal prompt definition for request-building tests.</summary>
-    private static PromptDefinition CreatePrompt() => new(
-        "chat-system",
+    private static PromptDefinition CreatePrompt(string id = "chat-system") => new(
+        id,
         2,
         "Test prompt",
         [],

@@ -24,7 +24,9 @@ public sealed record ShellRuntimeStatus(
     decimal? PromptCostUsd,
     decimal? ResponseCostUsd,
     decimal RunningCostUsd,
-    long ContextInputTokens,
+    long ContextTotalTokens,
+    long InputTokens,
+    long OutputTokens,
     long ContextWindowTokens,
     bool ContextIsEstimated,
     long CachedInputTokens,
@@ -39,11 +41,24 @@ public sealed record ShellRuntimeStatus(
         0m,
         0m,
         0,
+        0,
+        0,
         settings is null ? 0 : AiModelCatalog.Resolve(settings.Model).ContextWindowTokens,
         true,
         0,
         0);
 }
+
+public enum CommandSuggestionAction
+{
+    DoNotExecute,
+    StartChat,
+    SelectCommand
+}
+
+public sealed record CommandSuggestionDecision(
+    CommandSuggestionAction Action,
+    SuggestedCommand? SuggestedCommand);
 
 public enum MainMenuAction
 {

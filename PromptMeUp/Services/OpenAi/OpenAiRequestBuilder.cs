@@ -18,11 +18,20 @@ internal static class OpenAiRequestBuilder
         string instructions,
         int maxOutputTokens)
     {
+        var text = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["verbosity"] = ResolveVerbosity(settings.OutputDetail)
+        };
+        if (IsStructuredAssistantPrompt(prompt))
+        {
+            text["format"] = BuildChatResponseFormat();
+        }
+
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["model"] = settings.Model,
             ["reasoning"] = new { effort = settings.ReasoningEffort },
-            ["text"] = new { verbosity = ResolveVerbosity(settings.OutputDetail) },
+            ["text"] = text,
             ["max_output_tokens"] = maxOutputTokens,
             ["store"] = false
         };
@@ -31,10 +40,14 @@ internal static class OpenAiRequestBuilder
             && IsGpt56(settings.Model)
             && EstimateTokens(instructions) >= MinimumExplicitCachePrefixTokens)
         {
-            // GPT-5.6 explicit mode caches only the stable YAML instruction, not the changing conversation suffix.
+            // A chat retains implicit checkpoints for its append-only history; a one-shot query avoids caching its unique suffix.
             body["input"] = BuildExplicitCacheInput(instructions, messages);
             body["prompt_cache_key"] = BuildPromptCacheKey(prompt, settings.Model, instructions);
-            body["prompt_cache_options"] = new { mode = "explicit", ttl = "30m" };
+            body["prompt_cache_options"] = new
+            {
+                mode = UsesGrowingConversation(prompt) ? "implicit" : "explicit",
+                ttl = "30m"
+            };
         }
         else
         {
@@ -57,11 +70,15 @@ internal static class OpenAiRequestBuilder
         return body;
     }
 
-    /// <summary>Combines the immutable YAML instruction with approved user preferences and optional locale context.</summary>
-    internal static string BuildInstructions(PromptDefinition prompt, AppSettings settings, string language)
+    /// <summary>Combines immutable YAML, approved preferences, optional locale, and sanitized runtime context for assistant prompts.</summary>
+    internal static string BuildInstructions(
+        PromptDefinition prompt,
+        AppSettings settings,
+        string language,
+        RuntimeContext? runtimeContext = null)
     {
         var builder = new StringBuilder(prompt.ResolveText(language));
-        if (string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase))
+        if (IsStructuredAssistantPrompt(prompt))
         {
             if (!string.IsNullOrWhiteSpace(settings.CustomInstruction))
             {
@@ -78,6 +95,13 @@ internal static class OpenAiRequestBuilder
                     .Append(", timezone=")
                     .Append(TimeZoneInfo.Local.Id)
                     .Append('.');
+            }
+
+            if (runtimeContext is not null)
+            {
+                builder.AppendLine()
+                    .AppendLine()
+                    .Append(runtimeContext.ToPromptBlock());
             }
         }
 
@@ -150,6 +174,10 @@ internal static class OpenAiRequestBuilder
         return input;
     }
 
+    /// <summary>Identifies the assistant prompt whose bounded history grows by appending reusable turns.</summary>
+    private static bool UsesGrowingConversation(PromptDefinition prompt) =>
+        string.Equals(prompt.Id, "chat-system", StringComparison.Ordinal);
+
     /// <summary>Creates a stable routing key without embedding instruction text or user data.</summary>
     private static string BuildPromptCacheKey(PromptDefinition prompt, string model, string instructions)
     {
@@ -157,6 +185,39 @@ internal static class OpenAiRequestBuilder
             .ToLowerInvariant()[..16];
         return $"promptmeup:{model}:{prompt.Id}:v{prompt.Version}:{hash}";
     }
+
+    /// <summary>Builds the strict user-facing chat envelope without granting the model a command-execution capability.</summary>
+    private static object BuildChatResponseFormat() => new
+    {
+        type = "json_schema",
+        name = "promptmeup_chat_response_v1",
+        strict = true,
+        schema = new
+        {
+            type = "object",
+            properties = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["answer_markdown"] = new { type = "string" },
+                ["commands"] = new
+                {
+                    type = "array",
+                    items = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            label = new { type = "string" },
+                            command = new { type = "string" }
+                        },
+                        required = new[] { "label", "command" },
+                        additionalProperties = false
+                    }
+                }
+            },
+            required = new[] { "answer_markdown", "commands" },
+            additionalProperties = false
+        }
+    };
 
     /// <summary>Approximates text tokens from UTF-8 payload size until provider usage supplies the exact count.</summary>
     private static long EstimateTokens(string text) => string.IsNullOrEmpty(text)
@@ -178,6 +239,11 @@ internal static class OpenAiRequestBuilder
         "developer" => "developer",
         _ => "user"
     };
+
+    /// <summary>Identifies assistant prompts that return the typed answer-and-command envelope.</summary>
+    private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
+        string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Identifies the model family that supports explicit prompt-cache breakpoints.</summary>
     private static bool IsGpt56(string model) => model.StartsWith("gpt-5.6", StringComparison.OrdinalIgnoreCase);

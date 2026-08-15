@@ -39,7 +39,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         TerminalTheme.WriteBlock(_console, _text.Text("Command.Preview"), command, color.ToMarkup());
         _console.MarkupLine(
             $"[{color.ToMarkup()}]●[/] [bold]{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(assessment.Level.ToString().ToUpperInvariant())}[/]");
-        _console.MarkupLine($"[grey]{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
         _markdown.Render(assessment.DescriptionMarkdown);
         if (!string.IsNullOrWhiteSpace(assessment.Advisory))
         {
@@ -74,9 +74,9 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         }
 
         _console.MarkupLine(
-            $"[grey]exit:[/] {(result.ExitCode?.ToString() ?? "timeout")}   " +
-            $"[grey]elapsed:[/] {result.ElapsedMilliseconds} ms   " +
-            $"[grey]truncated:[/] {result.OutputTruncated.ToString().ToLowerInvariant()}");
+            $"[{TerminalTheme.Muted}]exit:[/] [{TerminalTheme.Primary}]{(result.ExitCode?.ToString() ?? "timeout")}[/]   " +
+            $"[{TerminalTheme.Muted}]elapsed:[/] [{TerminalTheme.Primary}]{result.ElapsedMilliseconds} ms[/]   " +
+            $"[{TerminalTheme.Muted}]truncated:[/] [{TerminalTheme.Primary}]{result.OutputTruncated.ToString().ToLowerInvariant()}[/]");
     }
 
     /// <summary>Maps risk severity to a stable visual color.</summary>
@@ -86,6 +86,6 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         CommandRiskLevel.Medium => Color.Yellow,
         CommandRiskLevel.High => Color.Orange1,
         CommandRiskLevel.Critical => Color.Red,
-        _ => Color.Grey
+        _ => Color.Grey70
     };
 }

@@ -10,7 +10,7 @@ Before a request, PromptMeUp estimates tokens from UTF-8 payload size for:
 - prior active conversation messages;
 - the latest user prompt.
 
-After a response, provider usage replaces the estimated input/output total. The status strip reports combined consumed context against the catalogued model window, while the database retains input, output, reasoning, cached-input, cache-write, and total token counters separately.
+After a response, provider usage replaces the estimated input/output total. The session snapshot reports total context consumed against the catalogued model window and presents the exact provider input and output token counters side by side; it also shows cache reads/writes when the API reports them. The database retains input, output, reasoning, cached-input, cache-write, and total token counters separately.
 
 The client-side estimate is intentionally lightweight and can differ from provider tokenization. It is a preflight guard and UI signal, not an invoice.
 
@@ -56,8 +56,9 @@ Prompt caching is enabled by default and can be disabled in setup.
 - Stable localized YAML instructions and custom settings are placed before changing conversation messages.
 - A stable `prompt_cache_key` is derived from product name, model, prompt ID/version, and a short hash of the populated instruction; user text is not embedded in the key.
 - GPT-5.6 requests use an explicit cache breakpoint immediately after the stable developer instruction only when that prefix meets the documented 1,024-token minimum; shorter requests keep automatic prefix caching enabled.
+- Long interactive chats pair that stable breakpoint with implicit caching, so their append-only conversation history can create and reuse later checkpoints. Long one-shot queries use explicit-only caching, which reuses the stable instruction without paying to cache the unique request suffix.
 - GPT-5.5 requests select its supported `24h` retention policy. Earlier supported models keep the provider/account default so zero-data-retention policy can choose in-memory behavior where applicable.
-- The status strip shows cache reads and cache writes returned by the API.
+- The session snapshot shows cache reads and cache writes returned by the API, alongside total context and the turn's input/output token counters.
 
 Provider-side caching has minimum prompt-size, model, retention, and routing semantics that can change. PromptMeUp records actual provider counters instead of assuming every request received a cache hit.
 

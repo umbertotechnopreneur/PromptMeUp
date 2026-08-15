@@ -51,7 +51,7 @@ public sealed class SetupView : ISetupView
         var language = _console.Prompt(
             new SelectionPrompt<SupportedLanguage>()
                 .Title(Markup.Escape(_text.Text("Setup.Language")))
-                .UseConverter(item => $"{item.NativeName}  [grey]({item.Code})[/]")
+                .UseConverter(item => $"{Markup.Escape(item.NativeName)}  [{TerminalTheme.Muted}]({Markup.Escape(item.Code)})[/]")
                 .AddChoices(languageChoices));
         _text.SetLanguage(language.Code);
 
@@ -200,24 +200,20 @@ public sealed class SetupView : ISetupView
         return new SetupSubmission(settings, apiKey, adminKey, testConnection);
     }
 
-    /// <summary>Clears prior prompt history and draws one compact wizard stage heading.</summary>
+    /// <summary>Marks one compact wizard stage while retaining every earlier terminal interaction.</summary>
     private void BeginStage(int stage, string title, string? subtitle = null)
     {
-        if (!Console.IsOutputRedirected)
-        {
-            _console.Clear(home: true);
-        }
-
-        _console.Write(new Rule("[bold mediumpurple2]HM[/] [grey]/ setup[/]")
+        _console.WriteLine();
+        _console.Write(new Rule($"[bold {TerminalTheme.Accent}]HM[/] [{TerminalTheme.Muted}]/ setup[/]")
         {
             Justification = Justify.Left,
-            Style = Style.Parse("grey35")
+            Style = Style.Parse(TerminalTheme.Divider)
         });
         _console.MarkupLine(
-            $"[grey]{stage:00}[/]  [bold deepskyblue1]{Markup.Escape(title)}[/]");
+            $"[{TerminalTheme.Muted}]{stage:00}[/]  [bold {TerminalTheme.Info}]{Markup.Escape(title)}[/]");
         if (!string.IsNullOrWhiteSpace(subtitle))
         {
-            _console.MarkupLine($"[grey]{Markup.Escape(subtitle)}[/]");
+            _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(subtitle)}[/]");
         }
 
         _console.MarkupLine($"[mediumpurple2]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
@@ -262,7 +258,7 @@ public sealed class SetupView : ISetupView
         var prompt = new SelectionPrompt<AiModelDescriptor>()
             .Title(Markup.Escape(_text.Text("Setup.Model")))
             .PageSize(8)
-            .UseConverter(model => $"[bold]{Markup.Escape(model.DisplayName)}[/]  [grey]{Markup.Escape(_text.Text($"Model.{model.Id}"))}[/]")
+            .UseConverter(model => $"[bold {TerminalTheme.Primary}]{Markup.Escape(model.DisplayName)}[/]  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text($"Model.{model.Id}"))}[/]")
             .HighlightStyle(new Style(Color.MediumPurple2))
             .AddChoices(choices);
 
@@ -275,7 +271,7 @@ public sealed class SetupView : ISetupView
     /// <summary>Collects one integer setting while showing its accepted inclusive range.</summary>
     private int PromptForBoundedInteger(string key, int current, int minimum, int maximum) =>
         _console.Prompt(
-            new TextPrompt<int>($"{Markup.Escape(_text.Text(key))} [grey]({minimum:N0}–{maximum:N0})[/]")
+            new TextPrompt<int>($"{Markup.Escape(_text.Text(key))} [{TerminalTheme.Muted}]({minimum:N0}–{maximum:N0})[/]")
                 .DefaultValue(current)
                 .Validate(value => value >= minimum && value <= maximum
                     ? ValidationResult.Success()
@@ -333,5 +329,5 @@ public sealed class SetupView : ISetupView
 
     /// <summary>Adds one escaped label/value pair to the setup summary grid.</summary>
     private static void AddSummaryRow(Grid grid, string label, string value) =>
-        grid.AddRow(new Markup($"[grey]{Markup.Escape(label)}[/]"), new Text(value));
+        grid.AddRow(new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(label)}[/]"), new Text(value, Style.Parse(TerminalTheme.Primary)));
 }

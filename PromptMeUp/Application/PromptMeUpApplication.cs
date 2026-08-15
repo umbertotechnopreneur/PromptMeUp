@@ -521,7 +521,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         var assembly = Assembly.GetExecutingAssembly().GetName();
         _shell.RenderVersion(
-            assembly.Version?.ToString(3) ?? "0.1.1",
+            assembly.Version?.ToString(3) ?? "0.1.2",
             Environment.Version.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
     }

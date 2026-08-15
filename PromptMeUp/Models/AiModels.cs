@@ -28,6 +28,8 @@ public sealed record AiContextUsage(
     long ContextWindowTokens,
     bool IsInputEstimate);
 
+public sealed record SuggestedCommand(string Label, string Command);
+
 public sealed record AiResponse(
     string Id,
     string Model,
@@ -38,7 +40,10 @@ public sealed record AiResponse(
     decimal? EstimatedCostUsd,
     int HttpStatusCode,
     long ElapsedMilliseconds,
-    string? ProviderRequestId);
+    string? ProviderRequestId)
+{
+    public IReadOnlyList<SuggestedCommand> SuggestedCommands { get; init; } = [];
+}
 
 public sealed record AiRequestLog(
     string Id,

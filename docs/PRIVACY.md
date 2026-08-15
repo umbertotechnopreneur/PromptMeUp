@@ -33,10 +33,13 @@ An ordinary AI request can contain:
 
 - the localized YAML instruction selected for that operation;
 - the optional custom instruction saved in setup;
+- for chat and one-off queries, a privacy-filtered runtime snapshot: the current working directory (with a recognized home directory rendered as `~`), operating-system and shell family, CPU summary, physical-memory summary, and GPU label when the portable runtime can expose one;
 - coarse culture and time-zone context only when the location option is enabled;
 - the bounded active user/assistant conversation;
 - an explicitly authorized command's redacted, bounded stdout/stderr when used for the next turn;
 - model, reasoning, output-detail, cache-routing, and output-budget settings.
+
+The runtime snapshot deliberately excludes user name, host name, network identity, device serial numbers, and secrets. It is used only to make platform-specific console guidance accurate; PromptMeUp does not use the model for image generation or general-purpose prose editing.
 
 The optional command review sends a redacted copy of the proposed command. The exact local command is still shown to the user and is used only for local execution after authorization.
 
