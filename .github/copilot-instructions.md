@@ -17,6 +17,7 @@ alwaysApply: true
 - Add a brief XML `<summary>` to every C# implementation method, including constructors, tests, and private helpers. Add inline comments only as small hints for non-obvious logic.
 - Keep typed usage/cost fields normalized and flexible audit/session payloads valid JSON.
 - Preserve unrelated work, avoid broad formatting churn, use `pwsh -NoProfile` for PowerShell automation, and fail fast on invalid or unsupported state.
+- After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; keep the full validation gate before committing.
 - Keep `AGENTS.md` and this file aligned when repository-wide rules change.
 - Exclude credentials, `.env`, SQLite data, logs, private absolute paths, `bin/`, `obj/`, `artifacts/`, and `.vs/` from commits.
 

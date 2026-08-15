@@ -20,7 +20,7 @@ flowchart LR
 - `Models/` contains immutable settings, AI usage, pricing, command authorization, memory, status, and audit contracts.
 - `Services/` owns SQLite, OpenAI, pricing, prompt loading, localization, short-term memory, command risk, command execution, secrets, PATH, font support, redaction, and cost calculation.
 - `Views/` owns Spectre.Console rendering and user input. Views do not call OpenAI, SQLite, or PowerShell.
-- `Application/` coordinates one invocation and is the only place that combines services with views.
+- `Application/` coordinates one invocation through focused conversation and authorized-command workflows and is the only place that combines services with views.
 - `Infrastructure/` resolves local application paths.
 - `/prompt` contains versioned runtime instructions and metadata. `/prompts` contains contributor-facing development prompts and is not sent by the application.
 
@@ -45,7 +45,7 @@ sequenceDiagram
     App-->>User: Markdown answer + cost/context status
 ```
 
-The Responses request sets `store=false`. Stable YAML instructions precede changing conversation content. Prompt cache routing is enabled by default and usage details are read from the provider response.
+The Responses request sets `store=false`. `OpenAiService` owns HTTP, auditing, persistence, and pricing; small request-builder and response-parser components isolate the provider protocol and are tested without network access. Stable YAML instructions precede changing conversation content. Prompt cache routing is enabled by default and usage details are read from the provider response.
 
 ## Command authorization flow
 

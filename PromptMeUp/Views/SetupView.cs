@@ -8,35 +8,42 @@ namespace PromptMeUp.Views;
 
 public interface ISetupView
 {
-    SetupSubmission? Collect(AppSettings current);
+    SetupSubmission? Collect(SetupViewState state);
 }
 
 public sealed class SetupView : ISetupView
 {
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
-    private readonly IEnvironmentSecretService _secrets;
 
-    /// <summary>Creates the interactive AS/400-inspired setup form.</summary>
-    public SetupView(IAnsiConsole console, ILocalizationService text, IEnvironmentSecretService secrets)
+    /// <summary>Creates the interactive setup form.</summary>
+    public SetupView(IAnsiConsole console, ILocalizationService text)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
-        _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
     }
 
     /// <summary>Collects a complete configuration while keeping entered secrets outside the settings model.</summary>
-    public SetupSubmission? Collect(AppSettings current)
+    public SetupSubmission? Collect(SetupViewState state)
     {
-        ArgumentNullException.ThrowIfNull(current);
-        _console.Write(new Panel(
-            $"[bold green]{Markup.Escape(_text.Text("Setup.Title"))}[/]\n[grey]{Markup.Escape(_text.Text("Setup.Subtitle"))}[/]")
+        ArgumentNullException.ThrowIfNull(state);
+        var originalLanguage = _text.Language;
+        try
         {
-            Border = BoxBorder.Double,
-            BorderStyle = new Style(Color.Green),
-            Header = new PanelHeader($" {Markup.Escape(_text.Text("Setup.Header"))} "),
-            Padding = new Padding(2, 1)
-        });
+            return CollectCore(state);
+        }
+        finally
+        {
+            _text.SetLanguage(originalLanguage);
+        }
+    }
+
+    /// <summary>Runs the localized wizard while the public boundary preserves the live session language.</summary>
+    private SetupSubmission? CollectCore(SetupViewState state)
+    {
+        var current = state.Settings;
+        var stage = 0;
+        BeginStage(++stage, _text.Text("Setup.Header"), _text.Text("Setup.Subtitle"));
 
         var languageChoices = SupportedLanguages.All
             .OrderBy(item => item.Code == current.Language ? 0 : 1)
@@ -57,18 +64,22 @@ public sealed class SetupView : ISetupView
         string? adminKey = null;
         if (aiEnabled)
         {
+            BeginStage(++stage, _text.Text("Setup.Keys"));
             apiKey = PromptForSecret(
                 current.ApiKeyVariable,
+                state.ApiKeyConfigured,
                 "Setup.KeyStatus",
                 "Setup.SetKey",
                 "Setup.KeyPrompt");
             adminKey = PromptForSecret(
                 current.AdminKeyVariable,
+                state.AdminKeyConfigured,
                 "Setup.AdminKeyStatus",
                 "Setup.SetAdminKey",
                 "Setup.AdminKeyPrompt");
         }
 
+        BeginStage(++stage, _text.Text("Setup.Model"));
         var model = PromptForModel(current.Model);
         var descriptor = AiModelCatalog.Resolve(model);
         var reasoningChoices = descriptor.ReasoningEfforts
@@ -92,6 +103,8 @@ public sealed class SetupView : ISetupView
                     _ => "Setup.Balanced"
                 }))
                 .AddChoices(detailChoices));
+
+        BeginStage(++stage, _text.Text("Setup.Preferences"));
         var customInstructionPrompt = new TextPrompt<string>(Markup.Escape(_text.Text("Setup.Custom"))).AllowEmpty();
         if (!string.IsNullOrWhiteSpace(current.CustomInstruction))
         {
@@ -104,31 +117,46 @@ public sealed class SetupView : ISetupView
         {
             DefaultValue = current.IncludeWindowsLocation
         });
-        var reviewCommands = aiEnabled && _console.Prompt(new ConfirmationPrompt(
-            Markup.Escape(_text.Text("Setup.CommandReview")))
+        var reviewCommands = current.ReviewCommandsWithAi;
+        var promptCaching = current.PromptCachingEnabled;
+        if (aiEnabled)
         {
-            DefaultValue = current.ReviewCommandsWithAi
-        });
-        var promptCaching = aiEnabled && _console.Prompt(new ConfirmationPrompt(
-            Markup.Escape(_text.Text("Setup.PromptCaching")))
+            reviewCommands = _console.Prompt(new ConfirmationPrompt(
+                Markup.Escape(_text.Text("Setup.CommandReview")))
+            {
+                DefaultValue = current.ReviewCommandsWithAi
+            });
+            promptCaching = _console.Prompt(new ConfirmationPrompt(
+                Markup.Escape(_text.Text("Setup.PromptCaching")))
+            {
+                DefaultValue = current.PromptCachingEnabled
+            });
+        }
+
+        var maxTurns = current.MaxConversationTurns;
+        var maxMessageCharacters = current.MaxMessageCharacters;
+        var maxContextPercent = current.MaxContextPercent;
+        var maxCommandOutputCharacters = current.MaxCommandOutputCharacters;
+        var commandTimeoutSeconds = current.CommandTimeoutSeconds;
+        var endpoint = current.Endpoint;
+        if (_console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.EditAdvanced")))
         {
-            DefaultValue = current.PromptCachingEnabled
-        });
-        _console.Write(new Rule($"[green]{Markup.Escape(_text.Text("Setup.MemoryLimits"))}[/]")
+            DefaultValue = false
+        }))
         {
-            Style = Style.Parse("green")
-        });
-        var maxTurns = PromptForBoundedInteger("Setup.MaxTurns", current.MaxConversationTurns, 2, 50);
-        var maxMessageCharacters = PromptForBoundedInteger("Setup.MaxMessage", current.MaxMessageCharacters, 500, 100_000);
-        var maxContextPercent = PromptForBoundedInteger("Setup.MaxContext", current.MaxContextPercent, 10, 95);
-        var maxCommandOutputCharacters = PromptForBoundedInteger("Setup.MaxCommandOutput", current.MaxCommandOutputCharacters, 1_000, 32_768);
-        var commandTimeoutSeconds = PromptForBoundedInteger("Setup.CommandTimeout", current.CommandTimeoutSeconds, 5, 300);
-        var endpoint = _console.Prompt(
-            new TextPrompt<string>(Markup.Escape(_text.Text("Setup.Endpoint")))
-                .DefaultValue(current.Endpoint)
-                .Validate(value => OpenAiEndpointPolicy.IsAllowed(value)
-                    ? ValidationResult.Success()
-                    : ValidationResult.Error("[red]Use the official https://api.openai.com/v1/responses endpoint.[/]")));
+            BeginStage(++stage, _text.Text("Setup.MemoryLimits"));
+            maxTurns = PromptForBoundedInteger("Setup.MaxTurns", maxTurns, 2, 50);
+            maxMessageCharacters = PromptForBoundedInteger("Setup.MaxMessage", maxMessageCharacters, 500, 100_000);
+            maxContextPercent = PromptForBoundedInteger("Setup.MaxContext", maxContextPercent, 10, 95);
+            maxCommandOutputCharacters = PromptForBoundedInteger("Setup.MaxCommandOutput", maxCommandOutputCharacters, 1_000, 32_768);
+            commandTimeoutSeconds = PromptForBoundedInteger("Setup.CommandTimeout", commandTimeoutSeconds, 5, 300);
+            endpoint = _console.Prompt(
+                new TextPrompt<string>(Markup.Escape(_text.Text("Setup.Endpoint")))
+                    .DefaultValue(endpoint)
+                    .Validate(value => OpenAiEndpointPolicy.IsAllowed(value)
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error("[red]Use the official https://api.openai.com/v1/responses endpoint.[/]")));
+        }
 
         var settings = current with
         {
@@ -150,7 +178,11 @@ public sealed class SetupView : ISetupView
             Endpoint = endpoint.Trim(),
             UpdatedAt = DateTimeOffset.UtcNow
         };
-        RenderSummary(settings, apiKey is not null || _secrets.IsConfigured(settings.ApiKeyVariable));
+        BeginStage(++stage, _text.Text("Setup.Summary"));
+        RenderSummary(
+            settings,
+            apiKey is not null || state.ApiKeyConfigured,
+            adminKey is not null || state.AdminKeyConfigured);
         if (!_console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.Confirm")))
         {
             DefaultValue = true
@@ -159,7 +191,7 @@ public sealed class SetupView : ISetupView
             return null;
         }
 
-        var canTest = aiEnabled && (apiKey is not null || _secrets.IsConfigured(settings.ApiKeyVariable));
+        var canTest = aiEnabled && (apiKey is not null || state.ApiKeyConfigured);
         var testConnection = canTest && _console.Prompt(new ConfirmationPrompt(
             Markup.Escape(_text.Text("Setup.Test")))
         {
@@ -168,10 +200,38 @@ public sealed class SetupView : ISetupView
         return new SetupSubmission(settings, apiKey, adminKey, testConnection);
     }
 
-    /// <summary>Shows secret status and optionally captures a masked replacement.</summary>
-    private string? PromptForSecret(string variable, string statusKey, string changeKey, string promptKey)
+    /// <summary>Clears prior prompt history and draws one compact wizard stage heading.</summary>
+    private void BeginStage(int stage, string title, string? subtitle = null)
     {
-        var configured = _secrets.IsConfigured(variable);
+        if (!Console.IsOutputRedirected)
+        {
+            _console.Clear(home: true);
+        }
+
+        _console.Write(new Rule("[bold mediumpurple2]HM[/] [grey]/ setup[/]")
+        {
+            Justification = Justify.Left,
+            Style = Style.Parse("grey35")
+        });
+        _console.MarkupLine(
+            $"[grey]{stage:00}[/]  [bold deepskyblue1]{Markup.Escape(title)}[/]");
+        if (!string.IsNullOrWhiteSpace(subtitle))
+        {
+            _console.MarkupLine($"[grey]{Markup.Escape(subtitle)}[/]");
+        }
+
+        _console.MarkupLine($"[mediumpurple2]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
+        _console.WriteLine();
+    }
+
+    /// <summary>Shows secret status and optionally captures a replacement without echoing its value or length.</summary>
+    private string? PromptForSecret(
+        string variable,
+        bool configured,
+        string statusKey,
+        string changeKey,
+        string promptKey)
+    {
         var color = configured ? "green" : "yellow";
         var state = configured ? _text.Text("Status.Ready") : _text.Text("Status.Missing");
         _console.MarkupLine($"[{color}]●[/] {Markup.Escape(_text.Text(statusKey))}: [bold]{Markup.Escape(state)}[/]");
@@ -187,13 +247,13 @@ public sealed class SetupView : ISetupView
 
         return _console.Prompt(
             new TextPrompt<string>(Markup.Escape(_text.Text(promptKey)))
-                .Secret()
-                .Validate(value => _secrets.LooksLikeOpenAiKey(value)
+                .Secret(mask: null)
+                .Validate(value => OpenAiKeyPolicy.IsPlausible(value)
                     ? ValidationResult.Success()
                     : ValidationResult.Error("[red]The key must start with sk- and contain no whitespace.[/]")));
     }
 
-    /// <summary>Displays product-oriented model cards and returns the selected identifier.</summary>
+    /// <summary>Displays product-oriented model choices and returns the selected identifier.</summary>
     private AiModelDescriptor PromptForModelDescriptor(string currentModel)
     {
         var choices = AiModelCatalog.Models
@@ -209,7 +269,7 @@ public sealed class SetupView : ISetupView
         return _console.Prompt(prompt);
     }
 
-    /// <summary>Returns only the stable model identifier selected from the model card list.</summary>
+    /// <summary>Returns only the stable model identifier selected from the model choices.</summary>
     private string PromptForModel(string currentModel) => PromptForModelDescriptor(currentModel).Id;
 
     /// <summary>Collects one integer setting while showing its accepted inclusive range.</summary>
@@ -221,31 +281,57 @@ public sealed class SetupView : ISetupView
                     ? ValidationResult.Success()
                     : ValidationResult.Error($"[red]Enter a value from {minimum:N0} to {maximum:N0}.[/]")));
 
-    /// <summary>Renders the setup choices as a compact green-screen summary before saving.</summary>
-    private void RenderSummary(AppSettings settings, bool hasApiKey)
+    /// <summary>Renders the setup choices as a compact borderless summary before saving.</summary>
+    private void RenderSummary(AppSettings settings, bool hasApiKey, bool hasAdminKey)
     {
         var grid = new Grid();
         grid.AddColumn(new GridColumn().NoWrap());
         grid.AddColumn();
-        AddSummaryRow(grid, _text.Text("Setup.Language"), SupportedLanguages.All.First(item => item.Code == settings.Language).NativeName);
-        AddSummaryRow(grid, _text.Text("Setup.AiEnabled"), settings.AiEnabled ? _text.Text("Common.Yes") : _text.Text("Common.No"));
-        AddSummaryRow(grid, _text.Text("Status.ApiKey"), hasApiKey ? _text.Text("Status.Ready") : _text.Text("Status.Missing"));
-        AddSummaryRow(grid, _text.Text("Setup.Model"), settings.Model);
-        AddSummaryRow(grid, _text.Text("Setup.Reasoning"), _text.Text($"Reasoning.{settings.ReasoningEffort}"));
-        AddSummaryRow(grid, _text.Text("Setup.CommandReview"), settings.ReviewCommandsWithAi ? _text.Text("Common.Yes") : _text.Text("Common.No"));
-        AddSummaryRow(grid, _text.Text("Setup.PromptCaching"), settings.PromptCachingEnabled ? _text.Text("Common.Yes") : _text.Text("Common.No"));
-        AddSummaryRow(grid, _text.Text("Setup.MaxTurns"), settings.MaxConversationTurns.ToString(_text.Culture));
-        AddSummaryRow(grid, _text.Text("Setup.MaxContext"), $"{settings.MaxContextPercent}%");
-        AddSummaryRow(grid, _text.Text("Setup.Endpoint"), settings.Endpoint);
-        _console.Write(new Panel(grid)
-        {
-            Header = new PanelHeader($" {_text.Text("Setup.Summary")} "),
-            Border = BoxBorder.Double,
-            BorderStyle = new Style(Color.Green)
-        });
+        var yes = _text.Text("Common.Yes");
+        var no = _text.Text("Common.No");
+        var ready = _text.Text("Status.Ready");
+        var missing = _text.Text("Status.Missing");
+        AddSummaryRow(
+            grid,
+            _text.Text("Setup.Language"),
+            SupportedLanguages.All.First(item => item.Code == settings.Language).NativeName);
+        AddSummaryRow(grid, _text.Text("Setup.AiEnabled"), settings.AiEnabled ? yes : no);
+        AddSummaryRow(
+            grid,
+            _text.Text("Status.ApiKey"),
+            $"{(hasApiKey ? ready : missing)} · {_text.Text("Status.AdminKey")}: {(hasAdminKey ? ready : missing)}");
+        AddSummaryRow(
+            grid,
+            _text.Text("Setup.Model"),
+            $"{settings.Model} · {_text.Text($"Reasoning.{settings.ReasoningEffort}")} · {_text.Text(settings.OutputDetail switch
+            {
+                "compact" => "Setup.Compact",
+                "detailed" => "Setup.Detailed",
+                _ => "Setup.Balanced"
+            })}");
+        AddSummaryRow(
+            grid,
+            _text.Text("Setup.Custom"),
+            $"{(string.IsNullOrWhiteSpace(settings.CustomInstruction) ? no : yes)} · " +
+            $"{_text.Text("Setup.Location")}: {(settings.IncludeWindowsLocation ? yes : no)}");
+        AddSummaryRow(
+            grid,
+            _text.Text("Setup.CommandReview"),
+            $"{(settings.ReviewCommandsWithAi ? yes : no)} · " +
+            $"{_text.Text("Setup.PromptCaching")}: {(settings.PromptCachingEnabled ? yes : no)}");
+        AddSummaryRow(
+            grid,
+            _text.Text("Setup.MemoryLimits"),
+            $"{_text.Text("Setup.MaxTurns")}: {settings.MaxConversationTurns:N0} · " +
+            $"{_text.Text("Setup.MaxContext")}: {settings.MaxContextPercent}%\n" +
+            $"{_text.Text("Setup.MaxMessage")}: {settings.MaxMessageCharacters:N0} · " +
+            $"{_text.Text("Setup.MaxCommandOutput")}: {settings.MaxCommandOutputCharacters:N0} · " +
+            $"{_text.Text("Setup.CommandTimeout")}: {settings.CommandTimeoutSeconds:N0}");
+        _console.Write(grid);
+        _console.WriteLine();
     }
 
     /// <summary>Adds one escaped label/value pair to the setup summary grid.</summary>
     private static void AddSummaryRow(Grid grid, string label, string value) =>
-        grid.AddRow(new Markup($"[green]{Markup.Escape(label)}[/]"), new Text(value));
+        grid.AddRow(new Markup($"[grey]{Markup.Escape(label)}[/]"), new Text(value));
 }

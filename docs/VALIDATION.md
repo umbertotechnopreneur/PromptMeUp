@@ -13,7 +13,7 @@ dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserro
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-The manual GitHub Actions workflow runs lint plus cross-platform build only. Tests remain a required local handoff check while the product is in early preview.
+The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. It runs the repository preflight, verifies formatting and XML comments, then builds and tests on Windows, Linux, and macOS.
 
 ## Non-interactive smoke checks
 
@@ -33,13 +33,15 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 
 ## Interactive setup acceptance
 
-- [ ] A clean first launch opens the double-border green-screen setup.
+- [ ] A clean first launch opens the frameless staged setup with clear whitespace, headings, and shortcuts.
 - [ ] All six languages can be selected and the remaining form changes language immediately.
-- [ ] API and admin key values are masked and never reprinted.
+- [ ] API and admin key input reveals neither the value nor its character count, and is never reprinted.
 - [ ] Model, thinking, detail, custom instruction, coarse location, command review, and prompt caching are visible.
 - [ ] Every memory, output, and timeout limit rejects values outside its displayed range.
 - [ ] The summary appears before save.
 - [ ] Cancelling leaves setup incomplete.
+- [ ] `Esc` cancels setup without saving and returns to the command center when setup was opened from it.
+- [ ] `Ctrl+C` terminates an active prompt cleanly with exit code `130`.
 - [ ] Saving persists non-secret settings and reports platform-appropriate key guidance.
 - [ ] The optional connection test renders a short user prompt and teletype answer, then rejects an unexpected response.
 
@@ -80,3 +82,14 @@ pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
 ```
 
 Confirm that both portable ZIPs contain only `hm.exe`, `prompt/*.yaml`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; the current-architecture executable reports the requested package version; `winget validate` succeeds; the x64 MSI passes WiX validation; and every checksum in `SHA256SUMS.txt` matches its package. Do not install either distribution format on the host during routine validation.
+
+## Post-publication cleanup
+
+After every successful commit and every successful push, remove Release build and test intermediates and confirm that cleanup did not change tracked files:
+
+```powershell
+dotnet clean .\PromptMeUp.slnx --configuration Release
+git status --short
+```
+
+Generated installer and portable-package directories are not removed by `dotnet clean`; delete only an explicitly verified obsolete version directory under `artifacts/release`.

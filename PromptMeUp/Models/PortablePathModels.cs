@@ -24,4 +24,4 @@ public sealed record PortablePathResult(
     bool Changed,
     bool IsPresent);
 
-public sealed record SecretStoreResult(bool PersistedForFutureProcesses, string Guidance);
+public sealed record SecretStoreResult(string Guidance);

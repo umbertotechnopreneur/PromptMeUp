@@ -57,6 +57,8 @@ Only one top-level command can be selected per invocation.
 | `/costs` | Shows the cost dashboard without ending the chat. |
 | `/status` | Reprints the fixed runtime status contract. |
 | `/exit` | Closes the session and marks its ledger complete. |
+| `Esc` | Cancels the current interactive command; from the command center it exits the current flow. |
+| `Ctrl+C` | Cancels the whole application and returns exit code `130`. |
 
 There is no command that silently approves `/run`. The authorization prompt must be answered in a live terminal for every command.
 

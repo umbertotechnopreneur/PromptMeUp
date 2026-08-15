@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml"><img src="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml/badge.svg" alt="Manual quality gate" /></a>
+  <a href="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml"><img src="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml/badge.svg" alt="Quality gate" /></a>
   <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&amp;logoColor=white" alt=".NET 10" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-4F46E5" alt="Windows, Linux, and macOS" />
   <img src="https://img.shields.io/badge/status-early%20preview-F59E0B" alt="Early preview" />
@@ -83,7 +83,7 @@ dotnet build .\PromptMeUp.slnx --configuration Release
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj -- --setup
 ```
 
-The first interactive launch also opens setup automatically. The AS/400-inspired form lets you choose the interface language, model, thinking level, answer detail, optional instructions, command review, prompt caching, and short-memory limits. It can finish with a small teletype connection test.
+The first interactive launch also opens a compact staged setup automatically. Clear headings, whitespace, and color separate each decision without surrounding every section with a box. It lets you choose the interface language, model, thinking level, answer detail, optional instructions, command review, prompt caching, and optional advanced memory limits, then can finish with a small teletype connection test.
 
 On Windows, a key entered in setup is written to the current user's `OPENAI_API_KEY` environment variable and made available to the running process. On Linux and macOS it is loaded only for that process; PromptMeUp then tells you to export it through your shell or preferred secret manager. Keys are never stored in SQLite or accepted as command-line arguments.
 
@@ -116,6 +116,8 @@ Inside chat:
 - `/costs` shows the local cost dashboard;
 - `/clear` clears active short-term context but keeps the audit ledger;
 - `/exit` closes the session.
+
+During any interactive flow, `Esc` cancels the current command and returns to the command center when one is active. `Ctrl+C` terminates PromptMeUp with exit code `130`.
 
 Use `hm --help` for the compact reference or read [CLI reference](docs/CLI_REFERENCE.md).
 
@@ -157,7 +159,7 @@ Generated files stay below `artifacts/release/<version>/` and are ignored by Git
 
 ## Premium terminal details, optional font
 
-Colors, panels, progress, tables, and status bars work in a normal modern terminal. A Nerd Font adds the intended icon treatment.
+Colors, whitespace, progress, borderless tables, and compact status lines work in a normal modern terminal. A Nerd Font adds the intended icon treatment.
 
 ```powershell
 hm --install-font --dry-run
@@ -193,7 +195,7 @@ dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserro
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-The GitHub quality workflow is manual by design and currently performs only lint and cross-platform build jobs. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then use the [validation guide](docs/VALIDATION.md).
+The GitHub quality workflow runs formatting and XML checks plus cross-platform build and tests on pushes to `main`, pull requests, and manual dispatch. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then use the [validation guide](docs/VALIDATION.md).
 
 ## Repository map
 
@@ -203,7 +205,7 @@ The GitHub quality workflow is manual by design and currently performs only lint
 - `scripts/` — preflight, XML-comment policy, repository helpers, and portable PATH companions.
 - `docs/` — durable architecture, privacy, usage, cost/caching, and validation guidance.
 - `prompts/` — contributor-facing development prompts; these are separate from runtime AI instructions.
-- `.github/` — manual quality workflow, repository guidance, and task records.
+- `.github/` — quality workflow, repository guidance, and task records.
 
 ## Project documentation
 

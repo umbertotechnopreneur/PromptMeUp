@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PromptMeUp.Models;
+using PromptMeUp.Services.OpenAi;
 
 namespace PromptMeUp.Services;
 
@@ -137,7 +138,7 @@ public sealed class OpenAiPricingService : IPricingService
             if (!response.IsSuccessStatusCode)
             {
                 throw new OpenAiRequestException(
-                    ReadApiError(json) ?? $"OpenAI Costs API returned HTTP {(int)response.StatusCode}.",
+                    OpenAiResponseParser.ReadApiError(json) ?? $"OpenAI Costs API returned HTTP {(int)response.StatusCode}.",
                     "organization_costs_failed",
                     (int)response.StatusCode);
             }
@@ -212,23 +213,6 @@ public sealed class OpenAiPricingService : IPricingService
             ? property.GetString()
             : null;
 
-    /// <summary>Extracts a safe provider error message from a standard API error envelope.</summary>
-    private static string? ReadApiError(string json)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            return document.RootElement.GetProperty("error").GetProperty("message").GetString();
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-        catch (KeyNotFoundException)
-        {
-            return null;
-        }
-    }
 }
 
 internal static class OpenAiPricingMarkdownParser

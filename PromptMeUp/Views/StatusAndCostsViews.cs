@@ -18,7 +18,8 @@ public sealed class StatusView(IAnsiConsole console, ILocalizationService text) 
     public void Render(AppStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
-        var table = new Table().RoundedBorder().BorderColor(Color.Grey37).HideHeaders();
+        TerminalTheme.WriteHeading(console, text.Text("Status.Title"));
+        var table = new Table().Border(TableBorder.None).HideHeaders();
         table.AddColumn("Field");
         table.AddColumn("Value");
         AddRow(table, text.Text("Status.Setup"), status.Settings.SetupCompleted ? text.Text("Status.Completed") : text.Text("Status.Required"));
@@ -30,12 +31,7 @@ public sealed class StatusView(IAnsiConsole console, ILocalizationService text) 
         AddRow(table, text.Text("Status.Database"), status.DatabasePath);
         AddRow(table, text.Text("Status.Logs"), status.LogsDirectory);
         AddRow(table, text.Text("Status.Prompts"), $"{status.PromptCount} · {status.PromptDirectory}");
-        console.Write(new Panel(table)
-        {
-            Header = new PanelHeader($" {text.Text("Status.Title")} "),
-            Border = BoxBorder.Rounded,
-            BorderStyle = new Style(Color.DeepSkyBlue1)
-        });
+        console.Write(table);
     }
 
     /// <summary>Adds one escaped status row.</summary>
@@ -54,9 +50,7 @@ public sealed class CostsView(IAnsiConsole console, ILocalizationService text) :
     public void Render(CostOverview overview)
     {
         ArgumentNullException.ThrowIfNull(overview);
-        console.MarkupLine($"[bold deepskyblue1]{Markup.Escape(text.Text("Costs.Title"))}[/]");
-        console.MarkupLine($"[grey]{Markup.Escape(text.Text("Costs.Subtitle"))}[/]");
-        console.WriteLine();
+        TerminalTheme.WriteHeading(console, text.Text("Costs.Title"), text.Text("Costs.Subtitle"));
         var metrics = new Grid();
         metrics.AddColumn();
         metrics.AddColumn();
@@ -72,7 +66,8 @@ public sealed class CostsView(IAnsiConsole console, ILocalizationService text) :
         console.Write(metrics);
         console.WriteLine();
 
-        var table = new Table().RoundedBorder().BorderColor(Color.Grey37);
+        var table = new Table().Border(TableBorder.None);
+        table.Title = new TableTitle(Markup.Escape(text.Text("Costs.Models")));
         table.AddColumn(text.Text("Costs.Model"));
         table.AddColumn(new TableColumn(text.Text("Costs.Input")).RightAligned());
         table.AddColumn(new TableColumn(text.Text("Costs.Cached")).RightAligned());

@@ -4,6 +4,11 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Views;
 
+public sealed record SetupViewState(
+    AppSettings Settings,
+    bool ApiKeyConfigured,
+    bool AdminKeyConfigured);
+
 public sealed record SetupSubmission(
     AppSettings Settings,
     string? ApiKey,

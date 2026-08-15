@@ -36,13 +36,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(assessment);
         var color = RiskColor(assessment.Level);
-        _console.Write(new Panel(new Text(command))
-        {
-            Header = new PanelHeader($" {_text.Text("Command.Preview")} "),
-            Border = BoxBorder.Double,
-            BorderStyle = new Style(color),
-            Padding = new Padding(2, 1)
-        });
+        TerminalTheme.WriteBlock(_console, _text.Text("Command.Preview"), command, color.ToMarkup());
         _console.MarkupLine(
             $"[{color.ToMarkup()}]●[/] [bold]{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(assessment.Level.ToString().ToUpperInvariant())}[/]");
         _console.MarkupLine($"[grey]{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
@@ -72,20 +66,11 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     {
         ArgumentNullException.ThrowIfNull(result);
         var body = string.IsNullOrWhiteSpace(result.StandardOutput) ? "(no stdout)" : result.StandardOutput;
-        _console.Write(new Panel(new Text(body))
-        {
-            Header = new PanelHeader($" {_text.Text("Command.Output")} "),
-            Border = BoxBorder.Rounded,
-            BorderStyle = new Style(result.ExitCode == 0 && !result.TimedOut ? Color.Green : Color.Yellow)
-        });
+        var outputColor = result.ExitCode == 0 && !result.TimedOut ? "green" : "yellow";
+        TerminalTheme.WriteBlock(_console, _text.Text("Command.Output"), body, outputColor);
         if (!string.IsNullOrWhiteSpace(result.StandardError))
         {
-            _console.Write(new Panel(new Text(result.StandardError))
-            {
-                Header = new PanelHeader(" STDERR "),
-                Border = BoxBorder.Rounded,
-                BorderStyle = new Style(Color.Red)
-            });
+            TerminalTheme.WriteBlock(_console, "STDERR", result.StandardError, "red");
         }
 
         _console.MarkupLine(

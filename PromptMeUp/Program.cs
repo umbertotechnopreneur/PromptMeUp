@@ -32,26 +32,28 @@ internal static class Program
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
+        using var shutdown = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            shutdown.Cancel();
+        };
+        Console.CancelKeyPress += cancelHandler;
+
         try
         {
-            using var shutdown = new CancellationTokenSource();
-            ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
-            {
-                eventArgs.Cancel = true;
-                shutdown.Cancel();
-            };
-            Console.CancelKeyPress += cancelHandler;
             var services = new ServiceCollection();
-            ConfigureServices(services, paths);
+            ConfigureServices(services, paths, shutdown.Token);
             await using var provider = services.BuildServiceProvider();
-            try
-            {
-                return await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
-            }
-            finally
-            {
-                Console.CancelKeyPress -= cancelHandler;
-            }
+            return await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
+        }
+        catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
+        {
+            return 130;
+        }
+        catch (InteractiveFlowCanceledException)
+        {
+            return 0;
         }
         catch (Exception exception)
         {
@@ -61,15 +63,19 @@ internal static class Program
         }
         finally
         {
+            Console.CancelKeyPress -= cancelHandler;
             await Log.CloseAndFlushAsync();
         }
     }
 
     /// <summary>Registers the model, service, and view layers used by the lightweight console host.</summary>
-    private static void ConfigureServices(IServiceCollection services, AppPaths paths)
+    private static void ConfigureServices(
+        IServiceCollection services,
+        AppPaths paths,
+        CancellationToken shutdownToken)
     {
         services.AddSingleton(paths);
-        services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
+        services.AddSingleton<IAnsiConsole>(new EscapeAwareAnsiConsole(AnsiConsole.Console, shutdownToken));
         services.AddLogging(builder =>
         {
             builder.ClearProviders();
@@ -115,6 +121,8 @@ internal static class Program
         services.AddSingleton<IPortablePathView, PortablePathView>();
         services.AddSingleton<INerdFontView, NerdFontView>();
 
+        services.AddSingleton<IAuthorizedCommandWorkflow, AuthorizedCommandWorkflow>();
+        services.AddSingleton<IAiConversationWorkflow, AiConversationWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }

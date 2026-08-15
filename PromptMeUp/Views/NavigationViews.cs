@@ -16,11 +16,11 @@ public sealed class HelpView(IAnsiConsole console, ILocalizationService text) : 
     /// <summary>Renders the compact public CLI contract with hm-first examples.</summary>
     public void Render()
     {
-        console.MarkupLine($"[bold deepskyblue1]{Markup.Escape(text.Text("Help.Title"))}[/]");
+        TerminalTheme.WriteHeading(console, text.Text("Help.Title"), text.Text("Help.Usage"));
         console.MarkupLine("[bold]hm[/] [grey]\"how do I undo the last local git commit?\"[/]");
         console.MarkupLine("[bold]hm --chat[/]");
         console.WriteLine();
-        var table = new Table().RoundedBorder().BorderColor(Color.Grey37).HideHeaders();
+        var table = new Table().Border(TableBorder.None).HideHeaders();
         table.AddColumn("Switch");
         table.AddColumn("Description");
         Add(table, "--setup", text.Text("Help.Setup"));
@@ -36,6 +36,7 @@ public sealed class HelpView(IAnsiConsole console, ILocalizationService text) : 
         Add(table, "--language, -l <code>", text.Text("Help.Language"));
         Add(table, "--no-animation | --no-emoji", text.Text("Help.Rendering"));
         Add(table, "--yes, -y", text.Text("Help.Yes"));
+        Add(table, "--dry-run", text.Text("Help.DryRun"));
         console.Write(table);
     }
 
@@ -54,7 +55,7 @@ public sealed class MainMenuView(IAnsiConsole console, ILocalizationService text
     /// <summary>Returns one action from the lightweight interactive command center.</summary>
     public MainMenuAction Select() => console.Prompt(
         new SelectionPrompt<MainMenuAction>()
-            .Title(Markup.Escape(text.Text("Main.Choose")))
+            .Title($"[bold]{Markup.Escape(text.Text("Main.Title"))}[/] · {Markup.Escape(text.Text("Main.Choose"))}")
             .PageSize(12)
             .UseConverter(Label)
             .AddChoices(
@@ -109,9 +110,8 @@ public sealed class ThirdPartyView(IAnsiConsole console, ILocalizationService te
     /// <summary>Renders direct runtime dependencies and their declared licenses.</summary>
     public void Render()
     {
-        console.MarkupLine($"[bold deepskyblue1]{Markup.Escape(text.Text("ThirdParty.Title"))}[/]");
-        console.MarkupLine($"[grey]{Markup.Escape(text.Text("ThirdParty.Subtitle"))}[/]");
-        var table = new Table().RoundedBorder().BorderColor(Color.Grey37);
+        TerminalTheme.WriteHeading(console, text.Text("ThirdParty.Title"), text.Text("ThirdParty.Subtitle"));
+        var table = new Table().Border(TableBorder.None);
         table.AddColumn(text.Text("ThirdParty.Package"));
         table.AddColumn(text.Text("ThirdParty.Version"));
         table.AddColumn(text.Text("ThirdParty.License"));
@@ -151,12 +151,12 @@ public sealed class PortablePathView(IAnsiConsole console, ILocalizationService 
     public bool PreviewAndConfirm(PortablePathPlan plan, bool preauthorized)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        console.Write(new Panel(new Text($"{plan.Preview}\n\nTarget: {plan.PersistenceTarget}\nDirectory: {plan.ExecutableDirectory}"))
-        {
-            Header = new PanelHeader($" {text.Text("Path.Title")} "),
-            Border = BoxBorder.Double,
-            BorderStyle = new Style(Color.MediumPurple2)
-        });
+        TerminalTheme.WriteHeading(console, text.Text("Path.Title"));
+        TerminalTheme.WriteBlock(
+            console,
+            plan.Preview,
+            $"Target: {plan.PersistenceTarget}\nDirectory: {plan.ExecutableDirectory}",
+            TerminalTheme.Accent);
         if (plan.Action == PortablePathAction.Status || !plan.RequiresChange)
         {
             return false;

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PromptMeUp.Models;
+using PromptMeUp.Services.OpenAi;
 
 namespace PromptMeUp.Services;
 
@@ -41,7 +42,6 @@ public interface IOpenAiService
 public sealed class OpenAiService : IOpenAiService
 {
     private const string Provider = "openai";
-    private const long MinimumExplicitCachePrefixTokens = 1_024;
     private readonly HttpClient _http;
     private readonly IEnvironmentSecretService _secrets;
     private readonly IPromptCatalogService _prompts;
@@ -91,14 +91,14 @@ public sealed class OpenAiService : IOpenAiService
         }
 
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
-        var instructions = BuildInstructions(prompt, settings, language);
+        var instructions = OpenAiRequestBuilder.BuildInstructions(prompt, settings, language);
         return await SendCoreAsync(
             prompt,
             conversationId,
             messages,
             instructions,
             settings,
-            ResolveMaxOutputTokens(prompt, settings.OutputDetail),
+            OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -124,7 +124,7 @@ public sealed class OpenAiService : IOpenAiService
                 [new ChatMessage("user", prompt.ResolveText(language))],
                 prompt.ResolveText(language),
                 settings,
-                ResolveMaxOutputTokens(prompt, settings.OutputDetail),
+                OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail),
                 cancellationToken).ConfigureAwait(false);
             if (!string.Equals(response.Text.Trim(), expected.Trim(), StringComparison.Ordinal))
             {
@@ -134,7 +134,7 @@ public sealed class OpenAiService : IOpenAiService
                     response.HttpStatusCode);
             }
             status = "completed";
-            return new ConnectionTestResult(response, expected);
+            return new ConnectionTestResult(response);
         }
         finally
         {
@@ -154,7 +154,10 @@ public sealed class OpenAiService : IOpenAiService
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(settings);
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
-        return EstimateContext(BuildInstructions(prompt, settings, language), messages, settings.Model);
+        return OpenAiRequestBuilder.EstimateContext(
+            OpenAiRequestBuilder.BuildInstructions(prompt, settings, language),
+            messages,
+            settings.Model);
     }
 
     /// <summary>Requests an advisory AI risk review for a command; final authorization remains local and manual.</summary>
@@ -180,7 +183,7 @@ public sealed class OpenAiService : IOpenAiService
                 500,
                 cancellationToken).ConfigureAwait(false);
             status = "completed";
-            return ParseRiskAssessment(response.Text);
+            return OpenAiResponseParser.ParseRiskAssessment(response.Text);
         }
         finally
         {
@@ -212,7 +215,7 @@ public sealed class OpenAiService : IOpenAiService
         var stopwatch = Stopwatch.StartNew();
         var endpoint = new Uri(settings.Endpoint, UriKind.Absolute);
         var latestUserText = messages.Last(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)).Content;
-        var estimatedContext = EstimateContext(instructions, messages, settings.Model);
+        var estimatedContext = OpenAiRequestBuilder.EstimateContext(instructions, messages, settings.Model);
         var configuredContextLimit = checked(estimatedContext.ContextWindowTokens * settings.MaxContextPercent / 100);
         if (estimatedContext.InputTokens > configuredContextLimit)
         {
@@ -245,7 +248,7 @@ public sealed class OpenAiService : IOpenAiService
                     context = estimatedContext
                 },
                 cancellationToken).ConfigureAwait(false);
-            var requestBody = BuildRequestBody(prompt, settings, messages, instructions, maxOutputTokens);
+            var requestBody = OpenAiRequestBuilder.BuildBody(prompt, settings, messages, instructions, maxOutputTokens);
             using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
             {
                 Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
@@ -265,11 +268,16 @@ public sealed class OpenAiService : IOpenAiService
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var providerError = ReadApiError(responseJson) ?? $"OpenAI returned HTTP {(int)response.StatusCode}.";
+                var providerError = OpenAiResponseParser.ReadApiError(responseJson)
+                    ?? $"OpenAI returned HTTP {(int)response.StatusCode}.";
                 throw new OpenAiRequestException(providerError, "responses_api_failed", (int)response.StatusCode);
             }
 
-            var parsed = ParseResponse(responseJson, (int)response.StatusCode, stopwatch.ElapsedMilliseconds, providerRequestId);
+            var parsed = OpenAiResponseParser.ParseResponse(
+                responseJson,
+                (int)response.StatusCode,
+                stopwatch.ElapsedMilliseconds,
+                providerRequestId);
             var price = await ResolvePriceAsync(parsed.Model, settings.Model, cancellationToken).ConfigureAwait(false);
             var final = parsed with
             {
@@ -350,7 +358,7 @@ public sealed class OpenAiService : IOpenAiService
                     null,
                     _redactor.Redact(latestUserText),
                     null,
-                    EmptyUsage,
+                    OpenAiResponseParser.EmptyUsage,
                     null,
                     statusCode,
                     stopwatch.ElapsedMilliseconds,
@@ -381,253 +389,6 @@ public sealed class OpenAiService : IOpenAiService
         finally
         {
             response?.Dispose();
-        }
-    }
-
-    /// <summary>Builds a provider payload without placing secrets in the serializable object.</summary>
-    private static IReadOnlyDictionary<string, object> BuildRequestBody(
-        PromptDefinition prompt,
-        AppSettings settings,
-        IReadOnlyList<ChatMessage> messages,
-        string instructions,
-        int maxOutputTokens)
-    {
-        var body = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["model"] = settings.Model,
-            ["reasoning"] = new { effort = settings.ReasoningEffort },
-            ["text"] = new { verbosity = ResolveVerbosity(settings.OutputDetail) },
-            ["max_output_tokens"] = maxOutputTokens,
-            ["store"] = false
-        };
-
-        if (settings.PromptCachingEnabled
-            && IsGpt56(settings.Model)
-            && EstimateTokens(instructions) >= MinimumExplicitCachePrefixTokens)
-        {
-            // GPT-5.6 explicit mode caches only the stable YAML instruction, not the changing conversation suffix.
-            body["input"] = BuildExplicitCacheInput(instructions, messages);
-            body["prompt_cache_key"] = BuildPromptCacheKey(prompt, settings.Model, instructions);
-            body["prompt_cache_options"] = new { mode = "explicit", ttl = "30m" };
-        }
-        else
-        {
-            body["instructions"] = instructions;
-            body["input"] = messages.Select(message => new
-            {
-                role = NormalizeRole(message.Role),
-                content = message.Content
-            }).ToArray();
-            if (settings.PromptCachingEnabled)
-            {
-                body["prompt_cache_key"] = BuildPromptCacheKey(prompt, settings.Model, instructions);
-                if (settings.Model == "gpt-5.5")
-                {
-                    body["prompt_cache_retention"] = "24h";
-                }
-            }
-        }
-
-        return body;
-    }
-
-    /// <summary>Places an explicit cache breakpoint after the stable instruction for GPT-5.6 requests.</summary>
-    private static IReadOnlyList<object> BuildExplicitCacheInput(
-        string instructions,
-        IReadOnlyList<ChatMessage> messages)
-    {
-        var input = new List<object>
-        {
-            new
-            {
-                role = "developer",
-                content = new object[]
-                {
-                    new
-                    {
-                        type = "input_text",
-                        text = instructions,
-                        prompt_cache_breakpoint = new { mode = "explicit" }
-                    }
-                }
-            }
-        };
-        input.AddRange(messages.Select(message => (object)new
-        {
-            role = NormalizeRole(message.Role),
-            content = message.Content
-        }));
-        return input;
-    }
-
-    /// <summary>Creates a stable routing key without embedding instruction text or user data.</summary>
-    private static string BuildPromptCacheKey(PromptDefinition prompt, string model, string instructions)
-    {
-        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(instructions)))
-            .ToLowerInvariant()[..16];
-        return $"promptmeup:{model}:{prompt.Id}:v{prompt.Version}:{hash}";
-    }
-
-    /// <summary>Combines the immutable YAML instruction with approved user preferences and optional locale context.</summary>
-    private static string BuildInstructions(PromptDefinition prompt, AppSettings settings, string language)
-    {
-        var builder = new StringBuilder(prompt.ResolveText(language));
-        if (string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase))
-        {
-            if (!string.IsNullOrWhiteSpace(settings.CustomInstruction))
-            {
-                builder.AppendLine().AppendLine().Append(settings.CustomInstruction.Trim());
-            }
-
-            if (settings.IncludeWindowsLocation)
-            {
-                // Only coarse machine locale is included; precise location is neither requested nor inferred.
-                builder.AppendLine()
-                    .AppendLine()
-                    .Append("Windows locale context: culture=")
-                    .Append(System.Globalization.CultureInfo.CurrentCulture.Name)
-                    .Append(", timezone=")
-                    .Append(TimeZoneInfo.Local.Id)
-                    .Append('.');
-            }
-        }
-
-        return builder.ToString();
-    }
-
-    /// <summary>Builds a lightweight preflight estimate from the populated instruction and bounded message list.</summary>
-    private static AiContextUsage EstimateContext(
-        string instructions,
-        IReadOnlyList<ChatMessage> messages,
-        string model)
-    {
-        var instructionTokens = EstimateTokens(instructions);
-        var conversationTokens = messages.Sum(message => EstimateTokens(message.Content) + 4L);
-        var latestPromptTokens = messages.LastOrDefault(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)) is { } latest
-            ? EstimateTokens(latest.Content)
-            : 0;
-        return new AiContextUsage(
-            instructionTokens + conversationTokens + 8,
-            0,
-            instructionTokens,
-            conversationTokens,
-            latestPromptTokens,
-            AiModelCatalog.Resolve(model).ContextWindowTokens,
-            true);
-    }
-
-    /// <summary>Approximates text tokens from UTF-8 payload size until provider usage supplies the exact count.</summary>
-    private static long EstimateTokens(string text) => string.IsNullOrEmpty(text)
-        ? 0
-        : Math.Max(1, (long)Math.Ceiling(Encoding.UTF8.GetByteCount(text) / 4d));
-
-    /// <summary>Parses the stable response fields and tolerates non-text output items.</summary>
-    private static AiResponse ParseResponse(
-        string json,
-        int statusCode,
-        long elapsedMilliseconds,
-        string? providerRequestId)
-    {
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
-        var text = ReadOutputText(root);
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            throw new OpenAiRequestException("OpenAI returned no text output.", "empty_response", statusCode);
-        }
-
-        var usage = root.TryGetProperty("usage", out var usageElement)
-            ? ParseUsage(usageElement)
-            : EmptyUsage;
-        return new AiResponse(
-            ReadOptionalString(root, "id") ?? Guid.NewGuid().ToString("N"),
-            ReadOptionalString(root, "model") ?? "unknown",
-            text.Trim(),
-            usage,
-            new AiContextUsage(usage.InputTokens, usage.OutputTokens, 0, usage.InputTokens, 0, 0, false),
-            null,
-            null,
-            statusCode,
-            elapsedMilliseconds,
-            providerRequestId);
-    }
-
-    /// <summary>Concatenates output_text entries from every assistant output message.</summary>
-    private static string ReadOutputText(JsonElement root)
-    {
-        if (!root.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
-        {
-            return string.Empty;
-        }
-
-        var parts = new List<string>();
-        foreach (var item in output.EnumerateArray())
-        {
-            if (!item.TryGetProperty("content", out var content) || content.ValueKind != JsonValueKind.Array)
-            {
-                continue;
-            }
-
-            foreach (var part in content.EnumerateArray())
-            {
-                if (string.Equals(ReadOptionalString(part, "type"), "output_text", StringComparison.Ordinal)
-                    && ReadOptionalString(part, "text") is { Length: > 0 } value)
-                {
-                    parts.Add(value);
-                }
-            }
-        }
-
-        return string.Join(Environment.NewLine, parts);
-    }
-
-    /// <summary>Extracts token counters from the Responses API usage object.</summary>
-    private static AiUsageMetrics ParseUsage(JsonElement usage)
-    {
-        var input = ReadInt64(usage, "input_tokens");
-        var output = ReadInt64(usage, "output_tokens");
-        var total = ReadInt64(usage, "total_tokens");
-        var cached = usage.TryGetProperty("input_tokens_details", out var inputDetails)
-            ? ReadInt64(inputDetails, "cached_tokens")
-            : 0;
-        var cacheWrite = usage.TryGetProperty("input_tokens_details", out inputDetails)
-            ? ReadInt64(inputDetails, "cache_write_tokens")
-            : 0;
-        var reasoning = usage.TryGetProperty("output_tokens_details", out var outputDetails)
-            ? ReadInt64(outputDetails, "reasoning_tokens")
-            : 0;
-        return new AiUsageMetrics(input, cached, cacheWrite, output, reasoning, total == 0 ? input + output : total);
-    }
-
-    /// <summary>Parses the deliberately small JSON contract returned by the risk-review prompt.</summary>
-    private static CommandRiskAssessment ParseRiskAssessment(string text)
-    {
-        var json = StripCodeFence(text);
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-            var score = Math.Clamp(root.GetProperty("score").GetInt32(), 0, 100);
-            var levelText = root.GetProperty("level").GetString() ?? string.Empty;
-            var description = root.GetProperty("description_markdown").GetString();
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                throw new JsonException("Risk description is empty.");
-            }
-
-            var level = levelText.ToLowerInvariant() switch
-            {
-                "low" => CommandRiskLevel.Low,
-                "medium" => CommandRiskLevel.Medium,
-                "high" => CommandRiskLevel.High,
-                "critical" => CommandRiskLevel.Critical,
-                _ => ScoreToLevel(score)
-            };
-            return new CommandRiskAssessment(score, level, description.Trim(), true, null);
-        }
-        catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
-        {
-            throw new OpenAiRequestException("The AI command review returned an invalid structure.", "invalid_risk_review", null, exception);
         }
     }
 
@@ -678,97 +439,10 @@ public sealed class OpenAiService : IOpenAiService
         }
     }
 
-    /// <summary>Maps output-detail preference to the Responses API verbosity vocabulary.</summary>
-    private static string ResolveVerbosity(string detail) => detail switch
-    {
-        "compact" => "low",
-        "detailed" => "high",
-        _ => "medium"
-    };
-
-    /// <summary>Chooses a bounded response budget and honors a smaller YAML diagnostic limit.</summary>
-    private static int ResolveMaxOutputTokens(PromptDefinition prompt, string detail)
-    {
-        var configured = detail switch
-        {
-            "compact" => 900,
-            "detailed" => 3000,
-            _ => 1800
-        };
-        return prompt.Metadata.TryGetValue("max-output-tokens", out var text)
-               && int.TryParse(text, out var promptLimit)
-               && promptLimit is > 0 and <= 16_384
-            ? Math.Min(configured, promptLimit)
-            : configured;
-    }
-
-    /// <summary>Restricts conversation roles to those accepted by the provider.</summary>
-    private static string NormalizeRole(string role) => role.ToLowerInvariant() switch
-    {
-        "assistant" => "assistant",
-        "developer" => "developer",
-        _ => "user"
-    };
-
-    /// <summary>Identifies the model family that supports explicit prompt-cache breakpoints.</summary>
-    private static bool IsGpt56(string model) => model.StartsWith("gpt-5.6", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>Maps a numeric advisory score to its display level.</summary>
-    private static CommandRiskLevel ScoreToLevel(int score) => score switch
-    {
-        >= 85 => CommandRiskLevel.Critical,
-        >= 60 => CommandRiskLevel.High,
-        >= 30 => CommandRiskLevel.Medium,
-        _ => CommandRiskLevel.Low
-    };
-
-    /// <summary>Removes an optional JSON code fence without interpreting other Markdown.</summary>
-    private static string StripCodeFence(string value)
-    {
-        var trimmed = value.Trim();
-        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
-        {
-            return trimmed;
-        }
-
-        var firstLine = trimmed.IndexOf('\n');
-        var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
-        return firstLine >= 0 && lastFence > firstLine
-            ? trimmed[(firstLine + 1)..lastFence].Trim()
-            : trimmed;
-    }
-
-    /// <summary>Reads a scalar token counter and treats absent fields as zero.</summary>
-    private static long ReadInt64(JsonElement element, string propertyName) =>
-        element.TryGetProperty(propertyName, out var property) && property.TryGetInt64(out var value)
-            ? Math.Max(0, value)
-            : 0;
-
-    /// <summary>Reads a nullable JSON string.</summary>
-    private static string? ReadOptionalString(JsonElement element, string propertyName) =>
-        element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
-            ? property.GetString()
-            : null;
-
     /// <summary>Reads a provider response header without assuming it is present.</summary>
     private static string? ReadHeader(HttpResponseMessage response, string name) =>
         response.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
 
-    /// <summary>Extracts the standard provider error message while ignoring malformed envelopes.</summary>
-    private static string? ReadApiError(string json)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            return document.RootElement.GetProperty("error").GetProperty("message").GetString();
-        }
-        catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
-    private static AiUsageMetrics EmptyUsage { get; } = new(0, 0, 0, 0, 0, 0);
 }
 
 public sealed class OpenAiRequestException : Exception

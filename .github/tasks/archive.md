@@ -2,6 +2,17 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-08-16 — Readability, resilience, and terminal UX refactor
+
+- Corrected ordered multi-token query parsing and made SQLite initialization version-safe, transactional, repairable, and WAL-consistent.
+- Extracted AI conversation, authorized-command, provider request/response, and SQLite schema responsibilities from oversized services without weakening command authorization or audit boundaries.
+- Fixed one-shot query visibility and prevented scalar or malformed optional Costs API errors from aborting the requested AI operation.
+- Rebuilt the terminal experience around compact frameless headings, whitespace, color, responsive status lines, staged setup, optional advanced settings, and secret input that reveals neither value nor length.
+- Added `Esc` current-flow cancellation, fail-closed authorization cancellation, and `Ctrl+C` application shutdown; exact `/run` without a command now fails locally instead of reaching the model.
+- Removed confirmed-unused PowerShell helpers and redundant contract members, automated the multi-platform quality gate, and documented post-commit/push cleanup.
+
+Validation: preflight, restore, format verification, XML comments, Release build with 0 warnings/errors, 52/52 tests, read-only CLI commands in disposable data directories, and live `Esc` / `Ctrl+C` prompt smokes passed.
+
 ## 2026-08-16 — Windows release artifact builder
 
 - Added one PowerShell entry point with a read-only plan mode, bounded release output, and fail-fast prerequisite checks.

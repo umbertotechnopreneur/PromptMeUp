@@ -36,18 +36,7 @@ public sealed class EnvironmentSecretService(ILogger<EnvironmentSecretService> l
     public bool IsConfigured(string variableName) => LooksLikeOpenAiKey(Load(variableName));
 
     /// <summary>Performs a local shape check; this does not authenticate with OpenAI.</summary>
-    public bool LooksLikeOpenAiKey(string? secret)
-    {
-        if (string.IsNullOrWhiteSpace(secret)
-            || secret.Length < 20
-            || !secret.StartsWith("sk-", StringComparison.Ordinal)
-            || !string.Equals(secret, secret.Trim(), StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        return secret.All(character => !char.IsWhiteSpace(character) && !char.IsControl(character));
-    }
+    public bool LooksLikeOpenAiKey(string? secret) => OpenAiKeyPolicy.IsPlausible(secret);
 
     /// <summary>Stores a validated secret in current process and Windows user scope only.</summary>
     public SecretStoreResult StoreForCurrentUser(string variableName, string secret)
@@ -63,14 +52,13 @@ public sealed class EnvironmentSecretService(ILogger<EnvironmentSecretService> l
         {
             logger.LogInformation("Environment secret loaded for this process. Variable={Variable}, Scope=Process", name);
             return new SecretStoreResult(
-                false,
                 $"Export {name} in your shell or secret manager before future hm sessions.");
         }
 
         // User scope persists on Windows; process scope above makes the new key available immediately.
         Environment.SetEnvironmentVariable(name, secret, EnvironmentVariableTarget.User);
         logger.LogInformation("Environment secret stored. Variable={Variable}, Scopes=User+Process", name);
-        return new SecretStoreResult(true, $"{name} is available to this process and future Windows user sessions.");
+        return new SecretStoreResult($"{name} is available to this process and future Windows user sessions.");
     }
 
     /// <summary>Validates the allowlisted OpenAI environment variable name.</summary>

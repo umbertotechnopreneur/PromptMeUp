@@ -19,12 +19,12 @@ public sealed class NerdFontView(IAnsiConsole console, ILocalizationService text
     public bool PreviewAndConfirm(bool dryRun, bool preauthorized)
     {
         var operation = "oh-my-posh font install JetBrainsMono --headless";
-        console.Write(new Panel(new Text(dryRun ? $"DRY RUN · {operation}" : operation))
-        {
-            Header = new PanelHeader($" {text.Text("Font.Title")} "),
-            Border = BoxBorder.Double,
-            BorderStyle = new Style(Color.MediumPurple2)
-        });
+        TerminalTheme.WriteHeading(console, text.Text("Font.Title"));
+        TerminalTheme.WriteBlock(
+            console,
+            dryRun ? "DRY RUN" : text.Text("Command.Preview"),
+            operation,
+            TerminalTheme.Accent);
         return preauthorized || console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Font.Confirm")))
         {
             DefaultValue = false

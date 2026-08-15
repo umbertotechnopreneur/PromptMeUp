@@ -6,7 +6,6 @@ using PromptMeUp.Infrastructure;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Views;
-using Spectre.Console;
 
 namespace PromptMeUp.Application;
 
@@ -23,12 +22,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IEnvironmentSecretService _secrets;
     private readonly IPromptCatalogService _prompts;
     private readonly IPricingService _pricing;
-    private readonly IOpenAiService _openAi;
-    private readonly IConversationMemoryService _memoryService;
-    private readonly ICommandRiskAssessmentService _riskAssessment;
-    private readonly ICommandExecutionService _commandExecution;
+    private readonly IAiConversationWorkflow _conversationWorkflow;
     private readonly IActivityAuditService _audit;
-    private readonly ISensitiveDataRedactor _redactor;
     private readonly IPortablePathService _pathService;
     private readonly INerdFontInstallerService _fontInstaller;
     private readonly ILocalizationService _text;
@@ -36,14 +31,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly ISetupView _setupView;
     private readonly IStatusView _statusView;
     private readonly ICostsView _costsView;
-    private readonly IChatView _chatView;
-    private readonly ICommandAuthorizationView _commandView;
     private readonly IHelpView _helpView;
     private readonly IMainMenuView _mainMenuView;
     private readonly IThirdPartyView _thirdPartyView;
     private readonly IPortablePathView _pathView;
     private readonly INerdFontView _fontView;
-    private readonly IAnsiConsole _console;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
 
@@ -55,12 +47,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IEnvironmentSecretService secrets,
         IPromptCatalogService prompts,
         IPricingService pricing,
-        IOpenAiService openAi,
-        IConversationMemoryService memoryService,
-        ICommandRiskAssessmentService riskAssessment,
-        ICommandExecutionService commandExecution,
+        IAiConversationWorkflow conversationWorkflow,
         IActivityAuditService audit,
-        ISensitiveDataRedactor redactor,
         IPortablePathService pathService,
         INerdFontInstallerService fontInstaller,
         ILocalizationService text,
@@ -68,14 +56,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         ISetupView setupView,
         IStatusView statusView,
         ICostsView costsView,
-        IChatView chatView,
-        ICommandAuthorizationView commandView,
         IHelpView helpView,
         IMainMenuView mainMenuView,
         IThirdPartyView thirdPartyView,
         IPortablePathView pathView,
         INerdFontView fontView,
-        IAnsiConsole console,
         AppPaths paths,
         ILogger<PromptMeUpApplication> logger)
     {
@@ -85,12 +70,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _secrets = secrets;
         _prompts = prompts;
         _pricing = pricing;
-        _openAi = openAi;
-        _memoryService = memoryService;
-        _riskAssessment = riskAssessment;
-        _commandExecution = commandExecution;
+        _conversationWorkflow = conversationWorkflow;
         _audit = audit;
-        _redactor = redactor;
         _pathService = pathService;
         _fontInstaller = fontInstaller;
         _text = text;
@@ -98,14 +79,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _setupView = setupView;
         _statusView = statusView;
         _costsView = costsView;
-        _chatView = chatView;
-        _commandView = commandView;
         _helpView = helpView;
         _mainMenuView = mainMenuView;
         _thirdPartyView = thirdPartyView;
         _pathView = pathView;
         _fontView = fontView;
-        _console = console;
         _paths = paths;
         _logger = logger;
     }
@@ -152,9 +130,16 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             _shell.RenderFooter(commandName);
             return exitCode;
         }
+        catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _shell.RenderNotice(_text.Text("Common.Cancelled"));
+            await TryAuditAsync(commandName, "cancelled", null, new { reason = "escape" }).ConfigureAwait(false);
+            _shell.RenderFooter(commandName);
+            return 0;
+        }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _shell.RenderNotice("Operation cancelled.");
+            _shell.RenderNotice(_text.Text("Common.Cancelled"));
             _shell.RenderFooter(commandName);
             return 130;
         }
@@ -195,16 +180,20 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 return 0;
             case AppCommand.Query:
                 EnsureAiReady(settings);
-                await RunQueryAsync(options.Query!, settings, cancellationToken).ConfigureAwait(false);
+                await _conversationWorkflow.RunQueryAsync(
+                    options.Query!,
+                    settings,
+                    renderQuery: true,
+                    cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.Chat:
                 EnsureInteractive();
                 EnsureAiReady(settings);
-                await RunChatAsync(settings, cancellationToken).ConfigureAwait(false);
+                await _conversationWorkflow.RunChatAsync(settings, cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.TestAi:
                 EnsureAiReady(settings);
-                await RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
+                await _conversationWorkflow.RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.Costs:
                 _costsView.Render(await _pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false));
@@ -243,7 +232,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private async Task<int> RunSetupAsync(AppSettings current, CancellationToken cancellationToken)
     {
         EnsureInteractive();
-        var submission = _setupView.Collect(current);
+        var submission = _setupView.Collect(new SetupViewState(
+            current,
+            _secrets.IsConfigured(current.ApiKeyVariable),
+            _secrets.IsConfigured(current.AdminKeyVariable)));
         if (submission is null)
         {
             _shell.RenderNotice(_text.Text("Setup.Cancelled"));
@@ -263,10 +255,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
         await _settings.SaveAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
         _text.SetLanguage(submission.Settings.Language);
-        _console.MarkupLine($"[green]{Markup.Escape(_text.Text("Setup.Saved"))}[/]");
+        _shell.RenderSuccess(_text.Text("Setup.Saved"));
         foreach (var guidance in secretGuidance)
         {
-            _console.MarkupLine($"[grey]{Markup.Escape(guidance)}[/]");
+            _shell.RenderMuted(guidance);
         }
         await TryAuditAsync(
             "setup",
@@ -284,240 +276,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             }).ConfigureAwait(false);
         if (submission.TestConnection)
         {
-            await RunConnectionTestAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
+            await _conversationWorkflow.RunConnectionTestAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
         }
         return 0;
-    }
-
-    /// <summary>Runs a single-turn session and closes its ledger after the model response.</summary>
-    private async Task RunQueryAsync(string query, AppSettings settings, CancellationToken cancellationToken)
-    {
-        var sessionId = Guid.NewGuid().ToString("N");
-        var memory = _memoryService.Create(settings);
-        var runningCost = 0m;
-        await _audit.StartSessionAsync(sessionId, "query", settings, new { invocation = "query" }, cancellationToken).ConfigureAwait(false);
-        var status = "failed";
-        try
-        {
-            await SendTurnAsync(sessionId, query, memory, settings, runningCost, cancellationToken).ConfigureAwait(false);
-            status = "completed";
-        }
-        finally
-        {
-            await _audit.CloseSessionAsync(sessionId, status, CancellationToken.None).ConfigureAwait(false);
-        }
-    }
-
-    /// <summary>Runs a short interactive session with slash commands and a mandatory command-authorization gate.</summary>
-    private async Task RunChatAsync(AppSettings settings, CancellationToken cancellationToken)
-    {
-        var sessionId = Guid.NewGuid().ToString("N");
-        var memory = _memoryService.Create(settings);
-        var runningCost = 0m;
-        var status = "cancelled";
-        await _audit.StartSessionAsync(sessionId, "chat", settings, new { invocation = "chat" }, cancellationToken).ConfigureAwait(false);
-        _chatView.RenderIntro();
-        try
-        {
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var input = _chatView.ReadMessage().Trim();
-                if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
-                {
-                    status = "completed";
-                    _console.MarkupLine($"[grey]{Markup.Escape(_text.Text("Chat.Exit"))}[/]");
-                    break;
-                }
-                if (input.Equals("/clear", StringComparison.OrdinalIgnoreCase))
-                {
-                    memory.Clear();
-                    await _audit.AppendSessionEventAsync(sessionId, "memory_cleared", new { }, cancellationToken).ConfigureAwait(false);
-                    _console.MarkupLine($"[grey]{Markup.Escape(_text.Text("Chat.Cleared"))}[/]");
-                    continue;
-                }
-                if (input.Equals("/costs", StringComparison.OrdinalIgnoreCase))
-                {
-                    _costsView.Render(await _pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false));
-                    continue;
-                }
-                if (input.Equals("/status", StringComparison.OrdinalIgnoreCase))
-                {
-                    _shell.RenderRuntimeStatus(ShellRuntimeStatus.FromSettings(settings) with { RunningCostUsd = runningCost });
-                    continue;
-                }
-                if (input.StartsWith("/run ", StringComparison.OrdinalIgnoreCase))
-                {
-                    var command = input[5..].Trim();
-                    if (command.Length == 0)
-                    {
-                        _shell.RenderError("/run requires a command.");
-                        continue;
-                    }
-
-                    var commandFollowUp = await RunAuthorizedCommandAsync(
-                        sessionId,
-                        command,
-                        settings,
-                        cancellationToken).ConfigureAwait(false);
-                    if (commandFollowUp is not null)
-                    {
-                        runningCost += await SendTurnAsync(sessionId, commandFollowUp, memory, settings, runningCost, cancellationToken).ConfigureAwait(false);
-                    }
-                    continue;
-                }
-                if (string.IsNullOrWhiteSpace(input))
-                {
-                    continue;
-                }
-
-                runningCost += await SendTurnAsync(sessionId, input, memory, settings, runningCost, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
-            await _audit.CloseSessionAsync(sessionId, status, CancellationToken.None).ConfigureAwait(false);
-        }
-    }
-
-    /// <summary>Adds one bounded user turn, renders preflight context, calls OpenAI, and updates session metrics.</summary>
-    private async Task<decimal> SendTurnAsync(
-        string sessionId,
-        string userText,
-        ConversationMemory memory,
-        AppSettings settings,
-        decimal runningCost,
-        CancellationToken cancellationToken)
-    {
-        var update = memory.Add("user", userText);
-        await AuditPruningAsync(sessionId, update.PrunedMessages, cancellationToken).ConfigureAwait(false);
-        var before = await _openAi.EstimateContextAsync(
-            "chat-system",
-            update.Snapshot.Messages,
-            settings,
-            _text.Language,
-            cancellationToken).ConfigureAwait(false);
-        _shell.RenderRuntimeStatus(new ShellRuntimeStatus(
-            "OpenAI",
-            settings.Model,
-            settings.ReasoningEffort,
-            null,
-            null,
-            runningCost,
-            before.InputTokens,
-            before.ContextWindowTokens,
-            true,
-            0,
-            0));
-
-        var response = await _shell.RunWithStatusAsync(
-            _text.Text("Status.Thinking"),
-            () => _openAi.SendAsync(
-                "chat-system",
-                sessionId,
-                update.Snapshot.Messages,
-                settings,
-                _text.Language,
-                cancellationToken)).ConfigureAwait(false);
-        var assistantUpdate = memory.Add("assistant", response.Text);
-        await AuditPruningAsync(sessionId, assistantUpdate.PrunedMessages, cancellationToken).ConfigureAwait(false);
-        _chatView.RenderAssistant(response.Text, animate: false, cancellationToken);
-        var turnCost = response.EstimatedCostUsd ?? 0m;
-        decimal? promptCost = response.CostBreakdown is null
-            ? null
-            : response.CostBreakdown.InputUsd + response.CostBreakdown.CachedInputUsd + response.CostBreakdown.CacheWriteUsd;
-        _shell.RenderRuntimeStatus(new ShellRuntimeStatus(
-            "OpenAI",
-            response.Model,
-            settings.ReasoningEffort,
-            promptCost,
-            response.CostBreakdown?.OutputUsd,
-            runningCost + turnCost,
-            response.ContextUsage.InputTokens + response.ContextUsage.OutputTokens,
-            response.ContextUsage.ContextWindowTokens,
-            false,
-            response.Usage.CachedInputTokens,
-            response.Usage.CacheWriteTokens));
-        return turnCost;
-    }
-
-    /// <summary>Assesses, previews, authorizes, executes, audits, and prepares bounded command output for the next AI turn.</summary>
-    private async Task<string?> RunAuthorizedCommandAsync(
-        string sessionId,
-        string command,
-        AppSettings settings,
-        CancellationToken cancellationToken)
-    {
-        var assessment = await _riskAssessment.AssessAsync(
-            command,
-            settings.ReviewCommandsWithAi,
-            settings,
-            _text.Language,
-            cancellationToken).ConfigureAwait(false);
-        await _audit.AppendSessionEventAsync(
-            sessionId,
-            "command_preview",
-            new { command, assessment },
-            cancellationToken).ConfigureAwait(false);
-        var approved = _commandView.PreviewAndAuthorize(command, assessment);
-        if (approved is null)
-        {
-            await _audit.RecordAsync("command_authorization", "denied", sessionId, new { command, assessment.Score }, cancellationToken).ConfigureAwait(false);
-            return null;
-        }
-
-        await _audit.RecordAsync("command_authorization", "approved", sessionId, new { command, assessment.Score }, cancellationToken).ConfigureAwait(false);
-        var result = await _shell.RunWithStatusAsync(
-            _text.Text("Command.Running"),
-            () => _commandExecution.ExecuteAsync(
-                approved,
-                TimeSpan.FromSeconds(settings.CommandTimeoutSeconds),
-                cancellationToken)).ConfigureAwait(false);
-        _commandView.RenderExecutionResult(result);
-        var boundedOutput = Limit(_redactor.Redact(result.StandardOutput), settings.MaxCommandOutputCharacters);
-        var boundedError = Limit(_redactor.Redact(result.StandardError), settings.MaxCommandOutputCharacters);
-        var redactedCommand = _redactor.Redact(command);
-        await _audit.AppendSessionEventAsync(
-            sessionId,
-            "command_output",
-            new
-            {
-                result.Command,
-                result.ExitCode,
-                standardOutput = boundedOutput,
-                standardError = boundedError,
-                result.TimedOut,
-                result.OutputTruncated,
-                result.ElapsedMilliseconds
-            },
-            cancellationToken).ConfigureAwait(false);
-        var followUp = $"""
-            I explicitly authorized and ran this PowerShell command:
-            {redactedCommand}
-
-            Exit code: {result.ExitCode?.ToString() ?? "timeout"}
-            Standard output:
-            {boundedOutput}
-
-            Standard error:
-            {boundedError}
-
-            Analyze this result and explain the next useful step. Do not imply that any additional command has run.
-            """;
-        return Limit(followUp, settings.MaxMessageCharacters);
-    }
-
-    /// <summary>Runs the YAML diagnostic prompt and renders its response with a teletype effect.</summary>
-    private async Task RunConnectionTestAsync(AppSettings settings, CancellationToken cancellationToken)
-    {
-        _console.MarkupLine($"[bold deepskyblue1]{Markup.Escape(_text.Text("Test.Title"))}[/]");
-        var prompt = await _prompts.GetAsync("connection-test", cancellationToken).ConfigureAwait(false);
-        _chatView.RenderUser(prompt.ResolveText(_text.Language));
-        var result = await _shell.RunWithStatusAsync(
-            _text.Text("Status.Thinking"),
-            () => _openAi.TestConnectionAsync(settings, _text.Language, cancellationToken)).ConfigureAwait(false);
-        _chatView.RenderAssistant(result.Response.Text, animate: true, cancellationToken);
-        _console.MarkupLine($"[green]{Markup.Escape(_text.Text("Test.Success", result.Response.ElapsedMilliseconds))}[/]");
     }
 
     /// <summary>Builds and renders the current application status from local services.</summary>
@@ -579,47 +340,73 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         var settings = initialSettings;
         while (true)
         {
-            var action = _mainMenuView.Select();
-            switch (action)
+            MainMenuAction action;
+            try
             {
-                case MainMenuAction.Query:
-                    EnsureAiReady(settings);
-                    var query = _console.Prompt(new TextPrompt<string>(Markup.Escape(_text.Text("Query.Prompt"))));
-                    await RunQueryAsync(query, settings, cancellationToken).ConfigureAwait(false);
-                    break;
-                case MainMenuAction.Chat:
-                    EnsureAiReady(settings);
-                    await RunChatAsync(settings, cancellationToken).ConfigureAwait(false);
-                    break;
-                case MainMenuAction.Costs:
-                    await TryRefreshPricingAsync(settings, true, cancellationToken).ConfigureAwait(false);
-                    _costsView.Render(await _pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false));
-                    break;
-                case MainMenuAction.Status:
-                    await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
-                    break;
-                case MainMenuAction.Setup:
-                    await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
-                    settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
-                    _text.SetLanguage(settings.Language);
-                    break;
-                case MainMenuAction.TestAi:
-                    EnsureAiReady(settings);
-                    await RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
-                    break;
-                case MainMenuAction.Path:
-                    await RunPathAsync(new CommandLineOptions(AppCommand.Path, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
-                    break;
-                case MainMenuAction.InstallFont:
-                    await RunFontAsync(new CommandLineOptions(AppCommand.InstallFont, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
-                    break;
-                case MainMenuAction.ThirdParty:
-                    _thirdPartyView.Render();
-                    break;
-                default:
-                    return 0;
+                action = _mainMenuView.Select();
             }
-            _console.WriteLine();
+            catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                _shell.RenderNotice(_text.Text("Common.Cancelled"));
+                return 0;
+            }
+
+            try
+            {
+                switch (action)
+                {
+                    case MainMenuAction.Query:
+                        EnsureAiReady(settings);
+                        var query = _shell.ReadText(_text.Text("Query.Prompt"));
+                        await _conversationWorkflow.RunQueryAsync(
+                            query,
+                            settings,
+                            renderQuery: false,
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.Chat:
+                        EnsureAiReady(settings);
+                        await _conversationWorkflow.RunChatAsync(settings, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.Costs:
+                        await TryRefreshPricingAsync(settings, true, cancellationToken).ConfigureAwait(false);
+                        _costsView.Render(await _pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false));
+                        break;
+                    case MainMenuAction.Status:
+                        await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.Setup:
+                        await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
+                        settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+                        _text.SetLanguage(settings.Language);
+                        break;
+                    case MainMenuAction.TestAi:
+                        EnsureAiReady(settings);
+                        await _conversationWorkflow.RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.Path:
+                        await RunPathAsync(new CommandLineOptions(AppCommand.Path, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.InstallFont:
+                        await RunFontAsync(new CommandLineOptions(AppCommand.InstallFont, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.ThirdParty:
+                        _thirdPartyView.Render();
+                        break;
+                    default:
+                        return 0;
+                }
+            }
+            catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                _shell.RenderNotice(_text.Text("Common.Cancelled"));
+                await TryAuditAsync(
+                    action.ToString().ToLowerInvariant(),
+                    "cancelled",
+                    null,
+                    new { reason = "escape" }).ConfigureAwait(false);
+            }
+            _shell.WriteLine();
         }
     }
 
@@ -628,30 +415,27 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         try
         {
-            await _shell.RunWithStatusAsync(
+            var result = await _shell.RunWithStatusAsync(
                 _text.Text("Costs.Refreshing"),
                 () => _pricing.RefreshDailyIfNeededAsync(settings, force, cancellationToken)).ConfigureAwait(false);
+            if (force)
+            {
+                _shell.RenderSuccess(_text.Text("Costs.Refreshed"));
+            }
+
+            if (force || result.PricesRefreshed || result.OrganizationCostRows > 0)
+            {
+                await TryAuditAsync("pricing_refresh", "completed", null, result).ConfigureAwait(false);
+            }
         }
         catch (Exception exception) when (exception is HttpRequestException or OpenAiRequestException or InvalidDataException or TaskCanceledException)
         {
             _logger.LogWarning(exception, "Daily pricing refresh failed; cached data remains available.");
             if (force)
             {
-                _console.MarkupLine($"[yellow]{Markup.Escape(exception.Message)}[/]");
+                _shell.RenderWarning(exception.Message);
             }
         }
-    }
-
-    /// <summary>Records context-pruning activity only when the active memory actually changed.</summary>
-    private async Task AuditPruningAsync(string sessionId, int prunedMessages, CancellationToken cancellationToken)
-    {
-        if (prunedMessages <= 0)
-        {
-            return;
-        }
-
-        _chatView.RenderMemoryPruned(prunedMessages);
-        await _audit.AppendSessionEventAsync(sessionId, "memory_pruned", new { prunedMessages }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Records a non-session activity while allowing diagnostics to continue if auditing itself fails.</summary>
@@ -702,22 +486,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private void RenderVersion()
     {
         var assembly = Assembly.GetExecutingAssembly().GetName();
-        _console.MarkupLine($"[bold]PromptMeUp[/] {Markup.Escape(assembly.Version?.ToString(3) ?? "0.1.0")}");
-        _console.MarkupLine($"[grey].NET {Markup.Escape(Environment.Version.ToString())} · {Markup.Escape(System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier)}[/]");
-    }
-
-    /// <summary>Limits output retained and transmitted after an authorized command.</summary>
-    private static string Limit(string value, int maximumCharacters)
-    {
-        if (value.Length <= maximumCharacters)
-        {
-            return value;
-        }
-
-        const string suffix = "\n[truncated by PromptMeUp]";
-        return maximumCharacters <= suffix.Length
-            ? value[..maximumCharacters]
-            : value[..(maximumCharacters - suffix.Length)] + suffix;
+        _shell.RenderVersion(
+            assembly.Version?.ToString(3) ?? "0.1.0",
+            Environment.Version.ToString(),
+            System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
     }
 
     /// <summary>Maps a CLI PATH verb to the portable service action.</summary>

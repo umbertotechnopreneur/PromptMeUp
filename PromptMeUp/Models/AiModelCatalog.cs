@@ -5,11 +5,8 @@ namespace PromptMeUp.Models;
 public sealed record AiModelDescriptor(
     string Id,
     string DisplayName,
-    string Description,
     IReadOnlyList<string> ReasoningEfforts,
-    bool SupportsImageInput,
-    long ContextWindowTokens,
-    long MaximumOutputTokens);
+    long ContextWindowTokens);
 
 public static class AiModelCatalog
 {
@@ -18,13 +15,13 @@ public static class AiModelCatalog
 
     public static IReadOnlyList<AiModelDescriptor> Models { get; } =
     [
-        new("gpt-5.6-sol", "GPT-5.6 Sol", "Frontier model for demanding professional work and reasoning.", FrontierEfforts, true, 1_050_000, 128_000),
-        new("gpt-5.6-terra", "GPT-5.6 Terra", "Balanced intelligence, latency, and cost for everyday work.", FrontierEfforts, true, 1_050_000, 128_000),
-        new("gpt-5.6-luna", "GPT-5.6 Luna", "Cost-sensitive model for fast, high-volume workloads.", FrontierEfforts, true, 1_050_000, 128_000),
-        new("gpt-5.5", "GPT-5.5", "Previous frontier model for complex professional work.", FullEfforts, true, 1_050_000, 128_000),
-        new("gpt-5.4", "GPT-5.4", "Affordable model for coding and professional work.", FullEfforts, true, 1_050_000, 128_000),
-        new("gpt-5.4-mini", "GPT-5.4 mini", "Efficient model for focused and high-volume tasks.", FullEfforts, true, 400_000, 128_000),
-        new("gpt-5.4-nano", "GPT-5.4 nano", "Low-cost model for extraction, ranking, and simple tasks.", FullEfforts, true, 400_000, 128_000)
+        new("gpt-5.6-sol", "GPT-5.6 Sol", FrontierEfforts, 1_050_000),
+        new("gpt-5.6-terra", "GPT-5.6 Terra", FrontierEfforts, 1_050_000),
+        new("gpt-5.6-luna", "GPT-5.6 Luna", FrontierEfforts, 1_050_000),
+        new("gpt-5.5", "GPT-5.5", FullEfforts, 1_050_000),
+        new("gpt-5.4", "GPT-5.4", FullEfforts, 1_050_000),
+        new("gpt-5.4-mini", "GPT-5.4 mini", FullEfforts, 400_000),
+        new("gpt-5.4-nano", "GPT-5.4 nano", FullEfforts, 400_000)
     ];
 
     /// <summary>Resolves a supported model identifier or rejects stale configuration.</summary>

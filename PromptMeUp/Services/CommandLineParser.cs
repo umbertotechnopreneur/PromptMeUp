@@ -17,7 +17,6 @@ public sealed class CommandLineParser : ICommandLineParser
         ArgumentNullException.ThrowIfNull(args);
 
         var command = AppCommand.Main;
-        string? query = null;
         string? language = null;
         var noAnimation = false;
         var noEmoji = false;
@@ -25,7 +24,8 @@ public sealed class CommandLineParser : ICommandLineParser
         var dryRun = false;
         string? pathAction = null;
         var commandWasSelected = false;
-        var positionalQuery = new List<string>();
+        var queryOptionWasSpecified = false;
+        var queryParts = new List<string>();
 
         for (var index = 0; index < args.Count; index++)
         {
@@ -101,14 +101,20 @@ public sealed class CommandLineParser : ICommandLineParser
                     }
                     break;
                 case "--query" or "-q":
+                    if (queryOptionWasSpecified)
+                    {
+                        return Failure("--query can be specified only once.");
+                    }
                     if (!TrySelect(AppCommand.Query, ref command, ref commandWasSelected, out var queryError))
                     {
                         return Failure(queryError);
                     }
-                    if (!TryReadValue(args, ref index, argument, out query, out var missingQuery))
+                    if (!TryReadValue(args, ref index, argument, out var queryValue, out var missingQuery))
                     {
                         return Failure(missingQuery);
                     }
+                    queryOptionWasSpecified = true;
+                    queryParts.Add(queryValue!);
                     break;
                 case "--language" or "-l":
                     if (!TryReadValue(args, ref index, argument, out language, out var missingLanguage))
@@ -136,15 +142,21 @@ public sealed class CommandLineParser : ICommandLineParser
                 default:
                     if (argument.StartsWith("--query=", StringComparison.OrdinalIgnoreCase))
                     {
+                        if (queryOptionWasSpecified)
+                        {
+                            return Failure("--query can be specified only once.");
+                        }
                         if (!TrySelect(AppCommand.Query, ref command, ref commandWasSelected, out var inlineQueryError))
                         {
                             return Failure(inlineQueryError);
                         }
-                        query = argument[(argument.IndexOf('=') + 1)..].Trim();
-                        if (string.IsNullOrWhiteSpace(query))
+                        var inlineQueryValue = argument[(argument.IndexOf('=') + 1)..].Trim();
+                        if (string.IsNullOrWhiteSpace(inlineQueryValue))
                         {
                             return Failure("--query requires non-empty text.");
                         }
+                        queryOptionWasSpecified = true;
+                        queryParts.Add(inlineQueryValue);
                     }
                     else if (argument.StartsWith("--language=", StringComparison.OrdinalIgnoreCase))
                     {
@@ -174,13 +186,14 @@ public sealed class CommandLineParser : ICommandLineParser
                             return Failure($"Unknown argument '{argument}'. Use --help for command syntax.");
                         }
 
-                        positionalQuery.Add(argument);
+                        queryParts.Add(argument);
                     }
                     break;
             }
         }
 
-        if (positionalQuery.Count > 0)
+        string? query = null;
+        if (queryParts.Count > 0)
         {
             if (commandWasSelected && command != AppCommand.Query)
             {
@@ -189,7 +202,7 @@ public sealed class CommandLineParser : ICommandLineParser
 
             command = AppCommand.Query;
             commandWasSelected = true;
-            query = string.Join(' ', positionalQuery).Trim();
+            query = string.Join(' ', queryParts).Trim();
         }
 
         if (command == AppCommand.Query && string.IsNullOrWhiteSpace(query))

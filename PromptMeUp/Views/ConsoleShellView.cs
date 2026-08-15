@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
 using System.Reflection;
-using PromptMeUp.Infrastructure;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
@@ -25,20 +24,32 @@ public interface IConsoleShellView
     void RenderError(string message);
 
     void RenderNotice(string message);
+
+    void RenderSuccess(string message);
+
+    void RenderWarning(string message);
+
+    void RenderMuted(string message);
+
+    void RenderSectionTitle(string message);
+
+    string ReadText(string prompt);
+
+    void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier);
+
+    void WriteLine();
 }
 
 public sealed class ConsoleShellView : IConsoleShellView
 {
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
-    private readonly AppPaths _paths;
 
     /// <summary>Creates the shared premium console chrome used by every top-level command.</summary>
-    public ConsoleShellView(IAnsiConsole console, ILocalizationService text, AppPaths paths)
+    public ConsoleShellView(IAnsiConsole console, ILocalizationService text)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
-        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
     }
 
     public ConsoleRenderOptions Options { get; private set; } = new(false, false);
@@ -46,44 +57,28 @@ public sealed class ConsoleShellView : IConsoleShellView
     /// <summary>Applies terminal compatibility preferences for the current invocation.</summary>
     public void Configure(ConsoleRenderOptions options) => Options = options;
 
-    /// <summary>Draws the product banner followed by a compact live-status strip.</summary>
+    /// <summary>Draws a compact product and invocation header without idle usage metrics.</summary>
     public void RenderHeader(string command, AppSettings? settings, bool hasApiKey)
     {
         if (!Console.IsOutputRedirected)
         {
-            _console.Clear(home: false);
+            _console.Clear(home: true);
         }
-        var icon = Options.NoEmoji || Console.IsOutputRedirected ? "HM" : "󰚩  HM";
-        var title = new Markup(
-            $"[bold mediumpurple2]{Markup.Escape(icon)} // HELP ME[/]\n" +
-            "[bold white]PromptMeUp[/]  [grey]Ask. Understand. Approve. Act.[/]\n\n" +
-            "[link=https://umbertogiacobbi.biz]umbertogiacobbi.biz[/]  [grey]•[/]  " +
-            "[link=https://github.com/umbertotechnopreneur/PromptMeUp]github.com/umbertotechnopreneur/PromptMeUp[/]");
-        _console.Write(new Panel(title)
+
+        var invocation = command.Equals("main", StringComparison.OrdinalIgnoreCase)
+            ? "hm"
+            : $"hm {command}";
+        _console.Write(new Rule(
+            $"[bold mediumpurple2]HM[/] [grey]/[/] [white]{Markup.Escape(invocation)}[/]")
         {
-            Border = BoxBorder.Rounded,
-            BorderStyle = new Style(Color.MediumPurple2),
-            Header = new PanelHeader(" BOOTSTRAP // READY ", Justify.Right),
-            Padding = new Padding(2, 1)
+            Justification = Justify.Left,
+            Style = Style.Parse("grey35")
         });
 
-        var language = settings?.Language ?? _text.Language;
-        var model = settings?.Model ?? "—";
-        var keyState = settings?.AiEnabled == false
-            ? _text.Text("Status.Disabled")
-            : hasApiKey
-                ? _text.Text("Status.Ready")
-                : _text.Text("Status.Missing");
-        _console.MarkupLine(
-            $"[on grey15]  [grey70]{Markup.Escape(_text.Text("Footer.Command"))}[/] [white]{Markup.Escape(command)}[/]" +
-            $"   [grey70]{Markup.Escape(_text.Text("Status.Language"))}[/] [white]{Markup.Escape(language)}[/]" +
-            $"   [grey70]{Markup.Escape(_text.Text("Status.Model"))}[/] [white]{Markup.Escape(model)}[/]" +
-            $"   [grey70]{Markup.Escape(_text.Text("Status.ApiKey"))}[/] [{(hasApiKey ? "green" : "yellow")}]{Markup.Escape(keyState)}[/]  [/]");
-        RenderRuntimeStatus(ShellRuntimeStatus.FromSettings(settings));
-        _console.WriteLine();
+        RenderHeaderContext(command, settings, hasApiKey);
     }
 
-    /// <summary>Draws the fixed provider, model, thinking, turn-cost, and running-cost status contract.</summary>
+    /// <summary>Draws responsive AI identity, cost, and context lines for an active request.</summary>
     public void RenderRuntimeStatus(ShellRuntimeStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
@@ -93,15 +88,38 @@ public sealed class ConsoleShellView : IConsoleShellView
         var context = status.ContextWindowTokens > 0
             ? $"{(status.ContextIsEstimated ? "~" : string.Empty)}{status.ContextInputTokens:N0}/{status.ContextWindowTokens:N0} ({status.ContextInputTokens * 100d / status.ContextWindowTokens:0.0}%)"
             : "n/a";
-        _console.MarkupLine(
-            $"[on grey11]  [grey70]PROVIDER[/] [white]{Markup.Escape(status.Provider)}[/]" +
-            $"   [grey70]MODEL[/] [white]{Markup.Escape(status.Model)}[/]" +
-            $"   [grey70]THINKING[/] [white]{Markup.Escape(status.ThinkingLevel)}[/]" +
-            $"   [grey70]PROMPT[/] [deepskyblue1]{promptCost}[/]" +
-            $"   [grey70]RESPONSE[/] [deepskyblue1]{responseCost}[/]" +
-            $"   [grey70]SESSION[/] [green]{runningCost}[/]" +
-            $"   [grey70]CONTEXT[/] [yellow]{Markup.Escape(context)}[/]" +
-            $"   [grey70]CACHE R/W[/] [white]{status.CachedInputTokens:N0}/{status.CacheWriteTokens:N0}[/]  [/]");
+        var identity =
+            $"[grey]AI[/] [white]{Markup.Escape(status.Provider)}[/] [grey]·[/] " +
+            $"[white]{Markup.Escape(status.Model)}[/] [grey]· {Markup.Escape(status.ThinkingLevel)}[/]";
+        var costs =
+            $"[grey]PROMPT[/] [deepskyblue1]{promptCost}[/]  " +
+            $"[grey]RESPONSE[/] [deepskyblue1]{responseCost}[/]  " +
+            $"[grey]SESSION[/] [green]{runningCost}[/]";
+
+        if (status.PromptCostUsd.HasValue || status.ResponseCostUsd.HasValue || status.RunningCostUsd > 0)
+        {
+            if (_console.Profile.Width >= 112)
+            {
+                _console.MarkupLine($"{identity}   {costs}");
+            }
+            else
+            {
+                _console.MarkupLine(identity);
+                _console.MarkupLine(costs);
+            }
+        }
+        else
+        {
+            _console.MarkupLine(identity);
+        }
+
+        if (status.ContextWindowTokens > 0 || status.CachedInputTokens > 0 || status.CacheWriteTokens > 0)
+        {
+            var cache = status.CachedInputTokens > 0 || status.CacheWriteTokens > 0
+                ? $"  [grey]CACHE R/W[/] [white]{status.CachedInputTokens:N0}/{status.CacheWriteTokens:N0}[/]"
+                : string.Empty;
+            _console.MarkupLine($"[grey]CONTEXT[/] [deepskyblue1]{Markup.Escape(context)}[/]{cache}");
+        }
     }
 
     /// <summary>Runs one operation inside a premium spinner when the terminal supports animation.</summary>
@@ -121,35 +139,103 @@ public sealed class ConsoleShellView : IConsoleShellView
             .ConfigureAwait(false);
     }
 
-    /// <summary>Draws the closing status strip with version and local data location.</summary>
+    /// <summary>Draws a compact closing line with invocation and version.</summary>
     public void RenderFooter(string command)
     {
         _console.WriteLine();
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
-        _console.Write(new Rule
-        {
-            Style = Style.Parse("grey35")
-        });
-        _console.MarkupLine(
-            $"[grey]{Markup.Escape(_text.Text("Footer.Command"))}:[/] {Markup.Escape(command)}   " +
-            $"[grey]{Markup.Escape(_text.Text("Footer.Version"))}:[/] {Markup.Escape(version)}   " +
-            $"[grey]{Markup.Escape(_text.Text("Footer.Data"))}:[/] {Markup.Escape(_paths.DataDirectory)}");
+        var invocation = command.Equals("main", StringComparison.OrdinalIgnoreCase)
+            ? "hm"
+            : $"hm {command}";
+        _console.MarkupLine($"[grey]{Markup.Escape(invocation)} · v{Markup.Escape(version)}[/]");
     }
 
-    /// <summary>Shows a sanitized error panel without exposing exception internals.</summary>
-    public void RenderError(string message) => _console.Write(new Panel(Markup.Escape(message))
-    {
-        Header = new PanelHeader(" ERROR "),
-        Border = BoxBorder.Rounded,
-        BorderStyle = new Style(Color.Red)
-    });
+    /// <summary>Shows a sanitized frameless error without exposing exception internals.</summary>
+    public void RenderError(string message) =>
+        TerminalTheme.WriteBlock(_console, "ERROR", message, "red");
 
-    /// <summary>Shows a short informational panel.</summary>
-    public void RenderNotice(string message) => _console.Write(new Panel(Markup.Escape(message))
+    /// <summary>Shows a short frameless informational message.</summary>
+    public void RenderNotice(string message) =>
+        TerminalTheme.WriteBlock(_console, "INFO", message);
+
+    /// <summary>Shows one successful operation message using the shared terminal palette.</summary>
+    public void RenderSuccess(string message) =>
+        _console.MarkupLine($"[green]{Markup.Escape(message)}[/]");
+
+    /// <summary>Shows one recoverable warning using the shared terminal palette.</summary>
+    public void RenderWarning(string message) =>
+        _console.MarkupLine($"[yellow]{Markup.Escape(message)}[/]");
+
+    /// <summary>Shows low-emphasis explanatory text without leaking Spectre into the application layer.</summary>
+    public void RenderMuted(string message) =>
+        _console.MarkupLine($"[grey]{Markup.Escape(message)}[/]");
+
+    /// <summary>Shows a compact section heading for a focused command workflow.</summary>
+    public void RenderSectionTitle(string message) =>
+        _console.MarkupLine($"[bold deepskyblue1]{Markup.Escape(message)}[/]");
+
+    /// <summary>Reads one required text value using a localized passive-view prompt.</summary>
+    public string ReadText(string prompt) =>
+        _console.Prompt(new TextPrompt<string>(Markup.Escape(prompt)));
+
+    /// <summary>Renders product, runtime, and platform versions without exposing Spectre to the orchestrator.</summary>
+    public void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier)
     {
-        Border = BoxBorder.Rounded,
-        BorderStyle = new Style(Color.DeepSkyBlue1)
-    });
+        _console.MarkupLine($"[bold]PromptMeUp[/] {Markup.Escape(applicationVersion)}");
+        _console.MarkupLine($"[grey].NET {Markup.Escape(runtimeVersion)} · {Markup.Escape(runtimeIdentifier)}[/]");
+    }
+
+    /// <summary>Writes one layout separator line through the passive console boundary.</summary>
+    public void WriteLine() => _console.WriteLine();
+
+    /// <summary>Shows invocation context and keyboard navigation without rendering idle AI costs.</summary>
+    private void RenderHeaderContext(string command, AppSettings? settings, bool hasApiKey)
+    {
+        var context = settings is null
+            ? string.Empty
+            : $"[grey]{Markup.Escape(settings.Language)}[/]";
+        if (settings is not null && IsAiInvocation(command))
+        {
+            if (settings.AiEnabled)
+            {
+                var keyState = hasApiKey ? _text.Text("Status.Ready") : _text.Text("Status.Missing");
+                var keyColor = hasApiKey ? "green" : "yellow";
+                context +=
+                    $" [grey]·[/] [white]{Markup.Escape(settings.Model)}[/]" +
+                    $" [grey]· {Markup.Escape(_text.Text($"Reasoning.{settings.ReasoningEffort}"))} ·[/] " +
+                    $"[{keyColor}]{Markup.Escape(keyState)}[/]";
+            }
+            else
+            {
+                context += $" [grey]· {Markup.Escape(_text.Text("Status.Disabled"))}[/]";
+            }
+        }
+
+        var shortcuts = Console.IsInputRedirected
+                        || Console.IsOutputRedirected
+                        || !IsInteractiveInvocation(command)
+            ? string.Empty
+            : $"[mediumpurple2]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]";
+        if (context.Length > 0 && shortcuts.Length > 0)
+        {
+            _console.MarkupLine($"{context}  [grey]·[/]  {shortcuts}");
+        }
+        else if (context.Length > 0)
+        {
+            _console.MarkupLine(context);
+        }
+        else if (shortcuts.Length > 0)
+        {
+            _console.MarkupLine(shortcuts);
+        }
+    }
+
+    /// <summary>Identifies invocations that benefit from showing the selected AI model before work begins.</summary>
+    private static bool IsAiInvocation(string command) => command is "main" or "query" or "chat" or "test-ai";
+
+    /// <summary>Identifies commands that actively read navigation or confirmation keys.</summary>
+    private static bool IsInteractiveInvocation(string command) =>
+        command is "main" or "setup" or "chat" or "path" or "install-font";
 
     /// <summary>Formats small per-request USD amounts without hiding sub-cent costs.</summary>
     private static string FormatCost(decimal? value) => value.HasValue

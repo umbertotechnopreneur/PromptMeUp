@@ -77,4 +77,4 @@ public sealed record PromptDefinition(
                 : throw new InvalidDataException($"Prompt '{Id}' has no text for '{language}' or English fallback.");
 }
 
-public sealed record ConnectionTestResult(AiResponse Response, string ExpectedText);
+public sealed record ConnectionTestResult(AiResponse Response);

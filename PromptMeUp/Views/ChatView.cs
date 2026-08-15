@@ -42,9 +42,7 @@ public sealed class ChatView : IChatView
     /// <summary>Draws the chat heading and its small slash-command vocabulary.</summary>
     public void RenderIntro()
     {
-        _console.MarkupLine($"[bold deepskyblue1]{Markup.Escape(_text.Text("Chat.Title"))}[/]");
-        _console.MarkupLine($"[grey]{Markup.Escape(_text.Text("Chat.Hint"))}[/]");
-        _console.WriteLine();
+        TerminalTheme.WriteHeading(_console, _text.Text("Chat.Title"), _text.Text("Chat.Hint"));
     }
 
     /// <summary>Reads one user message without interpreting it as Spectre markup.</summary>
@@ -52,16 +50,11 @@ public sealed class ChatView : IChatView
         new TextPrompt<string>($"[bold mediumpurple2]{Markup.Escape(_text.Text("Chat.You"))} ›[/] ")
             .AllowEmpty());
 
-    /// <summary>Renders one non-interactive user message as a safe chat bubble.</summary>
+    /// <summary>Renders one non-interactive user message as a compact frameless block.</summary>
     public void RenderUser(string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        _console.MarkupLine($"[bold mediumpurple2]{Markup.Escape(_text.Text("Chat.You"))} ›[/]");
-        _console.Write(new Panel(new Text(text))
-        {
-            Border = BoxBorder.Rounded,
-            BorderStyle = new Style(Color.MediumPurple2)
-        });
+        TerminalTheme.WriteBlock(_console, $"{_text.Text("Chat.You")} ›", text, TerminalTheme.Accent);
     }
 
     /// <summary>Renders a model response using poor Markdown, with optional bounded teletype animation.</summary>
