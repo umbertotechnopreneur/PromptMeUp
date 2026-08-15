@@ -5,7 +5,7 @@ These instructions apply to every change in this repository.
 ## Product boundaries
 
 - PromptMeUp is a lightweight .NET 10 console assistant whose public command is `hm`.
-- Keep it portable across Windows, Linux, and macOS; do not introduce an application installer or background agent.
+- Keep it portable across Windows, Linux, and macOS. Portable archives remain canonical; release automation may also produce optional, versioned Windows installer artifacts. Do not introduce a background agent.
 - Keep GitHub as the project home and write public copy in product language before implementation detail.
 - Preserve the separation between `Models`, `Services`, `Views`, and the `Application` orchestrator.
 - Runtime AI instructions belong in `/prompt` as versioned YAML with metadata and all six supported languages: `it`, `en`, `fr`, `de`, `es`, `vi`.
@@ -14,7 +14,7 @@ These instructions apply to every change in this repository.
 
 - No shell command may run without an exact preview and explicit authorization for that one command.
 - Keep deterministic local risk scoring active. Optional AI review is advisory and cannot authorize execution.
-- Run commands without elevation through `pwsh -NoProfile -NonInteractive`, with timeout and bounded output.
+- Run application-authorized commands without elevation through `pwsh -NoProfile -NonInteractive`, with timeout and bounded output.
 - Never accept secrets as command-line values or store them in settings, SQLite, Serilog, tests, screenshots, or documentation.
 - Redact recognizable credentials before prompt/response persistence and before command output is sent to an AI follow-up.
 - Preserve the user's full local command preview; redaction applies to persistence and provider-bound content, not the local review surface.

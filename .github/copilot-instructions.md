@@ -6,12 +6,12 @@ alwaysApply: true
 
 # PromptMeUp repository rules
 
-- PromptMeUp is a lightweight, portable .NET 10 console assistant exposed as `hm`; do not add an application installer, background agent, or platform-specific product dependency.
+- PromptMeUp is a lightweight, portable .NET 10 console assistant exposed as `hm`. Portable archives remain canonical; release automation may also produce optional, versioned Windows installer artifacts. Do not add a background agent or platform-specific runtime dependency.
 - Keep GitHub as the project home and write public copy in product language before implementation detail.
 - Preserve `Models` / `Services` / `Views` / `Application` boundaries. Views never own HTTP, SQLite, secret storage, or process execution.
 - Put runtime AI instructions in `/prompt` as versioned metadata-rich YAML with `it`, `en`, `fr`, `de`, `es`, and `vi` text.
 - Every shell command requires exact preview and explicit per-command authorization. Local risk scoring always runs; AI review is advisory only.
-- Execute without elevation through `pwsh -NoProfile -NonInteractive`, with timeout and bounded output. `--yes` must never authorize chat commands.
+- Execute application-authorized commands without elevation through `pwsh -NoProfile -NonInteractive`, with timeout and bounded output. `--yes` must never authorize chat commands.
 - Never accept or persist secrets through command arguments, settings, SQLite, logs, tests, screenshots, or docs. Redact recognizable credentials before persistence or provider-bound command output.
 - Use `ILogger<T>` in application code and configure Serilog only in the composition root.
 - Add a brief XML `<summary>` to every C# implementation method, including constructors, tests, and private helpers. Add inline comments only as small hints for non-obvious logic.

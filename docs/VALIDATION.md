@@ -71,3 +71,12 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 Publish at least one current-machine runtime and launch the resulting `hm` directly. Confirm the `prompt` directory and both PATH helper scripts are beside it. Preview PATH install/status/remove; mutate only a disposable test account or a path you intend to keep.
 
 Nerd Font validation should start with `--dry-run`. The real operation is opt-in and should be tested only when Oh My Posh is already installed.
+
+## Windows release artifact acceptance
+
+```powershell
+pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
+pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
+```
+
+Confirm that both portable ZIPs contain only `hm.exe`, `prompt/*.yaml`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; the current-architecture executable reports the requested package version; `winget validate` succeeds; the x64 MSI passes WiX validation; and every checksum in `SHA256SUMS.txt` matches its package. Do not install either distribution format on the host during routine validation.

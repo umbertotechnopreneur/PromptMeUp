@@ -121,7 +121,7 @@ Use `hm --help` for the compact reference or read [CLI reference](docs/CLI_REFER
 
 ## Portable by design
 
-PromptMeUp has no application installer. Publish a folder, move that folder wherever you want, and add or remove that exact folder from your user `PATH`.
+PromptMeUp remains portable-first. Publish a folder, move that folder wherever you want, and add or remove that exact folder from your user `PATH`.
 
 ```powershell
 dotnet publish .\PromptMeUp\PromptMeUp.csproj `
@@ -143,6 +143,17 @@ pwsh -NoProfile -File .\hm-path.ps1 -Action remove
 ```
 
 Linux and macOS builds include `hm-path.sh`, which maintains one clearly marked block in the appropriate user shell profile. Supported publish targets are `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, and `osx-arm64`.
+
+### Windows release artifacts
+
+The release builder produces self-contained portable ZIP archives for WinGet (`win-x64` and `win-arm64`), a traditional machine-wide x64 MSI, SHA-256 checksums, and a validated multi-file WinGet manifest:
+
+```powershell
+pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
+pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
+```
+
+Generated files stay below `artifacts/release/<version>/` and are ignored by Git. The MSI is an optional Windows distribution surface; the ZIP archives remain the canonical portable build. See [Windows release packaging](docs/WINDOWS_PACKAGING.md) for prerequisites, local WinGet testing, and publication-time URLs.
 
 ## Premium terminal details, optional font
 
