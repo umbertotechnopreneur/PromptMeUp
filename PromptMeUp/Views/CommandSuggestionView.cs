@@ -40,9 +40,10 @@ public sealed class CommandSuggestionView(
         entries.AddRange(suggestions.Select(command => new MenuEntry(CommandSuggestionAction.SelectCommand, command)));
 
         var icon = TerminalTheme.Icon(shell.Options, "🧭", ">");
-        console.Write(TerminalTheme.Panel(
-            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("CommandMenu.Hint"))}[/]"),
-            $"{icon} {text.Text("CommandMenu.Title")}"));
+        console.WriteLine();
+        TerminalTheme.WriteRule(console, $"{icon} {text.Text("CommandMenu.Title")}", TerminalTheme.Accent);
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("CommandMenu.Hint"))}[/]");
+        console.WriteLine();
         var selected = console.Prompt(
             new SelectionPrompt<MenuEntry>()
                 .Title($"[bold {TerminalTheme.Primary}]{Markup.Escape(text.Text("CommandMenu.Choose"))}[/]")

@@ -44,11 +44,9 @@ public sealed class ChatView : IChatView
     {
         var icon = TerminalTheme.Icon(_shell.Options, "💬", ">");
         _console.WriteLine();
-        var banner = new Rows(
-            new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(_text.Text("Chat.Title"))}[/]"),
-            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.Branding"))}[/]"),
-            new Markup($"[{TerminalTheme.Info}]{Markup.Escape(_text.Text("Chat.Hint"))}[/]"));
-        _console.Write(TerminalTheme.Panel(banner, $"{icon} PromptMeUp"));
+        TerminalTheme.WriteRule(_console, $"{icon} {_text.Text("Chat.Title")}", TerminalTheme.Accent);
+        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.Branding"))}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Info}]{Markup.Escape(_text.Text("Chat.Hint"))}[/]");
         _console.WriteLine();
     }
 
@@ -71,13 +69,51 @@ public sealed class ChatView : IChatView
         ArgumentNullException.ThrowIfNull(markdown);
         _ = animate;
         cancellationToken.ThrowIfCancellationRequested();
+        var (heading, body) = SeparateLeadingHeading(markdown);
         var icon = TerminalTheme.Icon(_shell.Options, "🤖", "AI");
-        _console.MarkupLine($"[bold {TerminalTheme.Success}]{Markup.Escape(icon)} {Markup.Escape(_text.Text("Chat.Assistant"))}[/]");
-        _markdown.Render(markdown);
+        _console.WriteLine();
+        _console.Markup($"[bold {TerminalTheme.Success}]{Markup.Escape(icon)} {Markup.Escape(_text.Text("Chat.Assistant"))}[/]");
+        if (!string.IsNullOrWhiteSpace(heading))
+        {
+            _console.MarkupLine($" [{TerminalTheme.Muted}]·[/] [bold {TerminalTheme.Primary}]{Markup.Escape(heading)}[/]");
+        }
+        else
+        {
+            _console.WriteLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            _console.WriteLine();
+            _markdown.Render(body);
+        }
+
         _console.WriteLine();
     }
 
     /// <summary>Notifies the user when old active-context messages were pruned but remain in the session ledger.</summary>
     public void RenderMemoryPruned(int messageCount) =>
         _console.MarkupLine($"[yellow]{Markup.Escape(_text.Text("Chat.Pruned", messageCount))}[/]");
+
+    /// <summary>Separates one leading Markdown heading so the assistant identity and response title share a single line.</summary>
+    private static (string? Heading, string Body) SeparateLeadingHeading(string markdown)
+    {
+        var normalized = markdown.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var lineEnd = normalized.IndexOf('\n');
+        var firstLine = lineEnd >= 0 ? normalized[..lineEnd] : normalized;
+        var markerCount = firstLine.TakeWhile(character => character == '#').Count();
+        if (markerCount is < 1 or > 3 || firstLine.Length <= markerCount || !char.IsWhiteSpace(firstLine[markerCount]))
+        {
+            return (null, markdown);
+        }
+
+        var heading = firstLine[markerCount..].Trim();
+        if (string.IsNullOrWhiteSpace(heading))
+        {
+            return (null, markdown);
+        }
+
+        var body = lineEnd < 0 ? string.Empty : normalized[(lineEnd + 1)..].TrimStart('\n');
+        return (heading, body);
+    }
 }

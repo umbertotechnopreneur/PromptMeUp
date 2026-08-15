@@ -204,11 +204,7 @@ public sealed class SetupView : ISetupView
     private void BeginStage(int stage, string title, string? subtitle = null)
     {
         _console.WriteLine();
-        _console.Write(new Rule($"[bold {TerminalTheme.Accent}]HM[/] [{TerminalTheme.Muted}]/ setup[/]")
-        {
-            Justification = Justify.Left,
-            Style = Style.Parse(TerminalTheme.Divider)
-        });
+        TerminalTheme.WriteRule(_console, "⚙ Setup", TerminalTheme.Accent);
         _console.MarkupLine(
             $"[{TerminalTheme.Muted}]{stage:00}[/]  [bold {TerminalTheme.Info}]{Markup.Escape(title)}[/]");
         if (!string.IsNullOrWhiteSpace(subtitle))

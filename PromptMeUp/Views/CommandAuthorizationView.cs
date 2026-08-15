@@ -18,16 +18,19 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
     private readonly IPoorMarkdownRenderer _markdown;
+    private readonly IConsoleShellView _shell;
 
     /// <summary>Creates the mandatory preview and authorization gate for shell commands.</summary>
     public CommandAuthorizationView(
         IAnsiConsole console,
         ILocalizationService text,
-        IPoorMarkdownRenderer markdown)
+        IPoorMarkdownRenderer markdown,
+        IConsoleShellView shell)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
         _markdown = markdown ?? throw new ArgumentNullException(nameof(markdown));
+        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
     }
 
     /// <summary>Renders exact command text, advisory risk, and data notice before asking for explicit authorization.</summary>
@@ -36,10 +39,17 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(assessment);
         var color = RiskColor(assessment.Level);
-        TerminalTheme.WriteBlock(_console, _text.Text("Command.Preview"), command, color.ToMarkup());
+        _console.WriteLine();
+        TerminalTheme.WriteSection(
+            _console,
+            $"{TerminalTheme.Icon(_shell.Options, "🚦", ">")} {_text.Text("Command.Preview")}",
+            command,
+            TerminalTheme.Info);
         _console.MarkupLine(
-            $"[{color.ToMarkup()}]●[/] [bold]{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(assessment.Level.ToString().ToUpperInvariant())}[/]");
-        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
+            $"[bold {color.ToMarkup()}]{Markup.Escape(RiskIcon(assessment.Level))} {Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(assessment.Level.ToString().ToUpperInvariant())}[/]");
+        var reviewIcon = TerminalTheme.Icon(_shell.Options, assessment.UsedAi ? "🤖" : "🛡", assessment.UsedAi ? "AI" : "!");
+        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(reviewIcon)} {Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
+        _console.WriteLine();
         _markdown.Render(assessment.DescriptionMarkdown);
         if (!string.IsNullOrWhiteSpace(assessment.Advisory))
         {
@@ -65,18 +75,37 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     public void RenderExecutionResult(CommandExecutionResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        var body = string.IsNullOrWhiteSpace(result.StandardOutput) ? "(no stdout)" : result.StandardOutput;
         var outputColor = result.ExitCode == 0 && !result.TimedOut ? "green" : "yellow";
-        TerminalTheme.WriteBlock(_console, _text.Text("Command.Output"), body, outputColor);
+        var resultIcon = TerminalTheme.Icon(_shell.Options, outputColor == "green" ? "✅" : "⚠", outputColor == "green" ? "+" : "!");
+        _console.WriteLine();
+        TerminalTheme.WriteRule(_console, $"{resultIcon} {_text.Text("Command.Output")}", outputColor);
+        if (!string.IsNullOrWhiteSpace(result.StandardOutput))
+        {
+            _console.MarkupLine($"[{TerminalTheme.Muted}]STDOUT[/]");
+            foreach (var line in result.StandardOutput.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+            {
+                _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
+            }
+
+            _console.WriteLine();
+        }
+
         if (!string.IsNullOrWhiteSpace(result.StandardError))
         {
-            TerminalTheme.WriteBlock(_console, "STDERR", result.StandardError, "red");
+            _console.MarkupLine("[bold red]⚠ STDERR[/]");
+            foreach (var line in result.StandardError.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+            {
+                _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
+            }
+
+            _console.WriteLine();
         }
 
         _console.MarkupLine(
-            $"[{TerminalTheme.Muted}]exit:[/] [{TerminalTheme.Primary}]{(result.ExitCode?.ToString() ?? "timeout")}[/]   " +
-            $"[{TerminalTheme.Muted}]elapsed:[/] [{TerminalTheme.Primary}]{result.ElapsedMilliseconds} ms[/]   " +
-            $"[{TerminalTheme.Muted}]truncated:[/] [{TerminalTheme.Primary}]{result.OutputTruncated.ToString().ToLowerInvariant()}[/]");
+            $"[{TerminalTheme.Muted}]↳[/] [bold {outputColor}]{(result.ExitCode?.ToString() ?? "timeout")}[/]  " +
+            $"[{TerminalTheme.Muted}]⏱[/] [bold {TerminalTheme.Primary}]{result.ElapsedMilliseconds} ms[/]  " +
+            $"[{TerminalTheme.Muted}]✂[/] [bold {TerminalTheme.Primary}]{(result.OutputTruncated ? _text.Text("Common.Yes") : _text.Text("Common.No"))}[/]");
+        _console.WriteLine();
     }
 
     /// <summary>Maps risk severity to a stable visual color.</summary>
@@ -87,5 +116,15 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         CommandRiskLevel.High => Color.Orange1,
         CommandRiskLevel.Critical => Color.Red,
         _ => Color.Grey70
+    };
+
+    /// <summary>Maps each risk level to a recognisable, accessible command-review indicator.</summary>
+    private string RiskIcon(CommandRiskLevel level) => level switch
+    {
+        CommandRiskLevel.Low => TerminalTheme.Icon(_shell.Options, "🟢", "+"),
+        CommandRiskLevel.Medium => TerminalTheme.Icon(_shell.Options, "🟡", "!"),
+        CommandRiskLevel.High => TerminalTheme.Icon(_shell.Options, "🟠", "!!"),
+        CommandRiskLevel.Critical => TerminalTheme.Icon(_shell.Options, "🔴", "x"),
+        _ => TerminalTheme.Icon(_shell.Options, "⚪", "?")
     };
 }

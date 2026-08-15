@@ -2,6 +2,20 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-08-16 — PromptMeUp 0.1.3 frameless UX installer
+
+- Bumped the product and documented packaging examples from `0.1.2` to `0.1.3` for the frameless command-review refinement.
+- Built and checksummed the self-contained x64/ARM64 ZIPs, x64 MSI, release manifest, and validated WinGet manifests.
+- Upgraded the local installation from `0.1.2` to `0.1.3`; verified the installed binary, WinGet registration, one user PATH entry, and unchanged machine PATH.
+
+Validation: full repository gate passed with 68/68 tests; MSI SHA-256 is `99674769B454C354E8B4CEA793792135FF88FE429900F86B9DF65D75BC78092E`; installer exit code was `0`.
+
+## 2026-08-16 — Frameless command-review refinement
+
+- Replaced cards in the command suggestion, command authorization, command result, shell header, session snapshot, and chat introduction with spacious emoji-led sections.
+- Standardized every decorative section divider to end at 80% of the current terminal width and compacted session data into two metric rows.
+- Added semantic low/medium/high/critical risk indicators, a structured command-result view, single-line cancellation notices, and a one-line assistant-plus-response-heading treatment.
+
 ## 2026-08-16 — PromptMeUp 0.1.2 installer refresh
 
 - Bumped the product, assembly, package, and documented release version from `0.1.1` to `0.1.2` for the completed terminal UX and scoped-AI release.

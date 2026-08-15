@@ -65,24 +65,10 @@ public sealed class ConsoleShellView : IConsoleShellView
             : $"hm {command}";
         var icon = TerminalTheme.Icon(Options, "✦", "*");
         _console.WriteLine();
-        var identity = new Rows(
-            new Markup($"[bold {TerminalTheme.Accent}]{Markup.Escape(icon)} PromptMeUp[/]"),
-            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Tagline"))}[/]"));
-        var action = new Rows(
-            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Footer.Command").ToUpperInvariant())}[/]"),
-            new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(invocation)}[/]"));
-        if (_console.Profile.Width >= 72)
-        {
-            var banner = new Grid();
-            banner.AddColumn();
-            banner.AddColumn(new GridColumn().RightAligned());
-            banner.AddRow(identity, action);
-            _console.Write(TerminalTheme.Panel(banner, "PROMPTMEUP"));
-        }
-        else
-        {
-            _console.Write(TerminalTheme.Panel(new Rows(identity, action), "PROMPTMEUP"));
-        }
+        TerminalTheme.WriteRule(_console, $"{icon} PromptMeUp", TerminalTheme.Accent);
+        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Tagline"))}[/]");
+        _console.MarkupLine(
+            $"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Footer.Command"))}:[/] [bold {TerminalTheme.Primary}]{Markup.Escape(invocation)}[/]");
 
         RenderHeaderContext(command, settings, hasApiKey);
         _console.WriteLine();
@@ -92,6 +78,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void RenderRuntimeStatus(ShellRuntimeStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
+        _console.WriteLine();
         var turnCost = status.PromptCostUsd.HasValue || status.ResponseCostUsd.HasValue
             ? FormatCost((status.PromptCostUsd ?? 0m) + (status.ResponseCostUsd ?? 0m))
             : _text.Text("Costs.Unavailable");
@@ -102,16 +89,16 @@ public sealed class ConsoleShellView : IConsoleShellView
             ? $"{FormatTokens(status.CachedInputTokens)} / {FormatTokens(status.CacheWriteTokens)}"
             : _text.Text("Costs.Unavailable");
         var icon = TerminalTheme.Icon(Options, "📊", "=");
-        RenderMetricPanel(
+        RenderSessionSnapshot(
             $"{icon} {_text.Text("Shell.Session")}",
             [
-                TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "🧠", "AI")} {_text.Text("Shell.Model")}", status.Model),
-                TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "◌", "~")} {_text.Text("Shell.Context")}", context, TerminalTheme.Info),
-                TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "↘", "in")} {_text.Text("Shell.Input")}", FormatTokens(status.InputTokens), TerminalTheme.Info),
-                TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "↗", "out")} {_text.Text("Shell.Output")}", FormatTokens(status.OutputTokens), TerminalTheme.Info),
-                TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "◈", "$")} {_text.Text("Shell.TurnCost")}", turnCost, TerminalTheme.Info),
-                TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "✓", "+")} {_text.Text("Shell.SessionCost")}", FormatCost(status.RunningCostUsd), TerminalTheme.Success),
-                TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "▣", "#")} {_text.Text("Shell.Cache")}", cache)
+                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "🧠", "AI")} {_text.Text("Shell.Model")}", status.Model),
+                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "◌", "~")} {_text.Text("Shell.Context")}", context, TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "↘", "in")} {_text.Text("Shell.Input")}", FormatTokens(status.InputTokens), TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "↗", "out")} {_text.Text("Shell.Output")}", FormatTokens(status.OutputTokens), TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "◈", "$")} {_text.Text("Shell.TurnCost")}", turnCost, TerminalTheme.Info),
+                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "✓", "+")} {_text.Text("Shell.SessionCost")}", FormatCost(status.RunningCostUsd), TerminalTheme.Success),
+                TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "▣", "#")} {_text.Text("Shell.Cache")}", cache)
             ]);
         _console.WriteLine();
     }
@@ -169,9 +156,10 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void RenderNotice(string message)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
-        // An interrupted Spectre prompt leaves its cursor after the prompt text.
         _console.WriteLine();
-        TerminalTheme.WriteBlock(_console, "INFO", message);
+        _console.MarkupLine(
+            $"[bold {TerminalTheme.Info}]{TerminalTheme.Icon(Options, "ℹ", "i")} INFO[/]  [{TerminalTheme.Primary}]{Markup.Escape(message)}[/]");
+        _console.WriteLine();
     }
 
     /// <summary>Shows one successful operation message using the shared terminal palette.</summary>
@@ -238,13 +226,13 @@ public sealed class ConsoleShellView : IConsoleShellView
                 ? TerminalTheme.Icon(Options, "●", "+")
                 : TerminalTheme.Icon(Options, "!", "!");
             var dashboardIcon = TerminalTheme.Icon(Options, "🪞", "=");
-            RenderMetricPanel(
+            RenderSessionSnapshot(
                 $"{dashboardIcon} {_text.Text("Shell.Session")}",
                 [
-                    TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "🌐", "@")} {_text.Text("Status.Language")}", settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
-                    TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "🧠", "AI")} {_text.Text("Status.Model")}", settings.Model),
-                    TerminalTheme.Metric($"{TerminalTheme.Icon(Options, "⚙", "~")} {_text.Text("Shell.Thinking")}", _text.Text($"Reasoning.{settings.ReasoningEffort}"), TerminalTheme.Info),
-                    TerminalTheme.Metric($"{stateIcon} AI", state, stateColor)
+                    TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "🌐", "@")} {_text.Text("Status.Language")}", settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
+                    TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "🧠", "AI")} {_text.Text("Status.Model")}", settings.Model),
+                    TerminalTheme.CompactMetric($"{TerminalTheme.Icon(Options, "⚙", "~")} {_text.Text($"Shell.Thinking")}", _text.Text($"Reasoning.{settings.ReasoningEffort}"), TerminalTheme.Info),
+                    TerminalTheme.CompactMetric($"{stateIcon} AI", state, stateColor)
                 ]);
         }
 
@@ -261,16 +249,16 @@ public sealed class ConsoleShellView : IConsoleShellView
     private static bool IsInteractiveInvocation(string command) =>
         command is "main" or "setup" or "chat" or "where" or "path" or "install-font";
 
-    /// <summary>Renders a responsive grid of metrics inside one compact dashboard panel.</summary>
-    private void RenderMetricPanel(string header, IReadOnlyList<IRenderable> metrics)
+    /// <summary>Renders no more than two compact metric rows beneath a subtle frameless divider.</summary>
+    private void RenderSessionSnapshot(string header, IReadOnlyList<IRenderable> metrics)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(header);
         ArgumentNullException.ThrowIfNull(metrics);
-        var columns = _console.Profile.Width >= 112 ? 4 : _console.Profile.Width >= 72 ? 2 : 1;
+        const int columns = 4;
         var grid = new Grid();
         for (var column = 0; column < columns; column++)
         {
-            grid.AddColumn();
+            grid.AddColumn(new GridColumn().NoWrap());
         }
 
         for (var offset = 0; offset < metrics.Count; offset += columns)
@@ -285,7 +273,8 @@ public sealed class ConsoleShellView : IConsoleShellView
             grid.AddRow(row);
         }
 
-        _console.Write(TerminalTheme.Panel(grid, header));
+        TerminalTheme.WriteRule(_console, header, TerminalTheme.Accent);
+        _console.Write(grid);
     }
 
     /// <summary>Formats small per-request USD amounts without hiding sub-cent costs.</summary>

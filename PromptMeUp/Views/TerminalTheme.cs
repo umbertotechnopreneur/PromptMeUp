@@ -28,6 +28,10 @@ internal static class TerminalTheme
     internal static IRenderable Metric(string label, string value, string valueColor = Primary) => new Markup(
         $"[{Muted}]{Markup.Escape(label)}[/]\n[bold {valueColor}]{Markup.Escape(value)}[/]");
 
+    /// <summary>Creates one compact label-value metric for a dense, frameless session summary.</summary>
+    internal static IRenderable CompactMetric(string label, string value, string valueColor = Primary) => new Markup(
+        $"[{Muted}]{Markup.Escape(label)}:[/] [bold {valueColor}]{Markup.Escape(value)}[/]");
+
     /// <summary>Creates a lightweight bordered panel that groups related information without filling the terminal.</summary>
     internal static Panel Panel(IRenderable content, string header, string borderColor = Divider)
     {
@@ -57,16 +61,30 @@ internal static class TerminalTheme
         console.WriteLine();
     }
 
-    /// <summary>Writes an accessible horizontal divider with a concise section label.</summary>
+    /// <summary>Writes an accessible 80%-width divider with a concise section label.</summary>
     internal static void WriteRule(IAnsiConsole console, string title, string color = Info)
     {
         ArgumentNullException.ThrowIfNull(console);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        console.Write(new Rule($"[bold {color}]{Markup.Escape(title)}[/]")
+        var targetWidth = Math.Max(1, (int)Math.Floor(console.Profile.Width * 0.8d));
+        var dividerWidth = Math.Max(1, targetWidth - title.Length - 1);
+        console.MarkupLine(
+            $"[bold {color}]{Markup.Escape(title)}[/] [{Divider}]{new string('─', dividerWidth)}[/]");
+    }
+
+    /// <summary>Writes an unboxed section with a continuous divider and escaped multiline content.</summary>
+    internal static void WriteSection(IAnsiConsole console, string title, string content, string color = Info)
+    {
+        ArgumentNullException.ThrowIfNull(console);
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentNullException.ThrowIfNull(content);
+        WriteRule(console, title, color);
+        foreach (var line in content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
         {
-            Justification = Justify.Left,
-            Style = Style.Parse(Divider)
-        });
+            console.MarkupLine($"  [{Primary}]{Markup.Escape(line)}[/]");
+        }
+
+        console.WriteLine();
     }
 
     /// <summary>Writes escaped multiline content under a colored label without surrounding it with a card.</summary>

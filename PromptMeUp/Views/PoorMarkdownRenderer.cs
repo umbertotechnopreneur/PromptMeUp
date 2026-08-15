@@ -100,11 +100,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
         switch (level)
         {
             case 1:
-                _console.Write(new Rule($"[bold {TerminalTheme.Accent}]{inline}[/]")
-                {
-                    Justification = Justify.Left,
-                    Style = Style.Parse(TerminalTheme.Divider)
-                });
+                TerminalTheme.WriteRule(_console, $"✦ {text}", TerminalTheme.Accent);
                 break;
             case 2:
                 _console.MarkupLine($"[bold {TerminalTheme.Info}]◆[/] [bold {TerminalTheme.Primary}]{inline}[/]");
@@ -121,9 +117,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
         ArgumentNullException.ThrowIfNull(lines);
         var label = string.IsNullOrWhiteSpace(language) ? "code" : language;
         var content = string.Join(Environment.NewLine, lines);
-        var panel = TerminalTheme.Panel(new Text(content, Style.Parse(TerminalTheme.Primary)), label);
-        _console.Write(panel);
-        _console.WriteLine();
+        TerminalTheme.WriteSection(_console, $"⌘ {label}", content, TerminalTheme.Info);
     }
 
     /// <summary>Converts only bold spans, inline code, and validated HTTP links into Spectre markup.</summary>
