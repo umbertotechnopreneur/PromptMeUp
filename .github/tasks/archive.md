@@ -139,3 +139,11 @@ Validation: full repository gate passed with zero build warnings/errors and 90/9
 - Corrected the README navigation anchor, described `hm` as the cross-platform public command, and aligned contributor wording with portable archives as the canonical distribution plus optional platform installers.
 
 Validation: full repository gate passed with zero build warnings/errors and 90/90 tests; isolated non-interactive `--help` and `--version` smoke tests passed; `git diff --check` passed.
+
+## 2026-09-01 — Cross-platform quality-gate repair
+
+- Declared CRLF checkout behavior for C# files in `.gitattributes`, matching the existing repository-wide `.editorconfig` contract on Linux as well as Windows.
+- Made the animated Markdown test strip host-emitted ANSI control sequences before asserting semantic text, while continuing to reject raw Markdown markers.
+- Kept production rendering unchanged; the failure was isolated to checkout policy and test-output normalization.
+
+Validation: full repository gate passed locally with zero build warnings/errors and 90/90 tests; the previously failing animation test passed in isolation; Git resolved `TerminalViewTests.cs` as `text eol=crlf`; `git diff --check` passed.
