@@ -183,6 +183,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     {
         const string repositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
         const string websiteUrl = "https://umbertogiacobbi.biz";
+        const string motto = "Yet another CLI AI assistant :-)";
         var icon = TerminalTheme.IconPrefix(Options, "✨", "*");
         var details = TerminalTheme.PairGrid(
         [
@@ -201,6 +202,8 @@ public sealed class ConsoleShellView : IConsoleShellView
             new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("About.Website"))}:[/]"),
             new Markup($"[link={websiteUrl}]{Markup.Escape(websiteUrl)}[/]"));
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("About.Title")}", TerminalTheme.Accent);
+        _console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(motto)}[/]");
+        _console.WriteLine();
         _console.Write(details);
         _console.WriteLine();
         _console.Write(links);

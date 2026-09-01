@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem in PromptMeUp.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for improving PromptMeUp. Do not include API keys, tokens, prompt history,
+        command output with personal data, or private local paths. For vulnerabilities, use the
+        private reporting path in SECURITY.md instead.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observable problem and the outcome you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Safe reproduction steps
+      description: Provide the smallest safe sequence that reproduces the problem. Redact private data.
+      placeholder: |
+        1. Run ...
+        2. Choose ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include PromptMeUp version or commit, OS, PowerShell version, and .NET SDK version.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Safe diagnostics
+      description: Paste only redacted logs or screenshots. Never include credentials or private command output.

@@ -1,8 +1,8 @@
 # CLI reference
 
-The executable and .NET tool command are both named `hm`, short for **help me**.
+`hm`, short for **help me**, turns a terminal question into a clear answer and an optional, explicitly approved next step. The same two-letter public command is used on Windows, Linux, and macOS.
 
-## Invocation
+## Ask or choose a command
 
 ```text
 hm [question]
@@ -53,7 +53,7 @@ Only one top-level command can be selected per invocation.
 
 PromptMeUp is scoped to terminal tasks. It does not generate images or rewrite, proofread, translate, or compose ordinary prose. Each AI request receives a privacy-filtered snapshot of the current directory, platform/shell, CPU, memory, and available GPU label so its command guidance matches the machine in use.
 
-## Chat controls
+## Keep a conversation moving
 
 | Control | Behavior |
 | --- | --- |
@@ -75,7 +75,7 @@ With no explicit command and no completed setup, `hm` opens setup. If input is r
 
 Read-only commands such as `--help`, `--version`, `--status`, `--third-party`, and `--path=status` support redirected output. Mutating PATH and font operations require a live prompt or `--yes`; font dry-run is non-mutating and can run unattended.
 
-## Portable PATH management
+## Take `hm` with you
 
 `hm --path install` does not copy, download, or install the application. It previews and adds the directory containing the current executable:
 

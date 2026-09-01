@@ -88,6 +88,7 @@ internal static class Program
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
         services.AddSingleton<ISensitiveDataRedactor, SensitiveDataRedactor>();
+        services.AddSingleton<IPromptInjectionProtectionService, PromptInjectionProtectionService>();
         services.AddSingleton<IRuntimeContextService, RuntimeContextService>();
         services.AddSingleton<IPromptCatalogService, YamlPromptCatalogService>();
         services.AddSingleton<IAiCostCalculator, AiCostCalculator>();

@@ -1,6 +1,6 @@
 # Third-party notices
 
-This inventory covers direct NuGet dependencies declared by PromptMeUp as of 2026-08-12. Package versions and license expressions are taken from the installed NuGet package metadata. Transitive packages retain their own notices and license files in the NuGet distribution.
+PromptMeUp keeps its direct software supply chain visible. This inventory covers direct NuGet dependencies declared as of 2026-08-12; package versions and license expressions come from installed NuGet package metadata. Transitive packages retain their own notices and license files in the NuGet distribution.
 
 ## Runtime dependencies
 

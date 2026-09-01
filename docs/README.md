@@ -1,4 +1,6 @@
-# PromptMeUp documentation
+# Choose the right PromptMeUp guide
+
+Start with the outcome you need, then go as deep as the work requires:
 
 - [CLI reference](CLI_REFERENCE.md) — commands, switches, chat controls, exit codes, and portability.
 - [Architecture](ARCHITECTURE.md) — model/view/service boundaries, request flow, persistence, and safety gates.

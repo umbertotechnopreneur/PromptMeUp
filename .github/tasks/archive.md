@@ -2,6 +2,24 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-08-16 — PromptMeUp 0.1.5 protected-preamble installer
+
+- Bumped the product and current packaging examples from `0.1.4` to `0.1.5` for the multilingual protected-preamble release.
+- Built and validated the self-contained x64/ARM64 ZIPs, x64 MSI, release manifest, checksums, and WinGet manifests.
+- Upgraded the current-user installation from `0.1.4` to `0.1.5` silently without elevation or restart.
+- Verified all seven installed payload files byte-for-byte against the x64 ZIP, MSI registration `0.1.5`, exactly one user PATH entry, zero machine PATH entries, and `hm --version` / `hm -where` output.
+
+Validation: full repository gate passed with 90/90 tests and zero build warnings/errors; MSI SHA-256 is `1E7E19B2976897ADD724B47DE07F1B195657F94C80FBA71096D4449F6469671C`.
+
+## 2026-08-16 — Multilingual AI preamble protection
+
+- Reframed the optional setup instruction as a preamble appended to every user-facing chat and one-off query, with a hard 500-word limit and used/maximum/remaining word feedback.
+- Added deterministic Unicode normalization and multilingual prompt-injection screening for Italian, English, French, German, Spanish, and Vietnamese, including instruction overrides, role forgery, prompt extraction, and delimiter breakout attempts.
+- Added provider-bound defense in depth through explicit untrusted-data delimiters and versioned localized YAML rules that prevent the preamble from weakening system instructions or authorizing commands.
+- Preserved existing SQLite compatibility, sanitized preambles before persistence and again before provider-bound prompt assembly, and documented the feature and its non-infallible security boundary.
+
+Validation: full repository gate passed with 90/90 tests and zero build warnings/errors; isolated `--help` and `--status` smoke tests passed with a disposable data directory that was removed afterward.
+
 ## 2026-08-16 — PromptMeUp 0.1.4 premium UI audit installer
 
 - Bumped the product and current packaging examples from `0.1.3` to `0.1.4` for the completed cross-screen terminal UI audit.
@@ -97,3 +115,27 @@ Validation: release `0.1.1` generation and `winget validate` passed; MSI tables 
 - Added portable PATH management, an opt-in Nerd Font helper, MIT/public-repository documentation, tests, and a manual build/lint workflow.
 
 Validation is recorded in `docs/VALIDATION.md` and the publication commit history.
+
+## 2026-09-01 — Public open-source readiness
+
+- Confirmed the public repository's canonical MIT license, package metadata, third-party notices, security policy, contribution guide, and cross-platform quality gate.
+- Added Dependabot for NuGet and GitHub Actions, CodeQL analysis for C#, structured bug and feature forms, a pull-request template, and a public support path through GitHub Discussions.
+- Enabled GitHub Discussions; disabled the duplicate Wiki; enabled Dependabot alerts and automatic security updates; and added public discovery topics and standard labels.
+- Protected `main` with up-to-date required quality checks, pull requests, resolved conversations, linear history, and blocked force-pushes and deletions. Administrative bypass remains available for repository recovery.
+- Ignored Windows `desktop.ini` noise and kept the optional MSI release path explicitly dependent on WiX Toolset 3.14 rather than treating it as an open-source prerequisite.
+
+Validation: required repository gate passed with zero build warnings/errors and 90/90 tests; isolated `--version` and `--third-party` smoke tests passed with a disposable data directory; `git diff --check` passed. GitHub settings were read back after application.
+
+## 2026-09-01 — Product motto
+
+- Added the public motto `Yet another CLI AI assistant :-)` beneath the README title and in the terminal About surface for every language.
+
+Validation: full repository gate passed with zero build warnings/errors and 90/90 tests; the non-interactive `--version` smoke test rendered the exact motto; `git diff --check` passed.
+
+## 2026-09-01 — Product-led public documentation
+
+- Reframed the README, contributor, support, security, CLI, architecture, privacy, cost, validation, packaging, and runtime-resource documentation around user outcomes and durable product promises.
+- Kept technical, licensing, privacy, and command-authorization details explicit while moving implementation mechanics behind the experience they support.
+- Corrected the README navigation anchor, described `hm` as the cross-platform public command, and aligned contributor wording with portable archives as the canonical distribution plus optional platform installers.
+
+Validation: full repository gate passed with zero build warnings/errors and 90/90 tests; isolated non-interactive `--help` and `--version` smoke tests passed; `git diff --check` passed.

@@ -110,7 +110,7 @@ public sealed class OpenAiRequestBuilderTests
         Assert.False(root.TryGetProperty("prompt_cache_retention", out _));
     }
 
-    /// <summary>Verifies that only the chat prompt receives the trimmed custom instruction.</summary>
+    /// <summary>Verifies that the chat prompt receives the configured preamble inside its untrusted-data boundary.</summary>
     [Fact]
     public void BuildInstructions_ChatPrompt_AppendsCustomInstruction()
     {
@@ -118,7 +118,12 @@ public sealed class OpenAiRequestBuilderTests
 
         var result = OpenAiRequestBuilder.BuildInstructions(CreatePrompt(), settings, "en");
 
-        Assert.Equal($"Base instruction.{Environment.NewLine}{Environment.NewLine}Prefer tables.", result);
+        Assert.Equal(
+            $"Base instruction.{Environment.NewLine}{Environment.NewLine}" +
+            $"<user-configured-preamble>{Environment.NewLine}" +
+            $"Prefer tables.{Environment.NewLine}" +
+            "</user-configured-preamble>",
+            result);
     }
 
     /// <summary>Verifies that the single-query prompt receives the sanitized runtime facts and the approved custom instruction.</summary>
@@ -141,6 +146,8 @@ public sealed class OpenAiRequestBuilderTests
             runtimeContext);
 
         Assert.Contains("Prefer concise diagnostics.", result, StringComparison.Ordinal);
+        Assert.Contains("<user-configured-preamble>", result, StringComparison.Ordinal);
+        Assert.Contains("</user-configured-preamble>", result, StringComparison.Ordinal);
         Assert.Contains("Runtime context supplied by PromptMeUp", result, StringComparison.Ordinal);
         Assert.Contains("Current working directory (sanitized): ~/workspace", result, StringComparison.Ordinal);
         Assert.Contains("GPU: NVIDIA RTX", result, StringComparison.Ordinal);

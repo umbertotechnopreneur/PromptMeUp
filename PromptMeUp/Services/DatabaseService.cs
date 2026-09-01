@@ -47,13 +47,18 @@ public sealed class SqliteDatabaseService : IDatabaseService
 {
     private readonly string _connectionString;
     private readonly ILogger<SqliteDatabaseService> _logger;
+    private readonly IPromptInjectionProtectionService _promptProtection;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     /// <summary>Creates the serialized SQLite gateway for local settings, usage, sessions, and audit data.</summary>
-    public SqliteDatabaseService(AppPaths paths, ILogger<SqliteDatabaseService> logger)
+    public SqliteDatabaseService(
+        AppPaths paths,
+        ILogger<SqliteDatabaseService> logger,
+        IPromptInjectionProtectionService promptProtection)
     {
         ArgumentNullException.ThrowIfNull(paths);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = paths.DatabasePath,
@@ -140,6 +145,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
     {
         ArgumentNullException.ThrowIfNull(settings);
         ValidateSettings(settings);
+        var protectedPreamble = _promptProtection.Protect(settings.CustomInstruction);
 
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -175,7 +181,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.Parameters.AddWithValue("$model", settings.Model);
             command.Parameters.AddWithValue("$reasoning", settings.ReasoningEffort);
             command.Parameters.AddWithValue("$detail", settings.OutputDetail);
-            command.Parameters.AddWithValue("$customInstruction", settings.CustomInstruction);
+            command.Parameters.AddWithValue("$customInstruction", protectedPreamble.SanitizedText);
             command.Parameters.AddWithValue("$includeLocation", settings.IncludeWindowsLocation ? 1 : 0);
             command.Parameters.AddWithValue("$reviewCommandsWithAi", settings.ReviewCommandsWithAi ? 1 : 0);
             command.Parameters.AddWithValue("$promptCachingEnabled", settings.PromptCachingEnabled ? 1 : 0);
@@ -754,8 +760,9 @@ public sealed class SqliteDatabaseService : IDatabaseService
         DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(10)));
 
     /// <summary>Rejects unsupported settings before persistence can create an unusable runtime state.</summary>
-    private static void ValidateSettings(AppSettings settings)
+    private void ValidateSettings(AppSettings settings)
     {
+        var protectedPreamble = _promptProtection.Protect(settings.CustomInstruction);
         if (!SupportedLanguages.IsSupported(settings.Language)
             || string.IsNullOrWhiteSpace(settings.Model)
             || !AiModelCatalog.Models.Any(model => model.Id == settings.Model)
@@ -764,7 +771,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
             || !OpenAiEndpointPolicy.IsAllowed(settings.Endpoint)
             || string.IsNullOrWhiteSpace(settings.ApiKeyVariable)
             || string.IsNullOrWhiteSpace(settings.AdminKeyVariable)
-            || settings.CustomInstruction.Length > 4000
+            || !protectedPreamble.IsSafe
+            || !protectedPreamble.IsWithinWordLimit
             || settings.MaxConversationTurns is < 2 or > 50
             || settings.MaxMessageCharacters is < 500 or > 100_000
             || settings.MaxContextPercent is < 10 or > 95

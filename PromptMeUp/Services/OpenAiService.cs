@@ -50,6 +50,7 @@ public sealed class OpenAiService : IOpenAiService
     private readonly IAiCostCalculator _costCalculator;
     private readonly IActivityAuditService _audit;
     private readonly ISensitiveDataRedactor _redactor;
+    private readonly IPromptInjectionProtectionService _promptProtection;
     private readonly ILogger<OpenAiService> _logger;
 
     /// <summary>Creates the Responses API client and its local persistence collaborators.</summary>
@@ -62,6 +63,7 @@ public sealed class OpenAiService : IOpenAiService
         IAiCostCalculator costCalculator,
         IActivityAuditService audit,
         ISensitiveDataRedactor redactor,
+        IPromptInjectionProtectionService promptProtection,
         ILogger<OpenAiService> logger)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
@@ -72,6 +74,7 @@ public sealed class OpenAiService : IOpenAiService
         _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
         _audit = audit ?? throw new ArgumentNullException(nameof(audit));
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
+        _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -94,6 +97,7 @@ public sealed class OpenAiService : IOpenAiService
         }
 
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
+        settings = ProtectPreamble(settings);
         var instructions = OpenAiRequestBuilder.BuildInstructions(
             prompt,
             settings,
@@ -161,6 +165,7 @@ public sealed class OpenAiService : IOpenAiService
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(settings);
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
+        settings = ProtectPreamble(settings);
         return OpenAiRequestBuilder.EstimateContext(
             OpenAiRequestBuilder.BuildInstructions(
                 prompt,
@@ -407,6 +412,18 @@ public sealed class OpenAiService : IOpenAiService
         {
             response?.Dispose();
         }
+    }
+
+    /// <summary>Revalidates and normalizes the configured preamble immediately before provider-bound prompt assembly.</summary>
+    private AppSettings ProtectPreamble(AppSettings settings)
+    {
+        var result = _promptProtection.Protect(settings.CustomInstruction);
+        if (!result.IsSafe || !result.IsWithinWordLimit)
+        {
+            throw new InvalidOperationException("The configured AI preamble did not pass local prompt-injection protection.");
+        }
+
+        return settings with { CustomInstruction = result.SanitizedText };
     }
 
     /// <summary>Uses the returned model first, then the configured model, for local price estimation.</summary>

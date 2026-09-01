@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose a focused improvement to PromptMeUp.
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explain the user outcome first. Larger product or architecture changes should begin here before implementation.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What terminal-work problem would this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the expected user experience, including relevant safety or privacy impact.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What existing workflow or smaller change could address the problem?

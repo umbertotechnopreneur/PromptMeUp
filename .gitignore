@@ -26,6 +26,7 @@ coverage.*
 # OS and editor noise
 Thumbs.db
 .DS_Store
+desktop.ini
 
 # Local JavaScript dependencies
 node_modules/

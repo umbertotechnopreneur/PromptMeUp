@@ -1,6 +1,6 @@
 # Privacy and data flow
 
-PromptMeUp combines local history with an external AI provider. Read this document before using confidential prompts or command output.
+PromptMeUp keeps its working history on your machine and sends only the bounded context needed for the AI features you choose to use. This guide makes that boundary inspectable: what stays local, what can reach OpenAI, and where your approval is required. Read it before using confidential prompts or command output.
 
 ## Local by default
 
@@ -32,7 +32,7 @@ Redaction is defensive, not infallible. Do not paste secrets into prompts or com
 An ordinary AI request can contain:
 
 - the localized YAML instruction selected for that operation;
-- the optional custom instruction saved in setup;
+- the optional setup preamble, after local Unicode normalization and multilingual prompt-injection screening, delimited as untrusted preference data for chat and one-off queries;
 - for chat and one-off queries, a privacy-filtered runtime snapshot: the current working directory (with a recognized home directory rendered as `~`), operating-system and shell family, CPU summary, physical-memory summary, and GPU label when the portable runtime can expose one;
 - coarse culture and time-zone context only when the location option is enabled;
 - the bounded active user/assistant conversation;
@@ -40,6 +40,8 @@ An ordinary AI request can contain:
 - model, reasoning, output-detail, cache-routing, and output-budget settings.
 
 The runtime snapshot deliberately excludes user name, host name, network identity, device serial numbers, and secrets. It is used only to make platform-specific console guidance accurate; PromptMeUp does not use the model for image generation or general-purpose prose editing.
+
+Prompt-injection screening is deterministic defense in depth, not a proof that arbitrary text is safe. The preamble is limited to 500 words, cannot contain the provider-facing delimiter, and is rejected when local rules recognize instruction overrides or role forgery in any supported language. The YAML system prompt independently tells the model to treat the delimited preamble only as untrusted style or format preferences.
 
 The optional command review sends a redacted copy of the proposed command. The exact local command is still shown to the user and is used only for local execution after authorization.
 

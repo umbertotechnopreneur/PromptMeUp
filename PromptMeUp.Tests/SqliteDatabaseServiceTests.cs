@@ -100,6 +100,22 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
                 "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'ix_ai_requests_occurred';"));
     }
 
+    /// <summary>Verifies that persisted preamble text is Unicode-normalized and stripped of invisible formatting controls.</summary>
+    [Fact]
+    public async Task SaveSettingsAsync_Preamble_PersistsSanitizedText()
+    {
+        var service = CreateService();
+        await service.InitializeAsync(CancellationToken.None);
+        var settings = await service.LoadSettingsAsync(CancellationToken.None);
+
+        await service.SaveSettingsAsync(
+            settings with { CustomInstruction = "  Prefer\u200B concise   tables.  " },
+            CancellationToken.None);
+
+        var saved = await service.LoadSettingsAsync(CancellationToken.None);
+        Assert.Equal("Prefer concise tables.", saved.CustomInstruction);
+    }
+
     /// <summary>Verifies that a newer database is rejected before initialization creates any schema objects.</summary>
     [Fact]
     public async Task InitializeAsync_FutureDatabase_RejectsWithoutApplyingDdl()
@@ -126,7 +142,10 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
 
     /// <summary>Creates the service under test with a no-op logger.</summary>
     private SqliteDatabaseService CreateService() =>
-        new(_paths, NullLogger<SqliteDatabaseService>.Instance);
+        new(
+            _paths,
+            NullLogger<SqliteDatabaseService>.Instance,
+            new PromptInjectionProtectionService());
 
     /// <summary>Opens the isolated test database without connection pooling.</summary>
     private async Task<SqliteConnection> OpenDatabaseAsync()

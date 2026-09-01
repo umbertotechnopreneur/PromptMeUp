@@ -1,6 +1,6 @@
 # Architecture
 
-PromptMeUp is one small .NET 10 console host with explicit boundaries between data, behavior, and terminal rendering. It does not automate a graphical interface and it does not run a background agent.
+PromptMeUp is built around one product promise: help with the terminal without silently taking control of it. A small .NET 10 console host keeps data, behavior, rendering, and command authority in explicit boundaries. It does not automate a graphical interface and it does not run a background agent.
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,7 @@ flowchart LR
     Y["Localized YAML prompts"] --> S
 ```
 
-## Layers
+## Product boundaries in code
 
 - `Models/` contains immutable settings, AI usage, pricing, command authorization, memory, status, and audit contracts.
 - `Services/` owns SQLite, OpenAI, pricing, prompt loading, localization, short-term memory, command risk, command execution, secrets, PATH, font support, redaction, and cost calculation.
@@ -26,7 +26,7 @@ flowchart LR
 
 Dependencies are wired through `Microsoft.Extensions.DependencyInjection`. Application code consumes `ILogger<T>`; Serilog is configured only at the composition root.
 
-## AI request flow
+## From question to answer
 
 ```mermaid
 sequenceDiagram
@@ -39,7 +39,7 @@ sequenceDiagram
     User->>App: hm question or chat turn
     App->>Memory: Add bounded user message
     Memory-->>App: Snapshot and prune count
-    App->>OpenAI: YAML instruction + sanitized runtime snapshot + active messages
+    App->>OpenAI: YAML instruction + protected preamble + sanitized runtime snapshot + active messages
     OpenAI-->>App: Structured Markdown answer + cited command candidates + usage
     App->>SQLite: Redacted request and ordered session events
     App-->>User: Markdown answer + cost/context status
@@ -47,9 +47,9 @@ sequenceDiagram
 
 The Responses request sets `store=false`. For chat and single queries, the instruction includes only a privacy-filtered runtime context (working directory, platform/shell, CPU, physical memory, and an available GPU label) so terminal guidance matches the active machine; it excludes account, host, network, serial, and secret data. `OpenAiService` owns HTTP, auditing, persistence, and pricing; small request-builder and response-parser components isolate the provider protocol and are tested without network access. Stable YAML instructions precede changing conversation content. Prompt cache routing is enabled by default and usage details are read from the provider response.
 
-The system prompts constrain the assistant to Windows, macOS, and Linux console help. They explicitly exclude image generation and ordinary prose editing. The Responses API uses a strict JSON schema for the rendered Markdown answer and any cited command candidates. The model has no tool or process-execution capability.
+The system prompts constrain the assistant to Windows, macOS, and Linux console help. They explicitly exclude image generation and ordinary prose editing. An optional setup preamble is Unicode-normalized, capped at 500 words, screened for multilingual instruction overrides and role forgery, and enclosed in a dedicated untrusted-data block. The localized YAML prompt tells the model to apply only compatible style or format preferences from that block. The Responses API uses a strict JSON schema for the rendered Markdown answer and any cited command candidates. The model has no tool or process-execution capability.
 
-## Command authorization flow
+## From suggestion to authorized action
 
 1. `/run` captures the exact proposed PowerShell text.
 2. A conservative local rule produces a risk score and description.

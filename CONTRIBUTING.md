@@ -1,10 +1,10 @@
-# Contributing to PromptMeUp
+# Build a better `hm`
 
-Thank you for helping make `hm` clearer, safer, and more useful.
+Every contribution should make the next terminal step clearer, safer, or easier to understand.
 
-PromptMeUp is deliberately small. Focused changes with an explicit user benefit and concrete validation are the easiest to review.
+PromptMeUp is deliberately small. Lead with the user outcome, keep the change focused, and bring concrete validation so the improvement is easy to trust and review.
 
-## Before opening an issue or pull request
+## Choose the right contribution path
 
 - Read [README.md](README.md), [Privacy and data flow](docs/PRIVACY.md), and [Security](SECURITY.md).
 - Read `AGENTS.md` and `.github/copilot-instructions.md` before changing the repository.
@@ -13,7 +13,7 @@ PromptMeUp is deliberately small. Focused changes with an explicit user benefit 
 - Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 - Open an issue before a large product or architecture change.
 
-## Development setup
+## Get a local build running
 
 Requirements: .NET 10 SDK, Git, and PowerShell 7 for repository helpers.
 
@@ -26,7 +26,7 @@ dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserro
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-## Repository rules
+## Protect the product promises
 
 - Keep the application split into models, services, views, and the application orchestrator.
 - Keep every command execution behind exact preview and explicit authorization.
@@ -35,9 +35,9 @@ dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 - Put runtime AI prompts in `/prompt` as validated YAML with metadata and all six localized texts.
 - Add a brief XML `<summary>` to every C# implementation method. Add small inline hints only where a non-obvious algorithm needs them.
 - Keep `AGENTS.md` and `.github/copilot-instructions.md` aligned.
-- Preserve cross-platform behavior and do not introduce an application installer.
+- Preserve cross-platform behavior and keep portable archives canonical; platform installers must remain optional release surfaces.
 
-## Pull request expectations
+## Make the outcome easy to review
 
 Explain the user-visible outcome, the safety/privacy impact, the files or layers changed, and the commands used to validate the result. Keep generated output and unrelated formatting out of the change.
 

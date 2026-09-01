@@ -1,12 +1,12 @@
 # Memory, costs, and caching
 
-PromptMeUp makes usage visible without pretending that a client-side estimate is provider billing.
+PromptMeUp keeps a short conversation useful without making token use or cost disappear behind the interface. It shows local estimates, provider-reported usage, and cache activity separately—and never presents a client-side estimate as provider billing.
 
-## Context accounting
+## See what the conversation consumes
 
 Before a request, PromptMeUp estimates tokens from UTF-8 payload size for:
 
-- populated YAML and custom instructions;
+- populated YAML and the optional protected setup preamble;
 - prior active conversation messages;
 - the latest user prompt.
 
@@ -14,10 +14,11 @@ After a response, provider usage replaces the estimated input/output total. The 
 
 The client-side estimate is intentionally lightweight and can differ from provider tokenization. It is a preflight guard and UI signal, not an invoice.
 
-## Short-memory limits
+## Keep context useful and bounded
 
 Setup currently exposes:
 
+- optional AI preamble: at most `500` Unicode words, with used/remaining counts and local multilingual prompt-injection screening;
 - maximum user turns: `2–50` (default `12`);
 - maximum characters per message: `500–100,000` (default `16,000`);
 - maximum context-window percentage: `10–95%` (default `70%`);
@@ -26,7 +27,7 @@ Setup currently exposes:
 
 PromptMeUp reserves instruction space, then removes the oldest complete turn groups until both the turn count and estimated token budget fit. It never drops only one side of an old user/assistant exchange when a complete pair is available. If a single new message or populated request still exceeds a configured boundary, the request is rejected with a visible explanation.
 
-## Local request cost
+## Understand local request cost
 
 Each successful Responses call can report:
 
@@ -41,7 +42,7 @@ PromptMeUp multiplies those counters by the matching normalized public price row
 
 Today's and the current month's local estimates include only successful requests recorded by this PromptMeUp data directory. They are not account-wide totals.
 
-## Pricing refresh
+## Keep pricing current
 
 The first relevant app invocation after local midnight checks whether pricing was already synchronized that day. If not, PromptMeUp downloads and parses the official Standard pricing table. `hm --costs` forces a refresh. A failed refresh leaves the previous cache available and writes a diagnostic warning.
 
@@ -53,7 +54,7 @@ With `OPENAI_ADMIN_KEY`, the same cost flow can refresh current-month organizati
 
 Prompt caching is enabled by default and can be disabled in setup.
 
-- Stable localized YAML instructions and custom settings are placed before changing conversation messages.
+- Stable localized YAML instructions and the protected setup preamble are placed before changing conversation messages.
 - A stable `prompt_cache_key` is derived from product name, model, prompt ID/version, and a short hash of the populated instruction; user text is not embedded in the key.
 - GPT-5.6 requests use an explicit cache breakpoint immediately after the stable developer instruction only when that prefix meets the documented 1,024-token minimum; shorter requests keep automatic prefix caching enabled.
 - Long interactive chats pair that stable breakpoint with implicit caching, so their append-only conversation history can create and reuse later checkpoints. Long one-shot queries use explicit-only caching, which reuses the stable instruction without paying to cache the unique request suffix.

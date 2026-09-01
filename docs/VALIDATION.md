@@ -1,8 +1,8 @@
 # Validation guide
 
-Use a clean terminal and never use production API keys or confidential prompts for validation evidence.
+Every PromptMeUp change should preserve the same experience: readable output, explicit choices, bounded local behavior, and no surprise changes to the machine. Use a clean terminal and never use production API keys or confidential prompts for validation evidence.
 
-## Automated checks
+## Prove the build is healthy
 
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
@@ -15,7 +15,7 @@ dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 
 The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. It runs the repository preflight, verifies formatting and XML comments, then builds and tests on Windows, Linux, and macOS.
 
-## Non-interactive smoke checks
+## Prove the CLI is predictable
 
 Use a disposable data directory:
 
@@ -32,12 +32,14 @@ dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- -
 
 Every command should exit `0`, preserve readable redirected output, and avoid an interactive prompt.
 
-## Interactive setup acceptance
+## Validate the first-run experience
 
 - [ ] A clean first launch opens the frameless staged setup with clear whitespace, headings, and shortcuts.
 - [ ] All six languages can be selected and the remaining form changes language immediately.
 - [ ] API and admin key input reveals neither the value nor its character count, and is never reprinted.
-- [ ] Model, thinking, detail, custom instruction, coarse location, command review, and prompt caching are visible.
+- [ ] Model, thinking, detail, 500-word AI preamble, coarse location, command review, and prompt caching are visible.
+- [ ] The preamble reports used/maximum/remaining word counts, accepts exactly 500 words, rejects 501, and shows localized validation in all six languages.
+- [ ] The preamble rejects localized instruction overrides and attempts to forge or close its provider-facing delimiter.
 - [ ] Every memory, output, and timeout limit rejects values outside its displayed range.
 - [ ] The summary appears before save.
 - [ ] Cancelling leaves setup incomplete.
@@ -46,7 +48,7 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] Saving persists non-secret settings and reports platform-appropriate key guidance.
 - [ ] The optional connection test renders a short user prompt, progress indicator, formatted answer, and token snapshot, then rejects an unexpected response.
 
-## Chat and command acceptance
+## Validate questions, chat, and command control
 
 - [ ] A one-off query creates and closes one session.
 - [ ] A one-off query and every completed chat turn display total context plus separate provider input/output token counts.
@@ -60,7 +62,7 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] A simulated key in command output is visible locally but redacted in SQLite and the next AI prompt.
 - [ ] Timeout and output limits are honored.
 
-## Costs and persistence acceptance
+## Validate usage visibility and local history
 
 - [ ] The first relevant invocation of a local day refreshes public pricing once.
 - [ ] `--costs` forces refresh and renders prices in a localized table.

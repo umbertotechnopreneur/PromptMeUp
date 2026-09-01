@@ -82,7 +82,11 @@ internal static class OpenAiRequestBuilder
         {
             if (!string.IsNullOrWhiteSpace(settings.CustomInstruction))
             {
-                builder.AppendLine().AppendLine().Append(settings.CustomInstruction.Trim());
+                builder.AppendLine()
+                    .AppendLine()
+                    .AppendLine("<user-configured-preamble>")
+                    .AppendLine(settings.CustomInstruction.Trim())
+                    .Append("</user-configured-preamble>");
             }
 
             if (settings.IncludeWindowsLocation)

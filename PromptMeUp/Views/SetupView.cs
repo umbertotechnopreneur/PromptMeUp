@@ -16,13 +16,19 @@ public sealed class SetupView : ISetupView
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
     private readonly IConsoleShellView _shell;
+    private readonly IPromptInjectionProtectionService _promptProtection;
 
     /// <summary>Creates the interactive setup form.</summary>
-    public SetupView(IAnsiConsole console, ILocalizationService text, IConsoleShellView shell)
+    public SetupView(
+        IAnsiConsole console,
+        ILocalizationService text,
+        IConsoleShellView shell,
+        IPromptInjectionProtectionService promptProtection)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
+        _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
     }
 
     /// <summary>Collects a complete configuration while keeping entered secrets outside the settings model.</summary>
@@ -107,13 +113,7 @@ public sealed class SetupView : ISetupView
                 .AddChoices(detailChoices));
 
         BeginStage(++stage, _text.Text("Setup.Preferences"));
-        var customInstructionPrompt = new TextPrompt<string>(Markup.Escape(_text.Text("Setup.Custom"))).AllowEmpty();
-        if (!string.IsNullOrWhiteSpace(current.CustomInstruction))
-        {
-            customInstructionPrompt.DefaultValue(current.CustomInstruction);
-        }
-
-        var customInstruction = _console.Prompt(customInstructionPrompt).Trim();
+        var customInstruction = PromptForPreamble(current.CustomInstruction);
         var includeLocation = _console.Prompt(new ConfirmationPrompt(
             Markup.Escape(_text.Text("Setup.Location")))
         {
@@ -282,6 +282,38 @@ public sealed class SetupView : ISetupView
                 .Validate(value => value >= minimum && value <= maximum
                     ? ValidationResult.Success()
                     : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.RangeError", minimum, maximum))}[/]")));
+
+    /// <summary>Collects, sanitizes, and reports a multilingual injection-checked preamble of at most 500 words.</summary>
+    private string PromptForPreamble(string current)
+    {
+        var prompt = new TextPrompt<string>(
+                $"{Markup.Escape(_text.Text("Setup.Custom"))} " +
+                $"[{TerminalTheme.Muted}]({Markup.Escape(_text.Text("Setup.PreambleLimit", PromptInjectionProtectionService.MaximumPreambleWords))})[/]")
+            .AllowEmpty()
+            .Validate(value =>
+            {
+                var result = _promptProtection.Protect(value);
+                if (!result.IsWithinWordLimit)
+                {
+                    return ValidationResult.Error(
+                        $"[red]{Markup.Escape(_text.Text("Setup.PreambleTooLong", result.WordCount, PromptInjectionProtectionService.MaximumPreambleWords))}[/]");
+                }
+
+                return result.IsSafe
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.PreambleUnsafe"))}[/]");
+            });
+        if (!string.IsNullOrWhiteSpace(current))
+        {
+            prompt.DefaultValue(current);
+        }
+
+        var result = _promptProtection.Protect(_console.Prompt(prompt));
+        _console.MarkupLine(
+            $"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Setup.PreambleCount", result.WordCount, PromptInjectionProtectionService.MaximumPreambleWords, PromptInjectionProtectionService.MaximumPreambleWords - result.WordCount))}[/]");
+        _console.WriteLine();
+        return result.SanitizedText;
+    }
 
     /// <summary>Renders the setup choices as a compact borderless summary before saving.</summary>
     private void RenderSummary(AppSettings settings, bool hasApiKey, bool hasAdminKey)

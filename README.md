@@ -1,5 +1,7 @@
 <h1 align="center">PromptMeUp</h1>
 
+<p align="center"><em>Yet another CLI AI assistant :-)</em></p>
+
 <p align="center"><strong>Two letters between a question and a safer next step.</strong></p>
 
 <p align="center">
@@ -10,7 +12,7 @@
 <p align="center">
   <a href="#meet-hm"><strong>Meet hm</strong></a>
   ·
-  <a href="#start-a-conversation"><strong>Start locally</strong></a>
+  <a href="#try-hm-from-source"><strong>Start locally</strong></a>
   ·
   <a href="docs/PRIVACY.md"><strong>Read the privacy model</strong></a>
 </p>
@@ -25,7 +27,7 @@
 
 ## Meet `hm`
 
-`hm` stands for **help me**. It is the small command you reach for when the terminal knows what happened but you do not yet know the next command.
+`hm` stands for **help me**. It closes the gap between knowing what you want and knowing the exact terminal command that gets you there. Ask in your own words, understand the answer, and decide whether the suggested next step should run.
 
 ```powershell
 hm "come annullo l'ultimo commit locale senza perdere le modifiche?"
@@ -39,9 +41,9 @@ PromptMeUp is designed around three everyday moments:
 
 Nothing in a model response runs automatically. Every command begins as a proposal.
 
-## A focused assistant, not another terminal platform
+## One focused terminal habit
 
-PromptMeUp keeps the experience intentionally light:
+PromptMeUp keeps the path from question to action short, visible, and deliberate:
 
 1. Ask a one-off question with `hm "…"`, or open a short conversation with `hm --chat`.
 2. Continue for a few turns while a bounded in-memory context keeps the thread coherent.
@@ -51,7 +53,7 @@ PromptMeUp keeps the experience intentionally light:
 
 PromptMeUp is deliberately scoped to terminal work: it helps with Windows, macOS, and Linux console tasks. It does not generate images or rewrite, proofread, translate, or compose ordinary prose. A compact session snapshot appears after an AI turn; terminal scrollback is never cleared.
 
-## Safety is part of the interaction
+## Confidence before execution
 
 PromptMeUp does not treat fluent AI text as authorization.
 
@@ -65,7 +67,7 @@ PromptMeUp does not treat fluent AI text as authorization.
 
 PromptMeUp is not a sandbox. The user remains responsible for every approved command and should inspect paths, arguments, and expected effects.
 
-## Start a conversation
+## Try `hm` from source
 
 PromptMeUp is currently an early source preview; public binary releases are not published yet.
 
@@ -83,7 +85,7 @@ dotnet build .\PromptMeUp.slnx --configuration Release
 dotnet run --project .\PromptMeUp\PromptMeUp.csproj -- --setup
 ```
 
-The first interactive launch also opens a compact staged setup automatically. Deliberate whitespace, clear headings, high-contrast color, and focused Spectre panels separate each decision. It lets you choose the interface language, model, thinking level, answer detail, optional instructions, command review, prompt caching, and optional advanced memory limits, then can finish with a formatted connection test and progress indicator.
+The first interactive launch also opens a compact staged setup automatically. Deliberate whitespace, clear headings, high-contrast color, and focused Spectre panels separate each decision. It lets you choose the interface language, model, thinking level, answer detail, an optional AI preamble, command review, prompt caching, and optional advanced memory limits, then can finish with a formatted connection test and progress indicator. The preamble is limited to 500 Unicode words, shows used/remaining word counts, and passes a local multilingual prompt-injection check before it is saved or sent.
 
 On Windows, a key entered in setup is written to the current user's `OPENAI_API_KEY` environment variable and made available to the running process. On Linux and macOS it is loaded only for that process; PromptMeUp then tells you to export it through your shell or preferred secret manager. Keys are never stored in SQLite or accepted as command-line arguments.
 
@@ -171,7 +173,7 @@ hm --install-font
 
 The installer is opt-in, Windows-only, and follows the existing `oh-my-posh font install JetBrainsMono --headless` path. PromptMeUp does not install Oh My Posh. Select the font in your terminal profile after installation. `--no-emoji` and `--no-animation` keep output usable in constrained terminals and automation.
 
-## Short memory with a complete local trail
+## Useful context, visible local history
 
 Active chat memory is deliberately simple: a sliding window of recent complete turns. Setup controls the maximum number of turns, message size, context-window percentage, command-output size, and execution timeout. When a limit is reached, the oldest complete turns leave active context; PromptMeUp does not invent a summary.
 
@@ -179,7 +181,7 @@ The local SQLite ledger is separate from active memory. It records session heade
 
 Prompt templates and metadata live in `/prompt` as localized YAML resources. Stable instructions are placed before changing conversation content so OpenAI prompt caching can work by default. Read [Memory, costs, and caching](docs/OPENAI_COSTS_AND_CACHING.md) for the exact behavior.
 
-## What leaves the computer
+## Know what stays local
 
 When AI is enabled, PromptMeUp sends the selected YAML instruction, configured optional instruction, bounded active conversation, and any explicitly authorized command result used for a follow-up to the configured OpenAI Responses endpoint. For chat and one-off queries, the instruction also carries a privacy-filtered runtime snapshot: current working directory (with a home directory replaced by `~`), operating-system and shell family, CPU summary, physical-memory summary, and GPU label when the portable runtime can expose it. It excludes user name, host name, network identity, serial numbers, and secrets. The optional command-risk review sends a redacted form of the proposed command. The optional location setting sends coarse culture and time-zone context, not a requested precise position.
 
@@ -187,7 +189,7 @@ Local diagnostic logs, SQLite audit/history, settings, and cached pricing stay i
 
 Read [Privacy and data flow](docs/PRIVACY.md) before using real or confidential content. OpenAI account, API, retention, and billing terms remain separate from this MIT-licensed application.
 
-## Build and contribute
+## Help shape `hm`
 
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
