@@ -137,7 +137,7 @@ function Copy-PackagePayload {
     )
 
     New-Item -ItemType Directory -Path $StageDirectory -Force | Out-Null
-    foreach ($name in @('hm.exe', 'LICENSE', 'THIRD_PARTY_NOTICES.md')) {
+    foreach ($name in @('hm.exe', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'hm-path.ps1', 'hm-path.sh')) {
         $source = Join-Path $PublishDirectory $name
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
             throw "Published payload is missing '$source'."
@@ -146,6 +146,7 @@ function Copy-PackagePayload {
         Copy-Item -LiteralPath $source -Destination (Join-Path $StageDirectory $name)
     }
 
+    Copy-Item -LiteralPath (Join-Path $PublishDirectory 'LICENSES') -Destination (Join-Path $StageDirectory 'LICENSES') -Recurse
     $promptSource = Join-Path $PublishDirectory 'prompt'
     if (-not (Test-Path -LiteralPath $promptSource -PathType Container)) {
         throw "Published payload is missing '$promptSource'."
@@ -575,6 +576,7 @@ foreach ($architecture in $PortableArchitectures) {
         '-p:ContinuousIntegrationBuild=true',
         "-p:Version=$Version",
         '--output', $publishDirectory)
+    & (Join-Path $PSScriptRoot 'export-third-party-notices.ps1') -OutputDirectory $publishDirectory -Runtime $runtime
     Copy-PackagePayload -PublishDirectory $publishDirectory -StageDirectory $stageDirectory
     if ($architecture -eq $currentArchitecture) {
         Write-Step "Smoke test staged $runtime executable"

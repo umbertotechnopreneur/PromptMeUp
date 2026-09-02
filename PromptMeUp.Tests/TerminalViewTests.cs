@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Text.RegularExpressions;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Views;
@@ -41,7 +42,7 @@ public sealed class TerminalViewTests
 
         renderer.RenderAnimated("Testo **importante** con `codice`.", CancellationToken.None);
 
-        var rendered = output.ToString();
+        var rendered = StripAnsi(output.ToString());
         Assert.Contains("Testo importante con  codice .", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("**", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("`", rendered, StringComparison.Ordinal);
@@ -140,4 +141,8 @@ public sealed class TerminalViewTests
         });
         return (console, output);
     }
+
+    /// <summary>Removes ANSI control sequences so assertions verify semantic text independently of the host terminal.</summary>
+    private static string StripAnsi(string value) =>
+        Regex.Replace(value, @"\x1B\[[0-?]*[ -/]*[@-~]", string.Empty, RegexOptions.CultureInvariant);
 }

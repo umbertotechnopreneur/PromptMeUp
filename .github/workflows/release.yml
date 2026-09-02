@@ -1,0 +1,139 @@
+name: Portable release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify release source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Match the version and require a main commit
+        id: version
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Releases must come from a commit on main.' }
+          [xml]$project = Get-Content PromptMeUp/PromptMeUp.csproj -Raw
+          $version = [string]$project.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid project version.' }
+          if ($env:EVENT_NAME -eq 'push' -and ($env:REF_TYPE -ne 'tag' -or $env:REF_NAME -cne "v$version")) {
+            throw 'The tag must exactly match the project version, such as v1.2.3.'
+          }
+          if ($env:EVENT_NAME -eq 'workflow_dispatch' -and $env:REF_NAME -ne 'main') {
+            throw 'Run the manual packaging rehearsal from main.'
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+  quality:
+    name: Release quality
+    needs: verify
+    uses: ./.github/workflows/quality.yml
+
+  package:
+    name: Package (${{ matrix.runtime }})
+    needs: [verify, quality]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, runtime: win-x64 }
+          - { os: windows-latest, runtime: win-arm64 }
+          - { os: ubuntu-latest, runtime: linux-x64 }
+          - { os: ubuntu-latest, runtime: linux-arm64 }
+          - { os: macos-latest, runtime: osx-x64 }
+          - { os: macos-latest, runtime: osx-arm64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Publish, preserve notices, and smoke test
+        shell: pwsh
+        env:
+          TARGET_RUNTIME: ${{ matrix.runtime }}
+        run: pwsh -NoProfile -File ./scripts/build-portable-release.ps1 -Runtime $env:TARGET_RUNTIME
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: portable-${{ matrix.runtime }}
+          path: artifacts/portable/packages/*
+          if-no-files-found: error
+          retention-days: 14
+
+  deliver:
+    name: Prepare release draft
+    needs: [verify, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: portable-*
+          merge-multiple: true
+          path: release
+      - name: Check the archive set and write SHA-256 checksums
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          $expected = @('win-x64.zip', 'win-arm64.zip', 'linux-x64.tar.gz', 'linux-arm64.tar.gz', 'osx-x64.tar.gz', 'osx-arm64.tar.gz')
+          $files = @(Get-ChildItem release -File)
+          if ($files.Count -ne $expected.Count) { throw 'Expected exactly six portable archives.' }
+          foreach ($suffix in $expected) {
+            if (-not (Test-Path -LiteralPath "release/PromptMeUp-$env:RELEASE_VERSION-$suffix")) { throw "Missing archive: $suffix" }
+          }
+          $files | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          } | Set-Content release/SHA256SUMS.txt -Encoding utf8NoBOM
+      - name: Attest release archives
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/*
+      - name: Keep the complete delivery bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-bundle
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Create a draft for the maintainer to publish
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $files = @(Get-ChildItem release -File | ForEach-Object FullName)
+          gh release create $env:RELEASE_TAG @files --verify-tag --draft --title "PromptMeUp $env:RELEASE_TAG" --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Existing releases are never overwritten.' }
