@@ -485,7 +485,8 @@ public sealed class OpenAiService : IOpenAiService
     /// <summary>Identifies assistant prompts that request the typed user-facing response envelope.</summary>
     private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
         string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase);
+        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase)
+        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1";
 
 }
 

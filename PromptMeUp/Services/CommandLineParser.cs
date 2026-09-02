@@ -31,6 +31,7 @@ public sealed class CommandLineParser : ICommandLineParser
         var yes = false;
         var dryRun = false;
         string? pathAction = null;
+        string? inputFile = null;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -40,6 +41,18 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--diagnose":
+                    if (!TrySelect(AppCommand.Diagnose, ref command, ref commandWasSelected, out var diagnoseError))
+                    {
+                        return FailureMessage(diagnoseError);
+                    }
+                    break;
+                case "--file":
+                    if (inputFile is not null || !TryReadValue(args, ref index, argument, out inputFile, out _))
+                    {
+                        return Failure("Input.FileOption");
+                    }
+                    break;
                 case "--help" or "-h" or "/?":
                     if (!TrySelect(AppCommand.Help, ref command, ref commandWasSelected, out var helpError))
                     {
@@ -211,12 +224,12 @@ public sealed class CommandLineParser : ICommandLineParser
         string? query = null;
         if (queryParts.Count > 0)
         {
-            if (commandWasSelected && command != AppCommand.Query)
+            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose))
             {
                 return Failure("Cli.PositionalConflict");
             }
 
-            command = AppCommand.Query;
+            command = command == AppCommand.Diagnose ? command : AppCommand.Query;
             commandWasSelected = true;
             query = string.Join(' ', queryParts).Trim();
         }
@@ -231,8 +244,13 @@ public sealed class CommandLineParser : ICommandLineParser
             return Failure("Cli.DryRunScope");
         }
 
+        if (inputFile is not null && (command != AppCommand.Diagnose || query is not null))
+        {
+            return Failure("Input.SourceConflict");
+        }
+
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile),
             null);
     }
 

@@ -10,6 +10,7 @@ public enum AppCommand
     Setup,
     Status,
     Query,
+    Diagnose,
     Chat,
     TestAi,
     Costs,
@@ -27,7 +28,8 @@ public sealed record CommandLineOptions(
     bool NoEmoji,
     bool Yes,
     bool DryRun,
-    string? PathAction);
+    string? PathAction,
+    string? InputFile = null);
 
 public sealed record CommandLineParseResult(CommandLineOptions? Options, string? Error)
 {

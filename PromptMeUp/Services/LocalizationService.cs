@@ -341,6 +341,10 @@ public sealed class LocalizationService : ILocalizationService
     /// <summary>Resolves and formats one localized UI string with English as a guarded fallback.</summary>
     public string Text(string key, params object?[] args)
     {
+        if (FeatureText.TryGet(key, Language, out var feature))
+        {
+            return args.Length == 0 ? feature : string.Format(Culture, feature, args);
+        }
         var template = Overrides.TryGetValue(Language, out var localized) && localized.TryGetValue(key, out var translated)
             ? translated
             : English.TryGetValue(key, out var english)

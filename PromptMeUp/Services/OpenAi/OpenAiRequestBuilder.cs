@@ -247,7 +247,8 @@ internal static class OpenAiRequestBuilder
     /// <summary>Identifies assistant prompts that return the typed answer-and-command envelope.</summary>
     private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
         string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase);
+        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase)
+        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1";
 
     /// <summary>Identifies the model family that supports explicit prompt-cache breakpoints.</summary>
     private static bool IsGpt56(string model) => model.StartsWith("gpt-5.6", StringComparison.OrdinalIgnoreCase);

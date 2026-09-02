@@ -31,6 +31,13 @@ Validation: full required gate passed with 148/148 tests and zero build warnings
 
 Validation: the full required gate passed on an isolated baseline plus these changes, with 90/90 tests and zero Release-build warnings/errors. The Windows x64 portable archive passed credential-free startup/help/attribution smoke checks; all inventory notice references resolved inside the ZIP. GitHub-flavored Markdown rendering, local links, PowerShell parsing, and actionlint checks passed. The shared worktree's initial format check detected in-progress C# edits from the concurrent code task; those edits were excluded from this change.
 
+## 2026-09-02 — Guided error diagnosis
+
+- Added bounded text, UTF-8 log file, and stdin diagnosis with credential redaction and strict source validation.
+- Added an evidence-led prompt and UI text in all six languages; reused exact per-command approval for follow-up checks.
+- Validated parser boundaries, cancellation, redaction, Release build/tests, and isolated CLI smoke checks.
+- Delivered as the first feature commit and dedicated PR in the terminal assistance series.
+
 ## 2026-08-16 — PromptMeUp 0.1.5 protected-preamble installer
 
 - Bumped the product and current packaging examples from `0.1.4` to `0.1.5` for the multilingual protected-preamble release.

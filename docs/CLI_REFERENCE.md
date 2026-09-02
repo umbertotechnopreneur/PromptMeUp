@@ -37,6 +37,20 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 
 Only one top-level command can be selected per invocation.
 
+## Diagnose an error
+
+Use `hm --diagnose "restore failed"`, `hm --diagnose --file build.log`, or
+`Get-Content build.log | hm --diagnose`. With no supplied source in a live terminal,
+`hm --diagnose` asks for evidence. Do not put credentials in command arguments.
+File and pipe input is bounded by the configured message limit, with a 30-second
+read deadline. Empty or oversized evidence is rejected; select a smaller excerpt.
+Recognizable credentials are redacted before AI transmission. The selected text
+is still shared with the provider, so choose the excerpt deliberately.
+
+The answer separates observations, probable causes, missing evidence, and the
+next verification. In a live terminal, a suggested check uses the existing exact
+preview and per-command approval flow. Piped invocations only render suggestions.
+
 `hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
 
 ## Global options

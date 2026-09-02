@@ -128,6 +128,8 @@ internal static class Program
 
         services.AddSingleton<IAuthorizedCommandWorkflow, AuthorizedCommandWorkflow>();
         services.AddSingleton<IAiConversationWorkflow, AiConversationWorkflow>();
+        services.AddSingleton<BoundedTextInput>();
+        services.AddSingleton<DiagnosticWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }
