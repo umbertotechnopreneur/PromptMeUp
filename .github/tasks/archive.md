@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-02 — Repair PR #10 CI fixture failures
+
+- Investigated the first PR quality run: Lint and macOS passed, while Windows exposed global SQLite pool cleanup racing other fixtures and Linux timed out before the inherited-pipe fixture emitted its expected marker.
+- Replaced both global pool clears with cleanup scoped to the fixture's exact database connection pool, retaining parallel test execution.
+- Removed PowerShell module discovery from the process fixture, wrote and flushed markers directly, and allowed CI startup headroom. The deadline remains 10 seconds, the return assertion remains below 20 seconds, and the independent child lifetime is 30 seconds, so waiting for the child still fails the regression.
+- Preserved production code, timeout semantics, and all output/cancellation assertions; prepared the fix for the existing PR and its native CI matrix.
+
+Validation: the full local gate passed with 148/148 tests and zero build warnings/errors. The parallel SQLite regression subset passed ten consecutive runs; isolated help/version CLI smoke checks passed. Native CI outcomes are recorded in PR #10 checks.
+
 ## 2026-09-02 — Resolve ten verified code-review findings
 
 - Completed the privacy, deadline, chat/risk/shell, pricing, and summary plan; every finding in [the review](review-2026-09-02.md) now maps to tracked regression coverage.

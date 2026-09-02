@@ -85,7 +85,7 @@ internal sealed class RegressionFixture : IDisposable
     /// <summary>Releases pooled handles and removes only this fixture's temporary directory.</summary>
     public void Dispose()
     {
-        SqliteConnection.ClearAllPools();
+        SqliteTestPool.Clear(Paths.DatabasePath);
         Directory.Delete(_directory, recursive: true);
     }
 }

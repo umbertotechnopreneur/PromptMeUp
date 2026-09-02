@@ -9,20 +9,24 @@ namespace PromptMeUp.Tests;
 
 public sealed class CommandExecutionServiceTests
 {
+    private static readonly TimeSpan ProcessDeadline = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MaximumReturnTime = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan WatchdogDeadline = TimeSpan.FromSeconds(45);
+
     /// <summary>Verifies a still-running process is terminated at its deadline while retaining output already received.</summary>
     [Fact]
     public async Task ExecuteAsync_ParentStillRunning_TimesOutWithPartialOutput()
     {
         var service = new CommandExecutionService(NullLogger<CommandExecutionService>.Instance);
-        using var watchdog = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var watchdog = new CancellationTokenSource(WatchdogDeadline);
 
-        var result = await service.ExecuteAsync(Approve("Write-Output 'started'; Start-Sleep -Seconds 10"),
-            TimeSpan.FromSeconds(3), watchdog.Token);
+        var result = await service.ExecuteAsync(Approve("[Console]::Out.WriteLine('started'); [Console]::Out.Flush(); [Threading.Thread]::Sleep(30000)"),
+            ProcessDeadline, watchdog.Token);
 
         Assert.True(result.TimedOut);
         Assert.Contains("started", result.StandardOutput, StringComparison.Ordinal);
         Assert.Null(result.ExitCode);
-        Assert.True(result.ElapsedMilliseconds < 6_000, result.ElapsedMilliseconds.ToString());
+        Assert.True(result.ElapsedMilliseconds < MaximumReturnTime.TotalMilliseconds, result.ElapsedMilliseconds.ToString());
     }
 
     /// <summary>Verifies external cancellation is propagated instead of returning a misleading command timeout.</summary>
@@ -42,22 +46,24 @@ public sealed class CommandExecutionServiceTests
     {
         const string command = """
             $child = [Diagnostics.ProcessStartInfo]::new()
-            $child.FileName = (Get-Process -Id $PID).Path
+            $child.FileName = [Environment]::ProcessPath
             $child.UseShellExecute = $false
             $child.CreateNoWindow = $true
             $child.ArgumentList.Add('-NoProfile')
             $child.ArgumentList.Add('-NonInteractive')
             $child.ArgumentList.Add('-Command')
-            $child.ArgumentList.Add('Start-Sleep -Seconds 7')
+            $child.ArgumentList.Add('[Threading.Thread]::Sleep(30000)')
             $started = [Diagnostics.Process]::Start($child)
-            Write-Output "child-id=$($started.Id)"
-            Write-Output 'parent-finished'
+            [Console]::Out.WriteLine("child-id=$($started.Id)")
+            [Console]::Out.WriteLine('parent-finished')
+            [Console]::Out.Flush()
             """;
         var service = new CommandExecutionService(NullLogger<CommandExecutionService>.Instance);
-        using var watchdog = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var watchdog = new CancellationTokenSource(WatchdogDeadline);
         var stopwatch = Stopwatch.StartNew();
 
-        var result = await service.ExecuteAsync(Approve(command), TimeSpan.FromSeconds(3), watchdog.Token);
+        // Allow cold CI startup while keeping the return bound below the child's independent 30-second lifetime.
+        var result = await service.ExecuteAsync(Approve(command), ProcessDeadline, watchdog.Token);
 
         try
         {
@@ -65,7 +71,7 @@ public sealed class CommandExecutionServiceTests
             Assert.True(result.OutputTruncated);
             Assert.Null(result.ExitCode);
             Assert.Contains("parent-finished", result.StandardOutput, StringComparison.Ordinal);
-            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(6), stopwatch.Elapsed.ToString());
+            Assert.True(stopwatch.Elapsed < MaximumReturnTime, stopwatch.Elapsed.ToString());
         }
         finally
         {

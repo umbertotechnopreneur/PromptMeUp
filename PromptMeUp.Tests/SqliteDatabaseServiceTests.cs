@@ -28,7 +28,7 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
     /// <summary>Removes the disposable database and releases pooled SQLite file handles.</summary>
     public void Dispose()
     {
-        SqliteConnection.ClearAllPools();
+        SqliteTestPool.Clear(_paths.DatabasePath);
         if (Directory.Exists(_dataDirectory))
         {
             Directory.Delete(_dataDirectory, recursive: true);
