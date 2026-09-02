@@ -7,6 +7,7 @@ These instructions apply to every change in this repository.
 - PromptMeUp is a lightweight .NET 10 console assistant whose public command is `hm`.
 - Keep it portable across Windows, Linux, and macOS. Portable archives remain canonical; release automation may also produce optional, versioned Windows installer artifacts. Do not introduce a background agent.
 - Keep GitHub as the project home and write public copy in product language before implementation detail.
+- Write repository documentation, README copy, contributor guidance, code comments, and project artwork text in English. Keep runtime UI and prompt translations in all six supported languages.
 - Preserve the separation between `Models`, `Services`, `Views`, and the `Application` orchestrator.
 - Runtime AI instructions belong in `/prompt` as versioned YAML with metadata and all six supported languages: `it`, `en`, `fr`, `de`, `es`, `vi`.
 

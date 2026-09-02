@@ -5,32 +5,39 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: promptmeup-quality-${{ github.ref }}
+  group: promptmeup-quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up .NET 10
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       - name: Run repository preflight
         run: pwsh -NoProfile -File ./scripts/preflight.ps1
 
       - name: Restore
         run: dotnet restore PromptMeUp.slnx
+
+      - name: Verify redistribution notices
+        run: pwsh -NoProfile -File ./scripts/export-third-party-notices.ps1 -OutputDirectory ./artifacts/notice-check -Runtime linux-x64
 
       - name: Verify dotnet formatting
         run: dotnet format PromptMeUp.slnx --verify-no-changes --no-restore
@@ -45,14 +52,17 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up .NET 10
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       - name: Restore
         run: dotnet restore PromptMeUp.slnx
@@ -62,3 +72,22 @@ jobs:
 
       - name: Test
         run: dotnet test PromptMeUp.slnx --configuration Release --no-build
+
+      - name: Smoke test the CLI without credentials
+        shell: pwsh
+        run: |
+          $env:PROMPTMEUP_DATA_DIR = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
+          $env:OPENAI_API_KEY = $null
+          $env:OPENAI_ADMIN_KEY = $null
+          foreach ($command in @('--version', '--help', '--third-party')) {
+            dotnet run --project PromptMeUp/PromptMeUp.csproj --configuration Release --no-build -- $command --no-animation --no-emoji
+            if ($LASTEXITCODE -ne 0) { throw "Smoke test failed: $command" }
+          }
+
+      - name: Validate a native portable package
+        shell: pwsh
+        run: |
+          $platform = if ($IsWindows) { 'win' } elseif ($IsMacOS) { 'osx' } else { 'linux' }
+          $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+          pwsh -NoProfile -File ./scripts/build-portable-release.ps1 -Runtime "$platform-$architecture"
+          if ($LASTEXITCODE -ne 0) { throw 'Portable package validation failed.' }

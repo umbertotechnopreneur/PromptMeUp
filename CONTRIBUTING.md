@@ -43,4 +43,6 @@ Explain the user-visible outcome, the safety/privacy impact, the files or layers
 
 AI tools may assist, but contributors remain responsible for correctness, security, attribution, and license compatibility.
 
+Write repository prose and code comments in English; preserve all six runtime translations. See [governance](GOVERNANCE.md) for the maintainer workflow and [the release process](docs/RELEASING.md) for packaging. When adding or updating dependencies, review direct and transitive licenses and preserve their full upstream notices; package export fails for unknown dependency families.
+
 By contributing, you confirm that you can submit the work under the repository's [MIT License](LICENSE).

@@ -2,6 +2,16 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-02 — MIT repository, product presentation, and portable CI/CD
+
+- Preserved the MIT license and upstream attribution, including transitive dependency notices and the exact self-contained runtime's notices in release packages.
+- Added maintainer governance, CODEOWNERS, reproducible main/tag protection settings, dependency review, pinned Actions, and a six-target portable release workflow with checksums, provenance attestations, and a draft publication step.
+- Enabled private vulnerability reporting and applied main protection to administrators, required checks, pull requests, linear history, and resolved conversations; blocked changes and deletion of version tags.
+- Rebuilt the English README around the weekend-project story and UmbertoGiacobbiDotBiz team, with a retro banner, three explicitly illustrative screen renderings, and links to TrackMeUp, viewsapp.ai, and the creator's website.
+- Aligned the English repository-writing rule in AGENTS.md and GitHub Copilot instructions. Preserved the other agent's application-code work.
+
+Validation: the full required gate passed on an isolated baseline plus these changes, with 90/90 tests and zero Release-build warnings/errors. The Windows x64 portable archive passed credential-free startup/help/attribution smoke checks; all inventory notice references resolved inside the ZIP. GitHub-flavored Markdown rendering, local links, PowerShell parsing, and actionlint checks passed. The shared worktree's initial format check detected in-progress C# edits from the concurrent code task; those edits were excluded from this change.
+
 ## 2026-08-16 — PromptMeUp 0.1.5 protected-preamble installer
 
 - Bumped the product and current packaging examples from `0.1.4` to `0.1.5` for the multilingual protected-preamble release.
@@ -139,3 +149,11 @@ Validation: full repository gate passed with zero build warnings/errors and 90/9
 - Corrected the README navigation anchor, described `hm` as the cross-platform public command, and aligned contributor wording with portable archives as the canonical distribution plus optional platform installers.
 
 Validation: full repository gate passed with zero build warnings/errors and 90/90 tests; isolated non-interactive `--help` and `--version` smoke tests passed; `git diff --check` passed.
+
+## 2026-09-01 — Cross-platform quality-gate repair
+
+- Declared CRLF checkout behavior for C# files in `.gitattributes`, matching the existing repository-wide `.editorconfig` contract on Linux as well as Windows.
+- Made the animated Markdown test strip host-emitted ANSI control sequences before asserting semantic text, while continuing to reject raw Markdown markers.
+- Kept production rendering unchanged; the failure was isolated to checkout policy and test-output normalization.
+
+Validation: full repository gate passed locally with zero build warnings/errors and 90/90 tests; the previously failing animation test passed in isolation; Git resolved `TerminalViewTests.cs` as `text eol=crlf`; `git diff --check` passed.
