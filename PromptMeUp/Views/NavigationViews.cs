@@ -47,6 +47,7 @@ public sealed class HelpView(
                 ("--script <request> [--file <path>] [--output <path>]", text.Text("Script.Help")),
                 ("--plan <goal> | --plan --resume <id>", text.Text("Plan.Help")),
                 ("--preview <copy|move|rename|delete> --file <path>", text.Text("Preview.Help")),
+                ("--recipes [list|show|save|import|export|run]", text.Text("Recipe.Help")),
                 ("--chat", text.Text("Help.Chat")),
                 ("--test-ai", text.Text("Help.Test"))
             ]);

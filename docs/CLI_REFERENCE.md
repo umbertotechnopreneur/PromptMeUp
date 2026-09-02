@@ -24,6 +24,11 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | --- | --- | --- |
 | `--query <text>` | `-q` or positional text | Starts one AI session, renders one answer, then offers a safe choice to start chat or inspect a cited command. |
 | `--chat` | — | Opens a bounded interactive conversation for Windows, macOS, or Linux console work. |
+| `--diagnose [text]` | `--file <log>` or stdin | Diagnoses bounded evidence and offers focused checks. |
+| `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a reviewable PowerShell artifact. |
+| `--plan <goal>` | `--plan --resume <id>` | Guides and resumes explicitly approved steps with verified progress. |
+| `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Inspects concrete local file effects before individual command review. |
+| `--recipes [action]` | — | Lists, saves, imports, exports, or reuses personal command recipes. |
 | `--setup` | — | Opens the full first-run and AI settings form. |
 | `--test-ai` | — | Runs the localized `connection-test.yaml` prompt and verifies the exact expected response. |
 | `--costs` | — | Forces a pricing refresh, optionally refreshes organization costs, and renders the cost dashboard. |
@@ -36,6 +41,55 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | `--version` | `-v` | Shows the PromptMeUp About box, application/.NET/platform details, GitHub repository, and creator site. |
 
 Only one top-level command can be selected per invocation.
+
+`hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
+
+## Reuse personal recipes
+
+```powershell
+hm --recipes
+hm --recipes save project-check --from-plan <completed-plan-id>
+hm --recipes show project-check
+hm --recipes run project-check
+hm --recipes export project-check --output project-check.json
+hm --recipes import --file inspect-folder.json
+```
+
+Save a fully completed and confirmed plan as a local recipe, or import a reviewed
+JSON definition. Saves and exports require confirmation and never overwrite an
+existing recipe or file. Names use 1–40 ASCII letters, digits, hyphens, or
+underscores and start with a letter. Local libraries contain at most 200 recipes.
+
+Every run shows prerequisites and asks for parameter values interactively, then
+creates a new resumable plan with fresh per-command approvals. Parameter values
+are bound as literal entries in `$hmParameters`; they are never substituted into
+the source text. Definitions store parameter descriptions, not invocation values.
+The resulting run plan and ordinary audit retain the bound commands locally;
+recognizable credentials are rejected. Each value is limited to 1,024 characters,
+and the complete bound command must fit the plan's 4,096-character limit.
+
+Recipes saved from completed plans retain the original working directory and
+literal commands. To add parameters, export a definition, choose a new name,
+declare its parameters, and reference them as `$hmParameters['name']` in commands
+and checks before importing it. Set `directory` to `null` for an explicitly
+portable recipe that uses the current directory. A minimal import example:
+
+```json
+{
+  "version": 1,
+  "name": "inspect-folder",
+  "description": "Inspect a chosen folder.",
+  "directory": null,
+  "prerequisites": ["PowerShell 7 is available."],
+  "parameters": [{ "name": "folder", "description": "Folder to inspect." }],
+  "steps": [{
+    "label": "List files",
+    "command": "Get-ChildItem -LiteralPath $hmParameters['folder'] -ErrorAction Stop",
+    "verification": "if (-not (Test-Path -LiteralPath $hmParameters['folder'] -PathType Container)) { exit 1 }",
+    "expected": "The chosen folder exists and its listing is visible."
+  }]
+}
+```
 
 ## Preview concrete file effects
 
@@ -105,8 +159,6 @@ is still shared with the provider, so choose the excerpt deliberately.
 The answer separates observations, probable causes, missing evidence, and the
 next verification. In a live terminal, a suggested check uses the existing exact
 preview and per-command approval flow. Piped invocations only render suggestions.
-
-`hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
 
 ## Global options
 

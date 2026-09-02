@@ -27,6 +27,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly ScriptWorkflow _scripts;
     private readonly PlanWorkflow _plans;
     private readonly FilePreviewWorkflow _filePreview;
+    private readonly RecipeWorkflow _recipes;
     private readonly IActivityAuditService _audit;
     private readonly IPortablePathService _pathService;
     private readonly IExecutableLocationService _executableLocation;
@@ -58,6 +59,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         ScriptWorkflow scripts,
         PlanWorkflow plans,
         FilePreviewWorkflow filePreview,
+        RecipeWorkflow recipes,
         IActivityAuditService audit,
         IPortablePathService pathService,
         IExecutableLocationService executableLocation,
@@ -87,6 +89,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _scripts = scripts;
         _plans = plans;
         _filePreview = filePreview;
+        _recipes = recipes;
         _audit = audit;
         _pathService = pathService;
         _executableLocation = executableLocation;
@@ -185,6 +188,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         switch (options.Command)
         {
+            case AppCommand.Recipes:
+                if (options.RecipeAction is not ("list" or "show"))
+                {
+                    EnsureInteractive();
+                }
+                return await _recipes.RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Preview:
                 return await _filePreview.RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Plan:

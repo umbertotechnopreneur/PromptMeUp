@@ -228,3 +228,10 @@ Validation: ten dedicated defect reproductions confirmed; the full repository ga
 - Rechecked snapshot metadata after review, preserved per-command approval, and stopped batches on failure or denial.
 - Added tests for no-mutation previews, collisions, stale source, late destinations, literal quoting, links, and CLI scope.
 - Delivered after the full gate as the fourth stacked feature PR.
+## 2026-09-03 — Personal parameterized recipes
+
+- Added local recipe listing, inspection, import/export, and saving from completed plans.
+- Added schema validation, declared parameters, prerequisite review, and quoted data binding without source substitution.
+- Every reuse creates a new resumable plan with fresh approvals; imports cannot inherit progress or authorization.
+- Added tests for parameter quoting, credential rejection, definition isolation, overwrite prevention, schema/status handling, and CLI scope.
+- Completed the five-feature series with one commit and assigned stacked PR per feature after the full validation gate.

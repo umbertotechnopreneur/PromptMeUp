@@ -37,6 +37,9 @@ public sealed class CommandLineParser : ICommandLineParser
         string? previewAction = null;
         string? prefix = null;
         string? pattern = null;
+        string? recipeAction = null;
+        string? recipeName = null;
+        string? sourcePlan = null;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -46,6 +49,30 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--recipes":
+                    if (!TrySelect(AppCommand.Recipes, ref command, ref commandWasSelected, out var recipeError))
+                    {
+                        return FailureMessage(recipeError);
+                    }
+                    if (recipeAction is not null)
+                    {
+                        return Failure("Recipe.Usage");
+                    }
+                    recipeAction = index + 1 < args.Count && !args[index + 1].StartsWith('-') ? args[++index].ToLowerInvariant() : "list";
+                    if (recipeAction is "show" or "run" or "save" or "export")
+                    {
+                        if (!TryReadValue(args, ref index, argument, out recipeName, out _) || !RecipeStore.IsValidName(recipeName))
+                        {
+                            return Failure("Recipe.Usage");
+                        }
+                    }
+                    break;
+                case "--from-plan":
+                    if (sourcePlan is not null || !TryReadValue(args, ref index, argument, out sourcePlan, out _) || !Guid.TryParseExact(sourcePlan, "N", out _))
+                    {
+                        return Failure("Recipe.Usage");
+                    }
+                    break;
                 case "--preview":
                     if (!TrySelect(AppCommand.Preview, ref command, ref commandWasSelected, out var previewError))
                     {
@@ -296,14 +323,24 @@ public sealed class CommandLineParser : ICommandLineParser
             return Failure("Cli.DryRunScope");
         }
 
-        if (inputFile is not null && command is not (AppCommand.Script or AppCommand.Preview) && (command != AppCommand.Diagnose || query is not null))
+        if (inputFile is not null && command is not (AppCommand.Script or AppCommand.Preview)
+            && !(command == AppCommand.Recipes && recipeAction == "import") && (command != AppCommand.Diagnose || query is not null))
         {
             return Failure("Input.SourceConflict");
         }
 
-        if ((outputFile is not null && command is not (AppCommand.Script or AppCommand.Preview)) || (command == AppCommand.Script && string.IsNullOrWhiteSpace(query)))
+        if ((outputFile is not null && command is not (AppCommand.Script or AppCommand.Preview) && !(command == AppCommand.Recipes && recipeAction == "export"))
+            || (command == AppCommand.Script && string.IsNullOrWhiteSpace(query)))
         {
             return Failure("Script.Usage");
+        }
+
+        if ((sourcePlan is not null && !(command == AppCommand.Recipes && recipeAction == "save"))
+            || (command == AppCommand.Recipes && (recipeAction is not ("list" or "show" or "run" or "save" or "import" or "export")
+                || (recipeAction == "save" && sourcePlan is null) || (recipeAction == "import" && inputFile is null)
+                || (recipeAction == "export" && outputFile is null))))
+        {
+            return Failure("Recipe.Usage");
         }
 
         if ((command != AppCommand.Preview && (prefix is not null || pattern is not null))
@@ -321,7 +358,7 @@ public sealed class CommandLineParser : ICommandLineParser
         }
 
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern, recipeAction, recipeName, sourcePlan),
             null);
     }
 

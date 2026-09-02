@@ -140,6 +140,9 @@ internal static class Program
         services.AddSingleton<FilePreviewService>();
         services.AddSingleton<IFilePreviewView, FilePreviewView>();
         services.AddSingleton<FilePreviewWorkflow>();
+        services.AddSingleton<RecipeStore>();
+        services.AddSingleton<IRecipeView, RecipeView>();
+        services.AddSingleton<RecipeWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }
