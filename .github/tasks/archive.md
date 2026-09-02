@@ -38,6 +38,14 @@ Validation: the full required gate passed on an isolated baseline plus these cha
 - Validated parser boundaries, cancellation, redaction, Release build/tests, and isolated CLI smoke checks.
 - Delivered as the first feature commit and dedicated PR in the terminal assistance series.
 
+## 2026-09-03 — Reconcile diagnosis PR with main
+
+- Moved diagnosis history away from the archive append point changed by main, and separated planned feature work from the shared baseline task-status entry.
+- Preserved every diagnosis and planned-feature entry and rebased the PR onto current main to satisfy its required up-to-date checks without a merge commit.
+- Limited manual conflict corrections to the two task ledgers; production code and runtime prompts match the validated integration of the original feature with main.
+
+Validation: the original feature branch passed its full required gate with 98/98 tests; the integrated source passed with 156/156 tests and zero build warnings/errors. Diagnosis help and unconfigured-input smoke checks passed with isolated data. Native CI results for the updated branch are recorded in PR #11.
+
 ## 2026-08-16 — PromptMeUp 0.1.5 protected-preamble installer
 
 - Bumped the product and current packaging examples from `0.1.4` to `0.1.5` for the multilingual protected-preamble release.
