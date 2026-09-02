@@ -1,229 +1,168 @@
-<h1 align="center">PromptMeUp</h1>
+<p align="center">
+  <img src="docs/assets/promptmeup-banner.png" alt="PromptMeUp — Ask naturally. Understand first. You decide. A weekend idea. An everyday helper." width="100%" />
+</p>
 
-<p align="center"><em>Yet another CLI AI assistant :-)</em></p>
-
-<p align="center"><strong>Two letters between a question and a safer next step.</strong></p>
+<h1 align="center">A little help. Still your terminal.</h1>
 
 <p align="center">
-  Ask <code>hm</code> how to do something from your terminal. Get a clear answer, keep the conversation moving,
-  and—only when you choose—preview and authorize the exact command that should run.
+  Ask in your own words. Get a clearer next step.<br />
+  Run a command only after you have seen it and said yes.
 </p>
 
 <p align="center">
-  <a href="#meet-hm"><strong>Meet hm</strong></a>
-  ·
-  <a href="#try-hm-from-source"><strong>Start locally</strong></a>
-  ·
-  <a href="docs/PRIVACY.md"><strong>Read the privacy model</strong></a>
+  <a href="#meet-hm"><strong>Meet hm</strong></a> ·
+  <a href="#try-it-this-weekend"><strong>Try it</strong></a> ·
+  <a href="docs/PRIVACY.md"><strong>Privacy</strong></a> ·
+  <a href="https://github.com/umbertotechnopreneur/PromptMeUp/discussions"><strong>Join the conversation</strong></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml"><img src="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml/badge.svg" alt="Quality gate" /></a>
-  <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&amp;logoColor=white" alt=".NET 10" />
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-4F46E5" alt="Windows, Linux, and macOS" />
-  <img src="https://img.shields.io/badge/status-early%20preview-F59E0B" alt="Early preview" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22C55E" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-8B5CF6" alt="Windows, Linux, and macOS" />
+  <img src="https://img.shields.io/badge/early%20preview-F59E0B" alt="Early preview" />
 </p>
+
+## A weekend project that stayed
+
+PromptMeUp started as a **pet project built over a weekend**. Then we kept reaching for it. What began as a small experiment turned out to be more useful than expected in our team at **[UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/)**.
+
+So here it is: a small, open-source helper for the everyday terminal questions that interrupt your flow. Still personal. Still evolving. Already earning its place in our working day.
+
+*Yet another CLI AI assistant :-)*
 
 ## Meet `hm`
 
-`hm` stands for **help me**. It closes the gap between knowing what you want and knowing the exact terminal command that gets you there. Ask in your own words, understand the answer, and decide whether the suggested next step should run.
+`hm` means **help me**. Tell it what you want to do, read the explanation, and choose your next step.
 
 ```powershell
-hm "come annullo l'ultimo commit locale senza perdere le modifiche?"
+hm "How do I undo my last local commit without losing my changes?"
 ```
 
-PromptMeUp is designed around three everyday moments:
+<table>
+<tr>
+<td width="33%" valign="top"><strong>Ask naturally</strong><br /><br />Describe the outcome. Spend less time trying to remember the right command or flag.</td>
+<td width="33%" valign="top"><strong>Understand first</strong><br /><br />Get an explanation in your terminal. Ask a follow-up when you need more context.</td>
+<td width="33%" valign="top"><strong>You decide</strong><br /><br />Inspect the exact command and its risk review. Authorize that one command, or cancel.</td>
+</tr>
+</table>
 
-- **Ask naturally.** Describe the result you want instead of remembering every flag.
-- **Understand first.** Read a concise answer with simple, safe Markdown rendered directly in the terminal.
-- **Act deliberately.** Preview an exact PowerShell command, inspect a local and optional AI risk review, then explicitly authorize or cancel it.
+Nothing in an AI answer runs automatically. Every command starts as a proposal.
 
-Nothing in a model response runs automatically. Every command begins as a proposal.
+## A few moments with `hm`
 
-## One focused terminal habit
+**One question. A clearer next step.**
 
-PromptMeUp keeps the path from question to action short, visible, and deliberate:
+![Green CRT rendering of a question about finding large files, an explanation, a suggested command, and a menu with execution declined.](docs/assets/screen-ask-green.png)
 
-1. Ask a one-off question with `hm "…"`, or open a short conversation with `hm --chat`.
-2. Continue for a few turns while a bounded in-memory context keeps the thread coherent.
-3. Pick **Do not execute commands**, continue into chat, or inspect one model-suggested command; nothing runs from the menu.
-4. Review the exact command, its risk score, and a plain-language description.
-5. Approve it yourself. PromptMeUp captures bounded output and can ask the model to explain the result in the next turn.
+<table>
+<tr>
+<td width="50%" valign="top">
+<strong>Pause before you run</strong><br /><br />
+<img src="docs/assets/screen-review-amber.png" alt="Amber and cyan CRT rendering of the exact command, local risk review, and explicit approval or cancellation." />
+<br />See the command. Understand the effect. Make the call.
+</td>
+<td width="50%" valign="top">
+<strong>Your starting point</strong><br /><br />
+<img src="docs/assets/screen-center-violet.png" alt="Violet and cyan CRT rendering of the command center, showing sample settings and navigation." />
+<br />A question, a conversation, or a quick look at your settings.
+</td>
+</tr>
+</table>
 
-PromptMeUp is deliberately scoped to terminal work: it helps with Windows, macOS, and Linux console tasks. It does not generate images or rewrite, proofread, translate, or compose ordinary prose. A compact session snapshot appears after an AI turn; terminal scrollback is never cleared.
+*These are illustrative product renderings with sample content. The retro colors, scanlines, wording, and layouts are presentation treatments, not selectable app themes or exact screenshots. The real interface adapts to your terminal.*
 
-## Confidence before execution
+## Small enough to fit your day
 
-PromptMeUp does not treat fluent AI text as authorization.
+- **A quick answer or a short conversation.** Use `hm "…"` or `hm --chat`.
+- **Six interface languages.** English, Italian, French, German, Spanish, and Vietnamese.
+- **Your terminal stays yours.** No background agent; previous terminal output stays visible.
+- **Portable by design.** Windows, Linux, and macOS, with x64 and Arm64 publish targets.
+- **Visible usage.** Check session usage, local cost estimates, and optional organization costs.
+- **Readable without extras.** High-contrast output works without a special font; emoji and animation can be disabled.
 
-- A deterministic local review always scores common read-only, network, privileged, destructive, and broad-filesystem patterns.
-- An OpenAI review can add context when enabled, but it remains advisory and can never approve execution.
-- The exact command is always shown before authorization.
-- PromptMeUp starts commands as the current user through `pwsh -NoProfile -NonInteractive` and never requests elevation itself; a command that explicitly asks for higher privileges is flagged for review and may still trigger the platform's own prompt.
-- Authorization expires and applies only to the displayed command.
-- Captured output has time and size limits.
-- Recognizable API keys, bearer tokens, and credential assignments are redacted before local persistence or an AI follow-up.
+PromptMeUp focuses on terminal tasks. General writing, translation, and image generation are outside its scope.
 
-PromptMeUp is not a sandbox. The user remains responsible for every approved command and should inspect paths, arguments, and expected effects.
+## Try it this weekend
 
-## Try `hm` from source
+**Early source preview:** there are no public binary releases yet. The [Releases page](https://github.com/umbertotechnopreneur/PromptMeUp/releases) is where future downloads will appear.
 
-PromptMeUp is currently an early source preview; public binary releases are not published yet.
-
-Requirements:
-
-- .NET 10 SDK;
-- Git;
-- PowerShell 7 (`pwsh`) for command execution and Windows repository helpers;
-- an OpenAI API key for AI features.
+To build locally, install the **.NET 10 SDK**, **Git**, and **PowerShell 7**. AI features use your own OpenAI API account.
 
 ```powershell
 git clone https://github.com/umbertotechnopreneur/PromptMeUp.git
-Set-Location .\PromptMeUp
-dotnet build .\PromptMeUp.slnx --configuration Release
-dotnet run --project .\PromptMeUp\PromptMeUp.csproj -- --setup
+cd PromptMeUp
+dotnet build PromptMeUp.slnx --configuration Release
+dotnet run --project PromptMeUp/PromptMeUp.csproj -- --setup
+dotnet run --project PromptMeUp/PromptMeUp.csproj -- "How do I list the largest files here?"
 ```
 
-The first interactive launch also opens a compact staged setup automatically. Deliberate whitespace, clear headings, high-contrast color, and focused Spectre panels separate each decision. It lets you choose the interface language, model, thinking level, answer detail, an optional AI preamble, command review, prompt caching, and optional advanced memory limits, then can finish with a formatted connection test and progress indicator. The preamble is limited to 500 Unicode words, shows used/remaining word counts, and passes a local multilingual prompt-injection check before it is saved or sent.
+Setup guides you through language, model, answer style, and command review. Enter credentials through setup or your preferred secret manager; never put a key in a command argument. On Windows, setup can save the key to your current user's environment. On Linux and macOS, an entered key lasts for that process; configure your shell or secret manager for future launches.
 
-On Windows, a key entered in setup is written to the current user's `OPENAI_API_KEY` environment variable and made available to the running process. On Linux and macOS it is loaded only for that process; PromptMeUp then tells you to export it through your shell or preferred secret manager. Keys are never stored in SQLite or accepted as command-line arguments.
+After publishing or installing a portable build, the command is `hm`. The [CLI reference](docs/CLI_REFERENCE.md) explains setup, publishing, and the optional user-PATH helpers.
 
-```powershell
-$env:OPENAI_API_KEY = 'your-key-from-your-secret-store'
-hm --setup
-```
-
-`OPENAI_ADMIN_KEY` is optional. When present, `hm --costs` can also request organization-level cost buckets; ordinary prompts need only `OPENAI_API_KEY`.
-
-## Everyday commands
-
-| Command | Experience |
+| When you want to… | Use |
 | --- | --- |
-| `hm "question"` | Ask one question and close the session. |
-| `hm --chat` | Open a short multi-turn conversation. |
-| `hm --setup` | Reopen the full AI and memory setup. |
-| `hm --test-ai` | Run the localized YAML connection test with a formatted answer and progress indicator. |
-| `hm --costs` | Refresh and show model pricing, local estimates, and optional organization cost. |
-| `hm --status` | Show setup, key readiness, database, logs, prompt resources, and price-cache state. |
-| `hm --language fr` | Use `it`, `en`, `fr`, `de`, `es`, or `vi` for this invocation. |
-| `hm --third-party` | Show a polished list of direct runtime dependencies and licenses. |
-| `hm --where` / `hm -where` | Show the exact `hm` executable path, then offer Explorer or a change-directory command. |
-| `hm --path status` | Inspect whether the current executable directory is in the user `PATH`. |
-| `hm --path install` | Add the current executable directory to the user `PATH`. |
-| `hm --path remove` | Remove the current executable directory from the user `PATH`. |
-| `hm --install-font --dry-run` | Preview the optional JetBrainsMono Nerd Font helper. |
+| Ask one question | `hm "your question"` |
+| Keep the conversation going | `hm --chat` |
+| Change your preferences | `hm --setup` |
+| Check configuration | `hm --status` |
+| Understand usage and estimates | `hm --costs` |
+| See commands and options | `hm --help` |
+| See the libraries behind the app | `hm --third-party` |
 
-Inside chat:
+## Confidence comes from control
 
-- `/run <command>` starts the mandatory review and authorization flow;
-- `/status` shows the current session snapshot;
-- `/costs` shows the local cost dashboard;
-- `/clear` clears active short-term context but keeps the audit ledger;
-- `/exit` closes the session.
+Before execution, `hm` shows the exact command and always runs a deterministic local risk review. An optional AI review can add context, but cannot approve anything. Your approval applies only to that displayed command and expires.
 
-During any interactive flow, `Esc` cancels the current command and returns to the command center when one is active. `Ctrl+C` terminates PromptMeUp with exit code `130`.
+Commands run as your current user through PowerShell, with a timeout and bounded captured output. PromptMeUp is not a sandbox: inspect the command and its effects before authorizing it.
 
-Use `hm --help` for the compact reference or read [CLI reference](docs/CLI_REFERENCE.md).
+Settings, diagnostic logs, and an audit history stay in local application data. Recognizable credentials are redacted before persistence or AI follow-up. When AI is enabled, the configured provider receives your question, bounded conversation context, a filtered runtime snapshot, and any authorized output used for a follow-up. Redaction is not a guarantee that arbitrary confidential content will be removed.
 
-## Portable by design
+Read [Privacy and data flow](docs/PRIVACY.md) for the details. OpenAI service terms and API charges are separate from this MIT-licensed app.
 
-PromptMeUp remains portable-first. Publish a folder, move that folder wherever you want, and add or remove that exact folder from your user `PATH`.
+## Help shape the next weekend
 
-```powershell
-dotnet publish .\PromptMeUp\PromptMeUp.csproj `
-  --configuration Release `
-  --runtime win-x64 `
-  --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  --output .\artifacts\publish\win-x64
+Found a rough edge? Have a small improvement in mind? Start a [discussion](https://github.com/umbertotechnopreneur/PromptMeUp/discussions), [report a bug](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose), or read the [contribution guide](CONTRIBUTING.md).
 
-.\artifacts\publish\win-x64\hm.exe --path install
-```
+Repository writing is in English; the application keeps its six supported languages. Both `AGENTS.md` and GitHub Copilot instructions carry the same rule.
 
-The `--path` screen always previews the exact directory and persistence target. Use `--yes` only for an already reviewed non-interactive install or removal. Companion scripts are included in publish output:
+| For users | For contributors |
+| --- | --- |
+| [CLI reference](docs/CLI_REFERENCE.md) | [Architecture](docs/ARCHITECTURE.md) |
+| [Privacy](docs/PRIVACY.md) | [Validation](docs/VALIDATION.md) |
+| [Costs and conversation memory](docs/OPENAI_COSTS_AND_CACHING.md) | [Release process](docs/RELEASING.md) |
+| [Support](SUPPORT.md) | [Governance](GOVERNANCE.md) |
 
-```powershell
-pwsh -NoProfile -File .\hm-path.ps1 -Action install
-pwsh -NoProfile -File .\hm-path.ps1 -Action remove
-```
+Security issue? [Report it privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new), following our [security policy](SECURITY.md).
 
-Linux and macOS builds include `hm-path.sh`, which maintains one clearly marked block in the appropriate user shell profile. Supported publish targets are `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, and `osx-arm64`.
+## Open source, with credit where it belongs
 
-### Windows release artifacts
+PromptMeUp is released under the **[MIT License](LICENSE)**. Use it, adapt it, and build on it while keeping the copyright and license notice.
 
-The release builder produces self-contained portable ZIP archives for WinGet (`win-x64` and `win-arm64`), a traditional per-user x64 MSI, SHA-256 checksums, and a validated multi-file WinGet manifest:
+Created by **Umberto Giacobbi**, with appreciation for every contributor and the libraries that make it possible. See [third-party attribution](THIRD_PARTY_NOTICES.md), [upstream license texts](LICENSES/README.md), and [artwork provenance](docs/assets/README.md).
 
-```powershell
-pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
-pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
-```
+---
 
-Generated files stay below `artifacts/release/<version>/` and are ignored by Git. Both Windows installation routes add the directory containing `hm.exe` to the current user's `PATH`; neither requires a machine-wide PATH change. The MSI is an optional Windows distribution surface; the ZIP archives remain the canonical portable build. See [Windows release packaging](docs/WINDOWS_PACKAGING.md) for prerequisites, local WinGet testing, and publication-time URLs.
+<h2 align="center">More from the same workshop</h2>
+<p align="center">Useful ideas deserve to make it out of the weekend.</p>
 
-## Premium terminal details, optional font
-
-High-contrast color, whitespace, progress, panels, responsive tables, and session snapshots work in a normal modern terminal. Semantic emoji have an ASCII fallback through `--no-emoji`; PromptMeUp does not require a Nerd Font for its own interface.
-
-```powershell
-hm --install-font --dry-run
-hm --install-font
-```
-
-The installer is opt-in, Windows-only, and follows the existing `oh-my-posh font install JetBrainsMono --headless` path. PromptMeUp does not install Oh My Posh. Select the font in your terminal profile after installation. `--no-emoji` and `--no-animation` keep output usable in constrained terminals and automation.
-
-## Useful context, visible local history
-
-Active chat memory is deliberately simple: a sliding window of recent complete turns. Setup controls the maximum number of turns, message size, context-window percentage, command-output size, and execution timeout. When a limit is reached, the oldest complete turns leave active context; PromptMeUp does not invent a summary.
-
-The local SQLite ledger is separate from active memory. It records session headers, ordered prompt/response events, normalized token and cost usage, command authorization activity, bounded command output, and flexible JSON audit payloads. This makes a short session reviewable even after its active model context has been pruned.
-
-Prompt templates and metadata live in `/prompt` as localized YAML resources. Stable instructions are placed before changing conversation content so OpenAI prompt caching can work by default. Read [Memory, costs, and caching](docs/OPENAI_COSTS_AND_CACHING.md) for the exact behavior.
-
-## Know what stays local
-
-When AI is enabled, PromptMeUp sends the selected YAML instruction, configured optional instruction, bounded active conversation, and any explicitly authorized command result used for a follow-up to the configured OpenAI Responses endpoint. For chat and one-off queries, the instruction also carries a privacy-filtered runtime snapshot: current working directory (with a home directory replaced by `~`), operating-system and shell family, CPU summary, physical-memory summary, and GPU label when the portable runtime can expose it. It excludes user name, host name, network identity, serial numbers, and secrets. The optional command-risk review sends a redacted form of the proposed command. The optional location setting sends coarse culture and time-zone context, not a requested precise position.
-
-Local diagnostic logs, SQLite audit/history, settings, and cached pricing stay in the platform's local application-data directory. Run `hm --status` to see the exact paths. Set `PROMPTMEUP_DATA_DIR` to choose another data directory.
-
-Read [Privacy and data flow](docs/PRIVACY.md) before using real or confidential content. OpenAI account, API, retention, and billing terms remain separate from this MIT-licensed application.
-
-## Help shape `hm`
-
-```powershell
-pwsh -NoProfile -File .\scripts\preflight.ps1
-dotnet restore .\PromptMeUp.slnx
-dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
-pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
-dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
-dotnet test .\PromptMeUp.slnx --configuration Release --no-build
-```
-
-The GitHub quality workflow runs formatting and XML checks plus cross-platform build and tests on pushes to `main`, pull requests, and manual dispatch. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then use the [validation guide](docs/VALIDATION.md).
-
-## Repository map
-
-- `PromptMeUp/` — the `hm` application, split into models, services, views, infrastructure, and orchestration.
-- `PromptMeUp.Tests/` — focused parser, memory, localization, pricing, redaction, cost, and endpoint-policy tests.
-- `prompt/` — localized YAML resources sent by the runtime.
-- `scripts/` — preflight, XML-comment policy, repository helpers, and portable PATH companions.
-- `docs/` — durable architecture, privacy, usage, cost/caching, and validation guidance.
-- `prompts/` — contributor-facing development prompts; these are separate from runtime AI instructions.
-- `.github/` — quality workflow, repository guidance, and task records.
-
-## Project documentation
-
-- [CLI reference](docs/CLI_REFERENCE.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Privacy and data flow](docs/PRIVACY.md)
-- [Memory, costs, and caching](docs/OPENAI_COSTS_AND_CACHING.md)
-- [Validation guide](docs/VALIDATION.md)
-- [Security policy](SECURITY.md)
-- [Third-party notices](THIRD_PARTY_NOTICES.md)
-- [Contributing](CONTRIBUTING.md)
-- [Code of conduct](CODE_OF_CONDUCT.md)
-
-## License
-
-PromptMeUp is open source under the [MIT License](LICENSE).
+<table>
+<tr>
+<td width="33%" valign="top">
+<h3>TrackMeUp</h3>
+Find your workday again. A local-first memory for Windows that helps you recover the context you thought you had lost.<br /><br />
+<a href="https://github.com/umbertotechnopreneur/TrackMeUp"><strong>Explore TrackMeUp →</strong></a>
+</td>
+<td width="33%" valign="top">
+<h3>viewsapp.ai</h3>
+Curious about what else we are building? Make this your next stop.<br /><br />
+<a href="https://viewsapp.ai"><strong>Discover viewsapp.ai →</strong></a>
+</td>
+<td width="33%" valign="top">
+<h3>Umberto Giacobbi</h3>
+The person, the products, and the ideas behind the work. Come say hello.<br /><br />
+<a href="https://umbertogiacobbi.biz/"><strong>Visit my website →</strong></a>
+</td>
+</tr>
+</table>
