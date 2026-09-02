@@ -37,6 +37,21 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 
 Only one top-level command can be selected per invocation.
 
+## Create or revise a script
+
+Use `hm --script "Archive old logs with a report" --output archive-logs.ps1`.
+To revise a script, add `--file existing.ps1` and choose a new output file. This
+interactive flow shows the complete source and a line-by-line replacement diff,
+then offers revision, validation, saving, or cancellation. Existing files are
+never overwritten. Script input/output is limited to 12,000 characters; embedded
+credentials and redaction placeholders are rejected.
+
+The optional validation action previews a PowerShell parser command for explicit
+approval. It parses the source as literal data and uses PSScriptAnalyzer if already
+installed; it never evaluates the generated script or installs tooling. Syntax
+success does not establish semantic correctness or safety. Saving does not run
+the script. Requests and selected source are shared with the AI provider.
+
 ## Diagnose an error
 
 Use `hm --diagnose "restore failed"`, `hm --diagnose --file build.log`, or

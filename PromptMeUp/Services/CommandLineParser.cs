@@ -32,6 +32,7 @@ public sealed class CommandLineParser : ICommandLineParser
         var dryRun = false;
         string? pathAction = null;
         string? inputFile = null;
+        string? outputFile = null;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -41,6 +42,18 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--script":
+                    if (!TrySelect(AppCommand.Script, ref command, ref commandWasSelected, out var scriptError))
+                    {
+                        return FailureMessage(scriptError);
+                    }
+                    break;
+                case "--output":
+                    if (outputFile is not null || !TryReadValue(args, ref index, argument, out outputFile, out _))
+                    {
+                        return Failure("Script.OutputOption");
+                    }
+                    break;
                 case "--diagnose":
                     if (!TrySelect(AppCommand.Diagnose, ref command, ref commandWasSelected, out var diagnoseError))
                     {
@@ -224,12 +237,12 @@ public sealed class CommandLineParser : ICommandLineParser
         string? query = null;
         if (queryParts.Count > 0)
         {
-            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose))
+            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose or AppCommand.Script))
             {
                 return Failure("Cli.PositionalConflict");
             }
 
-            command = command == AppCommand.Diagnose ? command : AppCommand.Query;
+            command = command is AppCommand.Diagnose or AppCommand.Script ? command : AppCommand.Query;
             commandWasSelected = true;
             query = string.Join(' ', queryParts).Trim();
         }
@@ -244,13 +257,18 @@ public sealed class CommandLineParser : ICommandLineParser
             return Failure("Cli.DryRunScope");
         }
 
-        if (inputFile is not null && (command != AppCommand.Diagnose || query is not null))
+        if (inputFile is not null && command != AppCommand.Script && (command != AppCommand.Diagnose || query is not null))
         {
             return Failure("Input.SourceConflict");
         }
 
+        if ((outputFile is not null && command != AppCommand.Script) || (command == AppCommand.Script && string.IsNullOrWhiteSpace(query)))
+        {
+            return Failure("Script.Usage");
+        }
+
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile),
             null);
     }
 

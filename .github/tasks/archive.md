@@ -207,3 +207,10 @@ Validation: full repository gate passed with zero build warnings/errors and 90/9
 - Preserved concurrent repository work and left application code, existing tests, and runtime prompts unchanged.
 
 Validation: ten dedicated defect reproductions confirmed; the full repository gate passed with zero build warnings/errors and 90/90 existing tests. Isolated `--help` and `--version` smoke tests passed. The existing suite does not cover the reproduced failure cases.
+
+## 2026-09-02 — PowerShell script workshop
+
+- Added complete script generation, revision diffs, named-parameter guidance, and explicit saving to new files.
+- Added authorized parser-only validation and optional installed PSScriptAnalyzer support; source is never evaluated.
+- Added tests for parser isolation, invalid syntax, artifact shape, option scope, and overwrite prevention.
+- Validated through the full repository gate and isolated CLI smoke checks; delivered in the second stacked PR.

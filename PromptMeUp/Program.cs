@@ -130,6 +130,10 @@ internal static class Program
         services.AddSingleton<IAiConversationWorkflow, AiConversationWorkflow>();
         services.AddSingleton<BoundedTextInput>();
         services.AddSingleton<DiagnosticWorkflow>();
+        services.AddSingleton<ArtifactAssistant>();
+        services.AddSingleton<ScriptArtifactService>();
+        services.AddSingleton<IScriptView, ScriptView>();
+        services.AddSingleton<ScriptWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }

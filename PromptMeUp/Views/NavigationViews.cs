@@ -44,6 +44,7 @@ public sealed class HelpView(
             [
                 (text.Text("Help.QuerySyntax"), text.Text("Help.Query")),
                 ("--diagnose [--file <path>]", text.Text("Diagnose.Help")),
+                ("--script <request> [--file <path>] [--output <path>]", text.Text("Script.Help")),
                 ("--chat", text.Text("Help.Chat")),
                 ("--test-ai", text.Text("Help.Test"))
             ]);

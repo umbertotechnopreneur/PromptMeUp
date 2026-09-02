@@ -11,6 +11,7 @@ public enum AppCommand
     Status,
     Query,
     Diagnose,
+    Script,
     Chat,
     TestAi,
     Costs,
@@ -29,7 +30,8 @@ public sealed record CommandLineOptions(
     bool Yes,
     bool DryRun,
     string? PathAction,
-    string? InputFile = null);
+    string? InputFile = null,
+    string? OutputFile = null);
 
 public sealed record CommandLineParseResult(CommandLineOptions? Options, string? Error)
 {

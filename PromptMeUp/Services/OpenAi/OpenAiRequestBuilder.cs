@@ -26,6 +26,10 @@ internal static class OpenAiRequestBuilder
         {
             text["format"] = BuildChatResponseFormat();
         }
+        else if (prompt.Id == "script-system")
+        {
+            text["format"] = FeatureResponseFormats.Script();
+        }
 
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
         {
@@ -78,7 +82,7 @@ internal static class OpenAiRequestBuilder
         RuntimeContext? runtimeContext = null)
     {
         var builder = new StringBuilder(prompt.ResolveText(language));
-        if (IsStructuredAssistantPrompt(prompt))
+        if (IsStructuredAssistantPrompt(prompt) || prompt.Metadata.GetValueOrDefault("runtime-context") == "sanitized")
         {
             if (!string.IsNullOrWhiteSpace(settings.CustomInstruction))
             {
