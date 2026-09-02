@@ -37,6 +37,24 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 
 Only one top-level command can be selected per invocation.
 
+## Follow a resumable plan
+
+Use `hm --plan "Build, test, and package this project"`. PromptMeUp creates one
+to eight ordered PowerShell steps, saves their pending state locally, and shows
+`hm --plan --resume <id>`. The plan must be resumed from its original directory.
+
+Starting guidance does not authorize any step. Each action and its separate,
+read-only verification command receives the normal risk review, exact preview,
+and individual confirmation. A successful verification is followed by a user
+check against the declared expected result. Failure, timeout, denial, or a result
+that does not match pauses the plan before later actions start.
+
+Before starting an action, its state becomes `outcome unknown`. After a crash or
+interruption, resume runs the verification first and never repeats that action
+automatically. One process holds an exclusive lease while guiding a plan. Saved
+plan JSON contains the goal, original directory, commands, verification, and
+progress; credential-bearing plan content is rejected.
+
 ## Create or revise a script
 
 Use `hm --script "Archive old logs with a report" --output archive-logs.ps1`.

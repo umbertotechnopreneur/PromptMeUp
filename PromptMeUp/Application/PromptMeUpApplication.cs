@@ -25,6 +25,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IAiConversationWorkflow _conversationWorkflow;
     private readonly DiagnosticWorkflow _diagnostics;
     private readonly ScriptWorkflow _scripts;
+    private readonly PlanWorkflow _plans;
     private readonly IActivityAuditService _audit;
     private readonly IPortablePathService _pathService;
     private readonly IExecutableLocationService _executableLocation;
@@ -54,6 +55,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IAiConversationWorkflow conversationWorkflow,
         DiagnosticWorkflow diagnostics,
         ScriptWorkflow scripts,
+        PlanWorkflow plans,
         IActivityAuditService audit,
         IPortablePathService pathService,
         IExecutableLocationService executableLocation,
@@ -81,6 +83,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _conversationWorkflow = conversationWorkflow;
         _diagnostics = diagnostics;
         _scripts = scripts;
+        _plans = plans;
         _audit = audit;
         _pathService = pathService;
         _executableLocation = executableLocation;
@@ -179,6 +182,13 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         switch (options.Command)
         {
+            case AppCommand.Plan:
+                EnsureInteractive();
+                if (options.ResumeId is null)
+                {
+                    EnsureAiReady(settings);
+                }
+                return await _plans.RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Script:
                 EnsureInteractive();
                 EnsureAiReady(settings);

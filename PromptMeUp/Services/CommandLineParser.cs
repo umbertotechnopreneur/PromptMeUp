@@ -33,6 +33,7 @@ public sealed class CommandLineParser : ICommandLineParser
         string? pathAction = null;
         string? inputFile = null;
         string? outputFile = null;
+        string? resumeId = null;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -42,6 +43,18 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--plan":
+                    if (!TrySelect(AppCommand.Plan, ref command, ref commandWasSelected, out var planError))
+                    {
+                        return FailureMessage(planError);
+                    }
+                    break;
+                case "--resume":
+                    if (resumeId is not null || !TryReadValue(args, ref index, argument, out resumeId, out _))
+                    {
+                        return Failure("Plan.Usage");
+                    }
+                    break;
                 case "--script":
                     if (!TrySelect(AppCommand.Script, ref command, ref commandWasSelected, out var scriptError))
                     {
@@ -237,12 +250,12 @@ public sealed class CommandLineParser : ICommandLineParser
         string? query = null;
         if (queryParts.Count > 0)
         {
-            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose or AppCommand.Script))
+            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan))
             {
                 return Failure("Cli.PositionalConflict");
             }
 
-            command = command is AppCommand.Diagnose or AppCommand.Script ? command : AppCommand.Query;
+            command = command is AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan ? command : AppCommand.Query;
             commandWasSelected = true;
             query = string.Join(' ', queryParts).Trim();
         }
@@ -267,8 +280,14 @@ public sealed class CommandLineParser : ICommandLineParser
             return Failure("Script.Usage");
         }
 
+        if ((resumeId is not null && (command != AppCommand.Plan || query is not null || !Guid.TryParseExact(resumeId, "N", out _)))
+            || (command == AppCommand.Plan && query is null && resumeId is null))
+        {
+            return Failure("Plan.Usage");
+        }
+
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId),
             null);
     }
 

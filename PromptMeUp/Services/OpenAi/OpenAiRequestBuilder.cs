@@ -30,6 +30,10 @@ internal static class OpenAiRequestBuilder
         {
             text["format"] = FeatureResponseFormats.Script();
         }
+        else if (prompt.Id == "plan-system")
+        {
+            text["format"] = FeatureResponseFormats.Plan();
+        }
 
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
         {

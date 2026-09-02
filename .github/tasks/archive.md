@@ -214,3 +214,10 @@ Validation: ten dedicated defect reproductions confirmed; the full repository ga
 - Added authorized parser-only validation and optional installed PSScriptAnalyzer support; source is never evaluated.
 - Added tests for parser isolation, invalid syntax, artifact shape, option scope, and overwrite prevention.
 - Validated through the full repository gate and isolated CLI smoke checks; delivered in the second stacked PR.
+## 2026-09-02 — Resumable guided plans
+
+- Added bounded 1–8-step console plans with durable local progress and an explicit resume identifier.
+- Kept action and verification commands behind separate risk review, exact preview, and approval gates.
+- Marked intent before execution; interrupted actions are verified on resume and never replayed automatically.
+- Added exclusive plan leases, working-directory checks, user-confirmed outcomes, tests, and six-language guidance.
+- Delivered after the full gate as the third stacked feature PR.

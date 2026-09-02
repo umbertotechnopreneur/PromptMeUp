@@ -134,6 +134,9 @@ internal static class Program
         services.AddSingleton<ScriptArtifactService>();
         services.AddSingleton<IScriptView, ScriptView>();
         services.AddSingleton<ScriptWorkflow>();
+        services.AddSingleton<PlanStore>();
+        services.AddSingleton<IPlanView, PlanView>();
+        services.AddSingleton<PlanWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }
