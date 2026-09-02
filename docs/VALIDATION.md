@@ -15,6 +15,8 @@ dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 
 The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. It runs the repository preflight, verifies formatting and XML comments, then builds and tests on Windows, Linux, and macOS.
 
+Regression tests cover quoted/serialized JSON credentials, provider-bound command output, rejected and legacy preambles, Serilog exception privacy, HTTP body deadlines and limits, inherited process pipes, conservative command risk, long-answer visibility, Unix shell context, model-specific pricing bands, and indexed request summaries. HTTP and credential providers are synthetic; process tests run only inert PowerShell output/sleep commands and clean up their test child. The review-to-test mapping is recorded in [the September 2 review](../.github/tasks/review-2026-09-02.md).
+
 ## Prove the CLI is predictable
 
 Use a disposable data directory:

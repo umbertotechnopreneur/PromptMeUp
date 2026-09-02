@@ -156,7 +156,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                                           or InvalidOperationException
                                           or ConversationLimitException)
         {
-            _logger.LogWarning(exception, "PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}", commandName, exception.GetType().Name);
+            _logger.LogWarning("PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}", commandName, exception.GetType().Name);
             _shell.RenderError(exception.Message);
             await TryAuditAsync(commandName, "failed", null, new { error = exception.GetType().Name }).ConfigureAwait(false);
             _shell.RenderFooter(commandName);
@@ -470,7 +470,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
         catch (Exception exception) when (exception is HttpRequestException or OpenAiRequestException or InvalidDataException or TaskCanceledException)
         {
-            _logger.LogWarning(exception, "Daily pricing refresh failed; cached data remains available.");
+            _logger.LogWarning("Daily pricing refresh failed; cached data remains available. ErrorType={ErrorType}", exception.GetType().Name);
             if (force)
             {
                 _shell.RenderWarning(exception.Message);
@@ -487,7 +487,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Activity audit persistence failed. Activity={Activity}, Outcome={Outcome}", activity, outcome);
+            _logger.LogError("Activity audit persistence failed. Activity={Activity}, Outcome={Outcome}, ErrorType={ErrorType}", activity, outcome, exception.GetType().Name);
         }
     }
 

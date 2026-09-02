@@ -57,7 +57,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            Log.Fatal(exception, "PromptMeUp terminated unexpectedly. ExceptionType={ExceptionType}", exception.GetType().Name);
+            Log.Fatal("PromptMeUp terminated unexpectedly. ExceptionType={ExceptionType}", exception.GetType().Name);
             AnsiConsole.MarkupLine($"[red]PromptMeUp failed:[/] {Markup.Escape(exception.Message)}");
             return 1;
         }

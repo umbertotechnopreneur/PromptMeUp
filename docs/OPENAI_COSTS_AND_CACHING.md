@@ -20,12 +20,14 @@ Setup currently exposes:
 
 - optional AI preamble: at most `500` Unicode words, with used/remaining counts and local multilingual prompt-injection screening;
 - maximum user turns: `2–50` (default `12`);
-- maximum characters per message: `500–100,000` (default `16,000`);
+- maximum characters per user message: `500–100,000` (default `16,000`);
 - maximum context-window percentage: `10–95%` (default `70%`);
 - maximum retained command-output characters: `1,000–32,768` (default `12,000`);
 - authorized command timeout: `5–300` seconds (default `30`).
 
 PromptMeUp reserves instruction space, then removes the oldest complete turn groups until both the turn count and estimated token budget fit. It never drops only one side of an old user/assistant exchange when a complete pair is available. If a single new message or populated request still exceeds a configured boundary, the request is rejected with a visible explanation.
+
+Completed assistant answers are displayed in full even when they exceed the user-input character limit. If a completed turn exceeds the memory token budget, the whole turn is excluded from subsequent context. The provider's output budget and a 2 MiB response-body limit bound incoming responses.
 
 ## Understand local request cost
 
@@ -47,6 +49,8 @@ Today's and the current month's local estimates include only successful requests
 The first relevant app invocation after local midnight checks whether pricing was already synchronized that day. If not, PromptMeUp downloads and parses the official Standard pricing table. `hm --costs` forces a refresh. A failed refresh leaves the previous cache available and writes a diagnostic warning.
 
 The parser stores model, service tier, context band, currency, input, cached-input, cache-write, output, source URL, and retrieval time as normalized fields. The product table currently displays Standard short-context rows.
+
+Request estimates select the pricing band using actual provider input tokens and the returned model family, including dated snapshots. As verified on September 2, 2026, GPT-5.6 Sol/Terra/Luna, GPT-5.5, and GPT-5.4 use the long band above 272,000 input tokens; GPT-5.4 mini/nano keep their single band. Missing bands and unknown returned models leave the estimate unavailable. See the official [pricing table](https://developers.openai.com/api/docs/pricing), [GPT-5.6 Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra), [GPT-5.5](https://developers.openai.com/api/docs/models/gpt-5.5), and [GPT-5.4](https://developers.openai.com/api/docs/models/gpt-5.4) documentation.
 
 With `OPENAI_ADMIN_KEY`, the same cost flow can refresh current-month organization cost buckets. That provider total is displayed separately from local request estimates.
 

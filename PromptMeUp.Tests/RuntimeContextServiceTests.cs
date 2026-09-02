@@ -6,6 +6,22 @@ namespace PromptMeUp.Tests;
 
 public sealed class RuntimeContextServiceTests
 {
+    /// <summary>Verifies Unix platform context describes the same PowerShell runner used after authorization.</summary>
+    [Theory]
+    [InlineData("Linux")]
+    [InlineData("MacOS")]
+    public void Build_UnixPlatform_RequestsPowerShellSyntax(string platformName)
+    {
+        var platform = Enum.Parse<RuntimePlatform>(platformName);
+        var snapshot = new RuntimeContextSnapshot("/srv/work", null, platformName, platform, "Arm64", 4, null, null, []);
+
+        var context = RuntimeContextService.Build(snapshot, new SensitiveDataRedactor());
+
+        Assert.Contains("PowerShell 7 syntax", context.CommandEnvironment, StringComparison.Ordinal);
+        Assert.Contains("pwsh", context.CommandEnvironment, StringComparison.Ordinal);
+        Assert.DoesNotContain("POSIX", context.CommandEnvironment, StringComparison.Ordinal);
+    }
+
     /// <summary>Verifies that a home-directory identity and credential-shaped folder name never reach provider context.</summary>
     [Fact]
     public void Build_HomeDirectoryAndCredential_RedactsBothBeforePromptUse()
@@ -54,7 +70,7 @@ public sealed class RuntimeContextServiceTests
 
         Assert.Equal("/srv/work", context.WorkingDirectory);
         Assert.Equal("unavailable", context.OperatingSystem);
-        Assert.Equal("terminal family unavailable; ask before assuming shell syntax", context.CommandEnvironment);
+        Assert.Equal("operating-system family unavailable; approved commands run in PowerShell 7 (pwsh); ask before assuming paths", context.CommandEnvironment);
         Assert.Equal("4 logical processor(s), Arm64", context.Cpu);
         Assert.Equal("physical total unavailable to the portable runtime", context.Memory);
         Assert.Equal("not exposed by the portable runtime", context.Gpu);

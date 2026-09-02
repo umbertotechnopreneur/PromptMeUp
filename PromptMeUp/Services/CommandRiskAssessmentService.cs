@@ -65,7 +65,7 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
         }
         catch (Exception exception) when (exception is OpenAiRequestException or HttpRequestException or JsonException)
         {
-            _logger.LogWarning(exception, "Optional AI command review failed; local assessment retained.");
+            _logger.LogWarning("Optional AI command review failed; local assessment retained. ErrorType={ErrorType}", exception.GetType().Name);
             return local with
             {
                 Advisory = Translate(language, "Revisione AI non disponibile; è mostrata la valutazione locale.", "AI review unavailable; showing the local assessment.")
@@ -95,7 +95,7 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
             score = 50;
             effect = Translate(language, "Sono state rilevate attività di rete, installazione o avvio di processi.", "Network, installation, or process-launch activity was detected.");
         }
-        else if (ReadOnlyPattern().IsMatch(normalized))
+        else if (IsReadOnlyCommand(normalized))
         {
             score = 15;
             effect = Translate(language, "Il comando appare prevalentemente diagnostico o in sola lettura.", "The command appears primarily diagnostic or read-only.");
@@ -121,12 +121,23 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
     private static string Translate(string language, string italian, string english) =>
         string.Equals(SupportedLanguages.Normalize(language), "it", StringComparison.Ordinal) ? italian : english;
 
+    /// <summary>Recognizes only complete inspection shapes without evaluation, pipelines, redirects, or unknown Git options.</summary>
+    private static bool IsReadOnlyCommand(string command)
+    {
+        if (command.IndexOfAny(['|', ';', '&', '$', '`', '>', '<', '{', '}', '(', ')', '@', '\r', '\n']) >= 0)
+        {
+            return false;
+        }
+
+        return ReadOnlyPattern().IsMatch(command) || GitReadOnlyPattern().IsMatch(command);
+    }
+
     /// <summary>Matches operations that can erase broad state, reboot the machine, or discard repository work.</summary>
     [GeneratedRegex(@"(?ix)(\bformat(?:\.com)?\b|\bdiskpart\b|\bclear-disk\b|\binitialize-disk\b|\bremove-item\b[^\r\n]*(?:-recurse|-force)|\brm\b[^\r\n]*\s-rf\b|\bgit\s+(?:reset\s+--hard|clean\s+-[^\s]*f)|\b(?:stop|restart)-computer\b|\bshutdown(?:\.exe)?\b)")]
     private static partial Regex CriticalPattern();
 
     /// <summary>Matches direct file, registry, service, policy, or force-push mutations.</summary>
-    [GeneratedRegex(@"(?ix)(\bremove-item\b|\bdel(?:ete)?\b|\berase\b|\brd\b|\bmove-item\b|\bset-itemproperty\b|\bnew-item\b|\breg(?:\.exe)?\s+(?:add|delete)\b|\bset-executionpolicy\b|\b(?:start|stop|restart)-service\b|\bgit\s+push\b[^\r\n]*--force|\b(?:invoke-expression|iex|sudo|doas|runas(?:\.exe)?)\b|\b-verb\s+runas\b)")]
+    [GeneratedRegex(@"(?ix)(\bremove-item\b|\bdel(?:ete)?\b|\berase\b|\brd\b|\bmove-item\b|\b(?:set|add|clear)-content\b|\bout-file\b|\bset-itemproperty\b|\bnew-item\b|\breg(?:\.exe)?\s+(?:add|delete)\b|\bset-executionpolicy\b|\b(?:start|stop|restart)-service\b|\bgit\s+push\b[^\r\n]*--force|\bgit\s+branch\b[^\r\n]*(?:\s-[dDmMcCfF]\b|--(?:delete|move|copy|force)\b)|\b(?:invoke-expression|iex|sudo|doas|runas(?:\.exe)?)\b|\b-verb\s+runas\b)")]
     private static partial Regex HighPattern();
 
     /// <summary>Matches network downloads, installers, package managers, elevation, and dynamic evaluation.</summary>
@@ -134,6 +145,10 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
     private static partial Regex MediumPattern();
 
     /// <summary>Matches a small allowlist of familiar inspection-only command shapes.</summary>
-    [GeneratedRegex(@"(?ix)^\s*(?:get-[a-z0-9-]+|git\s+(?:status|log|diff|show|branch)|dotnet\s+(?:--info|--list-sdks|--version)|pwd|whoami|hostname)(?:\s|$)")]
+    [GeneratedRegex(@"(?ix)^\s*(?:(?:get-(?:location|date|childitem|content|item|itemproperty|filehash|process|service|command|help)|test-path|resolve-path)(?:\s+[^\r\n]+)?|dotnet\s+(?:--info|--list-sdks|--version)|pwd|whoami|hostname)\s*$")]
     private static partial Regex ReadOnlyPattern();
+
+    /// <summary>Allows only known inspection-only Git verbs and options, excluding branch mutation and external diff helpers.</summary>
+    [GeneratedRegex(@"(?ix)^\s*git\s+(?:status(?:\s+(?:--short|--branch|--porcelain(?:=[12])?|-s|-b|-sb|--untracked-files(?:=(?:no|normal|all))?))*|branch(?:\s+(?:--list|--all|--remotes|--show-current|--verbose|--no-color|-a|-r|-v|-vv))*|(?:log|show)(?:\s+(?:--oneline|--stat|--name-only|--name-status|--no-patch|--no-color|--decorate(?:=short)?|-\d+))*|diff(?:\s+(?:--stat|--name-only|--name-status|--no-color|--cached|--staged|--check))*\s+--no-ext-diff\s+--no-textconv)\s*$")]
+    private static partial Regex GitReadOnlyPattern();
 }

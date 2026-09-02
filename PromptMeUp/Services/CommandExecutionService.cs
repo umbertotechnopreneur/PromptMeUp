@@ -57,26 +57,37 @@ public sealed class CommandExecutionService : ICommandExecutionService
             throw new InvalidOperationException("PowerShell could not be started.");
         }
 
-        var outputTask = ReadBoundedAsync(process.StandardOutput, cancellationToken);
-        var errorTask = ReadBoundedAsync(process.StandardError, cancellationToken);
+        process.StandardInput.Close();
         using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCancellation.CancelAfter(timeout);
+        var outputTask = ReadBoundedAsync(process.StandardOutput, timeoutCancellation.Token);
+        var errorTask = ReadBoundedAsync(process.StandardError, timeoutCancellation.Token);
         var timedOut = false;
 
         try
         {
-            await process.WaitForExitAsync(timeoutCancellation.Token).ConfigureAwait(false);
+            await Task.WhenAll(
+                process.WaitForExitAsync(timeoutCancellation.Token),
+                outputTask,
+                errorTask).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            timedOut = timeoutCancellation.IsCancellationRequested;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             timedOut = true;
-            TryKill(process);
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch
         {
+            await timeoutCancellation.CancelAsync().ConfigureAwait(false);
             TryKill(process);
+            await Task.WhenAll(outputTask, errorTask).ConfigureAwait(false);
             throw;
+        }
+
+        if (timedOut)
+        {
+            TryKill(process);
         }
 
         var output = await outputTask.ConfigureAwait(false);
@@ -129,7 +140,16 @@ public sealed class CommandExecutionService : ICommandExecutionService
         var truncated = false;
         while (true)
         {
-            var read = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+            int read;
+            try
+            {
+                read = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                truncated = true;
+                break;
+            }
             if (read == 0)
             {
                 break;

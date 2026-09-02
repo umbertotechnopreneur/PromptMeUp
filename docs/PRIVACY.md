@@ -25,6 +25,10 @@ Prompt and audit history remains until the user removes the PromptMeUp database 
 - Request authorization headers are built outside the serialized provider payload.
 - Credential-shaped properties, OpenAI key prefixes, bearer tokens, and common credential assignments are redacted from audit strings and normalized request history.
 
+Quoted JSON credentials and serialized JSON strings are inspected before command output or history is persisted or used for an AI follow-up. New preambles containing recognizable credentials are rejected with a localized message. Legacy preambles are scrubbed in the current settings row before use; this does not erase older backups or previously stored history.
+
+Persistent diagnostics retain error types, stable failure codes, status codes, and request identifiers rather than raw exception messages or nested exceptions. The local error surface can still show the provider's explanation.
+
 Redaction is defensive, not infallible. Do not paste secrets into prompts or commands.
 
 ## Data sent to OpenAI
