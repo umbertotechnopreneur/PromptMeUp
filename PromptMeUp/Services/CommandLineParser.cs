@@ -34,6 +34,9 @@ public sealed class CommandLineParser : ICommandLineParser
         string? inputFile = null;
         string? outputFile = null;
         string? resumeId = null;
+        string? previewAction = null;
+        string? prefix = null;
+        string? pattern = null;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -43,6 +46,29 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--preview":
+                    if (!TrySelect(AppCommand.Preview, ref command, ref commandWasSelected, out var previewError))
+                    {
+                        return FailureMessage(previewError);
+                    }
+                    if (previewAction is not null || !TryReadValue(args, ref index, argument, out previewAction, out _))
+                    {
+                        return Failure("Preview.Usage");
+                    }
+                    previewAction = previewAction!.ToLowerInvariant();
+                    break;
+                case "--prefix":
+                    if (prefix is not null || !TryReadValue(args, ref index, argument, out prefix, out _))
+                    {
+                        return Failure("Preview.Usage");
+                    }
+                    break;
+                case "--pattern":
+                    if (pattern is not null || !TryReadValue(args, ref index, argument, out pattern, out _))
+                    {
+                        return Failure("Preview.Usage");
+                    }
+                    break;
                 case "--plan":
                     if (!TrySelect(AppCommand.Plan, ref command, ref commandWasSelected, out var planError))
                     {
@@ -270,14 +296,22 @@ public sealed class CommandLineParser : ICommandLineParser
             return Failure("Cli.DryRunScope");
         }
 
-        if (inputFile is not null && command != AppCommand.Script && (command != AppCommand.Diagnose || query is not null))
+        if (inputFile is not null && command is not (AppCommand.Script or AppCommand.Preview) && (command != AppCommand.Diagnose || query is not null))
         {
             return Failure("Input.SourceConflict");
         }
 
-        if ((outputFile is not null && command != AppCommand.Script) || (command == AppCommand.Script && string.IsNullOrWhiteSpace(query)))
+        if ((outputFile is not null && command is not (AppCommand.Script or AppCommand.Preview)) || (command == AppCommand.Script && string.IsNullOrWhiteSpace(query)))
         {
             return Failure("Script.Usage");
+        }
+
+        if ((command != AppCommand.Preview && (prefix is not null || pattern is not null))
+            || (command == AppCommand.Preview && (inputFile is null || previewAction is not ("copy" or "move" or "rename" or "delete")
+                || (previewAction is "copy" or "move") != (outputFile is not null)
+                || (previewAction == "rename") != (prefix is not null))))
+        {
+            return Failure("Preview.Usage");
         }
 
         if ((resumeId is not null && (command != AppCommand.Plan || query is not null || !Guid.TryParseExact(resumeId, "N", out _)))
@@ -287,7 +321,7 @@ public sealed class CommandLineParser : ICommandLineParser
         }
 
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern),
             null);
     }
 

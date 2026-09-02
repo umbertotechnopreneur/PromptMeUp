@@ -37,6 +37,28 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 
 Only one top-level command can be selected per invocation.
 
+## Preview concrete file effects
+
+```powershell
+hm --preview rename --file ./logs --pattern '*.log' --prefix archived-
+hm --preview copy --file ./report.txt --output ./backup
+hm --preview move --file ./logs --pattern '*.log' --output ./archive
+hm --preview delete --file ./logs --pattern '*.tmp'
+```
+
+This local-only flow displays source, destination or deletion, byte counts, and
+collisions. `--file` accepts one file or the immediate files of a directory;
+copy/move require an existing destination directory. No directory recursion,
+symbolic links, reparse points, or arbitrary shell-command simulation is supported.
+Preview is limited to 1,000 matching files and 10,000 scanned files.
+
+Redirected invocations only inspect. In a live terminal, opt into command review,
+then approve every generated command separately. A collision blocks the whole
+batch. Copy/move never overwrite existing destinations, including destinations
+created after preview. Source size/time and link ancestry are checked again after
+approval. This is a snapshot, not a filesystem lock: other processes can still
+change files. A failure or declined command stops remaining operations.
+
 ## Follow a resumable plan
 
 Use `hm --plan "Build, test, and package this project"`. PromptMeUp creates one

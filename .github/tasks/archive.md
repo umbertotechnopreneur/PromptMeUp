@@ -221,3 +221,10 @@ Validation: ten dedicated defect reproductions confirmed; the full repository ga
 - Marked intent before execution; interrupted actions are verified on resume and never replayed automatically.
 - Added exclusive plan leases, working-directory checks, user-confirmed outcomes, tests, and six-language guidance.
 - Delivered after the full gate as the third stacked feature PR.
+## 2026-09-02 — Concrete file-effect previews
+
+- Added bounded local snapshots for copy, move, prefix rename, and delete operations without AI or shell simulation.
+- Displayed exact mappings, bytes, and collisions; blocked links, unsupported operations, recursion, and overwrites.
+- Rechecked snapshot metadata after review, preserved per-command approval, and stopped batches on failure or denial.
+- Added tests for no-mutation previews, collisions, stale source, late destinations, literal quoting, links, and CLI scope.
+- Delivered after the full gate as the fourth stacked feature PR.

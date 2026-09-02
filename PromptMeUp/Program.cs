@@ -137,6 +137,9 @@ internal static class Program
         services.AddSingleton<PlanStore>();
         services.AddSingleton<IPlanView, PlanView>();
         services.AddSingleton<PlanWorkflow>();
+        services.AddSingleton<FilePreviewService>();
+        services.AddSingleton<IFilePreviewView, FilePreviewView>();
+        services.AddSingleton<FilePreviewWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }

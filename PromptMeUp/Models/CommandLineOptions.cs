@@ -13,6 +13,7 @@ public enum AppCommand
     Diagnose,
     Script,
     Plan,
+    Preview,
     Chat,
     TestAi,
     Costs,
@@ -33,7 +34,10 @@ public sealed record CommandLineOptions(
     string? PathAction,
     string? InputFile = null,
     string? OutputFile = null,
-    string? ResumeId = null);
+    string? ResumeId = null,
+    string? PreviewAction = null,
+    string? Prefix = null,
+    string? Pattern = null);
 
 public sealed record CommandLineParseResult(CommandLineOptions? Options, string? Error)
 {
