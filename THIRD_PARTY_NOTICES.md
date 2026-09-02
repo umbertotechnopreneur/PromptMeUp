@@ -1,6 +1,12 @@
 # Third-party notices
 
-PromptMeUp keeps its direct software supply chain visible. This inventory covers direct NuGet dependencies declared as of 2026-08-12; package versions and license expressions come from installed NuGet package metadata. Transitive packages retain their own notices and license files in the NuGet distribution.
+PromptMeUp is MIT-licensed; its dependencies retain their own licenses and copyright notices. This direct-package overview was checked against restored NuGet metadata on 2026-09-02. Full upstream texts are preserved in [LICENSES](LICENSES/README.md).
+
+Release archives also contain a `THIRD_PARTY_INVENTORY.json` with every resolved application package, including transitive dependencies and the exact self-contained .NET runtime pack. The release exporter copies package-supplied licenses and notices into the archive's `LICENSES` directory, alongside the preserved upstream texts. New package families stop packaging until their attribution is reviewed.
+
+## Transitive components and runtime
+
+The resolved application also includes Microsoft.Data.Sqlite.Core; Microsoft.Extensions configuration, abstractions, diagnostics, options, and primitives packages; Spectre.Console.Ansi; and SQLitePCLRaw core, native SQLite, and provider packages. Their versions and attribution are recorded per archive. Microsoft and Spectre components use MIT; SQLitePCLRaw uses Apache-2.0, and the deliverable SQLite library is [public domain](https://www.sqlite.org/copyright.html). The self-contained .NET runtime uses MIT and carries additional third-party notices, copied from the selected runtime pack. YamlDotNet's upstream libyaml notice is preserved as well.
 
 ## Runtime dependencies
 
