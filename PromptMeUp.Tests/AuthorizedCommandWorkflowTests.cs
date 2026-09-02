@@ -9,6 +9,24 @@ namespace PromptMeUp.Tests;
 
 public sealed class AuthorizedCommandWorkflowTests
 {
+    /// <summary>Verifies JSON credentials in both command streams are removed before the AI follow-up is assembled.</summary>
+    [Fact]
+    public async Task RunAsync_JsonCredentialsInStreams_RedactsProviderFollowUp()
+    {
+        var result = new CommandExecutionResult("Get-Location", 0,
+            "{\"password\":\"synthetic-output\",\"safe\":\"keep\"}",
+            "{\"api_key\":\"synthetic-error\"}", false, false, 5);
+        var fixture = new WorkflowFixture(authorized: true, result);
+
+        var followUp = await fixture.Workflow.RunAsync("json-output", "Get-Location", AppSettings.Default, default);
+
+        Assert.NotNull(followUp);
+        Assert.DoesNotContain("synthetic-output", followUp, StringComparison.Ordinal);
+        Assert.DoesNotContain("synthetic-error", followUp, StringComparison.Ordinal);
+        Assert.Contains("keep", followUp, StringComparison.Ordinal);
+        Assert.Equal(2, CountOccurrences(followUp, "[redacted-credential]"));
+    }
+
     /// <summary>Verifies that rejecting the exact preview prevents execution and records the denial in order.</summary>
     [Fact]
     public async Task RunAsync_DeniedAuthorization_DoesNotExecuteAndAuditsDenial()

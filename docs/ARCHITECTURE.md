@@ -47,6 +47,8 @@ sequenceDiagram
 
 The Responses request sets `store=false`. For chat and single queries, the instruction includes only a privacy-filtered runtime context (working directory, platform/shell, CPU, physical memory, and an available GPU label) so terminal guidance matches the active machine; it excludes account, host, network, serial, and secret data. `OpenAiService` owns HTTP, auditing, persistence, and pricing; small request-builder and response-parser components isolate the provider protocol and are tested without network access. Stable YAML instructions precede changing conversation content. Prompt cache routing is enabled by default and usage details are read from the provider response.
 
+One HTTP deadline covers sending and reading the bounded response body, and recorded duration includes body delivery. Runtime context requests PowerShell 7 syntax on Windows, Linux, and macOS, with paths appropriate to the host.
+
 The system prompts constrain the assistant to Windows, macOS, and Linux console help. They explicitly exclude image generation and ordinary prose editing. An optional setup preamble is Unicode-normalized, capped at 500 words, screened for multilingual instruction overrides and role forgery, and enclosed in a dedicated untrusted-data block. The localized YAML prompt tells the model to apply only compatible style or format preferences from that block. The Responses API uses a strict JSON schema for the rendered Markdown answer and any cited command candidates. The model has no tool or process-execution capability.
 
 ## From suggestion to authorized action
@@ -80,7 +82,7 @@ JSON payloads are validated before insertion. Credential-shaped properties and s
 
 ## Short-term memory
 
-Each query or chat receives an isolated `ConversationMemory`. It keeps recent user/assistant messages only, caps individual message size, reserves instruction space, and removes oldest complete turns when the turn or token budget is exceeded. It does not summarize or vectorize history.
+Each query or chat receives an isolated `ConversationMemory`. It keeps recent user/assistant messages only, caps user-input size, reserves instruction space, and removes oldest complete turns when the turn or token budget is exceeded. Completed answers are rendered before memory pruning; an oversized completed turn can be dropped entirely from future context. It does not summarize or vectorize history.
 
 The persistent event ledger is not reloaded into active context. A new invocation starts with fresh model memory even though its audit trail remains available locally.
 

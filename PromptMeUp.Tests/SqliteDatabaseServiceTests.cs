@@ -145,7 +145,8 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
         new(
             _paths,
             NullLogger<SqliteDatabaseService>.Instance,
-            new PromptInjectionProtectionService());
+            new PromptInjectionProtectionService(),
+            new SensitiveDataRedactor());
 
     /// <summary>Opens the isolated test database without connection pooling.</summary>
     private async Task<SqliteConnection> OpenDatabaseAsync()

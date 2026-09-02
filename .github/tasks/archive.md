@@ -2,6 +2,16 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-02 — Resolve ten verified code-review findings
+
+- Completed the privacy, deadline, chat/risk/shell, pricing, and summary plan; every finding in [the review](review-2026-09-02.md) now maps to tracked regression coverage.
+- Protected quoted and serialized JSON credentials, rejected new credential-bearing preambles, sanitized legacy settings before use, and removed raw exception details from persistent diagnostics.
+- Bounded complete HTTP/process operations, preserved completed assistant answers, corrected diagnostic risk classification and Unix shell instructions, and selected model-specific pricing bands from actual input usage.
+- Restricted summary reads to the indexed month interval and preserved successful-request totals at period boundaries.
+- Added 58 regression cases and updated privacy, architecture, costs, and validation guidance. Preserved the repository presentation and release work already merged through PR #9.
+
+Validation: full required gate passed with 148/148 tests and zero build warnings/errors; isolated help, version, Italian/Vietnamese status, and French attribution smoke checks passed. No real credentials or AI requests were used. The OS-temporary smoke directory was retained because automatic approval review blocked its deletion; it is outside the repository and excluded from publication.
+
 ## 2026-09-02 — MIT repository, product presentation, and portable CI/CD
 
 - Preserved the MIT license and upstream attribution, including transitive dependency notices and the exact self-contained runtime's notices in release packages.
@@ -157,3 +167,19 @@ Validation: full repository gate passed with zero build warnings/errors and 90/9
 - Kept production rendering unchanged; the failure was isolated to checkout policy and test-output normalization.
 
 Validation: full repository gate passed locally with zero build warnings/errors and 90/90 tests; the previously failing animation test passed in isolation; Git resolved `TerminalViewTests.cs` as `text eol=crlf`; `git diff --check` passed.
+
+## 2026-09-02 — Synchronize local main without merge commits
+
+- Backed up the 24 locally changed or added files and confirmed that their changes were already included in the remote tree; three-way comparisons of the nine differing documentation files matched the remote exactly.
+- Fast-forwarded `main` from `6da473d` to `89ec9f0`, preserving the local work without creating commits, branches, or worktrees.
+
+Validation: full repository gate passed with zero build warnings/errors and 90/90 tests; isolated `--help`, `--version`, Vietnamese `--status`, and French `--third-party` smoke tests passed with a disposable data directory. `main` matched `origin/main`, and the fetched range contained no merge commits.
+
+## 2026-09-02 — Ten actionable code-review findings
+
+- Reviewed the current application at `89ec9f0` and recorded ten distinct findings in [the review report](review-2026-09-02.md), including source references, reproduction evidence, impact, and recommended corrections.
+- Confirmed three credential-handling failures, two timeout failures, misleading local risk classification, lost assistant answers, a shell mismatch, ignored long-context prices, and an unnecessary historical table scan.
+- Reproduced all ten cases in an ignored local probe project with isolated SQLite data and simulated HTTP responses; no real AI calls, credentials, PATH changes, or font changes were used.
+- Preserved concurrent repository work and left application code, existing tests, and runtime prompts unchanged.
+
+Validation: ten dedicated defect reproductions confirmed; the full repository gate passed with zero build warnings/errors and 90/90 existing tests. Isolated `--help` and `--version` smoke tests passed. The existing suite does not cover the reproduced failure cases.

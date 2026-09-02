@@ -382,9 +382,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 settings,
                 _text.Language,
                 cancellationToken)).ConfigureAwait(false);
+        _chatView.RenderAssistant(response.Text, animate: true, cancellationToken);
         var assistantUpdate = memory.Add("assistant", response.Text);
         await AuditPruningAsync(sessionId, assistantUpdate.PrunedMessages, cancellationToken).ConfigureAwait(false);
-        _chatView.RenderAssistant(response.Text, animate: true, cancellationToken);
         var turnCost = response.EstimatedCostUsd ?? 0m;
         RenderTurnSnapshot(response, settings, runningCost + turnCost);
         return new TurnResult(response, turnCost);
