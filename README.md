@@ -13,6 +13,7 @@
 <p align="center">
   <a href="#meet-hm"><strong>Meet hm</strong></a> ·
   <a href="#try-it-this-weekend"><strong>Try it</strong></a> ·
+  <a href="https://umbertogiacobbi.biz/promptmeup/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_product_page"><strong>Product page</strong></a> ·
   <a href="docs/PRIVACY.md"><strong>Privacy</strong></a> ·
   <a href="https://github.com/umbertotechnopreneur/PromptMeUp/discussions"><strong>Join the conversation</strong></a>
 </p>
@@ -28,7 +29,7 @@ PromptMeUp is a lightweight, open-source AI command-line assistant for Windows, 
 
 ## A weekend project that stayed
 
-PromptMeUp started as a **pet project built over a weekend**. Then we kept reaching for it. What began as a small experiment turned out to be more useful than expected in our team at **[UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme-origin-story)**.
+PromptMeUp started as a **pet project built over a weekend**. Then we kept reaching for it. What began as a small experiment turned out to be more useful than expected in our team at **[UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story)**.
 
 So here it is: a small, open-source helper for the everyday terminal questions that interrupt your flow. Still personal. Still evolving. Already earning its place in our working day.
 
@@ -175,12 +176,12 @@ Find your workday again. A local-first memory for Windows that helps you recover
 <td width="33%" valign="top">
 <h3>viewsapp.ai</h3>
 Curious about what else we are building? Make this your next stop.<br /><br />
-<a href="https://www.viewsapp.ai/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme-workshop-viewsapp"><strong>Discover viewsapp.ai →</strong></a>
+<a href="https://www.viewsapp.ai/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_workshop_viewsapp"><strong>Discover viewsapp.ai →</strong></a>
 </td>
 <td width="33%" valign="top">
 <h3>Umberto Giacobbi</h3>
 The person, the products, and the ideas behind the work. Come say hello.<br /><br />
-<a href="https://umbertogiacobbi.biz/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme-workshop-creator"><strong>Visit my website →</strong></a>
+<a href="https://umbertogiacobbi.biz/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_workshop_creator"><strong>Visit my website →</strong></a>
 </td>
 </tr>
 </table>

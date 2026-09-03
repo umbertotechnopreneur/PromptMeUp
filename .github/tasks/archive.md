@@ -268,3 +268,11 @@ Validation: all three tagged destinations returned HTTP 200 and retained their c
 - Left the repository homepage unset because there is not yet a dedicated PromptMeUp landing page; a generic personal or unrelated product URL would weaken the repository's identity.
 
 Validation: GitHub's repository API returned the exact new description and the expected 14-topic set after the remote update. No release was created; the related README and documentation improvements are published through the dedicated documentation branch and pull request.
+
+## 2026-09-04 — Dedicated product-page attribution
+
+- Added a prominent README link to the dedicated PromptMeUp product page on `umbertogiacobbi.biz`.
+- Routed the origin-story link to the same product page and normalized all PromptMeUp `utm_content` values to snake_case.
+- Kept internal, community, release, and GitHub-native links untagged so campaign attribution remains limited to owned analytics-enabled destinations.
+
+Validation: repository preflight, restore, format verification, XML comment check, Release build with zero warnings/errors, and 182/182 tests passed; `git diff --check` passed for the README change.
