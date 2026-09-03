@@ -12,7 +12,8 @@ public interface IAiConversationWorkflow
         string query,
         AppSettings settings,
         bool renderQuery,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        string promptId = "query-system");
 
     Task RunChatAsync(AppSettings settings, CancellationToken cancellationToken);
 
@@ -65,13 +66,14 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         string query,
         AppSettings settings,
         bool renderQuery,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string promptId = "query-system")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         ArgumentNullException.ThrowIfNull(settings);
         var sessionId = Guid.NewGuid().ToString("N");
         var memory = _memoryService.Create(settings);
-        await _audit.StartSessionAsync(sessionId, "query", settings, new { invocation = "query" }, cancellationToken).ConfigureAwait(false);
+        await _audit.StartSessionAsync(sessionId, promptId, settings, new { invocation = promptId }, cancellationToken).ConfigureAwait(false);
         var status = "failed";
         var runningCost = 0m;
         try
@@ -86,7 +88,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 memory,
                 settings,
                 runningCost,
-                "query-system",
+                promptId,
                 cancellationToken).ConfigureAwait(false);
             runningCost += turn.Cost;
             var action = await OfferSuggestedActionsAsync(
@@ -96,7 +98,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 settings,
                 runningCost,
                 offerChatContinuation: IsInteractive,
-                promptId: "query-system",
+                promptId: promptId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             runningCost = action.RunningCost;
             if (action.StartChat)

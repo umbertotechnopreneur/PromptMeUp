@@ -26,6 +26,14 @@ internal static class OpenAiRequestBuilder
         {
             text["format"] = BuildChatResponseFormat();
         }
+        else if (prompt.Id == "script-system")
+        {
+            text["format"] = FeatureResponseFormats.Script();
+        }
+        else if (prompt.Id == "plan-system")
+        {
+            text["format"] = FeatureResponseFormats.Plan();
+        }
 
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
         {
@@ -78,7 +86,7 @@ internal static class OpenAiRequestBuilder
         RuntimeContext? runtimeContext = null)
     {
         var builder = new StringBuilder(prompt.ResolveText(language));
-        if (IsStructuredAssistantPrompt(prompt))
+        if (IsStructuredAssistantPrompt(prompt) || prompt.Metadata.GetValueOrDefault("runtime-context") == "sanitized")
         {
             if (!string.IsNullOrWhiteSpace(settings.CustomInstruction))
             {
@@ -247,7 +255,8 @@ internal static class OpenAiRequestBuilder
     /// <summary>Identifies assistant prompts that return the typed answer-and-command envelope.</summary>
     private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
         string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase);
+        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase)
+        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1";
 
     /// <summary>Identifies the model family that supports explicit prompt-cache breakpoints.</summary>
     private static bool IsGpt56(string model) => model.StartsWith("gpt-5.6", StringComparison.OrdinalIgnoreCase);

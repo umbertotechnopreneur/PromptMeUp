@@ -8,6 +8,12 @@ namespace PromptMeUp.Application;
 
 public interface IAuthorizedCommandWorkflow
 {
+    Task<CommandExecutionResult?> RunForResultAsync(
+        string sessionId,
+        string command,
+        AppSettings settings,
+        CancellationToken cancellationToken);
+
     Task<string?> RunAsync(
         string sessionId,
         string command,
@@ -46,6 +52,17 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
 
     /// <summary>Assesses, previews, authorizes, executes, audits, and prepares bounded command output for the next AI turn.</summary>
     public async Task<string?> RunAsync(
+        string sessionId,
+        string command,
+        AppSettings settings,
+        CancellationToken cancellationToken)
+    {
+        var result = await RunForResultAsync(sessionId, command, settings, cancellationToken).ConfigureAwait(false);
+        return result is null ? null : CreateFollowUp(result, settings);
+    }
+
+    /// <summary>Returns the typed outcome only after the existing exact preview and individual authorization.</summary>
+    public async Task<CommandExecutionResult?> RunForResultAsync(
         string sessionId,
         string command,
         AppSettings settings,
@@ -102,7 +119,6 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
         _commandView.RenderExecutionResult(result);
         var boundedOutput = Limit(_redactor.Redact(result.StandardOutput), settings.MaxCommandOutputCharacters);
         var boundedError = Limit(_redactor.Redact(result.StandardError), settings.MaxCommandOutputCharacters);
-        var redactedCommand = _redactor.Redact(command);
         await _audit.AppendSessionEventAsync(
             sessionId,
             "command_output",
@@ -117,6 +133,15 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
                 result.ElapsedMilliseconds
             },
             cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    /// <summary>Builds bounded, redacted evidence for a later AI turn without conveying authorization.</summary>
+    private string CreateFollowUp(CommandExecutionResult result, AppSettings settings)
+    {
+        var redactedCommand = _redactor.Redact(result.Command);
+        var boundedOutput = Limit(_redactor.Redact(result.StandardOutput), settings.MaxCommandOutputCharacters);
+        var boundedError = Limit(_redactor.Redact(result.StandardError), settings.MaxCommandOutputCharacters);
         var followUp = $"""
             I explicitly authorized and ran this PowerShell command:
             {redactedCommand}

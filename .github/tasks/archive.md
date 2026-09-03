@@ -31,6 +31,21 @@ Validation: full required gate passed with 148/148 tests and zero build warnings
 
 Validation: the full required gate passed on an isolated baseline plus these changes, with 90/90 tests and zero Release-build warnings/errors. The Windows x64 portable archive passed credential-free startup/help/attribution smoke checks; all inventory notice references resolved inside the ZIP. GitHub-flavored Markdown rendering, local links, PowerShell parsing, and actionlint checks passed. The shared worktree's initial format check detected in-progress C# edits from the concurrent code task; those edits were excluded from this change.
 
+## 2026-09-02 — Guided error diagnosis
+
+- Added bounded text, UTF-8 log file, and stdin diagnosis with credential redaction and strict source validation.
+- Added an evidence-led prompt and UI text in all six languages; reused exact per-command approval for follow-up checks.
+- Validated parser boundaries, cancellation, redaction, Release build/tests, and isolated CLI smoke checks.
+- Delivered as the first feature commit and dedicated PR in the terminal assistance series.
+
+## 2026-09-03 — Reconcile diagnosis PR with main
+
+- Moved diagnosis history away from the archive append point changed by main, and separated planned feature work from the shared baseline task-status entry.
+- Preserved every diagnosis and planned-feature entry and rebased the PR onto current main to satisfy its required up-to-date checks without a merge commit.
+- Limited manual conflict corrections to the two task ledgers; production code and runtime prompts match the validated integration of the original feature with main.
+
+Validation: the original feature branch passed its full required gate with 98/98 tests; the integrated source passed with 156/156 tests and zero build warnings/errors. Diagnosis help and unconfigured-input smoke checks passed with isolated data. Native CI results for the updated branch are recorded in PR #11.
+
 ## 2026-08-16 — PromptMeUp 0.1.5 protected-preamble installer
 
 - Bumped the product and current packaging examples from `0.1.4` to `0.1.5` for the multilingual protected-preamble release.
@@ -192,3 +207,31 @@ Validation: full repository gate passed with zero build warnings/errors and 90/9
 - Preserved concurrent repository work and left application code, existing tests, and runtime prompts unchanged.
 
 Validation: ten dedicated defect reproductions confirmed; the full repository gate passed with zero build warnings/errors and 90/90 existing tests. Isolated `--help` and `--version` smoke tests passed. The existing suite does not cover the reproduced failure cases.
+
+## 2026-09-02 — PowerShell script workshop
+
+- Added complete script generation, revision diffs, named-parameter guidance, and explicit saving to new files.
+- Added authorized parser-only validation and optional installed PSScriptAnalyzer support; source is never evaluated.
+- Added tests for parser isolation, invalid syntax, artifact shape, option scope, and overwrite prevention.
+- Validated through the full repository gate and isolated CLI smoke checks; delivered in the second stacked PR.
+## 2026-09-02 — Resumable guided plans
+
+- Added bounded 1–8-step console plans with durable local progress and an explicit resume identifier.
+- Kept action and verification commands behind separate risk review, exact preview, and approval gates.
+- Marked intent before execution; interrupted actions are verified on resume and never replayed automatically.
+- Added exclusive plan leases, working-directory checks, user-confirmed outcomes, tests, and six-language guidance.
+- Delivered after the full gate as the third stacked feature PR.
+## 2026-09-02 — Concrete file-effect previews
+
+- Added bounded local snapshots for copy, move, prefix rename, and delete operations without AI or shell simulation.
+- Displayed exact mappings, bytes, and collisions; blocked links, unsupported operations, recursion, and overwrites.
+- Rechecked snapshot metadata after review, preserved per-command approval, and stopped batches on failure or denial.
+- Added tests for no-mutation previews, collisions, stale source, late destinations, literal quoting, links, and CLI scope.
+- Delivered after the full gate as the fourth stacked feature PR.
+## 2026-09-03 — Personal parameterized recipes
+
+- Added local recipe listing, inspection, import/export, and saving from completed plans.
+- Added schema validation, declared parameters, prerequisite review, and quoted data binding without source substitution.
+- Every reuse creates a new resumable plan with fresh approvals; imports cannot inherit progress or authorization.
+- Added tests for parameter quoting, credential rejection, definition isolation, overwrite prevention, schema/status handling, and CLI scope.
+- Completed the five-feature series with one commit and assigned stacked PR per feature after the full validation gate.

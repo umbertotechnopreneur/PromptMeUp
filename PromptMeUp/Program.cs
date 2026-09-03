@@ -128,6 +128,21 @@ internal static class Program
 
         services.AddSingleton<IAuthorizedCommandWorkflow, AuthorizedCommandWorkflow>();
         services.AddSingleton<IAiConversationWorkflow, AiConversationWorkflow>();
+        services.AddSingleton<BoundedTextInput>();
+        services.AddSingleton<DiagnosticWorkflow>();
+        services.AddSingleton<ArtifactAssistant>();
+        services.AddSingleton<ScriptArtifactService>();
+        services.AddSingleton<IScriptView, ScriptView>();
+        services.AddSingleton<ScriptWorkflow>();
+        services.AddSingleton<PlanStore>();
+        services.AddSingleton<IPlanView, PlanView>();
+        services.AddSingleton<PlanWorkflow>();
+        services.AddSingleton<FilePreviewService>();
+        services.AddSingleton<IFilePreviewView, FilePreviewView>();
+        services.AddSingleton<FilePreviewWorkflow>();
+        services.AddSingleton<RecipeStore>();
+        services.AddSingleton<IRecipeView, RecipeView>();
+        services.AddSingleton<RecipeWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }
