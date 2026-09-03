@@ -265,10 +265,10 @@ public sealed class ThirdPartyView(
 {
     private static readonly (string Package, string Version, string License)[] Packages =
     [
-        ("Microsoft.Data.Sqlite", "10.0.10", "MIT"),
-        ("Microsoft.Extensions.DependencyInjection", "10.0.10", "MIT"),
-        ("Microsoft.Extensions.Http", "10.0.10", "MIT"),
-        ("Microsoft.Extensions.Logging", "10.0.10", "MIT"),
+        ("Microsoft.Data.Sqlite", "10.0.11", "MIT"),
+        ("Microsoft.Extensions.DependencyInjection", "10.0.11", "MIT"),
+        ("Microsoft.Extensions.Http", "10.0.11", "MIT"),
+        ("Microsoft.Extensions.Logging", "10.0.11", "MIT"),
         ("Serilog", "4.4.0", "Apache-2.0"),
         ("Serilog.Extensions.Logging", "10.0.0", "Apache-2.0"),
         ("Serilog.Sinks.File", "7.0.0", "Apache-2.0"),

@@ -235,3 +235,10 @@ Validation: ten dedicated defect reproductions confirmed; the full repository ga
 - Every reuse creates a new resumable plan with fresh approvals; imports cannot inherit progress or authorization.
 - Added tests for parameter quoting, credential rejection, definition isolation, overwrite prevention, schema/status handling, and CLI scope.
 - Completed the five-feature series with one commit and assigned stacked PR per feature after the full validation gate.
+
+## 2026-09-03 — Resolve SQLite dependency PR conflicts
+
+- Integrated current `main` into PR #3, preserving Microsoft.Data.Sqlite 10.0.11 and the three Microsoft.Extensions 10.0.11 updates already merged into `main`.
+- Aligned the affected runtime dependency versions in the CLI attribution table and third-party notices.
+
+Validation: the full repository gate passed with zero build warnings/errors and 182/182 tests. Isolated `--help`, `--version`, `--third-party`, and `--status` smoke checks passed with disposable data directories; the attribution output shows the four resolved 10.0.11 versions. `git diff --check` passed.
