@@ -1,4 +1,4 @@
-# Get help with `hm`
+# PromptMeUp support
 
 Whether `hm` is not launching, setup is unclear, or a terminal workflow needs explanation, start in
 [GitHub Discussions](https://github.com/umbertotechnopreneur/PromptMeUp/discussions). Search existing

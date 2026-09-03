@@ -1,4 +1,4 @@
-# Validation guide
+# PromptMeUp validation guide
 
 Every PromptMeUp change should preserve the same experience: readable output, explicit choices, bounded local behavior, and no surprise changes to the machine. Use a clean terminal and never use production API keys or confidential prompts for validation evidence.
 

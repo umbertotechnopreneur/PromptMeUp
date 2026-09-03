@@ -1,4 +1,4 @@
-# CLI reference
+# PromptMeUp CLI reference
 
 `hm`, short for **help me**, turns a terminal question into a clear answer and an optional, explicitly approved next step. The same two-letter public command is used on Windows, Linux, and macOS.
 

@@ -1,4 +1,4 @@
-# Keeping PromptMeUp small and useful
+# PromptMeUp governance
 
 PromptMeUp is a personal open-source project maintained by [Umberto Giacobbi](https://github.com/umbertotechnopreneur). It began as a weekend experiment and found a practical place in the UmbertoGiacobbiDotBiz team's daily work.
 
