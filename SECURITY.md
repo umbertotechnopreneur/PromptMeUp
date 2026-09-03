@@ -1,4 +1,4 @@
-# Security policy
+# PromptMeUp security policy
 
 PromptMeUp is designed so an AI answer is never the same thing as permission to act. Exact command preview, local risk scoring, explicit authorization, bounded execution, and credential redaction are product boundaries—not optional modes.
 

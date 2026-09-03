@@ -1,4 +1,4 @@
-# Privacy and data flow
+# PromptMeUp privacy and data flow
 
 PromptMeUp keeps its working history on your machine and sends only the bounded context needed for the AI features you choose to use. This guide makes that boundary inspectable: what stays local, what can reach OpenAI, and where your approval is required. Read it before using confidential prompts or command output.
 

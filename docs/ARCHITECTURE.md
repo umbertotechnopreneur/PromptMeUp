@@ -1,4 +1,4 @@
-# Architecture
+# PromptMeUp architecture
 
 PromptMeUp is built around one product promise: help with the terminal without silently taking control of it. A small .NET 10 console host keeps data, behavior, rendering, and command authority in explicit boundaries. It does not automate a graphical interface and it does not run a background agent.
 

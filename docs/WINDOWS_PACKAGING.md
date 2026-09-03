@@ -1,4 +1,4 @@
-# Windows release packaging
+# PromptMeUp Windows release packaging
 
 One release command turns PromptMeUp into a Windows-ready set for users who prefer a portable ZIP, WinGet, or an optional per-user MSI. `scripts/build-release-artifacts.ps1` creates those artifacts without publishing them or installing anything on the workstation.
 

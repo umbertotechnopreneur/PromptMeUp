@@ -1,4 +1,4 @@
-# From a useful change to a downloadable release
+# Releasing PromptMeUp
 
 Portable archives are the primary distribution format. A versioned tag prepares a GitHub Release draft after validation; the maintainer chooses when to publish it. No release is created just by merging to main.
 

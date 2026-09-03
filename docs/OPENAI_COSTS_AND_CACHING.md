@@ -1,4 +1,4 @@
-# Memory, costs, and caching
+# PromptMeUp memory, costs, and OpenAI caching
 
 PromptMeUp keeps a short conversation useful without making token use or cost disappear behind the interface. It shows local estimates, provider-reported usage, and cache activity separately—and never presents a client-side estimate as provider billing.
 

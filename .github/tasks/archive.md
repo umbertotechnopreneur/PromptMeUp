@@ -242,3 +242,29 @@ Validation: ten dedicated defect reproductions confirmed; the full repository ga
 - Aligned the affected runtime dependency versions in the CLI attribution table and third-party notices.
 
 Validation: the full repository gate passed with zero build warnings/errors and 182/182 tests. Isolated `--help`, `--version`, `--third-party`, and `--status` smoke checks passed with disposable data directories; the attribution output shows the four resolved 10.0.11 versions. `git diff --check` passed.
+
+## 2026-09-03 — Printable CLI manual and command discovery
+
+- Reviewed the latest feature commit and added README guidance for the five new workflows: diagnosis, PowerShell script drafts, resumable plans, file-effect previews, and reusable command recipes.
+- Clarified that the portable archive needs no installation: add the extracted `hm` folder to the user PATH, with `hm --path install`, `status`, and `remove` scoped to that entry.
+- Added a retro-styled two-page PDF manual: a printable all-command card on page one and workflow details, examples, and safety notes on page two.
+- Marked PDF files as binary so Git preserves the validated document bytes instead of applying text line-ending conversion.
+
+Validation: preflight, restore, format verification, XML comment check, Release build with zero warnings/errors, and 182/182 tests passed. The isolated `--help --no-animation --no-emoji` smoke test passed with a disposable `PROMPTMEUP_DATA_DIR`; `git diff --check` passed. The final two-page PDF was rendered to PNG and visually inspected.
+
+## 2026-09-04 — GitHub documentation discovery and GA4 attribution
+
+- Reframed the README title and opening copy around PromptMeUp's searchable product identity: a safety-first, open-source AI command-line assistant for Windows, Linux, and macOS.
+- Made the primary user, contributor, privacy, security, architecture, packaging, release, and validation document titles self-describing when surfaced as individual GitHub pages.
+- Added a consistent GA4 campaign taxonomy only to the three README links that lead to owned, analytics-enabled websites: `github` / `referral` / `promptmeup`, with placement-specific `utm_content` values.
+- Kept internal navigation, GitHub actions and community links, downloads, security reporting, third-party sources, and template URLs untagged so canonical destinations and analytics attribution remain clean.
+
+Validation: all three tagged destinations returned HTTP 200 and retained their complete UTM query strings. Repository preflight, restore, format verification, XML comment check, Release build with zero warnings/errors, and 182/182 tests passed. The isolated `--help --no-animation --no-emoji` smoke test passed with a disposable `PROMPTMEUP_DATA_DIR`; `git diff --check` passed.
+
+## 2026-09-04 — Live GitHub discovery metadata
+
+- Replaced the live GitHub repository description with concise product language identifying PromptMeUp as a lightweight, open-source, safety-first AI CLI for Windows, Linux, and macOS.
+- Preserved the existing relevant topics and added `ai-assistant`, `command-line`, `cli-tool`, `developer-tools`, `dotnet-10`, and `openai-api` for more precise GitHub discovery.
+- Left the repository homepage unset because there is not yet a dedicated PromptMeUp landing page; a generic personal or unrelated product URL would weaken the repository's identity.
+
+Validation: GitHub's repository API returned the exact new description and the expected 14-topic set after the remote update. No release was created; the related README and documentation improvements are published through the dedicated documentation branch and pull request.

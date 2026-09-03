@@ -2,9 +2,10 @@
   <img src="docs/assets/promptmeup-banner.png" alt="PromptMeUp — Ask naturally. Understand first. You decide. A weekend idea. An everyday helper." width="100%" />
 </p>
 
-<h1 align="center">A little help. Still your terminal.</h1>
+<h1 align="center">PromptMeUp — a safety-first AI assistant for your terminal</h1>
 
 <p align="center">
+  A little help. Still your terminal.<br />
   Ask in your own words. Get a clearer next step.<br />
   Run a command only after you have seen it and said yes.
 </p>
@@ -23,9 +24,11 @@
   <img src="https://img.shields.io/badge/early%20preview-F59E0B" alt="Early preview" />
 </p>
 
+PromptMeUp is a lightweight, open-source AI command-line assistant for Windows, Linux, and macOS. It explains terminal tasks, proposes PowerShell commands, and runs one only after an exact preview and explicit approval.
+
 ## A weekend project that stayed
 
-PromptMeUp started as a **pet project built over a weekend**. Then we kept reaching for it. What began as a small experiment turned out to be more useful than expected in our team at **[UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/)**.
+PromptMeUp started as a **pet project built over a weekend**. Then we kept reaching for it. What began as a small experiment turned out to be more useful than expected in our team at **[UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme-origin-story)**.
 
 So here it is: a small, open-source helper for the everyday terminal questions that interrupt your flow. Still personal. Still evolving. Already earning its place in our working day.
 
@@ -101,10 +104,25 @@ Setup guides you through language, model, answer style, and command review. Ente
 
 After publishing or installing a portable build, the command is `hm`. The [CLI reference](docs/CLI_REFERENCE.md) explains setup, publishing, and the optional user-PATH helpers.
 
+### No installation required
+
+The portable archive is enough. Extract it wherever you prefer, then add the folder containing `hm` to your user `PATH` and open a new terminal. There is no background service and no machine-wide installation requirement. From an already running copy, `hm --path install` previews and adds only its own folder to the user `PATH`; `hm --path status` and `hm --path remove` let you check or undo that entry.
+
+### New ways to work safely
+
+The latest CLI additions turn common terminal chores into guided, reviewable flows. Use `hm --diagnose` with an error, a log file, or piped output to separate evidence from likely causes. Use `hm --script` to create or revise a PowerShell draft without running it, and `hm --plan` to carry out a small, resumable sequence with a separate check for each step. Before copying, moving, renaming, or deleting files, `hm --preview` shows the exact local effects and collisions. Finally, `hm --recipes` saves a completed plan or imports a reviewed definition so a trusted routine can be started again with fresh approvals.
+
+For a printable one-page command card and a short guide to these workflows, see the [retro CLI manual](docs/PromptMeUp-CLI-Manual.pdf).
+
 | When you want to… | Use |
 | --- | --- |
 | Ask one question | `hm "your question"` |
 | Keep the conversation going | `hm --chat` |
+| Diagnose an error or log | `hm --diagnose --file build.log` |
+| Draft or revise a PowerShell script | `hm --script "your request"` |
+| Work through a verified, resumable plan | `hm --plan "your goal"` |
+| Inspect file effects before approval | `hm --preview copy --file report.txt --output backup` |
+| Save or reuse a personal routine | `hm --recipes` |
 | Change your preferences | `hm --setup` |
 | Check configuration | `hm --status` |
 | Understand usage and estimates | `hm --costs` |
@@ -157,12 +175,12 @@ Find your workday again. A local-first memory for Windows that helps you recover
 <td width="33%" valign="top">
 <h3>viewsapp.ai</h3>
 Curious about what else we are building? Make this your next stop.<br /><br />
-<a href="https://viewsapp.ai"><strong>Discover viewsapp.ai →</strong></a>
+<a href="https://www.viewsapp.ai/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme-workshop-viewsapp"><strong>Discover viewsapp.ai →</strong></a>
 </td>
 <td width="33%" valign="top">
 <h3>Umberto Giacobbi</h3>
 The person, the products, and the ideas behind the work. Come say hello.<br /><br />
-<a href="https://umbertogiacobbi.biz/"><strong>Visit my website →</strong></a>
+<a href="https://umbertogiacobbi.biz/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme-workshop-creator"><strong>Visit my website →</strong></a>
 </td>
 </tr>
 </table>

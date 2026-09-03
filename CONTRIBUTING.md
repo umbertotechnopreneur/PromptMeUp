@@ -1,4 +1,4 @@
-# Build a better `hm`
+# Contributing to PromptMeUp
 
 Every contribution should make the next terminal step clearer, safer, or easier to understand.
 
