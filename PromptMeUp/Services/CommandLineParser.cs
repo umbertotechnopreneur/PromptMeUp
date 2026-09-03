@@ -31,6 +31,15 @@ public sealed class CommandLineParser : ICommandLineParser
         var yes = false;
         var dryRun = false;
         string? pathAction = null;
+        string? inputFile = null;
+        string? outputFile = null;
+        string? resumeId = null;
+        string? previewAction = null;
+        string? prefix = null;
+        string? pattern = null;
+        string? recipeAction = null;
+        string? recipeName = null;
+        string? sourcePlan = null;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -40,6 +49,89 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--recipes":
+                    if (!TrySelect(AppCommand.Recipes, ref command, ref commandWasSelected, out var recipeError))
+                    {
+                        return FailureMessage(recipeError);
+                    }
+                    if (recipeAction is not null)
+                    {
+                        return Failure("Recipe.Usage");
+                    }
+                    recipeAction = index + 1 < args.Count && !args[index + 1].StartsWith('-') ? args[++index].ToLowerInvariant() : "list";
+                    if (recipeAction is "show" or "run" or "save" or "export")
+                    {
+                        if (!TryReadValue(args, ref index, argument, out recipeName, out _) || !RecipeStore.IsValidName(recipeName))
+                        {
+                            return Failure("Recipe.Usage");
+                        }
+                    }
+                    break;
+                case "--from-plan":
+                    if (sourcePlan is not null || !TryReadValue(args, ref index, argument, out sourcePlan, out _) || !Guid.TryParseExact(sourcePlan, "N", out _))
+                    {
+                        return Failure("Recipe.Usage");
+                    }
+                    break;
+                case "--preview":
+                    if (!TrySelect(AppCommand.Preview, ref command, ref commandWasSelected, out var previewError))
+                    {
+                        return FailureMessage(previewError);
+                    }
+                    if (previewAction is not null || !TryReadValue(args, ref index, argument, out previewAction, out _))
+                    {
+                        return Failure("Preview.Usage");
+                    }
+                    previewAction = previewAction!.ToLowerInvariant();
+                    break;
+                case "--prefix":
+                    if (prefix is not null || !TryReadValue(args, ref index, argument, out prefix, out _))
+                    {
+                        return Failure("Preview.Usage");
+                    }
+                    break;
+                case "--pattern":
+                    if (pattern is not null || !TryReadValue(args, ref index, argument, out pattern, out _))
+                    {
+                        return Failure("Preview.Usage");
+                    }
+                    break;
+                case "--plan":
+                    if (!TrySelect(AppCommand.Plan, ref command, ref commandWasSelected, out var planError))
+                    {
+                        return FailureMessage(planError);
+                    }
+                    break;
+                case "--resume":
+                    if (resumeId is not null || !TryReadValue(args, ref index, argument, out resumeId, out _))
+                    {
+                        return Failure("Plan.Usage");
+                    }
+                    break;
+                case "--script":
+                    if (!TrySelect(AppCommand.Script, ref command, ref commandWasSelected, out var scriptError))
+                    {
+                        return FailureMessage(scriptError);
+                    }
+                    break;
+                case "--output":
+                    if (outputFile is not null || !TryReadValue(args, ref index, argument, out outputFile, out _))
+                    {
+                        return Failure("Script.OutputOption");
+                    }
+                    break;
+                case "--diagnose":
+                    if (!TrySelect(AppCommand.Diagnose, ref command, ref commandWasSelected, out var diagnoseError))
+                    {
+                        return FailureMessage(diagnoseError);
+                    }
+                    break;
+                case "--file":
+                    if (inputFile is not null || !TryReadValue(args, ref index, argument, out inputFile, out _))
+                    {
+                        return Failure("Input.FileOption");
+                    }
+                    break;
                 case "--help" or "-h" or "/?":
                     if (!TrySelect(AppCommand.Help, ref command, ref commandWasSelected, out var helpError))
                     {
@@ -211,12 +303,12 @@ public sealed class CommandLineParser : ICommandLineParser
         string? query = null;
         if (queryParts.Count > 0)
         {
-            if (commandWasSelected && command != AppCommand.Query)
+            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan))
             {
                 return Failure("Cli.PositionalConflict");
             }
 
-            command = AppCommand.Query;
+            command = command is AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan ? command : AppCommand.Query;
             commandWasSelected = true;
             query = string.Join(' ', queryParts).Trim();
         }
@@ -231,8 +323,42 @@ public sealed class CommandLineParser : ICommandLineParser
             return Failure("Cli.DryRunScope");
         }
 
+        if (inputFile is not null && command is not (AppCommand.Script or AppCommand.Preview)
+            && !(command == AppCommand.Recipes && recipeAction == "import") && (command != AppCommand.Diagnose || query is not null))
+        {
+            return Failure("Input.SourceConflict");
+        }
+
+        if ((outputFile is not null && command is not (AppCommand.Script or AppCommand.Preview) && !(command == AppCommand.Recipes && recipeAction == "export"))
+            || (command == AppCommand.Script && string.IsNullOrWhiteSpace(query)))
+        {
+            return Failure("Script.Usage");
+        }
+
+        if ((sourcePlan is not null && !(command == AppCommand.Recipes && recipeAction == "save"))
+            || (command == AppCommand.Recipes && (recipeAction is not ("list" or "show" or "run" or "save" or "import" or "export")
+                || (recipeAction == "save" && sourcePlan is null) || (recipeAction == "import" && inputFile is null)
+                || (recipeAction == "export" && outputFile is null))))
+        {
+            return Failure("Recipe.Usage");
+        }
+
+        if ((command != AppCommand.Preview && (prefix is not null || pattern is not null))
+            || (command == AppCommand.Preview && (inputFile is null || previewAction is not ("copy" or "move" or "rename" or "delete")
+                || (previewAction is "copy" or "move") != (outputFile is not null)
+                || (previewAction == "rename") != (prefix is not null))))
+        {
+            return Failure("Preview.Usage");
+        }
+
+        if ((resumeId is not null && (command != AppCommand.Plan || query is not null || !Guid.TryParseExact(resumeId, "N", out _)))
+            || (command == AppCommand.Plan && query is null && resumeId is null))
+        {
+            return Failure("Plan.Usage");
+        }
+
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern, recipeAction, recipeName, sourcePlan),
             null);
     }
 

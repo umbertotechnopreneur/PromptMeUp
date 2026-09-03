@@ -12,10 +12,10 @@ The resolved application also includes Microsoft.Data.Sqlite.Core; Microsoft.Ext
 
 | Package | Version | License |
 | --- | ---: | --- |
-| [Microsoft.Data.Sqlite](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.10) | 10.0.10 | [MIT](https://licenses.nuget.org/MIT) |
-| [Microsoft.Extensions.DependencyInjection](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection/10.0.10) | 10.0.10 | [MIT](https://licenses.nuget.org/MIT) |
-| [Microsoft.Extensions.Http](https://www.nuget.org/packages/Microsoft.Extensions.Http/10.0.10) | 10.0.10 | [MIT](https://licenses.nuget.org/MIT) |
-| [Microsoft.Extensions.Logging](https://www.nuget.org/packages/Microsoft.Extensions.Logging/10.0.10) | 10.0.10 | [MIT](https://licenses.nuget.org/MIT) |
+| [Microsoft.Data.Sqlite](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.11) | 10.0.11 | [MIT](https://licenses.nuget.org/MIT) |
+| [Microsoft.Extensions.DependencyInjection](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection/10.0.11) | 10.0.11 | [MIT](https://licenses.nuget.org/MIT) |
+| [Microsoft.Extensions.Http](https://www.nuget.org/packages/Microsoft.Extensions.Http/10.0.11) | 10.0.11 | [MIT](https://licenses.nuget.org/MIT) |
+| [Microsoft.Extensions.Logging](https://www.nuget.org/packages/Microsoft.Extensions.Logging/10.0.11) | 10.0.11 | [MIT](https://licenses.nuget.org/MIT) |
 | [Serilog](https://www.nuget.org/packages/Serilog/4.4.0) | 4.4.0 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |
 | [Serilog.Extensions.Logging](https://www.nuget.org/packages/Serilog.Extensions.Logging/10.0.0) | 10.0.0 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |
 | [Serilog.Sinks.File](https://www.nuget.org/packages/Serilog.Sinks.File/7.0.0) | 7.0.0 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |

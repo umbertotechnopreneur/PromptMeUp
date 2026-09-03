@@ -22,7 +22,7 @@ public interface IDatabaseService
 
     Task<IReadOnlyList<AiModelPrice>> ListModelPricesAsync(string provider, CancellationToken cancellationToken);
 
-    Task<AiModelPrice?> FindModelPriceAsync(string provider, string model, CancellationToken cancellationToken);
+    Task<AiModelPrice?> FindModelPriceAsync(string provider, string model, long inputTokens, CancellationToken cancellationToken);
 
     Task<DateTimeOffset?> GetLatestModelPriceSyncAsync(string provider, CancellationToken cancellationToken);
 
@@ -45,20 +45,35 @@ public interface IDatabaseService
 
 public sealed class SqliteDatabaseService : IDatabaseService
 {
+    internal const string AiRequestSummarySql = """
+        SELECT
+            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN estimated_cost_microusd ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $month THEN estimated_cost_microusd ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN 1 ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN input_tokens ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN output_tokens ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN total_tokens ELSE 0 END), 0)
+        FROM ai_requests
+        WHERE occurred_unix >= $month;
+        """;
+
     private readonly string _connectionString;
     private readonly ILogger<SqliteDatabaseService> _logger;
     private readonly IPromptInjectionProtectionService _promptProtection;
+    private readonly ISensitiveDataRedactor _redactor;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     /// <summary>Creates the serialized SQLite gateway for local settings, usage, sessions, and audit data.</summary>
     public SqliteDatabaseService(
         AppPaths paths,
         ILogger<SqliteDatabaseService> logger,
-        IPromptInjectionProtectionService promptProtection)
+        IPromptInjectionProtectionService promptProtection,
+        ISensitiveDataRedactor redactor)
     {
         ArgumentNullException.ThrowIfNull(paths);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
+        _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = paths.DatabasePath,
@@ -136,6 +151,16 @@ public sealed class SqliteDatabaseService : IDatabaseService
             reader.GetString(16),
             reader.GetString(17),
             DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(18)));
+        var normalizedPreamble = _promptProtection.Protect(settings.CustomInstruction).SanitizedText;
+        var safePreamble = _redactor.Redact(normalizedPreamble);
+        if (!string.Equals(normalizedPreamble, safePreamble, StringComparison.Ordinal))
+        {
+            settings = settings with { CustomInstruction = safePreamble, UpdatedAt = DateTimeOffset.UtcNow };
+            await reader.DisposeAsync().ConfigureAwait(false);
+            await connection.DisposeAsync().ConfigureAwait(false);
+            await SaveSettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+            _logger.LogWarning("Recognizable credentials were removed from a legacy configured preamble.");
+        }
         ValidateSettings(settings);
         return settings;
     }
@@ -343,9 +368,15 @@ public sealed class SqliteDatabaseService : IDatabaseService
         return prices;
     }
 
-    /// <summary>Finds the cached standard short-context price for one exact model.</summary>
-    public async Task<AiModelPrice?> FindModelPriceAsync(string provider, string model, CancellationToken cancellationToken)
+    /// <summary>Finds the applicable cached standard rate, leaving unknown models or missing bands unpriced.</summary>
+    public async Task<AiModelPrice?> FindModelPriceAsync(string provider, string model, long inputTokens, CancellationToken cancellationToken)
     {
+        var selection = ModelPricingPolicy.Resolve(model, inputTokens);
+        if (selection is null)
+        {
+            return null;
+        }
+
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText = """
@@ -357,11 +388,12 @@ public sealed class SqliteDatabaseService : IDatabaseService
             WHERE provider = $provider
               AND model = $model COLLATE NOCASE
               AND service_tier = 'standard'
-              AND context_window = 'short'
+              AND context_window = $contextWindow
             LIMIT 1;
             """;
         command.Parameters.AddWithValue("$provider", provider.ToLowerInvariant());
-        command.Parameters.AddWithValue("$model", model);
+        command.Parameters.AddWithValue("$model", selection.Value.Model);
+        command.Parameters.AddWithValue("$contextWindow", selection.Value.ContextWindow);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         return await reader.ReadAsync(cancellationToken).ConfigureAwait(false) ? ReadPrice(reader) : null;
     }
@@ -451,16 +483,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
 
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT
-                COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN estimated_cost_microusd ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $month THEN estimated_cost_microusd ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN 1 ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN input_tokens ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN output_tokens ELSE 0 END), 0),
-                COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN total_tokens ELSE 0 END), 0)
-            FROM ai_requests;
-            """;
+        command.CommandText = AiRequestSummarySql;
         command.Parameters.AddWithValue("$today", todayUtc.ToUnixTimeSeconds());
         command.Parameters.AddWithValue("$tomorrow", tomorrowUtc.ToUnixTimeSeconds());
         command.Parameters.AddWithValue("$month", monthUtc.ToUnixTimeSeconds());
@@ -763,6 +786,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
     private void ValidateSettings(AppSettings settings)
     {
         var protectedPreamble = _promptProtection.Protect(settings.CustomInstruction);
+        if (!string.Equals(protectedPreamble.SanitizedText, _redactor.Redact(protectedPreamble.SanitizedText), StringComparison.Ordinal))
+        {
+            throw new ArgumentException("The configured AI preamble must not contain credentials.", nameof(settings));
+        }
         if (!SupportedLanguages.IsSupported(settings.Language)
             || string.IsNullOrWhiteSpace(settings.Model)
             || !AiModelCatalog.Models.Any(model => model.Id == settings.Model)

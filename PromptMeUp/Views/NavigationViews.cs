@@ -43,6 +43,11 @@ public sealed class HelpView(
             "Help.Group.Ai",
             [
                 (text.Text("Help.QuerySyntax"), text.Text("Help.Query")),
+                ("--diagnose [--file <path>]", text.Text("Diagnose.Help")),
+                ("--script <request> [--file <path>] [--output <path>]", text.Text("Script.Help")),
+                ("--plan <goal> | --plan --resume <id>", text.Text("Plan.Help")),
+                ("--preview <copy|move|rename|delete> --file <path>", text.Text("Preview.Help")),
+                ("--recipes [list|show|save|import|export|run]", text.Text("Recipe.Help")),
                 ("--chat", text.Text("Help.Chat")),
                 ("--test-ai", text.Text("Help.Test"))
             ]);
@@ -260,10 +265,10 @@ public sealed class ThirdPartyView(
 {
     private static readonly (string Package, string Version, string License)[] Packages =
     [
-        ("Microsoft.Data.Sqlite", "10.0.10", "MIT"),
-        ("Microsoft.Extensions.DependencyInjection", "10.0.10", "MIT"),
-        ("Microsoft.Extensions.Http", "10.0.10", "MIT"),
-        ("Microsoft.Extensions.Logging", "10.0.10", "MIT"),
+        ("Microsoft.Data.Sqlite", "10.0.11", "MIT"),
+        ("Microsoft.Extensions.DependencyInjection", "10.0.11", "MIT"),
+        ("Microsoft.Extensions.Http", "10.0.11", "MIT"),
+        ("Microsoft.Extensions.Logging", "10.0.11", "MIT"),
         ("Serilog", "4.4.0", "Apache-2.0"),
         ("Serilog.Extensions.Logging", "10.0.0", "Apache-2.0"),
         ("Serilog.Sinks.File", "7.0.0", "Apache-2.0"),

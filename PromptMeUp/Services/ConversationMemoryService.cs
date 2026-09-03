@@ -42,13 +42,20 @@ public sealed class ConversationMemory
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
-        if (content.Length > _settings.MaxMessageCharacters)
+        var normalizedRole = NormalizeRole(role);
+        if (normalizedRole == "user" && content.Length > _settings.MaxMessageCharacters)
         {
             throw new ConversationLimitException(
                 $"Message length {content.Length:N0} exceeds the configured {_settings.MaxMessageCharacters:N0}-character limit.");
         }
 
-        _messages.Add(new ChatMessage(NormalizeRole(role), content));
+        if (normalizedRole == "user" && EstimateMessages([new ChatMessage(normalizedRole, content)]) > _tokenBudget)
+        {
+            throw new ConversationLimitException("The message exceeds the configured context token budget.");
+        }
+
+        // Assistant output has its own provider/body limits; user-input limits must never discard a completed answer.
+        _messages.Add(new ChatMessage(normalizedRole, content));
         var pruned = PruneToLimits();
         _totalPrunedMessages += pruned;
         return new ConversationMemoryUpdate(pruned, Snapshot());
@@ -75,10 +82,10 @@ public sealed class ConversationMemory
         var removed = 0;
         while ((_messages.Count(message => message.Role == "user") > _settings.MaxConversationTurns
                 || EstimateMessages(_messages) > _tokenBudget)
-               && _messages.Count > 1)
+               && _messages.Count > 0)
         {
             var nextTurn = _messages.FindIndex(1, message => message.Role == "user");
-            var count = nextTurn > 0 ? nextTurn : 1;
+            var count = nextTurn > 0 ? nextTurn : _messages.Count;
             _messages.RemoveRange(0, count);
             removed += count;
         }

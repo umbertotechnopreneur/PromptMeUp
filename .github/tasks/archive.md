@@ -2,6 +2,25 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-02 — Repair PR #10 CI fixture failures
+
+- Investigated the first PR quality run: Lint and macOS passed, while Windows exposed global SQLite pool cleanup racing other fixtures and Linux timed out before the inherited-pipe fixture emitted its expected marker.
+- Replaced both global pool clears with cleanup scoped to the fixture's exact database connection pool, retaining parallel test execution.
+- Removed PowerShell module discovery from the process fixture, wrote and flushed markers directly, and allowed CI startup headroom. The deadline remains 10 seconds, the return assertion remains below 20 seconds, and the independent child lifetime is 30 seconds, so waiting for the child still fails the regression.
+- Preserved production code, timeout semantics, and all output/cancellation assertions; prepared the fix for the existing PR and its native CI matrix.
+
+Validation: the full local gate passed with 148/148 tests and zero build warnings/errors. The parallel SQLite regression subset passed ten consecutive runs; isolated help/version CLI smoke checks passed. Native CI outcomes are recorded in PR #10 checks.
+
+## 2026-09-02 — Resolve ten verified code-review findings
+
+- Completed the privacy, deadline, chat/risk/shell, pricing, and summary plan; every finding in [the review](review-2026-09-02.md) now maps to tracked regression coverage.
+- Protected quoted and serialized JSON credentials, rejected new credential-bearing preambles, sanitized legacy settings before use, and removed raw exception details from persistent diagnostics.
+- Bounded complete HTTP/process operations, preserved completed assistant answers, corrected diagnostic risk classification and Unix shell instructions, and selected model-specific pricing bands from actual input usage.
+- Restricted summary reads to the indexed month interval and preserved successful-request totals at period boundaries.
+- Added 58 regression cases and updated privacy, architecture, costs, and validation guidance. Preserved the repository presentation and release work already merged through PR #9.
+
+Validation: full required gate passed with 148/148 tests and zero build warnings/errors; isolated help, version, Italian/Vietnamese status, and French attribution smoke checks passed. No real credentials or AI requests were used. The OS-temporary smoke directory was retained because automatic approval review blocked its deletion; it is outside the repository and excluded from publication.
+
 ## 2026-09-02 — MIT repository, product presentation, and portable CI/CD
 
 - Preserved the MIT license and upstream attribution, including transitive dependency notices and the exact self-contained runtime's notices in release packages.
@@ -11,6 +30,21 @@ This archive tracks completed development tasks for reference and review.
 - Aligned the English repository-writing rule in AGENTS.md and GitHub Copilot instructions. Preserved the other agent's application-code work.
 
 Validation: the full required gate passed on an isolated baseline plus these changes, with 90/90 tests and zero Release-build warnings/errors. The Windows x64 portable archive passed credential-free startup/help/attribution smoke checks; all inventory notice references resolved inside the ZIP. GitHub-flavored Markdown rendering, local links, PowerShell parsing, and actionlint checks passed. The shared worktree's initial format check detected in-progress C# edits from the concurrent code task; those edits were excluded from this change.
+
+## 2026-09-02 — Guided error diagnosis
+
+- Added bounded text, UTF-8 log file, and stdin diagnosis with credential redaction and strict source validation.
+- Added an evidence-led prompt and UI text in all six languages; reused exact per-command approval for follow-up checks.
+- Validated parser boundaries, cancellation, redaction, Release build/tests, and isolated CLI smoke checks.
+- Delivered as the first feature commit and dedicated PR in the terminal assistance series.
+
+## 2026-09-03 — Reconcile diagnosis PR with main
+
+- Moved diagnosis history away from the archive append point changed by main, and separated planned feature work from the shared baseline task-status entry.
+- Preserved every diagnosis and planned-feature entry and rebased the PR onto current main to satisfy its required up-to-date checks without a merge commit.
+- Limited manual conflict corrections to the two task ledgers; production code and runtime prompts match the validated integration of the original feature with main.
+
+Validation: the original feature branch passed its full required gate with 98/98 tests; the integrated source passed with 156/156 tests and zero build warnings/errors. Diagnosis help and unconfigured-input smoke checks passed with isolated data. Native CI results for the updated branch are recorded in PR #11.
 
 ## 2026-08-16 — PromptMeUp 0.1.5 protected-preamble installer
 
@@ -157,3 +191,54 @@ Validation: full repository gate passed with zero build warnings/errors and 90/9
 - Kept production rendering unchanged; the failure was isolated to checkout policy and test-output normalization.
 
 Validation: full repository gate passed locally with zero build warnings/errors and 90/90 tests; the previously failing animation test passed in isolation; Git resolved `TerminalViewTests.cs` as `text eol=crlf`; `git diff --check` passed.
+
+## 2026-09-02 — Synchronize local main without merge commits
+
+- Backed up the 24 locally changed or added files and confirmed that their changes were already included in the remote tree; three-way comparisons of the nine differing documentation files matched the remote exactly.
+- Fast-forwarded `main` from `6da473d` to `89ec9f0`, preserving the local work without creating commits, branches, or worktrees.
+
+Validation: full repository gate passed with zero build warnings/errors and 90/90 tests; isolated `--help`, `--version`, Vietnamese `--status`, and French `--third-party` smoke tests passed with a disposable data directory. `main` matched `origin/main`, and the fetched range contained no merge commits.
+
+## 2026-09-02 — Ten actionable code-review findings
+
+- Reviewed the current application at `89ec9f0` and recorded ten distinct findings in [the review report](review-2026-09-02.md), including source references, reproduction evidence, impact, and recommended corrections.
+- Confirmed three credential-handling failures, two timeout failures, misleading local risk classification, lost assistant answers, a shell mismatch, ignored long-context prices, and an unnecessary historical table scan.
+- Reproduced all ten cases in an ignored local probe project with isolated SQLite data and simulated HTTP responses; no real AI calls, credentials, PATH changes, or font changes were used.
+- Preserved concurrent repository work and left application code, existing tests, and runtime prompts unchanged.
+
+Validation: ten dedicated defect reproductions confirmed; the full repository gate passed with zero build warnings/errors and 90/90 existing tests. Isolated `--help` and `--version` smoke tests passed. The existing suite does not cover the reproduced failure cases.
+
+## 2026-09-02 — PowerShell script workshop
+
+- Added complete script generation, revision diffs, named-parameter guidance, and explicit saving to new files.
+- Added authorized parser-only validation and optional installed PSScriptAnalyzer support; source is never evaluated.
+- Added tests for parser isolation, invalid syntax, artifact shape, option scope, and overwrite prevention.
+- Validated through the full repository gate and isolated CLI smoke checks; delivered in the second stacked PR.
+## 2026-09-02 — Resumable guided plans
+
+- Added bounded 1–8-step console plans with durable local progress and an explicit resume identifier.
+- Kept action and verification commands behind separate risk review, exact preview, and approval gates.
+- Marked intent before execution; interrupted actions are verified on resume and never replayed automatically.
+- Added exclusive plan leases, working-directory checks, user-confirmed outcomes, tests, and six-language guidance.
+- Delivered after the full gate as the third stacked feature PR.
+## 2026-09-02 — Concrete file-effect previews
+
+- Added bounded local snapshots for copy, move, prefix rename, and delete operations without AI or shell simulation.
+- Displayed exact mappings, bytes, and collisions; blocked links, unsupported operations, recursion, and overwrites.
+- Rechecked snapshot metadata after review, preserved per-command approval, and stopped batches on failure or denial.
+- Added tests for no-mutation previews, collisions, stale source, late destinations, literal quoting, links, and CLI scope.
+- Delivered after the full gate as the fourth stacked feature PR.
+## 2026-09-03 — Personal parameterized recipes
+
+- Added local recipe listing, inspection, import/export, and saving from completed plans.
+- Added schema validation, declared parameters, prerequisite review, and quoted data binding without source substitution.
+- Every reuse creates a new resumable plan with fresh approvals; imports cannot inherit progress or authorization.
+- Added tests for parameter quoting, credential rejection, definition isolation, overwrite prevention, schema/status handling, and CLI scope.
+- Completed the five-feature series with one commit and assigned stacked PR per feature after the full validation gate.
+
+## 2026-09-03 — Resolve SQLite dependency PR conflicts
+
+- Integrated current `main` into PR #3, preserving Microsoft.Data.Sqlite 10.0.11 and the three Microsoft.Extensions 10.0.11 updates already merged into `main`.
+- Aligned the affected runtime dependency versions in the CLI attribution table and third-party notices.
+
+Validation: the full repository gate passed with zero build warnings/errors and 182/182 tests. Isolated `--help`, `--version`, `--third-party`, and `--status` smoke checks passed with disposable data directories; the attribution output shows the four resolved 10.0.11 versions. `git diff --check` passed.

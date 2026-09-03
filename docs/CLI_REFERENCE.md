@@ -24,6 +24,11 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | --- | --- | --- |
 | `--query <text>` | `-q` or positional text | Starts one AI session, renders one answer, then offers a safe choice to start chat or inspect a cited command. |
 | `--chat` | — | Opens a bounded interactive conversation for Windows, macOS, or Linux console work. |
+| `--diagnose [text]` | `--file <log>` or stdin | Diagnoses bounded evidence and offers focused checks. |
+| `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a reviewable PowerShell artifact. |
+| `--plan <goal>` | `--plan --resume <id>` | Guides and resumes explicitly approved steps with verified progress. |
+| `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Inspects concrete local file effects before individual command review. |
+| `--recipes [action]` | — | Lists, saves, imports, exports, or reuses personal command recipes. |
 | `--setup` | — | Opens the full first-run and AI settings form. |
 | `--test-ai` | — | Runs the localized `connection-test.yaml` prompt and verifies the exact expected response. |
 | `--costs` | — | Forces a pricing refresh, optionally refreshes organization costs, and renders the cost dashboard. |
@@ -38,6 +43,122 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 Only one top-level command can be selected per invocation.
 
 `hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
+
+## Reuse personal recipes
+
+```powershell
+hm --recipes
+hm --recipes save project-check --from-plan <completed-plan-id>
+hm --recipes show project-check
+hm --recipes run project-check
+hm --recipes export project-check --output project-check.json
+hm --recipes import --file inspect-folder.json
+```
+
+Save a fully completed and confirmed plan as a local recipe, or import a reviewed
+JSON definition. Saves and exports require confirmation and never overwrite an
+existing recipe or file. Names use 1–40 ASCII letters, digits, hyphens, or
+underscores and start with a letter. Local libraries contain at most 200 recipes.
+
+Every run shows prerequisites and asks for parameter values interactively, then
+creates a new resumable plan with fresh per-command approvals. Parameter values
+are bound as literal entries in `$hmParameters`; they are never substituted into
+the source text. Definitions store parameter descriptions, not invocation values.
+The resulting run plan and ordinary audit retain the bound commands locally;
+recognizable credentials are rejected. Each value is limited to 1,024 characters,
+and the complete bound command must fit the plan's 4,096-character limit.
+
+Recipes saved from completed plans retain the original working directory and
+literal commands. To add parameters, export a definition, choose a new name,
+declare its parameters, and reference them as `$hmParameters['name']` in commands
+and checks before importing it. Set `directory` to `null` for an explicitly
+portable recipe that uses the current directory. A minimal import example:
+
+```json
+{
+  "version": 1,
+  "name": "inspect-folder",
+  "description": "Inspect a chosen folder.",
+  "directory": null,
+  "prerequisites": ["PowerShell 7 is available."],
+  "parameters": [{ "name": "folder", "description": "Folder to inspect." }],
+  "steps": [{
+    "label": "List files",
+    "command": "Get-ChildItem -LiteralPath $hmParameters['folder'] -ErrorAction Stop",
+    "verification": "if (-not (Test-Path -LiteralPath $hmParameters['folder'] -PathType Container)) { exit 1 }",
+    "expected": "The chosen folder exists and its listing is visible."
+  }]
+}
+```
+
+## Preview concrete file effects
+
+```powershell
+hm --preview rename --file ./logs --pattern '*.log' --prefix archived-
+hm --preview copy --file ./report.txt --output ./backup
+hm --preview move --file ./logs --pattern '*.log' --output ./archive
+hm --preview delete --file ./logs --pattern '*.tmp'
+```
+
+This local-only flow displays source, destination or deletion, byte counts, and
+collisions. `--file` accepts one file or the immediate files of a directory;
+copy/move require an existing destination directory. No directory recursion,
+symbolic links, reparse points, or arbitrary shell-command simulation is supported.
+Preview is limited to 1,000 matching files and 10,000 scanned files.
+
+Redirected invocations only inspect. In a live terminal, opt into command review,
+then approve every generated command separately. A collision blocks the whole
+batch. Copy/move never overwrite existing destinations, including destinations
+created after preview. Source size/time and link ancestry are checked again after
+approval. This is a snapshot, not a filesystem lock: other processes can still
+change files. A failure or declined command stops remaining operations.
+
+## Follow a resumable plan
+
+Use `hm --plan "Build, test, and package this project"`. PromptMeUp creates one
+to eight ordered PowerShell steps, saves their pending state locally, and shows
+`hm --plan --resume <id>`. The plan must be resumed from its original directory.
+
+Starting guidance does not authorize any step. Each action and its separate,
+read-only verification command receives the normal risk review, exact preview,
+and individual confirmation. A successful verification is followed by a user
+check against the declared expected result. Failure, timeout, denial, or a result
+that does not match pauses the plan before later actions start.
+
+Before starting an action, its state becomes `outcome unknown`. After a crash or
+interruption, resume runs the verification first and never repeats that action
+automatically. One process holds an exclusive lease while guiding a plan. Saved
+plan JSON contains the goal, original directory, commands, verification, and
+progress; credential-bearing plan content is rejected.
+
+## Create or revise a script
+
+Use `hm --script "Archive old logs with a report" --output archive-logs.ps1`.
+To revise a script, add `--file existing.ps1` and choose a new output file. This
+interactive flow shows the complete source and a line-by-line replacement diff,
+then offers revision, validation, saving, or cancellation. Existing files are
+never overwritten. Script input/output is limited to 12,000 characters; embedded
+credentials and redaction placeholders are rejected.
+
+The optional validation action previews a PowerShell parser command for explicit
+approval. It parses the source as literal data and uses PSScriptAnalyzer if already
+installed; it never evaluates the generated script or installs tooling. Syntax
+success does not establish semantic correctness or safety. Saving does not run
+the script. Requests and selected source are shared with the AI provider.
+
+## Diagnose an error
+
+Use `hm --diagnose "restore failed"`, `hm --diagnose --file build.log`, or
+`Get-Content build.log | hm --diagnose`. With no supplied source in a live terminal,
+`hm --diagnose` asks for evidence. Do not put credentials in command arguments.
+File and pipe input is bounded by the configured message limit, with a 30-second
+read deadline. Empty or oversized evidence is rejected; select a smaller excerpt.
+Recognizable credentials are redacted before AI transmission. The selected text
+is still shared with the provider, so choose the excerpt deliberately.
+
+The answer separates observations, probable causes, missing evidence, and the
+next verification. In a live terminal, a suggested check uses the existing exact
+preview and per-command approval flow. Piped invocations only render suggestions.
 
 ## Global options
 

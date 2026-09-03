@@ -42,6 +42,7 @@ public interface IOpenAiService
 public sealed class OpenAiService : IOpenAiService
 {
     private const string Provider = "openai";
+    private const long MaximumResponseBytes = 2 * 1024 * 1024;
     private readonly HttpClient _http;
     private readonly IEnvironmentSecretService _secrets;
     private readonly IPromptCatalogService _prompts;
@@ -278,10 +279,21 @@ public sealed class OpenAiService : IOpenAiService
                 settings.Model,
                 conversationId,
                 clientRequestId);
-            response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(_http.Timeout);
+            string responseJson;
+            try
+            {
+                response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
+                providerRequestId = ReadHeader(response, "x-request-id");
+                await response.Content.LoadIntoBufferAsync(MaximumResponseBytes, deadline.Token).ConfigureAwait(false);
+                responseJson = await response.Content.ReadAsStringAsync(deadline.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new OpenAiRequestException("The OpenAI request timed out.", "responses_api_timeout", null);
+            }
             stopwatch.Stop();
-            providerRequestId = ReadHeader(response, "x-request-id");
-            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 var providerError = OpenAiResponseParser.ReadApiError(responseJson)
@@ -295,7 +307,7 @@ public sealed class OpenAiService : IOpenAiService
                 stopwatch.ElapsedMilliseconds,
                 providerRequestId,
                 IsStructuredAssistantPrompt(prompt));
-            var price = await ResolvePriceAsync(parsed.Model, settings.Model, cancellationToken).ConfigureAwait(false);
+            var price = await _database.FindModelPriceAsync(Provider, parsed.Model, parsed.Usage.InputTokens, cancellationToken).ConfigureAwait(false);
             var final = parsed with
             {
                 ContextUsage = estimatedContext with
@@ -418,21 +430,14 @@ public sealed class OpenAiService : IOpenAiService
     private AppSettings ProtectPreamble(AppSettings settings)
     {
         var result = _promptProtection.Protect(settings.CustomInstruction);
-        if (!result.IsSafe || !result.IsWithinWordLimit)
+        if (!result.IsSafe || !result.IsWithinWordLimit
+            || !string.Equals(result.SanitizedText, _redactor.Redact(result.SanitizedText), StringComparison.Ordinal))
         {
             throw new InvalidOperationException("The configured AI preamble did not pass local prompt-injection protection.");
         }
 
         return settings with { CustomInstruction = result.SanitizedText };
     }
-
-    /// <summary>Uses the returned model first, then the configured model, for local price estimation.</summary>
-    private async Task<AiModelPrice?> ResolvePriceAsync(
-        string returnedModel,
-        string requestedModel,
-        CancellationToken cancellationToken) =>
-        await _database.FindModelPriceAsync(Provider, returnedModel, cancellationToken).ConfigureAwait(false)
-        ?? await _database.FindModelPriceAsync(Provider, requestedModel, cancellationToken).ConfigureAwait(false);
 
     /// <summary>Persists telemetry without allowing a database error to conceal the provider result.</summary>
     private async Task PersistAsync(AiRequestLog request, CancellationToken cancellationToken)
@@ -443,7 +448,7 @@ public sealed class OpenAiService : IOpenAiService
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "AI request persistence failed. RequestLogId={RequestLogId}", request.Id);
+            _logger.LogError("AI request persistence failed. RequestLogId={RequestLogId}, ErrorType={ErrorType}", request.Id, exception.GetType().Name);
         }
     }
 
@@ -456,7 +461,7 @@ public sealed class OpenAiService : IOpenAiService
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "AI session event persistence failed. SessionId={SessionId}, EventType={EventType}", sessionId, eventType);
+            _logger.LogError("AI session event persistence failed. SessionId={SessionId}, EventType={EventType}, ErrorType={ErrorType}", sessionId, eventType, exception.GetType().Name);
         }
     }
 
@@ -469,7 +474,7 @@ public sealed class OpenAiService : IOpenAiService
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "AI session close failed. SessionId={SessionId}, Status={Status}", sessionId, status);
+            _logger.LogError("AI session close failed. SessionId={SessionId}, Status={Status}, ErrorType={ErrorType}", sessionId, status, exception.GetType().Name);
         }
     }
 
@@ -480,7 +485,8 @@ public sealed class OpenAiService : IOpenAiService
     /// <summary>Identifies assistant prompts that request the typed user-facing response envelope.</summary>
     private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
         string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase);
+        || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase)
+        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1";
 
 }
 

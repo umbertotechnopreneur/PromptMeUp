@@ -2,11 +2,51 @@
 
 using PromptMeUp.Application;
 using PromptMeUp.Models;
+using PromptMeUp.Services;
+using PromptMeUp.Views;
 
 namespace PromptMeUp.Tests;
 
 public sealed class AiConversationWorkflowTests
 {
+    /// <summary>Verifies an answer above the configured user-input limit is rendered completely and closes the query successfully.</summary>
+    [Fact]
+    public async Task RunQueryAsync_LongAnswer_RendersAndCompletesSession()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var answer = new string('x', 501);
+        using var http = new HttpClient(new SyntheticHttpHandler(() => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent(RegressionFixture.ResponseJson(answer))
+        }));
+        var rendered = new List<string>();
+        var workflow = new AiConversationWorkflow(new ConversationMemoryService(), fixture.CreateOpenAi(http),
+            TestProxy.Create<IPromptCatalogService>((method, _) => throw new NotSupportedException(method.Name)),
+            TestProxy.Create<IPricingService>((method, _) => throw new NotSupportedException(method.Name)), fixture.Audit,
+            TestProxy.Create<IAuthorizedCommandWorkflow>((method, _) => throw new NotSupportedException(method.Name)),
+            TestProxy.Create<IChatView>((method, args) =>
+            {
+                Assert.Equal("RenderAssistant", method.Name);
+                rendered.Add((string)args[0]!);
+                return null;
+            }),
+            TestProxy.Create<ICommandSuggestionView>((_, _) => new CommandSuggestionDecision(CommandSuggestionAction.DoNotExecute, null)),
+            TestProxy.Create<ICostsView>((method, _) => throw new NotSupportedException(method.Name)),
+            TestProxy.Create<IConsoleShellView>((method, args) => method.Name switch
+            {
+                "RunWithStatusAsync" => ((Delegate)args[1]!).DynamicInvoke(),
+                "RenderRuntimeStatus" => null,
+                _ => throw new NotSupportedException(method.Name)
+            }), new LocalizationService());
+
+        await workflow.RunQueryAsync("Hello", AppSettings.Default with { MaxMessageCharacters = 500 }, false, default);
+
+        Assert.Equal(answer, Assert.Single(rendered));
+        Assert.Equal("completed", await fixture.ScalarAsync("SELECT status FROM ai_sessions;"));
+        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+    }
+
     /// <summary>Verifies exact, argument-bearing, and similarly prefixed run input without executing a command.</summary>
     [Theory]
     [InlineData("/run", true, "")]

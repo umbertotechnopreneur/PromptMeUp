@@ -17,18 +17,21 @@ public sealed class SetupView : ISetupView
     private readonly ILocalizationService _text;
     private readonly IConsoleShellView _shell;
     private readonly IPromptInjectionProtectionService _promptProtection;
+    private readonly ISensitiveDataRedactor _redactor;
 
     /// <summary>Creates the interactive setup form.</summary>
     public SetupView(
         IAnsiConsole console,
         ILocalizationService text,
         IConsoleShellView shell,
-        IPromptInjectionProtectionService promptProtection)
+        IPromptInjectionProtectionService promptProtection,
+        ISensitiveDataRedactor redactor)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
+        _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
     }
 
     /// <summary>Collects a complete configuration while keeping entered secrets outside the settings model.</summary>
@@ -293,6 +296,10 @@ public sealed class SetupView : ISetupView
             .Validate(value =>
             {
                 var result = _promptProtection.Protect(value);
+                if (!string.Equals(result.SanitizedText, _redactor.Redact(result.SanitizedText), StringComparison.Ordinal))
+                {
+                    return ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.PreambleSecret"))}[/]");
+                }
                 if (!result.IsWithinWordLimit)
                 {
                     return ValidationResult.Error(

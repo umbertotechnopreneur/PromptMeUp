@@ -94,9 +94,9 @@ public sealed class RuntimeContextService : IRuntimeContextService
     private static string ResolveCommandEnvironment(string platform) => platform switch
     {
         "Windows" => "Windows console; prefer PowerShell 7 syntax and paths",
-        "macOS" => "macOS terminal; prefer POSIX shell syntax and paths",
-        "Linux" => "Linux terminal; prefer POSIX shell syntax and paths",
-        _ => "terminal family unavailable; ask before assuming shell syntax"
+        "macOS" => "macOS terminal; use PowerShell 7 syntax with macOS paths; approved commands run in pwsh",
+        "Linux" => "Linux terminal; use PowerShell 7 syntax with Linux paths; approved commands run in pwsh",
+        _ => "operating-system family unavailable; approved commands run in PowerShell 7 (pwsh); ask before assuming paths"
     };
 
     /// <summary>Reads a CPU model label without invoking a shell or retaining device identifiers.</summary>
