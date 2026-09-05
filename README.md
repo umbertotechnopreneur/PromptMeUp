@@ -27,6 +27,9 @@
 
 PromptMeUp is a lightweight, open-source AI command-line assistant for Windows, Linux, and macOS. It explains terminal tasks, proposes PowerShell commands, and runs one only after an exact preview and explicit approval.
 
+> [!NOTE]
+> PromptMeUp is currently pre-production. Public binary releases are not published yet; the supported early-access path is to [build it from source](#try-it-this-weekend).
+
 ## A weekend project that stayed
 
 PromptMeUp started as a **pet project built over a weekend**. Then we kept reaching for it. What began as a small experiment turned out to be more useful than expected in our team at **[UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story)**.

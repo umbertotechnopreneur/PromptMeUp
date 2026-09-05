@@ -2,6 +2,30 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-05 — Current executable, PATH, and concise documentation
+
+- Uninstalled the previous MSI and installed the verified current portable build in the user's stable application directory. PATH selects this copy, which survives repository build cleanup.
+- Verified all 39 installed payload files, four installed CLI smoke checks, and an unchanged application database. Repeated the full gate: 216/216 tests and a Release build without warnings or errors.
+- Shortened artifact, privacy, and cost guidance. Cleaned .NET Release, runtime-specific, and Debug outputs; ignored directory deletion remains pending because the execution policy rejected it.
+
+## 2026-09-05 — Prominent README early-access notice
+
+- Added a GitHub Note alert immediately after the introduction, using PromptMeUp as the product name and linking directly to the source-build instructions.
+- Retained the existing installation-section guidance and confirmed that the public GitHub Releases page has no published releases.
+
+Validation: checked the alert placement, section link, and whitespace with `git diff --check`. Documentation-only follow-up; the preceding full validation gate remains applicable to the unchanged application code.
+
+## 2026-09-05 — Review improvements and configurable artifact limits
+
+- Rejected credential-bearing query arguments consistently and redacted every conversation message before provider transmission while preserving exact local command previews.
+- Preserved completed provider responses when optional local pricing or session cleanup fails; recorded actual usage and estimated costs for incomplete or invalid content responses and included billable failures in local totals.
+- Shared bounded process execution between approved commands and font helpers, including cancellation cleanup, output caps, and helper deadlines. Large approved source travels over standard input to avoid platform command-line limits.
+- Replaced small fixed script and plan limits with configurable UTF-8 budgets: 1 MiB scripts and 8 MiB serialized plans/recipes by default, each configurable from 1 to 64 MiB. Unified read/write checks and exposed effective limits in localized status output.
+- Separated artifact payload size from ordinary chat limits and reserved model context for the configurable artifact output budget (16,384 tokens by default). Updated both versioned artifact prompts in all six languages.
+- Completed six-language local risk explanations and documented configuration, privacy, accounting, and process boundaries.
+
+Validation: the required local gate passed with 216/216 tests and zero Release-build warnings/errors. Eleven isolated CLI smoke checks covered help/version, status in all six languages, overrides, invalid configuration, and credential-argument rejection. No real provider requests or PATH/font changes were performed. Disposable smoke data remains under ignored `artifacts/`. PATH resolves the existing August 16 installation, independently of the new repository Release build; the installation was inspected and left unchanged.
+
 ## 2026-09-02 — Repair PR #10 CI fixture failures
 
 - Investigated the first PR quality run: Lint and macOS passed, while Windows exposed global SQLite pool cleanup racing other fixtures and Linux timed out before the inherited-pipe fixture emitted its expected marker.

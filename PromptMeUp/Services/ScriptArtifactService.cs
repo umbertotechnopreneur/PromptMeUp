@@ -6,9 +6,9 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILocalizationService text)
+public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILocalizationService text, ArtifactLimits? limits = null)
 {
-    public const int MaximumSourceCharacters = 12_000;
+    private readonly ArtifactLimits _limits = limits ?? ArtifactLimits.Default;
 
     /// <summary>Rejects malformed, oversized, or credential-bearing generated artifacts before saving.</summary>
     public ScriptArtifact Parse(string json)
@@ -37,15 +37,9 @@ public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILoca
     {
         try
         {
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
-            if (stream.Length > MaximumSourceCharacters * 4L)
-            {
-                throw new InvalidOperationException(text.Text("Script.Invalid"));
-            }
-            using var reader = new StreamReader(stream, new UTF8Encoding(false, true), true);
-            var buffer = new char[MaximumSourceCharacters + 1];
-            var count = await reader.ReadBlockAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
-            var source = new string(buffer, 0, count);
+            var bytes = await BoundedArtifactFile.ReadAsync(path, _limits.MaxScriptBytes, text, cancellationToken).ConfigureAwait(false);
+            using var reader = new StreamReader(new MemoryStream(bytes), new UTF8Encoding(false, true), true);
+            var source = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
             ValidateSource(source);
             return source;
         }
@@ -102,7 +96,8 @@ public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILoca
     /// <summary>Rejects unsafe artifact shapes and recognizable credentials without concealing the reason in logs.</summary>
     private void ValidateSource(string source)
     {
-        if (string.IsNullOrWhiteSpace(source) || source.Length > MaximumSourceCharacters
+        BoundedArtifactFile.CheckSize(Encoding.UTF8.GetByteCount(source), _limits.MaxScriptBytes, text);
+        if (string.IsNullOrWhiteSpace(source)
             || source.Any(character => char.IsControl(character) && character is not ('\r' or '\n' or '\t'))
             || redactor.Redact(source) != source || source.Contains("[redacted", StringComparison.OrdinalIgnoreCase))
         {

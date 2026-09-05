@@ -45,6 +45,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly INerdFontView _fontView;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
+    private readonly ArtifactLimits _artifactLimits;
 
     /// <summary>Creates the application orchestrator while keeping business services independent from Spectre views.</summary>
     public PromptMeUpApplication(
@@ -76,7 +77,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IExecutableLocationView executableLocationView,
         INerdFontView fontView,
         AppPaths paths,
-        ILogger<PromptMeUpApplication> logger)
+        ILogger<PromptMeUpApplication> logger,
+        ArtifactLimits? artifactLimits = null)
     {
         _parser = parser;
         _database = database;
@@ -107,6 +109,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _fontView = fontView;
         _paths = paths;
         _logger = logger;
+        _artifactLimits = artifactLimits ?? ArtifactLimits.Default;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -339,7 +342,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             _paths.DatabasePath,
             _paths.LogsDirectory,
             _paths.PromptDirectory,
-            promptCount);
+            promptCount)
+        { ArtifactLimits = _artifactLimits };
         _statusView.Render(status);
         await TryAuditAsync("status", "completed", null, new { promptCount }).ConfigureAwait(false);
     }

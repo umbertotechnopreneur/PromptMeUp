@@ -2,6 +2,8 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
@@ -38,12 +40,14 @@ public sealed class ActivityAuditService : IActivityAuditService
 {
     private readonly IDatabaseService _database;
     private readonly ISensitiveDataRedactor _redactor;
+    private readonly ILogger<ActivityAuditService> _logger;
 
     /// <summary>Creates the JSON-backed activity and session ledger.</summary>
-    public ActivityAuditService(IDatabaseService database, ISensitiveDataRedactor redactor)
+    public ActivityAuditService(IDatabaseService database, ISensitiveDataRedactor redactor, ILogger<ActivityAuditService>? logger = null)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
+        _logger = logger ?? NullLogger<ActivityAuditService>.Instance;
     }
 
     /// <summary>Creates an idempotent AI work-session header.</summary>
@@ -70,9 +74,18 @@ public sealed class ActivityAuditService : IActivityAuditService
             cancellationToken);
     }
 
-    /// <summary>Closes an AI work session with a completed, cancelled, or failed status.</summary>
-    public Task CloseSessionAsync(string sessionId, string status, CancellationToken cancellationToken) =>
-        _database.CloseAiSessionAsync(sessionId, status, DateTimeOffset.UtcNow, cancellationToken);
+    /// <summary>Closes a session without allowing a secondary database failure to replace its primary outcome.</summary>
+    public async Task CloseSessionAsync(string sessionId, string status, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _database.CloseAiSessionAsync(sessionId, status, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogError("Session close failed. SessionId={SessionId}, Status={Status}, ErrorType={ErrorType}", sessionId, status, exception.GetType().Name);
+        }
+    }
 
     /// <summary>Appends a prompt, response, command, pruning, or error event to the ordered session ledger.</summary>
     public Task AppendSessionEventAsync(

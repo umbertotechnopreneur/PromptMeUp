@@ -83,9 +83,13 @@ internal static class OpenAiRequestBuilder
         PromptDefinition prompt,
         AppSettings settings,
         string language,
-        RuntimeContext? runtimeContext = null)
+        RuntimeContext? runtimeContext = null,
+        ArtifactLimits? limits = null)
     {
-        var builder = new StringBuilder(prompt.ResolveText(language));
+        var artifactLimits = limits ?? ArtifactLimits.Default;
+        var builder = new StringBuilder(prompt.ResolveText(language)
+            .Replace("{max_script_bytes}", artifactLimits.MaxScriptBytes.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("{max_plan_bytes}", artifactLimits.MaxPlanBytes.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal));
         if (IsStructuredAssistantPrompt(prompt) || prompt.Metadata.GetValueOrDefault("runtime-context") == "sanitized")
         {
             if (!string.IsNullOrWhiteSpace(settings.CustomInstruction))
@@ -142,8 +146,12 @@ internal static class OpenAiRequestBuilder
     }
 
     /// <summary>Chooses a bounded response budget and honors a smaller YAML diagnostic limit.</summary>
-    internal static int ResolveMaxOutputTokens(PromptDefinition prompt, string detail)
+    internal static int ResolveMaxOutputTokens(PromptDefinition prompt, string detail, ArtifactLimits? limits = null)
     {
+        if (prompt.Id is "script-system" or "plan-system")
+        {
+            return (limits ?? ArtifactLimits.Default).MaxOutputTokens;
+        }
         var configured = detail switch
         {
             "compact" => 900,

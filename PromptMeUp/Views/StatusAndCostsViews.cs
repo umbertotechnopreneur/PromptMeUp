@@ -38,6 +38,14 @@ public sealed class StatusView(
         console.Write(configuration);
         console.WriteLine();
 
+        console.Write(TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(text.Text("Artifact.ScriptLimit"), $"{status.ArtifactLimits.MaxScriptBytes / ArtifactLimits.Mebibyte} MiB"),
+            TerminalTheme.CompactMetric(text.Text("Artifact.PlanLimit"), $"{status.ArtifactLimits.MaxPlanBytes / ArtifactLimits.Mebibyte} MiB"),
+            TerminalTheme.CompactMetric(text.Text("Artifact.OutputBudget"), status.ArtifactLimits.MaxOutputTokens.ToString("N0", text.Culture))
+        ], preferredPairs: 3, width: console.Profile.Width));
+        console.WriteLine();
+
         var localData = TerminalTheme.PairGrid(
         [
             TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "▣", "#") + text.Text("Status.Database"), status.DatabasePath),

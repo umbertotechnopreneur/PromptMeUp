@@ -84,6 +84,8 @@ internal static class Program
 
         services.AddSingleton<ICommandLineParser, CommandLineParser>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
+        services.AddSingleton(provider => ArtifactLimitConfiguration.Load(
+            Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
         services.AddSingleton<IDatabaseService, SqliteDatabaseService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();

@@ -11,12 +11,15 @@ public sealed class ArtifactAssistant(
     IActivityAuditService audit,
     BoundedTextInput input,
     IConsoleShellView shell,
-    ILocalizationService text)
+    ILocalizationService text,
+    ArtifactLimits? limits = null)
 {
     /// <summary>Creates one bounded artifact request with audited lifecycle and visible provider usage.</summary>
     public async Task<AiResponse> SendAsync(string promptId, string request, AppSettings settings, CancellationToken cancellationToken)
     {
-        request = input.Sanitize(request, settings.MaxMessageCharacters);
+        request = promptId == "script-system"
+            ? input.SanitizeUtf8(request, (limits ?? ArtifactLimits.Default).ScriptRequestBytes(settings.MaxMessageCharacters))
+            : input.Sanitize(request, settings.MaxMessageCharacters);
         var sessionId = Guid.NewGuid().ToString("N");
         var status = "failed";
         await audit.StartSessionAsync(sessionId, promptId, settings, new { invocation = promptId }, cancellationToken).ConfigureAwait(false);

@@ -27,7 +27,7 @@ Setup currently exposes:
 
 PromptMeUp reserves instruction space, then removes the oldest complete turn groups until both the turn count and estimated token budget fit. It never drops only one side of an old user/assistant exchange when a complete pair is available. If a single new message or populated request still exceeds a configured boundary, the request is rejected with a visible explanation.
 
-Completed assistant answers are displayed in full even when they exceed the user-input character limit. If a completed turn exceeds the memory token budget, the whole turn is excluded from subsequent context. The provider's output budget and a 2 MiB response-body limit bound incoming responses.
+Completed answers display in full; turns exceeding the memory budget are omitted from subsequent context. Ordinary responses have a 2 MiB body limit. Scripts and plans use [configurable artifact limits](CLI_REFERENCE.md#configure-artifact-limits), with 16,384 output tokens by default.
 
 ## Understand local request cost
 
@@ -42,7 +42,9 @@ Each successful Responses call can report:
 
 PromptMeUp multiplies those counters by the matching normalized public price row and stores exact integer microdollars in SQLite. Cached input and cache-write rates fall back to the normal input rate only when the official row does not publish a separate value. The UI labels these amounts as estimates.
 
-Today's and the current month's local estimates include only successful requests recorded by this PromptMeUp data directory. They are not account-wide totals.
+Local totals include reported usage from incomplete or invalid responses. Request counts include successful calls and failures with reported tokens. These are local estimates, not account-wide totals; older discarded usage cannot be recovered.
+
+Pricing or session-cleanup failures preserve completed responses and token counts. If pricing is unavailable, the cost estimate remains unknown.
 
 ## Keep pricing current
 

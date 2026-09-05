@@ -137,14 +137,36 @@ Use `hm --script "Archive old logs with a report" --output archive-logs.ps1`.
 To revise a script, add `--file existing.ps1` and choose a new output file. This
 interactive flow shows the complete source and a line-by-line replacement diff,
 then offers revision, validation, saving, or cancellation. Existing files are
-never overwritten. Script input/output is limited to 12,000 characters; embedded
-credentials and redaction placeholders are rejected.
+never overwritten. Script input/output supports up to 1 MiB of UTF-8 source by
+default. Embedded credentials and redaction placeholders are rejected.
 
 The optional validation action previews a PowerShell parser command for explicit
 approval. It parses the source as literal data and uses PSScriptAnalyzer if already
 installed; it never evaluates the generated script or installs tooling. Syntax
 success does not establish semantic correctness or safety. Saving does not run
 the script. Requests and selected source are shared with the AI provider.
+
+### Configure artifact limits
+
+Set these environment variables before starting `hm`. Check their values with
+`hm --status`.
+
+| Variable | Default | Accepted values | Scope |
+| --- | --- | --- | --- |
+| `PROMPTMEUP_MAX_SCRIPT_MIB` | `1` | Integer `1`–`64` | UTF-8 script source, for both reading and saving. |
+| `PROMPTMEUP_MAX_PLAN_MIB` | `8` | Integer `1`–`64` | Complete serialized UTF-8 JSON for plans and recipes. |
+| `PROMPTMEUP_MAX_ARTIFACT_OUTPUT_TOKENS` | `16384` | Integer `1`–`65536` | Provider output budget for script and plan generation. |
+
+```powershell
+$env:PROMPTMEUP_MAX_SCRIPT_MIB = '4'
+$env:PROMPTMEUP_MAX_PLAN_MIB = '16'
+$env:PROMPTMEUP_MAX_ARTIFACT_OUTPUT_TOKENS = '32768'
+hm --status
+```
+
+One MiB is 1,048,576 bytes. Reading and saving use the same size limit; lowering it
+can block larger existing files. Model context and output limits still apply,
+including reasoning tokens. A file fitting locally may be too large for one AI response.
 
 ## Diagnose an error
 

@@ -7,8 +7,9 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-public sealed class RecipeStore(AppPaths paths, PlanStore plans, ISensitiveDataRedactor redactor, ILocalizationService text)
+public sealed class RecipeStore(AppPaths paths, PlanStore plans, ISensitiveDataRedactor redactor, ILocalizationService text, ArtifactLimits? limits = null)
 {
+    private readonly ArtifactLimits _limits = limits ?? ArtifactLimits.Default;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -56,12 +57,8 @@ public sealed class RecipeStore(AppPaths paths, PlanStore plans, ISensitiveDataR
     {
         try
         {
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
-            if (stream.Length > 256_000)
-            {
-                throw new InvalidOperationException(text.Text("Recipe.Invalid"));
-            }
-            var recipe = await JsonSerializer.DeserializeAsync<CommandRecipe>(stream, JsonOptions, cancellationToken).ConfigureAwait(false);
+            var bytes = await BoundedArtifactFile.ReadAsync(path, _limits.MaxPlanBytes, text, cancellationToken).ConfigureAwait(false);
+            var recipe = JsonSerializer.Deserialize<CommandRecipe>(bytes, JsonOptions);
             Validate(recipe!);
             return recipe! with { Steps = Pending(recipe!.Steps) };
         }
@@ -142,7 +139,7 @@ public sealed class RecipeStore(AppPaths paths, PlanStore plans, ISensitiveDataR
     /// <summary>Validates schema, portable identity, parameter descriptions, prerequisites, and credential-free source.</summary>
     public void Validate(CommandRecipe recipe)
     {
-        if (recipe is null || recipe.Version != 1 || !IsValidName(recipe.Name) || !SafeText(recipe.Description, 4000)
+        if (recipe is null || recipe.Version != 1 || !IsValidName(recipe.Name) || !SafeText(recipe.Description, _limits.MaxPlanBytes)
             || recipe.Prerequisites is null || recipe.Prerequisites.Count > 12 || recipe.Prerequisites.Any(item => !SafeText(item, 1000))
             || recipe.Parameters is null || recipe.Parameters.Count > 12
             || recipe.Parameters.Any(parameter => parameter is null || !IsValidName(parameter.Name) || !SafeText(parameter.Description, 500))
@@ -153,6 +150,7 @@ public sealed class RecipeStore(AppPaths paths, PlanStore plans, ISensitiveDataR
         }
         plans.Validate(new ExecutionPlan(1, Guid.NewGuid().ToString("N"), recipe.Description,
             recipe.Directory ?? Environment.CurrentDirectory, Pending(recipe.Steps)));
+        BoundedArtifactFile.CheckSize(JsonSerializer.SerializeToUtf8Bytes(recipe, JsonOptions).Length, _limits.MaxPlanBytes, text);
     }
 
     /// <summary>Clones steps as data-only pending actions, discarding any saved approval or progress implication.</summary>

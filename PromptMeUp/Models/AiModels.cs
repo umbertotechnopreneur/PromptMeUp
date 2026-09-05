@@ -12,6 +12,8 @@ public sealed record AiUsageMetrics(
     long ReasoningTokens,
     long TotalTokens);
 
+public sealed record AiResponseAccounting(string? Id, string? Model, AiUsageMetrics Usage);
+
 public sealed record AiCostBreakdown(
     decimal InputUsd,
     decimal CachedInputUsd,

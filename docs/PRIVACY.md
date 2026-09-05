@@ -31,6 +31,9 @@ Persistent diagnostics retain error types, stable failure codes, status codes, a
 
 Redaction is defensive, not infallible. Do not paste secrets into prompts or commands.
 
+Credential-bearing command arguments are rejected. Conversation messages are
+redacted before AI transmission; local command previews retain the exact text.
+
 ## Data sent to OpenAI
 
 An ordinary AI request can contain:

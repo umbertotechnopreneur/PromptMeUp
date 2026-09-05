@@ -22,5 +22,13 @@ public sealed class LocalizationTests
             Assert.True(overrides.TryGetValue(language, out var localized));
             Assert.Empty(english.Keys.Except(localized!.Keys, StringComparer.Ordinal));
         }
+
+        var features = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
+            typeof(FeatureText).GetField("Entries", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null));
+        foreach (var translations in features.Values)
+        {
+            Assert.Equal(SupportedLanguages.Codes.Count, translations.Length);
+            Assert.All(translations, translation => Assert.False(string.IsNullOrWhiteSpace(translation)));
+        }
     }
 }

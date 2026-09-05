@@ -42,7 +42,7 @@ public interface IOpenAiService
 public sealed class OpenAiService : IOpenAiService
 {
     private const string Provider = "openai";
-    private const long MaximumResponseBytes = 2 * 1024 * 1024;
+    private readonly ArtifactLimits _limits;
     private readonly HttpClient _http;
     private readonly IEnvironmentSecretService _secrets;
     private readonly IPromptCatalogService _prompts;
@@ -65,7 +65,8 @@ public sealed class OpenAiService : IOpenAiService
         IActivityAuditService audit,
         ISensitiveDataRedactor redactor,
         IPromptInjectionProtectionService promptProtection,
-        ILogger<OpenAiService> logger)
+        ILogger<OpenAiService> logger,
+        ArtifactLimits? limits = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
@@ -77,6 +78,7 @@ public sealed class OpenAiService : IOpenAiService
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
         _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _limits = limits ?? ArtifactLimits.Default;
     }
 
     /// <summary>Sends one bounded multi-turn conversation through the configured OpenAI Responses endpoint.</summary>
@@ -103,14 +105,14 @@ public sealed class OpenAiService : IOpenAiService
             prompt,
             settings,
             language,
-            _runtimeContext.GetCurrent());
+            _runtimeContext.GetCurrent(), _limits);
         return await SendCoreAsync(
             prompt,
             conversationId,
             messages,
             instructions,
             settings,
-            OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail),
+            OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail, _limits),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -172,7 +174,7 @@ public sealed class OpenAiService : IOpenAiService
                 prompt,
                 settings,
                 language,
-                _runtimeContext.GetCurrent()),
+                _runtimeContext.GetCurrent(), _limits),
             messages,
             settings.Model);
     }
@@ -218,6 +220,7 @@ public sealed class OpenAiService : IOpenAiService
         int maxOutputTokens,
         CancellationToken cancellationToken)
     {
+        messages = messages.Select(message => message with { Content = _redactor.Redact(message.Content) }).ToArray();
         var key = _secrets.Load(settings.ApiKeyVariable);
         if (!_secrets.LooksLikeOpenAiKey(key))
         {
@@ -234,14 +237,21 @@ public sealed class OpenAiService : IOpenAiService
         var latestUserText = messages.Last(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)).Content;
         var estimatedContext = OpenAiRequestBuilder.EstimateContext(instructions, messages, settings.Model);
         var configuredContextLimit = checked(estimatedContext.ContextWindowTokens * settings.MaxContextPercent / 100);
-        if (estimatedContext.InputTokens > configuredContextLimit)
+        var inputLimit = Math.Min(configuredContextLimit, estimatedContext.ContextWindowTokens - maxOutputTokens);
+        if (estimatedContext.InputTokens > inputLimit)
         {
-            throw new ConversationLimitException(
-                $"Estimated input context {estimatedContext.InputTokens:N0} exceeds the configured {settings.MaxContextPercent}% limit ({configuredContextLimit:N0} tokens). Clear the chat or reduce the prompt.");
+            if (!FeatureText.TryGet("Input.ContextBudget", settings.Language, out var template))
+            {
+                throw new InvalidOperationException("Missing context-budget translation.");
+            }
+            throw new ConversationLimitException(string.Format(SupportedLanguages.Culture(settings.Language),
+                template, estimatedContext.InputTokens, inputLimit, maxOutputTokens));
         }
         var clientRequestId = Guid.NewGuid().ToString();
         HttpResponseMessage? response = null;
         string? providerRequestId = null;
+        AiResponseAccounting? accounting = null;
+        AiModelPrice? price = null;
 
         try
         {
@@ -286,7 +296,7 @@ public sealed class OpenAiService : IOpenAiService
             {
                 response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
                 providerRequestId = ReadHeader(response, "x-request-id");
-                await response.Content.LoadIntoBufferAsync(MaximumResponseBytes, deadline.Token).ConfigureAwait(false);
+                await response.Content.LoadIntoBufferAsync(_limits.ResponseBytes(prompt.Id), deadline.Token).ConfigureAwait(false);
                 responseJson = await response.Content.ReadAsStringAsync(deadline.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -301,13 +311,14 @@ public sealed class OpenAiService : IOpenAiService
                 throw new OpenAiRequestException(providerError, "responses_api_failed", (int)response.StatusCode);
             }
 
+            accounting = OpenAiResponseParser.ParseAccounting(responseJson);
+            price = await TryFindPriceAsync(accounting.Model, accounting.Usage.InputTokens, cancellationToken).ConfigureAwait(false);
             var parsed = OpenAiResponseParser.ParseResponse(
                 responseJson,
                 (int)response.StatusCode,
                 stopwatch.ElapsedMilliseconds,
                 providerRequestId,
                 IsStructuredAssistantPrompt(prompt));
-            var price = await _database.FindModelPriceAsync(Provider, parsed.Model, parsed.Usage.InputTokens, cancellationToken).ConfigureAwait(false);
             var final = parsed with
             {
                 ContextUsage = estimatedContext with
@@ -389,14 +400,14 @@ public sealed class OpenAiService : IOpenAiService
                     DateTimeOffset.UtcNow,
                     endpoint.Host,
                     settings.Model,
-                    null,
+                    accounting?.Model,
                     _redactor.Redact(latestUserText),
                     null,
-                    OpenAiResponseParser.EmptyUsage,
-                    null,
+                    accounting?.Usage ?? OpenAiResponseParser.EmptyUsage,
+                    accounting is null || price is null ? null : _costCalculator.Calculate(accounting.Usage, price),
                     statusCode,
                     stopwatch.ElapsedMilliseconds,
-                    null,
+                    accounting?.Id,
                     providerRequestId,
                     false,
                     failureCode),
@@ -423,6 +434,24 @@ public sealed class OpenAiService : IOpenAiService
         finally
         {
             response?.Dispose();
+        }
+    }
+
+    /// <summary>Leaves optional cost estimation unavailable when local pricing fails, preserving provider content and usage.</summary>
+    private async Task<AiModelPrice?> TryFindPriceAsync(string? model, long inputTokens, CancellationToken cancellationToken)
+    {
+        if (model is null)
+        {
+            return null;
+        }
+        try
+        {
+            return await _database.FindModelPriceAsync(Provider, model, inputTokens, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning("Local price lookup failed; provider result retained without a cost estimate. ErrorType={ErrorType}", exception.GetType().Name);
+            return null;
         }
     }
 

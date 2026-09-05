@@ -22,6 +22,10 @@ internal static partial class OpenAiResponseParser
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
+        if (string.Equals(ReadOptionalString(root, "status"), "incomplete", StringComparison.OrdinalIgnoreCase))
+        {
+            throw CreateMissingTextException(root, statusCode);
+        }
         var text = ReadOutputText(root);
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -54,6 +58,15 @@ internal static partial class OpenAiResponseParser
         {
             SuggestedCommands = suggestedCommands
         };
+    }
+
+    /// <summary>Reads provider accounting independently of whether its answer satisfies the local content contract.</summary>
+    internal static AiResponseAccounting ParseAccounting(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        return new AiResponseAccounting(ReadOptionalString(root, "id"), ReadOptionalString(root, "model"),
+            root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object ? ParseUsage(usage) : EmptyUsage);
     }
 
     /// <summary>Parses command suggestions only from the structured chat envelope and fails closed on invalid data.</summary>

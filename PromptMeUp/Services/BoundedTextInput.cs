@@ -75,4 +75,19 @@ public sealed class BoundedTextInput(ISensitiveDataRedactor redactor, ILocalizat
         }
         return sanitized;
     }
+
+    /// <summary>Bounds serialized artifact input in UTF-8 bytes without imposing the chat character limit.</summary>
+    public string SanitizeUtf8(string value, int maximumBytes)
+    {
+        if (value.Length > maximumBytes || Encoding.UTF8.GetByteCount(value) > maximumBytes)
+        {
+            throw new InvalidOperationException(text.Text("Artifact.TooLarge", maximumBytes));
+        }
+        var sanitized = Sanitize(value, maximumBytes);
+        if (Encoding.UTF8.GetByteCount(sanitized) > maximumBytes)
+        {
+            throw new InvalidOperationException(text.Text("Artifact.TooLarge", maximumBytes));
+        }
+        return sanitized;
+    }
 }

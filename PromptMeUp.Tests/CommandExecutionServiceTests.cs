@@ -13,6 +13,43 @@ public sealed class CommandExecutionServiceTests
     private static readonly TimeSpan MaximumReturnTime = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan WatchdogDeadline = TimeSpan.FromSeconds(45);
 
+    /// <summary>Large source transport preserves multiline text, Unicode, and explicit or implicit command exit behavior.</summary>
+    [Theory]
+    [InlineData("[Console]::WriteLine('Tiếng Việt'); exit 7", 7)]
+    [InlineData("throw 'Synthetic failure'", 1)]
+    [InlineData("Write-Error 'Synthetic error'; 'done'", 0)]
+    [InlineData("[Console]::WriteLine('Tiếng Việt')", 0)]
+    public async Task ExecuteAsync_LargeSource_PreservesSemantics(string source, int expectedExitCode)
+    {
+        var command = "#" + new string('x', 40_000) + "\n" + source;
+        var result = await new CommandExecutionService(NullLogger<CommandExecutionService>.Instance)
+            .ExecuteAsync(Approve(command), TimeSpan.FromSeconds(15), default);
+        Assert.Equal(expectedExitCode, result.ExitCode);
+        Assert.Equal(command, result.Command);
+        if (source.Contains("Tiếng Việt", StringComparison.Ordinal))
+        {
+            Assert.Equal("Tiếng Việt", result.StandardOutput);
+        }
+    }
+
+    /// <summary>The shared helper runner bounds both output streams and honors cancellation before process startup.</summary>
+    [Fact]
+    public async Task SharedRunner_BoundsBothStreams_AndRejectsPrecancelledStart()
+    {
+        var startInfo = new ProcessStartInfo("pwsh");
+        foreach (var argument in new[] { "-NoProfile", "-NonInteractive", "-Command", "[Console]::Write(('x' * 40000)); [Console]::Error.Write(('y' * 40000))" })
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+        var result = await BoundedProcessRunner.RunAsync(startInfo, "Synthetic helper", TimeSpan.FromSeconds(15), default);
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(result.OutputTruncated);
+        Assert.Equal(32768, result.StandardOutput.Length);
+        Assert.Equal(32768, result.StandardError.Length);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => BoundedProcessRunner.RunAsync(
+            new ProcessStartInfo("synthetic-executable-that-does-not-exist"), "No start", TimeSpan.FromSeconds(1), new CancellationToken(true)));
+    }
+
     /// <summary>Verifies a still-running process is terminated at its deadline while retaining output already received.</summary>
     [Fact]
     public async Task ExecuteAsync_ParentStillRunning_TimesOutWithPartialOutput()

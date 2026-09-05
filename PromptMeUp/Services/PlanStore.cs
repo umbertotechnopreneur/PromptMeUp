@@ -7,8 +7,9 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-public sealed class PlanStore(AppPaths paths, ISensitiveDataRedactor redactor, ILocalizationService text)
+public sealed class PlanStore(AppPaths paths, ISensitiveDataRedactor redactor, ILocalizationService text, ArtifactLimits? limits = null)
 {
+    private readonly ArtifactLimits _limits = limits ?? ArtifactLimits.Default;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -57,12 +58,8 @@ public sealed class PlanStore(AppPaths paths, ISensitiveDataRedactor redactor, I
         var path = Resolve(id);
         try
         {
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
-            if (stream.Length > 128_000)
-            {
-                throw new InvalidOperationException(text.Text("Plan.Invalid"));
-            }
-            var plan = await JsonSerializer.DeserializeAsync<ExecutionPlan>(stream, JsonOptions, cancellationToken).ConfigureAwait(false);
+            var bytes = await BoundedArtifactFile.ReadAsync(path, _limits.MaxPlanBytes, text, cancellationToken).ConfigureAwait(false);
+            var plan = JsonSerializer.Deserialize<ExecutionPlan>(bytes, JsonOptions);
             Validate(plan!);
             if (plan!.Id != id)
             {
@@ -101,20 +98,21 @@ public sealed class PlanStore(AppPaths paths, ISensitiveDataRedactor redactor, I
     public void Validate(ExecutionPlan plan)
     {
         if (plan is null || plan.Version != 1 || !Guid.TryParseExact(plan.Id, "N", out _)
-            || !ValidText(plan.Goal, 16_000) || !ValidText(plan.Directory, 4096)
+            || !ValidText(plan.Goal, _limits.MaxPlanBytes) || !ValidText(plan.Directory, 4096)
             || !Path.IsPathFullyQualified(plan.Directory) || plan.Steps is null || plan.Steps.Count is < 1 or > 8)
         {
             throw new InvalidOperationException(text.Text("Plan.Invalid"));
         }
         foreach (var step in plan.Steps)
         {
-            if (step is null || !ValidText(step.Label, 160) || !ValidText(step.Command, 4096)
-                || !ValidText(step.Verification, 4096) || !ValidText(step.Expected, 2000)
+            if (step is null || !ValidText(step.Label, 160) || !ValidText(step.Command, _limits.MaxPlanBytes)
+                || !ValidText(step.Verification, _limits.MaxPlanBytes) || !ValidText(step.Expected, _limits.MaxPlanBytes)
                 || !Enum.IsDefined(step.Status))
             {
                 throw new InvalidOperationException(text.Text("Plan.Invalid"));
             }
         }
+        BoundedArtifactFile.CheckSize(JsonSerializer.SerializeToUtf8Bytes(plan, JsonOptions).Length, _limits.MaxPlanBytes, text);
     }
 
     /// <summary>Resolves only opaque generated identifiers inside the local plan directory.</summary>

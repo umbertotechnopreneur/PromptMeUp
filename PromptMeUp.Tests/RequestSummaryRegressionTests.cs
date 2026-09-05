@@ -53,9 +53,9 @@ public sealed class RequestSummaryRegressionTests
 
         var summary = await fixture.Database.GetAiRequestSummaryAsync(default);
 
-        var expectedRequests = today.Day == 1 ? 3 : 2;
-        Assert.Equal(5m, summary.EstimatedCostCurrentMonthUsd);
-        Assert.Equal(today.Day == 1 ? 5m : 3m, summary.EstimatedCostTodayUsd);
+        var expectedRequests = today.Day == 1 ? 4 : 3;
+        Assert.Equal(905m, summary.EstimatedCostCurrentMonthUsd);
+        Assert.Equal(today.Day == 1 ? 905m : 903m, summary.EstimatedCostTodayUsd);
         Assert.Equal(expectedRequests, summary.RequestsToday);
         Assert.Equal(expectedRequests * 10L, summary.InputTokensToday);
         Assert.Equal(expectedRequests * 2L, summary.OutputTokensToday);
