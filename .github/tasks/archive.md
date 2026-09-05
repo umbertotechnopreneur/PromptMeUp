@@ -2,6 +2,11 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-05 — PR #20 Windows Unicode output
+
+- Fixed the large-source PowerShell bootstrap to emit UTF-8 explicitly. The Windows CI runner otherwise replaced Vietnamese characters with question marks; parent-side UTF-8 decoding cannot recover them.
+- Preserved the existing Unicode assertions, command preview, and exit behavior. Local tests and builds were deferred at the user's request; the PR's existing CI covers the correction.
+
 ## 2026-09-05 — Current executable, PATH, and concise documentation
 
 - Uninstalled the previous MSI and installed the verified current portable build in the user's stable application directory. PATH selects this copy, which survives repository build cleanup.

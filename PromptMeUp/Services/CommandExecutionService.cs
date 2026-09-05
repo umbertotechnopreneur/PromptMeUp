@@ -57,7 +57,7 @@ public sealed class CommandExecutionService : ICommandExecutionService
         startInfo.ArgumentList.Add("-NonInteractive");
         startInfo.ArgumentList.Add("-Command");
         startInfo.ArgumentList.Add(command.Length > 8_000
-            ? "[Console]::InputEncoding = [Text.UTF8Encoding]::new($false); Invoke-Expression ([Console]::In.ReadToEnd()); if (-not $?) { exit 1 }"
+            ? "[Console]::InputEncoding = [Text.UTF8Encoding]::new($false); [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); Invoke-Expression ([Console]::In.ReadToEnd()); if (-not $?) { exit 1 }"
             : command);
         return startInfo;
     }
