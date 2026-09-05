@@ -47,12 +47,12 @@ public sealed class SqliteDatabaseService : IDatabaseService
 {
     internal const string AiRequestSummarySql = """
         SELECT
-            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN estimated_cost_microusd ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $month THEN estimated_cost_microusd ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN 1 ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN input_tokens ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN output_tokens ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN success = 1 AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN total_tokens ELSE 0 END), 0)
+            COALESCE(SUM(CASE WHEN occurred_unix >= $today AND occurred_unix < $tomorrow THEN estimated_cost_microusd ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN occurred_unix >= $month THEN estimated_cost_microusd ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN (success = 1 OR total_tokens > 0) AND occurred_unix >= $today AND occurred_unix < $tomorrow THEN 1 ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN occurred_unix >= $today AND occurred_unix < $tomorrow THEN input_tokens ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN occurred_unix >= $today AND occurred_unix < $tomorrow THEN output_tokens ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN occurred_unix >= $today AND occurred_unix < $tomorrow THEN total_tokens ELSE 0 END), 0)
         FROM ai_requests
         WHERE occurred_unix >= $month;
         """;

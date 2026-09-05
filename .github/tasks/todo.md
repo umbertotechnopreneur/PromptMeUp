@@ -1,3 +1,3 @@
 ## Task
 
-No active implementation tasks. Completed work and validation are recorded in [the archive](archive.md).
+- [ ] Remove ignored local package, IDE, and smoke-test directories. Standard .NET cleanup completed; recursive directory deletion was blocked by the execution policy.

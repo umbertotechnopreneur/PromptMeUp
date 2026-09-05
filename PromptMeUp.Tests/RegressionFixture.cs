@@ -39,14 +39,15 @@ internal sealed class RegressionFixture : IDisposable
     }
 
     /// <summary>Constructs the actual provider service with local HTTP responses and deterministic runtime facts.</summary>
-    internal OpenAiService CreateOpenAi(HttpClient http, ILogger<OpenAiService>? logger = null) => new(
+    internal OpenAiService CreateOpenAi(HttpClient http, ILogger<OpenAiService>? logger = null, IDatabaseService? database = null,
+        string promptId = "query-system", ArtifactLimits? limits = null) => new(
         http, Secrets,
         TestProxy.Create<IPromptCatalogService>((_, _) => Task.FromResult(new PromptDefinition(
-            "query-system", 1, "Synthetic regression prompt", [],
+            promptId, 1, "Synthetic regression prompt", [],
             new Dictionary<string, string> { ["en"] = "Answer the user's question." }, new Dictionary<string, string>()))),
         TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("~", "test", "PowerShell 7", "test", "test", "test")),
-        Database, new AiCostCalculator(), Audit, new SensitiveDataRedactor(), new PromptInjectionProtectionService(),
-        logger ?? NullLogger<OpenAiService>.Instance);
+        database ?? Database, new AiCostCalculator(), Audit, new SensitiveDataRedactor(), new PromptInjectionProtectionService(),
+        logger ?? NullLogger<OpenAiService>.Instance, limits);
 
     /// <summary>Executes fixture-only SQL with bound values and returns its scalar result.</summary>
     internal async Task<object?> ScalarAsync(string sql, params (string Name, object Value)[] parameters)

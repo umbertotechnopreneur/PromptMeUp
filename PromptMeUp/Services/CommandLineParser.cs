@@ -318,6 +318,11 @@ public sealed class CommandLineParser : ICommandLineParser
             return Failure("Cli.QueryText");
         }
 
+        if (query is not null && !string.Equals(query, new SensitiveDataRedactor().Redact(query), StringComparison.Ordinal))
+        {
+            return Failure("Input.SecretArgument");
+        }
+
         if (dryRun && command != AppCommand.InstallFont)
         {
             return Failure("Cli.DryRunScope");

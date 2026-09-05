@@ -10,6 +10,9 @@ public sealed record AppStatus(
     string DatabasePath,
     string LogsDirectory,
     string PromptDirectory,
-    int PromptCount);
+    int PromptCount)
+{
+    public ArtifactLimits ArtifactLimits { get; init; } = ArtifactLimits.Default;
+}
 
 public sealed record FontInstallResult(bool Changed, bool DryRun, string FontName, string Message);

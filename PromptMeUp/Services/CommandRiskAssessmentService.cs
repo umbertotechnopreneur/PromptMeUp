@@ -59,8 +59,8 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
             var score = Math.Max(local.Score, ai.Score);
             var level = ScoreToLevel(score);
             var advisory = local.Score > ai.Score
-                ? Translate(language, "La regola locale più prudente ha prevalso sul punteggio AI.", "The more conservative local rule overrode the AI score.")
-                : Translate(language, "La revisione AI è consultiva: controlla comunque il comando.", "The AI review is advisory: inspect the command yourself.");
+                ? Translate(language, "Risk.LocalWins")
+                : Translate(language, "Risk.Advisory");
             return new CommandRiskAssessment(score, level, ai.DescriptionMarkdown, true, advisory);
         }
         catch (Exception exception) when (exception is OpenAiRequestException or HttpRequestException or JsonException)
@@ -68,7 +68,7 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
             _logger.LogWarning("Optional AI command review failed; local assessment retained. ErrorType={ErrorType}", exception.GetType().Name);
             return local with
             {
-                Advisory = Translate(language, "Revisione AI non disponibile; è mostrata la valutazione locale.", "AI review unavailable; showing the local assessment.")
+                Advisory = Translate(language, "Risk.Unavailable")
             };
         }
     }
@@ -78,33 +78,30 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
     {
         var normalized = command.Trim();
         var score = 35;
-        var effect = Translate(language, "Il comando può modificare lo stato del sistema; verifica argomenti e percorso.", "The command may change system state; verify its arguments and path.");
+        var effect = Translate(language, "Risk.Unknown");
 
         if (CriticalPattern().IsMatch(normalized))
         {
             score = 95;
-            effect = Translate(language, "Sono state rilevate operazioni distruttive, di arresto o ad ampio raggio.", "Destructive, shutdown, or broad-scope operations were detected.");
+            effect = Translate(language, "Risk.Critical");
         }
         else if (HighPattern().IsMatch(normalized))
         {
             score = 75;
-            effect = Translate(language, "Sono state rilevate modifiche a file, repository, servizi o configurazione di sistema.", "File, repository, service, or system-configuration changes were detected.");
+            effect = Translate(language, "Risk.High");
         }
         else if (MediumPattern().IsMatch(normalized))
         {
             score = 50;
-            effect = Translate(language, "Sono state rilevate attività di rete, installazione o avvio di processi.", "Network, installation, or process-launch activity was detected.");
+            effect = Translate(language, "Risk.Medium");
         }
         else if (IsReadOnlyCommand(normalized))
         {
             score = 15;
-            effect = Translate(language, "Il comando appare prevalentemente diagnostico o in sola lettura.", "The command appears primarily diagnostic or read-only.");
+            effect = Translate(language, "Risk.Low");
         }
 
-        var description = Translate(
-            language,
-            $"## Valutazione locale\n\n- **Effetto rilevato:** {effect}\n- **Stato:** anteprima soltanto; il comando non è ancora stato eseguito.",
-            $"## Local review\n\n- **Detected effect:** {effect}\n- **State:** preview only; the command has not run yet.");
+        var description = Translate(language, "Risk.Description", effect);
         return new CommandRiskAssessment(score, ScoreToLevel(score), description, false, null);
     }
 
@@ -117,9 +114,16 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
         _ => CommandRiskLevel.Low
     };
 
-    /// <summary>Uses Italian text for Italian and an English fallback understood in every supported locale.</summary>
-    private static string Translate(string language, string italian, string english) =>
-        string.Equals(SupportedLanguages.Normalize(language), "it", StringComparison.Ordinal) ? italian : english;
+    /// <summary>Resolves local risk copy through the shared six-language catalog.</summary>
+    private static string Translate(string language, string key, params object?[] args)
+    {
+        var normalized = SupportedLanguages.Normalize(language);
+        if (!FeatureText.TryGet(key, normalized, out var template))
+        {
+            throw new InvalidOperationException("Missing risk-review translation.");
+        }
+        return string.Format(SupportedLanguages.Culture(normalized), template, args);
+    }
 
     /// <summary>Recognizes only complete inspection shapes without evaluation, pipelines, redirects, or unknown Git options.</summary>
     private static bool IsReadOnlyCommand(string command)

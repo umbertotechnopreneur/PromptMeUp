@@ -80,6 +80,15 @@ SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and sc
 
 JSON payloads are validated before insertion. Credential-shaped properties and string values are redacted. SQLite errors are logged; provider results are not replaced by secondary telemetry failures.
 
+## Artifact and helper boundaries
+
+Artifacts use matching read/write limits and a separate generation budget; see
+[configuration](CLI_REFERENCE.md#configure-artifact-limits).
+
+Commands and font helpers share bounded process I/O and cancellation cleanup.
+Large approved commands travel over standard input. Font checks time out after
+15 seconds; installation after two minutes. Command approval remains mandatory.
+
 ## Short-term memory
 
 Each query or chat receives an isolated `ConversationMemory`. It keeps recent user/assistant messages only, caps user-input size, reserves instruction space, and removes oldest complete turns when the turn or token budget is exceeded. Completed answers are rendered before memory pruning; an oversized completed turn can be dropped entirely from future context. It does not summarize or vectorize history.
