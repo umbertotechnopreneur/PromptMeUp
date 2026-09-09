@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-06 — Automatic formatting fixes before the CI gate
+
+- Added `scripts/format.ps1` with applying and read-only verification modes.
+- Updated the quality workflow to apply supported `dotnet format` fixes before the final formatting check and summarize runner-only changes.
+- Documented the local workflow in `CONTRIBUTING.md` and `docs/VALIDATION.md`.
+
+Validation: preflight, restore, automatic formatting, formatting verification, XML method comments, Release build with 0 warnings/errors, 216/216 tests, CLI `--version`/`--help`/`--third-party` smoke checks, and `git diff --check` passed.
+
 ## 2026-09-05 — PR #20 Windows Unicode output
 
 - Fixed the large-source PowerShell bootstrap to emit UTF-8 explicitly. The Windows CI runner otherwise replaced Vietnamese characters with question marks; parent-side UTF-8 decoding cannot recover them.
