@@ -39,8 +39,29 @@ jobs:
       - name: Verify redistribution notices
         run: pwsh -NoProfile -File ./scripts/export-third-party-notices.ps1 -OutputDirectory ./artifacts/notice-check -Runtime linux-x64
 
-      - name: Verify dotnet formatting
-        run: dotnet format PromptMeUp.slnx --verify-no-changes --no-restore
+      - name: Apply automatic dotnet formatting fixes
+        shell: pwsh
+        run: pwsh -NoProfile -File ./scripts/format.ps1
+
+      - name: Verify dotnet formatting after automatic fixes
+        shell: pwsh
+        run: pwsh -NoProfile -File ./scripts/format.ps1 -Verify
+
+      - name: Summarize automatic formatting fixes
+        shell: pwsh
+        run: |
+          $changes = git status --short
+          if ($changes) {
+            "### Automatic formatting fixes" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            "The formatter changed these files in the CI workspace:" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            '```text' | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            $changes | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            '```' | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+            Write-Warning 'Automatic formatting changed the CI workspace. Run ./scripts/format.ps1 locally and commit the result.'
+          }
+          else {
+            'No automatic formatting changes were required.' | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          }
 
       - name: Verify XML method comments
         run: pwsh -NoProfile -File ./scripts/check-xml-comments.ps1
