@@ -11,7 +11,7 @@ alwaysApply: true
 - Write repository documentation, README copy, contributor guidance, code comments, and project artwork text in English. Keep runtime UI and prompt translations in all six supported languages.
 - Preserve `Models` / `Services` / `Views` / `Application` boundaries. Views never own HTTP, SQLite, secret storage, or process execution.
 - Put runtime AI instructions in `/prompt` as versioned metadata-rich YAML with `it`, `en`, `fr`, `de`, `es`, and `vi` text.
-- Every shell command requires exact preview and explicit per-command authorization. Local risk scoring always runs; AI review is advisory only.
+- Local risk scoring always runs; AI review is advisory only.
 - Execute application-authorized commands without elevation through `pwsh -NoProfile -NonInteractive`, with timeout and bounded output. `--yes` must never authorize chat commands.
 - Never accept or persist secrets through command arguments, settings, SQLite, logs, tests, screenshots, or docs. Redact recognizable credentials before persistence or provider-bound command output.
 - Use `ILogger<T>` in application code and configure Serilog only in the composition root.

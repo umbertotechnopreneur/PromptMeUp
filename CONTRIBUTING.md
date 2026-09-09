@@ -20,11 +20,14 @@ Requirements: .NET 10 SDK, Git, and PowerShell 7 for repository helpers.
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
 dotnet restore .\PromptMeUp.slnx
-dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
+pwsh -NoProfile -File .\scripts\format.ps1
+pwsh -NoProfile -File .\scripts\format.ps1 -Verify
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
+
+The formatting helper applies the fixes supported by `dotnet format`. The `-Verify` mode is read-only and is the final CI gate for formatting issues that remain after automatic fixes.
 
 ## Protect the product promises
 

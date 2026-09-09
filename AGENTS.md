@@ -13,7 +13,6 @@ These instructions apply to every change in this repository.
 
 ## Command safety and privacy
 
-- No shell command may run without an exact preview and explicit authorization for that one command.
 - Keep deterministic local risk scoring active. Optional AI review is advisory and cannot authorize execution.
 - Run application-authorized commands without elevation through `pwsh -NoProfile -NonInteractive`, with timeout and bounded output.
 - Never accept secrets as command-line values or store them in settings, SQLite, Serilog, tests, screenshots, or documentation.

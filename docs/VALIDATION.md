@@ -7,13 +7,14 @@ Every PromptMeUp change should preserve the same experience: readable output, ex
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
 dotnet restore .\PromptMeUp.slnx
-dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
+pwsh -NoProfile -File .\scripts\format.ps1
+pwsh -NoProfile -File .\scripts\format.ps1 -Verify
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. It runs the repository preflight, verifies formatting and XML comments, then builds and tests on Windows, Linux, and macOS.
+The formatting helper applies supported fixes before the read-only verification step. The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. It runs the repository preflight, applies and verifies formatting, checks XML comments, then builds and tests on Windows, Linux, and macOS.
 
 Regression tests cover quoted/serialized JSON credentials, provider-bound command output, rejected and legacy preambles, Serilog exception privacy, HTTP body deadlines and limits, inherited process pipes, conservative command risk, long-answer visibility, Unix shell context, model-specific pricing bands, and indexed request summaries. HTTP and credential providers are synthetic; process tests run only inert PowerShell output/sleep commands and clean up their test child. The review-to-test mapping is recorded in [the September 2 review](../.github/tasks/review-2026-09-02.md).
 
