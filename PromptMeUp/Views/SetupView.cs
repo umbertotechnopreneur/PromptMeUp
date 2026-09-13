@@ -62,7 +62,7 @@ public sealed class SetupView : ISetupView
         var language = _console.Prompt(
             new SelectionPrompt<SupportedLanguage>()
                 .Title(Markup.Escape(_text.Text("Setup.Language")))
-                .UseConverter(item => $"{Markup.Escape(item.NativeName)}  [{TerminalTheme.Muted}]({Markup.Escape(item.Code)})[/]")
+                .UseConverter(item => FormatLanguageChoice(item, _shell.Options))
                 .AddChoices(languageChoices));
         _text.SetLanguage(language.Code);
 
@@ -219,7 +219,7 @@ public sealed class SetupView : ISetupView
             _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(subtitle)}[/]");
         }
 
-        _console.MarkupLine($"[mediumpurple2]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Accent}]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
         _console.WriteLine();
     }
 
@@ -268,7 +268,7 @@ public sealed class SetupView : ISetupView
             .Title(Markup.Escape(_text.Text("Setup.Model")))
             .PageSize(8)
             .UseConverter(model => $"[bold {TerminalTheme.Primary}]{Markup.Escape(model.DisplayName)}[/]  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text($"Model.{model.Id}"))}[/]")
-            .HighlightStyle(new Style(Color.MediumPurple2))
+            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
             .AddChoices(choices);
 
         return _console.Prompt(prompt);
@@ -276,6 +276,15 @@ public sealed class SetupView : ISetupView
 
     /// <summary>Returns only the stable model identifier selected from the model choices.</summary>
     private string PromptForModel(string currentModel) => PromptForModelDescriptor(currentModel).Id;
+
+    /// <summary>Formats one language choice with its country flag and stable language code.</summary>
+    internal static string FormatLanguageChoice(SupportedLanguage item, ConsoleRenderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(options);
+        return $"{Markup.Escape(TerminalTheme.IconPrefix(options, item.Flag, "@"))}" +
+            $"{Markup.Escape(item.NativeName)}  [{TerminalTheme.Muted}]({Markup.Escape(item.Code)})[/]";
+    }
 
     /// <summary>Collects one integer setting while showing its accepted inclusive range.</summary>
     private int PromptForBoundedInteger(string key, int current, int minimum, int maximum) =>

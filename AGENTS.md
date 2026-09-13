@@ -28,6 +28,7 @@ These instructions apply to every change in this repository.
 - Keep flexible audit/session data valid JSON and normalized usage/cost data in typed columns.
 - Preserve terminal scrollback in every application flow: never call a terminal clear operation. Mark new flows with intentional whitespace and accessible separators instead.
 - Treat contrast as a product requirement: do not render user-facing information in dark grey. Use the shared terminal palette, with bright primary text and only high-contrast muted nuances for secondary metadata.
+- Render every user-facing emoji with one visible space before and after it; keep emoji spacing in shared view helpers so icons never touch adjacent text.
 - Use Spectre.Console layout primitives purposefully (for example panels, grids, rules, and selection prompts) to convey hierarchy; do not reduce command, help, or status surfaces to undifferentiated text walls.
 - Keep `AGENTS.md` and `.github/copilot-instructions.md` aligned when repository-wide rules change.
 - Do not commit credentials, `.env` files, local databases, logs, build output, private absolute paths, or generated artifacts.

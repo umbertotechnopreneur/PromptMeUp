@@ -4,18 +4,18 @@ using System.Globalization;
 
 namespace PromptMeUp.Services;
 
-public sealed record SupportedLanguage(string Code, string NativeName, string CultureName);
+public sealed record SupportedLanguage(string Code, string NativeName, string CultureName, string Flag);
 
 public static class SupportedLanguages
 {
     public static IReadOnlyList<SupportedLanguage> All { get; } =
     [
-        new("it", "Italiano", "it-IT"),
-        new("en", "English", "en-US"),
-        new("fr", "Français", "fr-FR"),
-        new("de", "Deutsch", "de-DE"),
-        new("es", "Español", "es-ES"),
-        new("vi", "Tiếng Việt", "vi-VN")
+        new("it", "Italiano", "it-IT", "🇮🇹"),
+        new("en", "English", "en-US", "🇺🇸"),
+        new("fr", "Français", "fr-FR", "🇫🇷"),
+        new("de", "Deutsch", "de-DE", "🇩🇪"),
+        new("es", "Español", "es-ES", "🇪🇸"),
+        new("vi", "Tiếng Việt", "vi-VN", "🇻🇳")
     ];
 
     public static IReadOnlyList<string> Codes { get; } = All.Select(language => language.Code).ToArray();

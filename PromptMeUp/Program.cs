@@ -39,12 +39,14 @@ internal static class Program
             shutdown.Cancel();
         };
         Console.CancelKeyPress += cancelHandler;
+        IConsoleShellView? shell = null;
 
         try
         {
             var services = new ServiceCollection();
             ConfigureServices(services, paths, shutdown.Token);
             await using var provider = services.BuildServiceProvider();
+            shell = provider.GetRequiredService<IConsoleShellView>();
             return await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
@@ -64,7 +66,14 @@ internal static class Program
         finally
         {
             Console.CancelKeyPress -= cancelHandler;
-            await Log.CloseAndFlushAsync();
+            try
+            {
+                shell?.RenderFooter();
+            }
+            finally
+            {
+                await Log.CloseAndFlushAsync();
+            }
         }
     }
 

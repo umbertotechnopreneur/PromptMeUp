@@ -78,6 +78,7 @@ public sealed class HelpView(
                 ("--yes, -y", text.Text("Help.Yes")),
                 ("--dry-run", text.Text("Help.DryRun"))
             ]);
+        shell.RenderProjectBanner();
     }
 
     /// <summary>Renders one cohesive command category without turning the help screen into a flat flag dump.</summary>
@@ -127,7 +128,7 @@ public sealed class MainMenuView(
             new SelectionPrompt<MainMenuAction>()
             .Title($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Main.Choose"))}[/]")
             .PageSize(12)
-            .HighlightStyle(new Style(Color.MediumPurple2))
+            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
             .UseConverter(Label)
             .AddChoices(
                 MainMenuAction.Query,

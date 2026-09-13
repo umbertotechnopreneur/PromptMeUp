@@ -47,7 +47,7 @@ public sealed class CommandSuggestionView(
             new SelectionPrompt<MenuEntry>()
                 .Title($"[bold {TerminalTheme.Primary}]{Markup.Escape(text.Text("CommandMenu.Choose"))}[/]")
                 .PageSize(Math.Min(12, entries.Count))
-                .HighlightStyle(new Style(Color.MediumPurple2))
+                .HighlightStyle(Style.Parse(TerminalTheme.Accent))
                 .UseConverter(Label)
                 .AddChoices(entries));
         return new CommandSuggestionDecision(selected.Action, selected.Command);

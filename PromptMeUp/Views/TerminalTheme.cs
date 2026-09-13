@@ -7,7 +7,7 @@ namespace PromptMeUp.Views;
 
 internal static class TerminalTheme
 {
-    internal const string Accent = "mediumpurple2";
+    internal const string Accent = "lightskyblue1";
     internal const string Info = "deepskyblue1";
     internal const string Primary = "white";
     internal const string Muted = "grey78";
@@ -23,9 +23,9 @@ internal static class TerminalTheme
         return options.NoEmoji ? fallback : icon;
     }
 
-    /// <summary>Returns an icon followed by a non-breaking space so labels never touch their visual cue.</summary>
+    /// <summary>Returns a visual icon with visible surrounding spaces, or an ASCII fallback followed by a non-breaking space.</summary>
     internal static string IconPrefix(ConsoleRenderOptions options, string icon, string fallback) =>
-        $"{Icon(options, icon, fallback)}\u00A0";
+        options.NoEmoji ? $"{Icon(options, icon, fallback)}\u00A0" : $" {Icon(options, icon, fallback)} ";
 
     /// <summary>Creates one compact label-value metric for a dense, frameless session summary.</summary>
     internal static CompactTerminalMetric CompactMetric(string label, string value, string valueColor = Primary) =>

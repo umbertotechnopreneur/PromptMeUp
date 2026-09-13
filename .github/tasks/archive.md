@@ -2,6 +2,49 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-13 — Repository checkpoint validation
+
+- Reviewed the accumulated console presentation, language flags, Windows key guidance, shared project banner, and MSI directory-cleanup changes before publishing the repository checkpoint.
+- Confirmed that the four findings in the September 13 review remain tracked separately.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, 225/225 tests, and 15 isolated CLI smoke checks passed. Smoke checks covered help/status in all six languages, version output, invalid arguments, and missing setup; they verified one project banner per invocation and preserved terminal scrollback. No real credentials, provider requests, PATH changes, or font changes were used.
+
+## 2026-09-13 — Current directory and shared project banner
+
+- Added a dedicated current-directory row to the invocation header, supplied by the application and escaped for terminal display.
+- Added `RenderProjectBanner` with localized thanks for using hm (help me), a GitHub star/suggestion invitation, the repository link, and linked copyright attribution.
+- Reused the banner at the end of help and on process exit without duplicate output; normal, application-error, and initialization-error exits retain their expected exit codes.
+- Reviewed the new UI and existing credential, authorization, execution, and redaction paths. Four open findings are documented in [the September 13 code review](review-2026-09-13.md) and tracked separately in the active task list.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, and 225/225 tests passed. Fifteen isolated CLI smoke checks covered help/status in all six languages, invalid arguments, missing setup, and invalid startup configuration. Narrow-terminal, literal bracketed-path, emoji-option, and banner-deduplication rendering tests passed. No real provider requests, credential changes, PATH changes, or font changes were made. The installed application was not replaced.
+
+## 2026-09-13 — API key session-restart guidance
+
+- Added localized restart guidance after API or admin key changes on Windows, where an existing terminal can retain a stale process environment value.
+- Added the same guidance to HTTP 401 authentication failures and locally detected missing or invalid API keys without changing unrelated provider errors.
+- Covered authentication, non-authentication, and non-Windows error rendering with focused regression tests.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, and 221/221 tests passed.
+
+## 2026-09-13 — Updated per-user MSI installation
+
+- Downloaded the official WiX Toolset 3.14.1 binaries for an isolated, non-administrator build after the system installer required elevation and .NET Framework 3.5.
+- Repaired MSI harvesting for container-only payload directories by attaching uninstall cleanup to a descendant component.
+- Built and WinGet-validated the current x64 portable ZIP and per-user MSI, then verified the MSI against `SHA256SUMS.txt`.
+- Installed the MSI successfully, removed the obsolete portable PATH entry and moved its versioned directory to the Recycle Bin.
+- Verified MSI registration, the stable `%LOCALAPPDATA%\Programs\PromptMeUp` executable, exactly one user PATH entry, no machine PATH entry, and the installed six-flag setup menu.
+
+Validation: MSI SHA-256 is `EF4BB8C0EB908CFB3265156C31225CD361C4FDFA1EBADA75AC2284A3F314A151`; Windows Installer returned exit code `0`; preflight, restore, formatting verification, XML comments, Release build with 0 warnings/errors, 218/218 tests, packaged smoke tests, WinGet validation, and installed interactive setup smoke passed.
+
+## 2026-09-13 — Emoji spacing, language flags, and light accent
+
+- Standardized user-facing emoji rendering with one visible space before and after every icon while preserving compact ASCII fallbacks for `--no-emoji`.
+- Added country-flag emoji to all six language choices in setup.
+- Replaced the purple accent and selection highlight with the shared very-light near-cyan `lightskyblue1` color.
+- Added the emoji-spacing rule to both repository-wide instruction files and regression coverage for spacing and flags.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, 218/218 tests, isolated CLI `--version`/`--help`/`--status` smoke checks, and emoji-enabled rendering passed.
+
 ## 2026-09-06 — Automatic formatting fixes before the CI gate
 
 - Added `scripts/format.ps1` with applying and read-only verification modes.

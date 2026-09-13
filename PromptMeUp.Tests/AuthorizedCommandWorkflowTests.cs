@@ -353,7 +353,7 @@ public sealed class AuthorizedCommandWorkflowTests
         public void Configure(ConsoleRenderOptions options) => Options = options;
 
         /// <summary>Rejects unexpected header rendering in this focused workflow fixture.</summary>
-        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey) =>
+        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey, string currentDirectory) =>
             throw new InvalidOperationException("Header rendering is outside this workflow.");
 
         /// <summary>Rejects unexpected runtime-status rendering in this focused workflow fixture.</summary>
@@ -364,8 +364,12 @@ public sealed class AuthorizedCommandWorkflowTests
         public Task<T> RunWithStatusAsync<T>(string message, Func<Task<T>> action) => action();
 
         /// <summary>Rejects unexpected footer rendering in this focused workflow fixture.</summary>
-        public void RenderFooter(string command) =>
+        public void RenderFooter() =>
             throw new InvalidOperationException("Footer rendering is outside this workflow.");
+
+        /// <summary>Rejects unexpected project-banner rendering in this focused workflow fixture.</summary>
+        public void RenderProjectBanner() =>
+            throw new InvalidOperationException("Project-banner rendering is outside this workflow.");
 
         /// <summary>Rejects unexpected error rendering in this focused workflow fixture.</summary>
         public void RenderError(string message) =>

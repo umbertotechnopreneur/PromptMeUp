@@ -259,7 +259,11 @@ function ConvertTo-PerUserHarvest {
     foreach ($directory in $userDirectories) {
         $component = $directory.SelectSingleNode('w:Component', $namespaceManager)
         if ($null -eq $component) {
-            throw "Harvested user directory '$($directory.Id)' has no direct component for uninstall cleanup."
+            # A container-only directory can share the uninstall action of its first harvested descendant.
+            $component = $directory.SelectSingleNode('.//w:Component', $namespaceManager)
+        }
+        if ($null -eq $component) {
+            throw "Harvested user directory '$($directory.Id)' has no component for uninstall cleanup."
         }
 
         $removeFolder = $document.CreateElement('RemoveFolder', $namespace)

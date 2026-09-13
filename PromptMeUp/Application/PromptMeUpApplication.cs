@@ -120,10 +120,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         var parse = _parser.Parse(args);
         if (!parse.Succeeded)
         {
-            _shell.RenderHeader("?", null, false);
+            _shell.RenderHeader("?", null, false, Environment.CurrentDirectory);
             _shell.RenderError(parse.Error ?? _text.Text("Cli.Invalid"));
             _helpView.Render();
-            _shell.RenderFooter("invalid");
             return 2;
         }
 
@@ -136,7 +135,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         settings = settings with { Language = _text.Language };
         var hasApiKey = _secrets.IsConfigured(settings.ApiKeyVariable);
         var commandName = ToCommandName(options.Command);
-        _shell.RenderHeader(commandName, settings, hasApiKey);
+        _shell.RenderHeader(commandName, settings, hasApiKey, Environment.CurrentDirectory);
 
         try
         {
@@ -151,20 +150,17 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             }
 
             var exitCode = await DispatchAsync(options, settings, promptCount, cancellationToken).ConfigureAwait(false);
-            _shell.RenderFooter(commandName);
             return exitCode;
         }
         catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _shell.RenderNotice(_text.Text("Common.Cancelled"));
             await TryAuditAsync(commandName, "cancelled", null, new { reason = "escape" }).ConfigureAwait(false);
-            _shell.RenderFooter(commandName);
             return 0;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _shell.RenderNotice(_text.Text("Common.Cancelled"));
-            _shell.RenderFooter(commandName);
             return 130;
         }
         catch (Exception exception) when (exception is OpenAiRequestException
@@ -175,9 +171,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                                           or ConversationLimitException)
         {
             _logger.LogWarning("PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}", commandName, exception.GetType().Name);
-            _shell.RenderError(exception.Message);
+            _shell.RenderError(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
             await TryAuditAsync(commandName, "failed", null, new { error = exception.GetType().Name }).ConfigureAwait(false);
-            _shell.RenderFooter(commandName);
             return 1;
         }
     }
@@ -269,12 +264,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         if (!IsInteractive)
         {
             _shell.RenderError(_text.Text("Error.SetupRequired"));
-            _shell.RenderFooter("setup");
             return 2;
         }
 
         var result = await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
-        _shell.RenderFooter("setup");
         return result;
     }
 
@@ -309,6 +302,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         foreach (var guidance in secretGuidance)
         {
             _shell.RenderMuted(guidance);
+        }
+        if (secretGuidance.Count > 0 && OperatingSystem.IsWindows())
+        {
+            _shell.RenderWarning(_text.Text("Setup.KeyRestartRequired"));
         }
         await TryAuditAsync(
             "setup",
@@ -543,8 +540,31 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
         if (!_secrets.IsConfigured(settings.ApiKeyVariable))
         {
-            throw new InvalidOperationException(_text.Text("Error.ApiKeyMissing", settings.ApiKeyVariable));
+            throw new InvalidOperationException(AppendKeyRestartHint(
+                _text.Text("Error.ApiKeyMissing", settings.ApiKeyVariable),
+                _text,
+                OperatingSystem.IsWindows()));
         }
+    }
+
+    /// <summary>Adds the localized terminal-restart guidance to Windows authentication failures.</summary>
+    internal static string FormatErrorMessage(Exception exception, ILocalizationService text, bool isWindows)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(text);
+        return exception is OpenAiRequestException { StatusCode: 401 }
+            ? AppendKeyRestartHint(exception.Message, text, isWindows)
+            : exception.Message;
+    }
+
+    /// <summary>Appends the localized key-refresh guidance when Windows may retain a stale process value.</summary>
+    internal static string AppendKeyRestartHint(string message, ILocalizationService text, bool isWindows)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        ArgumentNullException.ThrowIfNull(text);
+        return isWindows
+            ? $"{message}{Environment.NewLine}{text.Text("Error.KeyRestartRequired")}"
+            : message;
     }
 
     /// <summary>Requires a live terminal for forms and authorization prompts.</summary>

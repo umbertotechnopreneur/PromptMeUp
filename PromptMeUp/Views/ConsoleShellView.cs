@@ -13,13 +13,15 @@ public interface IConsoleShellView
 
     void Configure(ConsoleRenderOptions options);
 
-    void RenderHeader(string command, AppSettings? settings, bool hasApiKey);
+    void RenderHeader(string command, AppSettings? settings, bool hasApiKey, string currentDirectory);
 
     void RenderRuntimeStatus(ShellRuntimeStatus status);
 
     Task<T> RunWithStatusAsync<T>(string message, Func<Task<T>> action);
 
-    void RenderFooter(string command);
+    void RenderFooter();
+
+    void RenderProjectBanner();
 
     void RenderError(string message);
 
@@ -42,8 +44,10 @@ public interface IConsoleShellView
 
 public sealed class ConsoleShellView : IConsoleShellView
 {
+    private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
+    private bool _projectBannerRendered;
 
     /// <summary>Creates the shared premium console chrome used by every top-level command.</summary>
     public ConsoleShellView(IAnsiConsole console, ILocalizationService text)
@@ -58,8 +62,9 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void Configure(ConsoleRenderOptions options) => Options = options;
 
     /// <summary>Draws a compact product and invocation header while preserving prior terminal output.</summary>
-    public void RenderHeader(string command, AppSettings? settings, bool hasApiKey)
+    public void RenderHeader(string command, AppSettings? settings, bool hasApiKey, string currentDirectory)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(currentDirectory);
         var invocation = command.Equals("main", StringComparison.OrdinalIgnoreCase)
             ? "hm"
             : $"hm {command}";
@@ -70,6 +75,12 @@ public sealed class ConsoleShellView : IConsoleShellView
             $"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Footer.Command"))}:[/] [bold {TerminalTheme.Primary}]{Markup.Escape(invocation)}[/]");
 
         RenderHeaderContext(command, settings, hasApiKey);
+        _console.Write(TerminalTheme.PairGrid(
+            [TerminalTheme.CompactMetric(
+                TerminalTheme.IconPrefix(Options, "📂", ">") + _text.Text("Shell.CurrentDirectory"),
+                currentDirectory)],
+            preferredPairs: 1,
+            width: _console.Profile.Width));
         _console.WriteLine();
     }
 
@@ -127,11 +138,29 @@ public sealed class ConsoleShellView : IConsoleShellView
             .ConfigureAwait(false);
     }
 
-    /// <summary>Leaves a deliberate blank boundary before control returns to the host terminal.</summary>
-    public void RenderFooter(string command)
+    /// <summary>Displays the shared project banner on exit unless help has already shown it.</summary>
+    public void RenderFooter() => RenderProjectBanner();
+
+    /// <summary>Renders the localized thanks, project links, and copyright once per invocation.</summary>
+    public void RenderProjectBanner()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(command);
+        if (_projectBannerRendered)
+        {
+            return;
+        }
+        var content = new Grid();
+        content.AddColumn();
+        content.AddRow(new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(_text.Text("Footer.Thanks"))}[/]"));
+        content.AddRow(new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Footer.Support"))}[/]"));
+        content.AddRow(new Markup($"[{TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"));
+        content.AddRow(new Markup($"[{TerminalTheme.Muted}]Copyright (c) [link=https://umbertogiacobbi.biz]umbertogiacobbi.biz[/][/]"));
         _console.WriteLine();
+        _console.Write(new Panel(content)
+            .Header(TerminalTheme.IconPrefix(Options, "👋", "*") + "hm · help me")
+            .Border(BoxBorder.Rounded)
+            .BorderStyle(Style.Parse(TerminalTheme.Accent)));
+        _console.WriteLine();
+        _projectBannerRendered = true;
     }
 
     /// <summary>Shows a sanitized frameless error without exposing exception internals.</summary>
@@ -181,7 +210,6 @@ public sealed class ConsoleShellView : IConsoleShellView
     /// <summary>Renders product, runtime, source, and safety details as a compact frameless About section.</summary>
     public void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier)
     {
-        const string repositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
         const string websiteUrl = "https://umbertogiacobbi.biz";
         const string motto = "Yet another CLI AI assistant :-)";
         var icon = TerminalTheme.IconPrefix(Options, "✨", "*");
@@ -197,7 +225,7 @@ public sealed class ConsoleShellView : IConsoleShellView
         links.AddColumn(new GridColumn().LeftAligned());
         links.AddRow(
             new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("About.Repository"))}:[/]"),
-            new Markup($"[link={repositoryUrl}]{Markup.Escape(repositoryUrl)}[/]"));
+            new Markup($"[link={RepositoryUrl}]{Markup.Escape(RepositoryUrl)}[/]"));
         links.AddRow(
             new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("About.Website"))}:[/]"),
             new Markup($"[link={websiteUrl}]{Markup.Escape(websiteUrl)}[/]"));
