@@ -2,6 +2,17 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-13 — Shared workflow, storage, and localization behavior
+
+- Centralized audit session lifecycles with typed outcomes and cancellation-independent cleanup; script validation now records its actual result.
+- Shared chat turn submission and action handling while retaining completed-turn cost across recoverable input-limit failures.
+- Reused settings-summary formatting and atomic artifact writes, preserving row order, encoding, validation, and explicit overwrite policies.
+- Consolidated 396 UI keys into nine functional catalogs with six named translations per key; static source comparison preserved all 2,376 effective translations.
+- Extracted setup and installation workflows from the invocation orchestrator and shared non-session activity recording.
+- Preserved unrelated local privacy fixes and documentation changes outside the refactoring commit, including their relocated translation entries.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors. Existing localization test source was adapted and compiled; automated tests and CLI smoke tests were not run because they were not requested.
+
 ## 2026-09-13 — Bounded memories, context accounting, and AI settings
 
 - Added explicit project/global memories with local relevance selection, credential protection, and an 800-estimated-token request envelope.

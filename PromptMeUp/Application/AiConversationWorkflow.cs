@@ -87,49 +87,29 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         ArgumentNullException.ThrowIfNull(settings);
-        var sessionId = Guid.NewGuid().ToString("N");
         var memory = new ConversationState(_memoryService.Create(settings));
-        await _audit.StartSessionAsync(sessionId, promptId, settings, new { invocation = promptId }, cancellationToken).ConfigureAwait(false);
-        var status = "failed";
-        var runningCost = 0m;
-        try
+        await using var session = await AuditSessionScope.StartAsync(
+            _audit, promptId, settings, new { invocation = promptId }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
+        if (renderQuery)
         {
-            if (renderQuery)
-            {
-                _chatView.RenderUser(query);
-            }
-            var turn = await SendTurnAsync(
-                sessionId,
-                query,
-                memory,
-                settings,
-                runningCost,
-                promptId,
-                cancellationToken).ConfigureAwait(false);
-            runningCost += turn.Cost;
-            var action = await OfferSuggestedActionsAsync(
-                sessionId,
-                turn.Response,
-                memory,
-                settings,
-                runningCost,
-                offerChatContinuation: IsInteractive,
-                promptId: promptId,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            runningCost = action.RunningCost;
-            if (action.StartChat)
-            {
-                _chatView.RenderIntro();
-                status = await RunChatLoopAsync(sessionId, memory, settings, runningCost, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                status = "completed";
-            }
+            _chatView.RenderUser(query);
         }
-        finally
+        var action = await SendAndOfferActionsAsync(
+            session.Id,
+            query,
+            memory,
+            settings,
+            offerChatContinuation: IsInteractive,
+            promptId,
+            cancellationToken).ConfigureAwait(false);
+        if (action.StartChat)
         {
-            await _audit.CloseSessionAsync(sessionId, status, CancellationToken.None).ConfigureAwait(false);
+            _chatView.RenderIntro();
+            session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            session.Outcome = AuditSessionOutcome.Completed;
         }
     }
 
@@ -137,31 +117,20 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     public async Task RunChatAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        var sessionId = Guid.NewGuid().ToString("N");
         var memory = new ConversationState(_memoryService.Create(settings));
-        var runningCost = 0m;
-        var status = "cancelled";
-        await _audit.StartSessionAsync(sessionId, "chat", settings, new { invocation = "chat" }, cancellationToken).ConfigureAwait(false);
+        await using var session = await AuditSessionScope.StartAsync(
+            _audit, "chat", settings, new { invocation = "chat" }, AuditSessionOutcome.Cancelled, cancellationToken).ConfigureAwait(false);
         _chatView.RenderIntro();
-        try
-        {
-            status = await RunChatLoopAsync(sessionId, memory, settings, runningCost, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            await _audit.CloseSessionAsync(sessionId, status, CancellationToken.None).ConfigureAwait(false);
-        }
+        session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Runs user chat turns until exit while keeping every command path behind the authorization workflow.</summary>
-    private async Task<string> RunChatLoopAsync(
+    private async Task<AuditSessionOutcome> RunChatLoopAsync(
         string sessionId,
         ConversationState memory,
         AppSettings settings,
-        decimal initialRunningCost,
         CancellationToken cancellationToken)
     {
-        var runningCost = initialRunningCost;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -171,14 +140,14 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
                 {
                     _shell.RenderMuted(_text.Text("Chat.Exit"));
-                    return "completed";
+                    return AuditSessionOutcome.Completed;
                 }
                 if (input.Equals("/clear", StringComparison.OrdinalIgnoreCase))
                 {
                     memory.Memory.Clear();
                     await _audit.AppendSessionEventAsync(sessionId, "memory_cleared", new { }, cancellationToken).ConfigureAwait(false);
                     _shell.RenderMuted(_text.Text("Chat.Cleared"));
-                    await RenderActiveSnapshotAsync(sessionId, memory, settings, runningCost, "chat-system", cancellationToken).ConfigureAwait(false);
+                    await RenderActiveSnapshotAsync(sessionId, memory, settings, memory.RunningCost, "chat-system", cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 if (input.Equals("/costs", StringComparison.OrdinalIgnoreCase))
@@ -189,12 +158,12 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 if (input.Equals("/status", StringComparison.OrdinalIgnoreCase)
                     || input.Equals("/context", StringComparison.OrdinalIgnoreCase))
                 {
-                    await RenderActiveSnapshotAsync(sessionId, memory, settings, runningCost, "chat-system", cancellationToken).ConfigureAwait(false);
+                    await RenderActiveSnapshotAsync(sessionId, memory, settings, memory.RunningCost, "chat-system", cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 if (await HandleMemoryCommandAsync(input, cancellationToken).ConfigureAwait(false))
                 {
-                    await RenderActiveSnapshotAsync(sessionId, memory, settings, runningCost, "chat-system", cancellationToken).ConfigureAwait(false);
+                    await RenderActiveSnapshotAsync(sessionId, memory, settings, memory.RunningCost, "chat-system", cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 if (TryParseRunCommand(input, out var command))
@@ -212,25 +181,14 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                         cancellationToken).ConfigureAwait(false);
                     if (commandFollowUp is not null)
                     {
-                        var turn = await SendTurnAsync(
+                        await SendAndOfferActionsAsync(
                             sessionId,
                             commandFollowUp,
                             memory,
                             settings,
-                            runningCost,
+                            offerChatContinuation: false,
                             "chat-system",
                             cancellationToken).ConfigureAwait(false);
-                        runningCost += turn.Cost;
-                        var action = await OfferSuggestedActionsAsync(
-                            sessionId,
-                            turn.Response,
-                            memory,
-                            settings,
-                            runningCost,
-                            offerChatContinuation: false,
-                            promptId: "chat-system",
-                            cancellationToken: cancellationToken).ConfigureAwait(false);
-                        runningCost = action.RunningCost;
                     }
                     continue;
                 }
@@ -239,31 +197,39 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                     continue;
                 }
 
-                var userTurn = await SendTurnAsync(
+                await SendAndOfferActionsAsync(
                     sessionId,
                     input,
                     memory,
                     settings,
-                    runningCost,
+                    offerChatContinuation: false,
                     "chat-system",
                     cancellationToken).ConfigureAwait(false);
-                runningCost += userTurn.Cost;
-                var selectedAction = await OfferSuggestedActionsAsync(
-                    sessionId,
-                    userTurn.Response,
-                    memory,
-                    settings,
-                    runningCost,
-                    offerChatContinuation: false,
-                    promptId: "chat-system",
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-                runningCost = selectedAction.RunningCost;
             }
             catch (ConversationLimitException)
             {
                 _shell.RenderError(_text.Text("Chat.ContextLimit"));
             }
         }
+    }
+
+    /// <summary>Sends one turn and offers its actions while retaining completed-turn cost if a follow-up fails.</summary>
+    private async Task<PostResponseAction> SendAndOfferActionsAsync(
+        string sessionId,
+        string userText,
+        ConversationState memory,
+        AppSettings settings,
+        bool offerChatContinuation,
+        string promptId,
+        CancellationToken cancellationToken)
+    {
+        var turn = await SendTurnAsync(
+            sessionId, userText, memory, settings, memory.RunningCost, promptId, cancellationToken).ConfigureAwait(false);
+        memory.RunningCost += turn.Cost;
+        var action = await OfferSuggestedActionsAsync(
+            sessionId, turn.Response, memory, settings, memory.RunningCost, offerChatContinuation, promptId, cancellationToken).ConfigureAwait(false);
+        memory.RunningCost = action.RunningCost;
+        return action;
     }
 
     /// <summary>Presents model-suggested commands as inert choices and optionally converts a one-shot answer into chat.</summary>
@@ -619,6 +585,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         public ConversationMemory Memory { get; } = memory;
 
         public AiResponse? LastResponse { get; set; }
+
+        public decimal RunningCost { get; set; }
     }
 
     private sealed record MemoryEnvelope(ChatMessage? Message, int Count, long Tokens);

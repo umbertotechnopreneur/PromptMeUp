@@ -158,6 +158,9 @@ internal static class Program
         services.AddSingleton<RecipeStore>();
         services.AddSingleton<IRecipeView, RecipeView>();
         services.AddSingleton<RecipeWorkflow>();
+        services.AddSingleton<ApplicationActivityRecorder>();
+        services.AddSingleton<SetupWorkflow>();
+        services.AddSingleton<InstallationWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }

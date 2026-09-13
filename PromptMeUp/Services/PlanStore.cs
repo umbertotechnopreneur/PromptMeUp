@@ -79,19 +79,8 @@ public sealed class PlanStore(AppPaths paths, ISensitiveDataRedactor redactor, I
         Validate(plan);
         var path = Resolve(plan.Id);
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(plan, JsonOptions), cancellationToken).ConfigureAwait(false);
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        await AtomicFileWriter.WriteAllTextAsync(path, JsonSerializer.Serialize(plan, JsonOptions),
+            overwrite: true, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Checks supported schema, bounded content, valid progress states, and credential-free plan data.</summary>

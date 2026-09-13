@@ -20,20 +20,12 @@ public sealed class ArtifactAssistant(
         request = promptId == "script-system"
             ? input.SanitizeUtf8(request, (limits ?? ArtifactLimits.Default).ScriptRequestBytes(settings.MaxMessageCharacters))
             : input.Sanitize(request, settings.MaxMessageCharacters);
-        var sessionId = Guid.NewGuid().ToString("N");
-        var status = "failed";
-        await audit.StartSessionAsync(sessionId, promptId, settings, new { invocation = promptId }, cancellationToken).ConfigureAwait(false);
-        try
-        {
-            var response = await shell.RunWithStatusAsync(text.Text("Status.Thinking"),
-                () => openAi.SendAsync(promptId, sessionId, [new ChatMessage("user", request)], settings, settings.Language, cancellationToken)).ConfigureAwait(false);
-            shell.RenderRuntimeStatus(AiConversationWorkflow.CreateTurnSnapshot(response, settings, response.EstimatedCostUsd ?? 0));
-            status = "completed";
-            return response;
-        }
-        finally
-        {
-            await audit.CloseSessionAsync(sessionId, status, CancellationToken.None).ConfigureAwait(false);
-        }
+        await using var session = await AuditSessionScope.StartAsync(
+            audit, promptId, settings, new { invocation = promptId }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
+        var response = await shell.RunWithStatusAsync(text.Text("Status.Thinking"),
+            () => openAi.SendAsync(promptId, session.Id, [new ChatMessage("user", request)], settings, settings.Language, cancellationToken)).ConfigureAwait(false);
+        shell.RenderRuntimeStatus(AiConversationWorkflow.CreateTurnSnapshot(response, settings, response.EstimatedCostUsd ?? 0));
+        session.Outcome = AuditSessionOutcome.Completed;
+        return response;
     }
 }

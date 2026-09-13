@@ -44,16 +44,7 @@ public sealed class ScriptWorkflow(
                         }
                         break;
                     case ScriptAction.Validate:
-                        var session = Guid.NewGuid().ToString("N");
-                        await audit.StartSessionAsync(session, "script-validation", settings, new { }, cancellationToken).ConfigureAwait(false);
-                        try
-                        {
-                            await commands.RunForResultAsync(session, ScriptArtifactService.BuildValidationCommand(artifact.Source), settings, cancellationToken).ConfigureAwait(false);
-                        }
-                        finally
-                        {
-                            await audit.CloseSessionAsync(session, "completed", CancellationToken.None).ConfigureAwait(false);
-                        }
+                        await ValidateAsync(artifact.Source, settings, cancellationToken).ConfigureAwait(false);
                         shell.RenderNotice(text.Text("Script.ValidationNote"));
                         break;
                     case ScriptAction.Revise:
@@ -66,5 +57,20 @@ public sealed class ScriptWorkflow(
             }
         NextRevision:;
         }
+    }
+
+    /// <summary>Audits validation according to its authorized execution result while preserving failures during cleanup.</summary>
+    private async Task ValidateAsync(string source, AppSettings settings, CancellationToken cancellationToken)
+    {
+        await using var session = await AuditSessionScope.StartAsync(
+            audit, "script-validation", settings, new { }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
+        var result = await commands.RunForResultAsync(
+            session.Id, ScriptArtifactService.BuildValidationCommand(source), settings, cancellationToken).ConfigureAwait(false);
+        session.Outcome = result switch
+        {
+            null => AuditSessionOutcome.Cancelled,
+            { TimedOut: false, ExitCode: 0 } => AuditSessionOutcome.Completed,
+            _ => AuditSessionOutcome.Failed
+        };
     }
 }

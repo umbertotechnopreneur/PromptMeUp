@@ -391,9 +391,8 @@ public sealed class SetupView : ISetupView
     /// <summary>Renders the setup choices as a compact borderless summary before saving.</summary>
     private void RenderSummary(AppSettings settings, bool hasApiKey, bool hasAdminKey)
     {
-        var grid = new Grid();
-        grid.AddColumn(new GridColumn().RightAligned().NoWrap());
-        grid.AddColumn(new GridColumn().LeftAligned());
+        var grid = CreateSummaryGrid();
+        var aiValues = CreateAiSummaryValues(settings);
         var yes = _text.Text("Common.Yes");
         var no = _text.Text("Common.No");
         var ready = _text.Text("Status.Ready");
@@ -402,25 +401,15 @@ public sealed class SetupView : ISetupView
             grid,
             _text.Text("Setup.Language"),
             SupportedLanguages.All.First(item => item.Code == settings.Language).NativeName);
-        AddSummaryRow(grid, _text.Text("Setup.AiEnabled"), settings.AiEnabled ? yes : no);
+        AddAiSummaryRows(grid, aiValues, "Setup.AiEnabled");
         AddSummaryRow(grid, _text.Text("Status.ApiKey"), hasApiKey ? ready : missing);
         AddSummaryRow(grid, _text.Text("Status.AdminKey"), hasAdminKey ? ready : missing);
-        AddSummaryRow(grid, _text.Text("Setup.Model"), settings.Model);
-        AddSummaryRow(grid, _text.Text("Setup.Reasoning"), _text.Text($"Reasoning.{settings.ReasoningEffort}"));
-        AddSummaryRow(grid, _text.Text("Setup.Detail"), _text.Text(settings.OutputDetail switch
-        {
-            "compact" => "Setup.Compact",
-            "detailed" => "Setup.Detailed",
-            _ => "Setup.Balanced"
-        }));
+        AddAiSummaryRows(grid, aiValues, "Setup.Model", "Setup.Reasoning", "Setup.Detail");
         AddSummaryRow(grid, _text.Text("Setup.Custom"), string.IsNullOrWhiteSpace(settings.CustomInstruction) ? no : yes);
         AddSummaryRow(grid, _text.Text("Setup.Location"), settings.IncludeWindowsLocation ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.CommandReview"), settings.ReviewCommandsWithAi ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.PromptCaching"), settings.PromptCachingEnabled ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.MaxTurns"), settings.MaxConversationTurns.ToString("N0", _text.Culture));
-        AddSummaryRow(grid, _text.Text("Setup.MaxContext"), $"{settings.MaxContextPercent}%");
-        AddSummaryRow(grid, _text.Text("AiSettings.ContextBudget"), settings.ContextTokenBudget.ToString("N0", _text.Culture));
-        AddSummaryRow(grid, _text.Text("Setup.MaxMessage"), settings.MaxMessageCharacters.ToString("N0", _text.Culture));
+        AddAiSummaryRows(grid, aiValues,
+            "Setup.CommandReview", "Setup.PromptCaching", "Setup.MaxTurns", "Setup.MaxContext",
+            "AiSettings.ContextBudget", "Setup.MaxMessage");
         AddSummaryRow(grid, _text.Text("Setup.MaxCommandOutput"), settings.MaxCommandOutputCharacters.ToString("N0", _text.Culture));
         AddSummaryRow(grid, _text.Text("Setup.CommandTimeout"), settings.CommandTimeoutSeconds.ToString("N0", _text.Culture));
         _console.Write(grid);
@@ -430,28 +419,56 @@ public sealed class SetupView : ISetupView
     /// <summary>Previews only the AI preferences that the focused settings command will save.</summary>
     private void RenderAiSummary(AppSettings settings)
     {
+        var grid = CreateSummaryGrid();
+        AddAiSummaryRows(grid, CreateAiSummaryValues(settings),
+            "Setup.AiEnabled", "Setup.Model", "Setup.Reasoning", "Setup.Detail",
+            "Setup.CommandReview", "Setup.PromptCaching", "AiSettings.ContextBudget",
+            "Setup.MaxTurns", "Setup.MaxMessage", "Setup.MaxContext");
+        _console.Write(grid);
+        _console.WriteLine();
+    }
+
+    /// <summary>Creates the shared borderless label/value layout for both settings summaries.</summary>
+    private static Grid CreateSummaryGrid()
+    {
         var grid = new Grid();
         grid.AddColumn(new GridColumn().RightAligned().NoWrap());
         grid.AddColumn(new GridColumn().LeftAligned());
+        return grid;
+    }
+
+    /// <summary>Formats each shared AI preference once while leaving row order to its summary surface.</summary>
+    private IReadOnlyDictionary<string, string> CreateAiSummaryValues(AppSettings settings)
+    {
         var yes = _text.Text("Common.Yes");
         var no = _text.Text("Common.No");
-        AddSummaryRow(grid, _text.Text("Setup.AiEnabled"), settings.AiEnabled ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.Model"), settings.Model);
-        AddSummaryRow(grid, _text.Text("Setup.Reasoning"), _text.Text($"Reasoning.{settings.ReasoningEffort}"));
-        AddSummaryRow(grid, _text.Text("Setup.Detail"), _text.Text(settings.OutputDetail switch
+        return new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            "compact" => "Setup.Compact",
-            "detailed" => "Setup.Detailed",
-            _ => "Setup.Balanced"
-        }));
-        AddSummaryRow(grid, _text.Text("Setup.CommandReview"), settings.ReviewCommandsWithAi ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.PromptCaching"), settings.PromptCachingEnabled ? yes : no);
-        AddSummaryRow(grid, _text.Text("AiSettings.ContextBudget"), settings.ContextTokenBudget.ToString("N0", _text.Culture));
-        AddSummaryRow(grid, _text.Text("Setup.MaxTurns"), settings.MaxConversationTurns.ToString("N0", _text.Culture));
-        AddSummaryRow(grid, _text.Text("Setup.MaxMessage"), settings.MaxMessageCharacters.ToString("N0", _text.Culture));
-        AddSummaryRow(grid, _text.Text("Setup.MaxContext"), $"{settings.MaxContextPercent}%");
-        _console.Write(grid);
-        _console.WriteLine();
+            ["Setup.AiEnabled"] = settings.AiEnabled ? yes : no,
+            ["Setup.Model"] = settings.Model,
+            ["Setup.Reasoning"] = _text.Text($"Reasoning.{settings.ReasoningEffort}"),
+            ["Setup.Detail"] = _text.Text(settings.OutputDetail switch
+            {
+                "compact" => "Setup.Compact",
+                "detailed" => "Setup.Detailed",
+                _ => "Setup.Balanced"
+            }),
+            ["Setup.CommandReview"] = settings.ReviewCommandsWithAi ? yes : no,
+            ["Setup.PromptCaching"] = settings.PromptCachingEnabled ? yes : no,
+            ["AiSettings.ContextBudget"] = settings.ContextTokenBudget.ToString("N0", _text.Culture),
+            ["Setup.MaxTurns"] = settings.MaxConversationTurns.ToString("N0", _text.Culture),
+            ["Setup.MaxMessage"] = settings.MaxMessageCharacters.ToString("N0", _text.Culture),
+            ["Setup.MaxContext"] = $"{settings.MaxContextPercent}%"
+        };
+    }
+
+    /// <summary>Adds shared AI preferences in the exact order selected by the calling summary.</summary>
+    private void AddAiSummaryRows(Grid grid, IReadOnlyDictionary<string, string> values, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            AddSummaryRow(grid, _text.Text(key), values[key]);
+        }
     }
 
     /// <summary>Adds one escaped label/value pair to the setup summary grid.</summary>

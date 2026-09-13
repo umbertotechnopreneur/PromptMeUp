@@ -26,6 +26,10 @@ flowchart LR
 
 Dependencies are wired through `Microsoft.Extensions.DependencyInjection`. Application code consumes `ILogger<T>`; Serilog is configured only at the composition root.
 
+The invocation orchestrator delegates settings and credential forms to `SetupWorkflow` and reviewed PATH, executable-location, and font operations to `InstallationWorkflow`. `ApplicationActivityRecorder` shares best-effort non-session audit recording. `AuditSessionScope` opens and closes workflow sessions with explicit typed outcomes, including cleanup after cancellation.
+
+UI translations have one definition per key and language in the functionality-grouped `Services/Localization/UiTextCatalog.*.cs` files. Each entry names all six translations explicitly, and catalog assembly rejects duplicate keys. `LocalizationService` retains language selection and culture-aware formatting; runtime AI instructions remain in `/prompt`.
+
 ## From question to answer
 
 ```mermaid
@@ -84,6 +88,8 @@ JSON payloads are validated before insertion. Credential-shaped properties and s
 
 Artifacts use matching read/write limits and a separate generation budget; see
 [configuration](CLI_REFERENCE.md#configure-artifact-limits).
+
+Plans, recipes, and scripts share `AtomicFileWriter` for temporary-file publication and cleanup. Callers retain validation and localized errors and explicitly select overwrite behavior: plans replace progress files, while recipes and scripts require a new destination.
 
 Commands and font helpers share bounded process I/O and cancellation cleanup.
 Large approved commands travel over standard input. Font checks time out after

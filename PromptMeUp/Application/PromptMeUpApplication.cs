@@ -28,21 +28,16 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly PlanWorkflow _plans;
     private readonly FilePreviewWorkflow _filePreview;
     private readonly RecipeWorkflow _recipes;
-    private readonly IActivityAuditService _audit;
-    private readonly IPortablePathService _pathService;
-    private readonly IExecutableLocationService _executableLocation;
-    private readonly INerdFontInstallerService _fontInstaller;
+    private readonly ApplicationActivityRecorder _activity;
+    private readonly SetupWorkflow _setup;
+    private readonly InstallationWorkflow _installation;
     private readonly ILocalizationService _text;
     private readonly IConsoleShellView _shell;
-    private readonly ISetupView _setupView;
     private readonly IStatusView _statusView;
     private readonly ICostsView _costsView;
     private readonly IHelpView _helpView;
     private readonly IMainMenuView _mainMenuView;
     private readonly IThirdPartyView _thirdPartyView;
-    private readonly IPortablePathView _pathView;
-    private readonly IExecutableLocationView _executableLocationView;
-    private readonly INerdFontView _fontView;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
     private readonly ArtifactLimits _artifactLimits;
@@ -61,21 +56,16 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         PlanWorkflow plans,
         FilePreviewWorkflow filePreview,
         RecipeWorkflow recipes,
-        IActivityAuditService audit,
-        IPortablePathService pathService,
-        IExecutableLocationService executableLocation,
-        INerdFontInstallerService fontInstaller,
+        ApplicationActivityRecorder activity,
+        SetupWorkflow setup,
+        InstallationWorkflow installation,
         ILocalizationService text,
         IConsoleShellView shell,
-        ISetupView setupView,
         IStatusView statusView,
         ICostsView costsView,
         IHelpView helpView,
         IMainMenuView mainMenuView,
         IThirdPartyView thirdPartyView,
-        IPortablePathView pathView,
-        IExecutableLocationView executableLocationView,
-        INerdFontView fontView,
         AppPaths paths,
         ILogger<PromptMeUpApplication> logger,
         ArtifactLimits? artifactLimits = null)
@@ -92,21 +82,16 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _plans = plans;
         _filePreview = filePreview;
         _recipes = recipes;
-        _audit = audit;
-        _pathService = pathService;
-        _executableLocation = executableLocation;
-        _fontInstaller = fontInstaller;
+        _activity = activity;
+        _setup = setup;
+        _installation = installation;
         _text = text;
         _shell = shell;
-        _setupView = setupView;
         _statusView = statusView;
         _costsView = costsView;
         _helpView = helpView;
         _mainMenuView = mainMenuView;
         _thirdPartyView = thirdPartyView;
-        _pathView = pathView;
-        _executableLocationView = executableLocationView;
-        _fontView = fontView;
         _paths = paths;
         _logger = logger;
         _artifactLimits = artifactLimits ?? ArtifactLimits.Default;
@@ -158,7 +143,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _shell.RenderNotice(_text.Text("Common.Cancelled"));
-            await TryAuditAsync(commandName, "cancelled", null, new { reason = "escape" }).ConfigureAwait(false);
+            await _activity.TryRecordAsync(commandName, "cancelled", null, new { reason = "escape" }).ConfigureAwait(false);
             return 0;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -175,7 +160,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         {
             _logger.LogWarning("PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}", commandName, exception.GetType().Name);
             _shell.RenderError(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
-            await TryAuditAsync(commandName, "failed", null, new { error = exception.GetType().Name }).ConfigureAwait(false);
+            await _activity.TryRecordAsync(commandName, "failed", null, new { error = exception.GetType().Name }).ConfigureAwait(false);
             return 1;
         }
     }
@@ -250,13 +235,13 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 _thirdPartyView.Render();
                 return 0;
             case AppCommand.Where:
-                return await RunWhereAsync(cancellationToken).ConfigureAwait(false);
+                return await _installation.RunWhereAsync(IsInteractive, cancellationToken).ConfigureAwait(false);
             case AppCommand.InstallFont:
                 EnsureInteractiveUnlessPreauthorized(options.Yes || options.DryRun);
-                return await RunFontAsync(options, cancellationToken).ConfigureAwait(false);
+                return await _installation.RunFontAsync(options, cancellationToken).ConfigureAwait(false);
             case AppCommand.Path:
                 EnsureInteractiveUnlessPreauthorized(options.Yes || options.PathAction == "status");
-                return await RunPathAsync(options, cancellationToken).ConfigureAwait(false);
+                return await _installation.RunPathAsync(options, cancellationToken).ConfigureAwait(false);
             default:
                 EnsureInteractive();
                 return await RunMainMenuAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
@@ -276,7 +261,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         return result;
     }
 
-    /// <summary>Edits only AI preferences after initial setup without touching secrets or other configuration.</summary>
+    /// <summary>Checks initial setup and terminal access before editing focused AI preferences.</summary>
     private async Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken)
     {
         if (!current.SetupCompleted)
@@ -286,99 +271,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
 
         EnsureInteractive();
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS")))
-        {
-            _shell.RenderNotice(_text.Text("AiSettings.ContextOverride"));
-        }
-        var selected = _setupView.CollectAiSettings(current);
-        if (selected is null)
-        {
-            _shell.RenderNotice(_text.Text("Setup.Cancelled"));
-            await TryAuditAsync("ai-settings", "cancelled", null, new { }).ConfigureAwait(false);
-            return 0;
-        }
-
-        var updated = current with
-        {
-            AiEnabled = selected.AiEnabled,
-            Model = selected.Model,
-            ReasoningEffort = selected.ReasoningEffort,
-            OutputDetail = selected.OutputDetail,
-            ReviewCommandsWithAi = selected.ReviewCommandsWithAi,
-            PromptCachingEnabled = selected.PromptCachingEnabled,
-            MaxConversationTurns = selected.MaxConversationTurns,
-            MaxMessageCharacters = selected.MaxMessageCharacters,
-            MaxContextPercent = selected.MaxContextPercent,
-            ContextTokenBudget = selected.ContextTokenBudget,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
-        await _settings.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
-        _shell.RenderSuccess(_text.Text("AiSettings.Saved"));
-        await TryAuditAsync("ai-settings", "completed", null, new
-        {
-            updated.AiEnabled,
-            updated.Model,
-            updated.ReasoningEffort,
-            updated.ContextTokenBudget
-        }).ConfigureAwait(false);
-        return 0;
+        return await _setup.RunAiSettingsAsync(current, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Collects setup settings, persists secrets safely, saves preferences, and optionally tests OpenAI.</summary>
+    /// <summary>Requires a live terminal before collecting setup settings and credentials.</summary>
     private async Task<int> RunSetupAsync(AppSettings current, CancellationToken cancellationToken)
     {
         EnsureInteractive();
-        var submission = _setupView.Collect(new SetupViewState(
-            current,
-            _secrets.IsConfigured(current.ApiKeyVariable),
-            _secrets.IsConfigured(current.AdminKeyVariable)));
-        if (submission is null)
-        {
-            _shell.RenderNotice(_text.Text("Setup.Cancelled"));
-            await TryAuditAsync("setup", "cancelled", null, new { }).ConfigureAwait(false);
-            return 0;
-        }
-
-        var secretGuidance = new List<string>();
-        if (submission.ApiKey is not null)
-        {
-            secretGuidance.Add(_secrets.StoreForCurrentUser(submission.Settings.ApiKeyVariable, submission.ApiKey).Guidance);
-        }
-        if (submission.AdminKey is not null)
-        {
-            secretGuidance.Add(_secrets.StoreForCurrentUser(submission.Settings.AdminKeyVariable, submission.AdminKey).Guidance);
-        }
-
-        await _settings.SaveAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
-        _text.SetLanguage(submission.Settings.Language);
-        _shell.RenderSuccess(_text.Text("Setup.Saved"));
-        foreach (var guidance in secretGuidance)
-        {
-            _shell.RenderMuted(guidance);
-        }
-        if (secretGuidance.Count > 0 && OperatingSystem.IsWindows())
-        {
-            _shell.RenderWarning(_text.Text("Setup.KeyRestartRequired"));
-        }
-        await TryAuditAsync(
-            "setup",
-            "completed",
-            null,
-            new
-            {
-                submission.Settings.Language,
-                submission.Settings.Model,
-                submission.Settings.ReasoningEffort,
-                submission.Settings.OutputDetail,
-                submission.Settings.PromptCachingEnabled,
-                submission.Settings.MaxConversationTurns,
-                submission.Settings.MaxContextPercent
-            }).ConfigureAwait(false);
-        if (submission.TestConnection)
-        {
-            await _conversationWorkflow.RunConnectionTestAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
-        }
-        return 0;
+        return await _setup.RunAsync(current, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Builds and renders the current application status from local services.</summary>
@@ -395,73 +295,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             promptCount)
         { ArtifactLimits = _artifactLimits };
         _statusView.Render(status);
-        await TryAuditAsync("status", "completed", null, new { promptCount }).ConfigureAwait(false);
-    }
-
-    /// <summary>Runs the persistent PATH status or mutation flow after displaying its exact target.</summary>
-    private async Task<int> RunPathAsync(CommandLineOptions options, CancellationToken cancellationToken)
-    {
-        var action = options.PathAction is null
-            ? _pathView.SelectAction()
-            : ParsePathAction(options.PathAction);
-        var plan = _pathService.CreatePlan(action);
-        var confirmed = _pathView.PreviewAndConfirm(plan, options.Yes);
-        if (action != PortablePathAction.Status && plan.RequiresChange && !(confirmed || options.Yes))
-        {
-            await TryAuditAsync("path", "cancelled", null, new { action, plan.ExecutableDirectory }).ConfigureAwait(false);
-            return 0;
-        }
-
-        var result = await _pathService.ApplyAsync(plan, cancellationToken).ConfigureAwait(false);
-        _pathView.RenderResult(result);
-        await TryAuditAsync("path", "completed", null, new { action, result.Changed, result.IsPresent, result.ExecutableDirectory }).ConfigureAwait(false);
-        return 0;
-    }
-
-    /// <summary>Shows the running hm location and optionally opens its containing folder after exact authorization.</summary>
-    private async Task<int> RunWhereAsync(CancellationToken cancellationToken)
-    {
-        var location = _executableLocation.Resolve();
-        var action = _executableLocationView.RenderAndSelect(location, IsInteractive);
-        if (action == ExecutableLocationAction.DoNothing)
-        {
-            await TryAuditAsync("where", "cancelled", null, new { location.ExecutablePath }).ConfigureAwait(false);
-            return 0;
-        }
-
-        if (action == ExecutableLocationAction.OpenContainingFolder)
-        {
-            if (!_executableLocationView.ConfirmOpen(location))
-            {
-                _executableLocationView.RenderResult(location, ExecutableLocationAction.ShowChangeDirectoryCommand);
-                await TryAuditAsync("where", "cancelled", null, new { location.ExecutablePath }).ConfigureAwait(false);
-                return 0;
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            _executableLocation.OpenContainingFolder(location);
-        }
-
-        _executableLocationView.RenderResult(location, action);
-        await TryAuditAsync("where", "completed", null, new { action, location.ExecutablePath }).ConfigureAwait(false);
-        return 0;
-    }
-
-    /// <summary>Runs the optional Nerd Font helper only after preview and authorization.</summary>
-    private async Task<int> RunFontAsync(CommandLineOptions options, CancellationToken cancellationToken)
-    {
-        if (!_fontView.PreviewAndConfirm(options.DryRun, options.Yes || options.DryRun))
-        {
-            await TryAuditAsync("font", "cancelled", null, new { options.DryRun }).ConfigureAwait(false);
-            return 0;
-        }
-
-        var result = await _shell.RunWithStatusAsync(
-            _text.Text("Font.Progress"),
-            () => _fontInstaller.InstallAsync(options.DryRun, cancellationToken)).ConfigureAwait(false);
-        _fontView.RenderResult(result);
-        await TryAuditAsync("font", "completed", null, new { result.FontName, result.Changed, result.DryRun }).ConfigureAwait(false);
-        return 0;
+        await _activity.TryRecordAsync("status", "completed", null, new { promptCount }).ConfigureAwait(false);
     }
 
     /// <summary>Runs the interactive command center until the user exits.</summary>
@@ -515,13 +349,13 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                         await _conversationWorkflow.RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
                         break;
                     case MainMenuAction.Where:
-                        await RunWhereAsync(cancellationToken).ConfigureAwait(false);
+                        await _installation.RunWhereAsync(IsInteractive, cancellationToken).ConfigureAwait(false);
                         break;
                     case MainMenuAction.Path:
-                        await RunPathAsync(new CommandLineOptions(AppCommand.Path, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
+                        await _installation.RunPathAsync(new CommandLineOptions(AppCommand.Path, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
                         break;
                     case MainMenuAction.InstallFont:
-                        await RunFontAsync(new CommandLineOptions(AppCommand.InstallFont, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
+                        await _installation.RunFontAsync(new CommandLineOptions(AppCommand.InstallFont, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
                         break;
                     case MainMenuAction.ThirdParty:
                         _thirdPartyView.Render();
@@ -533,7 +367,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 _shell.RenderNotice(_text.Text("Common.Cancelled"));
-                await TryAuditAsync(
+                await _activity.TryRecordAsync(
                     action.ToString().ToLowerInvariant(),
                     "cancelled",
                     null,
@@ -558,7 +392,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
             if (force || result.PricesRefreshed || result.OrganizationCostRows > 0)
             {
-                await TryAuditAsync("pricing_refresh", "completed", null, result).ConfigureAwait(false);
+                await _activity.TryRecordAsync("pricing_refresh", "completed", null, result).ConfigureAwait(false);
             }
         }
         catch (Exception exception) when (exception is HttpRequestException or OpenAiRequestException or InvalidDataException or TaskCanceledException)
@@ -568,19 +402,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             {
                 _shell.RenderWarning(exception.Message);
             }
-        }
-    }
-
-    /// <summary>Records a non-session activity while allowing diagnostics to continue if auditing itself fails.</summary>
-    private async Task TryAuditAsync(string activity, string outcome, string? sessionId, object payload)
-    {
-        try
-        {
-            await _audit.RecordAsync(activity, outcome, sessionId, payload, CancellationToken.None).ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError("Activity audit persistence failed. Activity={Activity}, Outcome={Outcome}, ErrorType={ErrorType}", activity, outcome, exception.GetType().Name);
         }
     }
 
@@ -647,14 +468,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             Environment.Version.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
     }
-
-    /// <summary>Maps a CLI PATH verb to the portable service action.</summary>
-    private static PortablePathAction ParsePathAction(string action) => action switch
-    {
-        "install" => PortablePathAction.Install,
-        "remove" => PortablePathAction.Remove,
-        _ => PortablePathAction.Status
-    };
 
     /// <summary>Chooses commands where daily pricing is relevant and network access is expected.</summary>
     private static bool ShouldRefreshPricing(AppCommand command, AppSettings settings) =>

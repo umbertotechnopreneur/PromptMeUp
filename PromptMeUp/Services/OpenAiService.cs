@@ -247,7 +247,7 @@ public sealed class OpenAiService : IOpenAiService
         var inputLimit = OpenAiRequestBuilder.ResolveInputBudget(prompt, settings, maxOutputTokens, _contextLimits);
         if (estimatedContext.InputTokens > inputLimit)
         {
-            if (!FeatureText.TryGet("Input.ContextBudget", settings.Language, out var template))
+            if (!UiTextCatalog.TryGet("Input.ContextBudget", settings.Language, out var template))
             {
                 throw new InvalidOperationException("Missing context-budget translation.");
             }
