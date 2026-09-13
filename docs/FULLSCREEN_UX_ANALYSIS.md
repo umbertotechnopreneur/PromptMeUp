@@ -56,7 +56,7 @@ Fullscreen improves navigation and context; it does not remove the explicit auth
 | `--path install/remove` | Zero or one, depending on changes and `--yes` | Waterfall |
 | `--where` / `-where` | One selection, plus confirmation only for opening the directory; zero with redirect | Waterfall |
 | `--install-font` | One confirmation; zero with `--yes` or `--dry-run` | Waterfall |
-| `--status`, `--costs` | Zero prompts | Keep structured panels/tables in scrollback |
+| `--status`, `--costs` | Zero prompts | Keep open sections and tables in scrollback |
 | Help, version, third-party notices | Zero prompts | Waterfall |
 | `--test-ai` | No form collection | Waterfall progress/result |
 | `/memories`, `/remember`, `/forget` | No additional prompts beyond the chat command | Keep inline chat behavior |

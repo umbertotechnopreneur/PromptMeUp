@@ -9,6 +9,7 @@ public enum AppCommand
     Version,
     Setup,
     AiSettings,
+    Theme,
     Status,
     Query,
     Diagnose,
@@ -22,7 +23,8 @@ public enum AppCommand
     ThirdParty,
     Where,
     InstallFont,
-    Path
+    Path,
+    Lenna
 }
 
 public sealed record CommandLineOptions(

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PromptMeUp.Application;
 using PromptMeUp.Infrastructure;
+using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Views;
 using Serilog;
@@ -47,6 +48,17 @@ internal static class Program
             ConfigureServices(services, paths, shutdown.Token);
             await using var provider = services.BuildServiceProvider();
             shell = provider.GetRequiredService<IConsoleShellView>();
+            var text = provider.GetRequiredService<ILocalizationService>();
+            text.SetLanguage(SupportedLanguages.ResolveSystemLanguage());
+            var parse = provider.GetRequiredService<ICommandLineParser>().Parse(args);
+            if (parse.Succeeded && parse.Options!.Command == AppCommand.Lenna)
+            {
+                return provider.GetRequiredService<LennaWorkflow>().Run(parse.Options, shutdown.Token);
+            }
+            if (parse.Succeeded && parse.Options!.Command == AppCommand.Help)
+            {
+                return provider.GetRequiredService<HelpWorkflow>().Run(parse.Options, shutdown.Token);
+            }
             return await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
@@ -92,6 +104,7 @@ internal static class Program
         });
 
         services.AddSingleton<ICommandLineParser, CommandLineParser>();
+        services.AddSingleton<ILennaImageService, LennaImageService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton(provider => ArtifactLimitConfiguration.Load(
             Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
@@ -99,6 +112,7 @@ internal static class Program
             Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
         services.AddSingleton<IDatabaseService, SqliteDatabaseService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IThemeCatalogService>(_ => new ThemeCatalogService(Path.Combine(AppContext.BaseDirectory, "themes")));
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
         services.AddSingleton<ISensitiveDataRedactor, SensitiveDataRedactor>();
         services.AddSingleton<IPromptInjectionProtectionService, PromptInjectionProtectionService>();
@@ -127,13 +141,17 @@ internal static class Program
 
         services.AddSingleton<IConsoleShellView, ConsoleShellView>();
         services.AddSingleton<IPoorMarkdownRenderer, PoorMarkdownRenderer>();
-        services.AddSingleton<ISetupView, SetupView>();
+        services.AddSingleton<IThemeView, ThemeView>();
+        services.AddSingleton<SetupView>();
+        services.AddSingleton<FullscreenSetupView>();
+        services.AddSingleton<ISetupView, AdaptiveSetupView>();
         services.AddSingleton<IStatusView, StatusView>();
         services.AddSingleton<ICostsView, CostsView>();
         services.AddSingleton<IChatView, ChatView>();
         services.AddSingleton<IMemoryView, MemoryView>();
         services.AddSingleton<ICommandSuggestionView, CommandSuggestionView>();
         services.AddSingleton<IHelpView, HelpView>();
+        services.AddSingleton<ILennaView, LennaView>();
         services.AddSingleton<IMainMenuView, MainMenuView>();
         services.AddSingleton<ICommandAuthorizationView, CommandAuthorizationView>();
         services.AddSingleton<IThirdPartyView, ThirdPartyView>();
@@ -161,6 +179,8 @@ internal static class Program
         services.AddSingleton<ApplicationActivityRecorder>();
         services.AddSingleton<SetupWorkflow>();
         services.AddSingleton<InstallationWorkflow>();
+        services.AddSingleton<LennaWorkflow>();
+        services.AddSingleton<HelpWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }

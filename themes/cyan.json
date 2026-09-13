@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "cyan",
+  "name": "Cyan",
+  "colors": {
+    "background": "#081820",
+    "primary": "#F4FAFF",
+    "muted": "#BDCED8",
+    "accent": "#80DEEA",
+    "info": "#69D2FF",
+    "divider": "#7B9DAC",
+    "success": "#7CE6A2",
+    "warning": "#FFD479",
+    "error": "#FF9B9B",
+    "selectionBackground": "#80DEEA",
+    "selectionForeground": "#081820"
+  }
+}

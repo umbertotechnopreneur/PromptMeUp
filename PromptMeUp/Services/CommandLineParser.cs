@@ -156,10 +156,22 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(aiSettingsError);
                     }
                     break;
+                case "--theme":
+                    if (!TrySelect(AppCommand.Theme, ref command, ref commandWasSelected, out var themeError))
+                    {
+                        return FailureMessage(themeError);
+                    }
+                    break;
                 case "--status":
                     if (!TrySelect(AppCommand.Status, ref command, ref commandWasSelected, out var statusError))
                     {
                         return FailureMessage(statusError);
+                    }
+                    break;
+                case "--lenna":
+                    if (!TrySelect(AppCommand.Lenna, ref command, ref commandWasSelected, out var lennaError))
+                    {
+                        return FailureMessage(lennaError);
                     }
                     break;
                 case "--chat":
@@ -306,6 +318,14 @@ public sealed class CommandLineParser : ICommandLineParser
             }
         }
 
+        if (!commandWasSelected && queryParts.Count == 1
+            && queryParts[0].Equals("lenna", StringComparison.OrdinalIgnoreCase))
+        {
+            command = AppCommand.Lenna;
+            commandWasSelected = true;
+            queryParts.Clear();
+        }
+
         string? query = null;
         if (queryParts.Count > 0)
         {
@@ -434,6 +454,7 @@ public sealed class CommandLineParser : ICommandLineParser
     {
         AppCommand.TestAi => "test-ai",
         AppCommand.AiSettings => "ai-settings",
+        AppCommand.Theme => "theme",
         AppCommand.InstallFont => "install-font",
         AppCommand.ThirdParty => "third-party",
         AppCommand.Path => "path",

@@ -18,8 +18,10 @@ public sealed class FilePreviewView(IAnsiConsole console, ILocalizationService t
     public void Render(FilePreview preview)
     {
         TerminalTheme.WriteRule(console, text.Text("Preview.Help"), TerminalTheme.Accent);
-        console.Write(new Panel(new Text(text.Text("Preview.Snapshot"))).BorderColor(Color.Cyan1));
-        var table = new Table().Border(TableBorder.Rounded)
+        console.Write(new Text(text.Text("Preview.Snapshot"), Style.Parse(TerminalTheme.Info)));
+        console.WriteLine();
+        console.WriteLine();
+        var table = new Table().Border(TableBorder.Simple)
             .AddColumn(text.Text("Preview.Source")).AddColumn(text.Text("Preview.Target"))
             .AddColumn(text.Text("Preview.Bytes")).AddColumn(text.Text("Plan.Status"));
         foreach (var effect in preview.Effects)
@@ -28,7 +30,7 @@ public sealed class FilePreviewView(IAnsiConsole console, ILocalizationService t
                 new Text(effect.Destination ?? text.Text("Preview.Delete")),
                 new Text(effect.Bytes.ToString("N0", text.Culture)),
                 new Text(text.Text(effect.Collision ? "Preview.Collision" : "Preview.Ready"),
-                    Style.Parse(effect.Collision ? "yellow" : TerminalTheme.Primary)));
+                    Style.Parse(effect.Collision ? TerminalTheme.Warning : TerminalTheme.Primary)));
         }
         console.Write(table);
         console.Write(new Text(text.Text("Preview.Total", preview.Effects.Count, preview.Effects.Sum(effect => effect.Bytes))));

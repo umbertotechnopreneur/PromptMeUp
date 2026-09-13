@@ -27,11 +27,11 @@ public sealed class StatusView(
             TerminalTheme.Accent);
         var configuration = TerminalTheme.PairGrid(
         [
-            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "◈", "#") + text.Text("Status.Setup"), status.Settings.SetupCompleted ? text.Text("Status.Completed") : text.Text("Status.Required"), status.Settings.SetupCompleted ? TerminalTheme.Success : "yellow"),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "◈", "#") + text.Text("Status.Setup"), status.Settings.SetupCompleted ? text.Text("Status.Completed") : text.Text("Status.Required"), status.Settings.SetupCompleted ? TerminalTheme.Success : TerminalTheme.Warning),
             TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🌐", "@") + text.Text("Status.Language"), status.Settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
             TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🧠", "AI") + text.Text("Status.Model"), status.Settings.Model),
-            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🔑", "K") + text.Text("Status.ApiKey"), status.HasApiKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasApiKey ? TerminalTheme.Success : "yellow"),
-            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🔐", "K") + text.Text("Status.AdminKey"), status.HasAdminKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasAdminKey ? TerminalTheme.Success : "yellow"),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🔑", "K") + text.Text("Status.ApiKey"), status.HasApiKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasApiKey ? TerminalTheme.Success : TerminalTheme.Warning),
+            TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "🔐", "K") + text.Text("Status.AdminKey"), status.HasAdminKey ? text.Text("Status.Ready") : text.Text("Status.Missing"), status.HasAdminKey ? TerminalTheme.Success : TerminalTheme.Warning),
             TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "↻", "~") + text.Text("Status.Pricing"), status.LastPricingSync?.ToLocalTime().ToString("g", text.Culture) ?? text.Text("Costs.Unavailable"), TerminalTheme.Info)
         ], preferredPairs: 3, width: console.Profile.Width);
         TerminalTheme.WriteRule(console, $"{TerminalTheme.IconPrefix(shell.Options, "⚙", "~")}{text.Text("Status.Configuration")}", TerminalTheme.Accent);
@@ -92,7 +92,7 @@ public sealed class CostsView(
         console.WriteLine();
 
         var table = new Table()
-            .Border(TableBorder.Rounded)
+            .Border(TableBorder.Simple)
             .BorderStyle(Style.Parse(TerminalTheme.Divider));
         table.Title = new TableTitle($"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Costs.Models"))}[/]");
         table.AddColumn(new TableColumn(text.Text("Costs.Model")).NoWrap());
@@ -137,7 +137,7 @@ public sealed class CostsView(
             CostBand.Cheap => ("🌱", "$", text.Text("Costs.Cheap"), TerminalTheme.Success),
             CostBand.Affordable => ("✓", "+", text.Text("Costs.Affordable"), TerminalTheme.Info),
             CostBand.Premium => ("◆", "*", text.Text("Costs.Premium"), TerminalTheme.Accent),
-            _ => ("⚠", "!", text.Text("Costs.Extreme"), "red")
+            _ => ("⚠", "!", text.Text("Costs.Extreme"), TerminalTheme.Error)
         };
         return new Markup(
             $"[bold {color}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, icon, fallback))}{Markup.Escape(label)}[/]");

@@ -11,4 +11,6 @@ These assets were commissioned for PromptMeUp on 2026-09-02 and generated with O
 
 The three screen images use invented, non-sensitive sample content. They are promotional renderings, not captures of a running app. Retro scanlines, colors, spacing, and condensed labels are artistic treatments; they do not promise an in-app CRT mode or exact menu wording. The actual terminal interface remains the source of truth.
 
+The banner was edited with OpenAI image generation on 2026-09-13 to remove the horizontal underscore after `hm`, retaining the separate block cursor. The edit used the existing banner as its only reference. The final prompt requested one local removal while preserving the wording, green phosphor glow, scanlines, layout, and 3:1 composition.
+
 The project offers these assets under its root MIT license to the extent rights apply. Preserve the project attribution when redistributing them. The MIT license does not grant endorsement or rights to third-party trademarks. Keep these curated documentation assets in version control; temporary variants and build output remain excluded.

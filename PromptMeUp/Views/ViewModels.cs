@@ -15,7 +15,7 @@ public sealed record SetupSubmission(
     string? AdminKey,
     bool TestConnection);
 
-public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji);
+public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji, bool SuppressFooter = false);
 
 public sealed record ShellRuntimeStatus(
     string Provider,
@@ -81,6 +81,8 @@ public enum MainMenuAction
     Costs,
     Status,
     Setup,
+    AiSettings,
+    Theme,
     TestAi,
     Where,
     Path,

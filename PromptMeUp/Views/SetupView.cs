@@ -20,6 +20,7 @@ public sealed class SetupView : ISetupView
     private readonly IConsoleShellView _shell;
     private readonly IPromptInjectionProtectionService _promptProtection;
     private readonly ISensitiveDataRedactor _redactor;
+    private readonly IThemeView? _themeView;
 
     /// <summary>Creates the interactive setup form.</summary>
     public SetupView(
@@ -27,13 +28,15 @@ public sealed class SetupView : ISetupView
         ILocalizationService text,
         IConsoleShellView shell,
         IPromptInjectionProtectionService promptProtection,
-        ISensitiveDataRedactor redactor)
+        ISensitiveDataRedactor redactor,
+        IThemeView? themeView = null)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
+        _themeView = themeView;
     }
 
     /// <summary>Collects a complete configuration while keeping entered secrets outside the settings model.</summary>
@@ -187,12 +190,18 @@ public sealed class SetupView : ISetupView
                     .DefaultValue(endpoint)
                     .Validate(value => OpenAiEndpointPolicy.IsAllowed(value)
                         ? ValidationResult.Success()
-                        : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.EndpointError"))}[/]")));
+                        : ValidationResult.Error($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.EndpointError"))}[/]")));
         }
 
+        var theme = _themeView is null ? current.Theme : _themeView.Collect(current.Theme);
+        if (theme is null)
+        {
+            return null;
+        }
         var settings = current with
         {
             SetupCompleted = true,
+            Theme = theme,
             Language = language.Code,
             AiEnabled = aiEnabled,
             Model = model,
@@ -259,7 +268,7 @@ public sealed class SetupView : ISetupView
         string changeKey,
         string promptKey)
     {
-        var color = configured ? "green" : "yellow";
+        var color = configured ? TerminalTheme.Success : TerminalTheme.Warning;
         var state = configured ? _text.Text("Status.Ready") : _text.Text("Status.Missing");
         _console.Write(TerminalTheme.PairGrid(
         [
@@ -283,7 +292,7 @@ public sealed class SetupView : ISetupView
                 .Secret(mask: null)
                 .Validate(value => OpenAiKeyPolicy.IsPlausible(value)
                     ? ValidationResult.Success()
-                    : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.KeyError"))}[/]")));
+                    : ValidationResult.Error($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.KeyError"))}[/]")));
     }
 
     /// <summary>Displays product-oriented model choices and returns the selected identifier.</summary>
@@ -350,7 +359,7 @@ public sealed class SetupView : ISetupView
                 .DefaultValue(current)
                 .Validate(value => value >= minimum && value <= maximum
                     ? ValidationResult.Success()
-                    : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.RangeError", minimum, maximum))}[/]")));
+                    : ValidationResult.Error($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.RangeError", minimum, maximum))}[/]")));
 
     /// <summary>Collects, sanitizes, and reports a multilingual injection-checked preamble of at most 500 words.</summary>
     private string PromptForPreamble(string current)
@@ -364,17 +373,17 @@ public sealed class SetupView : ISetupView
                 var result = _promptProtection.Protect(value);
                 if (!string.Equals(result.SanitizedText, _redactor.Redact(result.SanitizedText), StringComparison.Ordinal))
                 {
-                    return ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.PreambleSecret"))}[/]");
+                    return ValidationResult.Error($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.PreambleSecret"))}[/]");
                 }
                 if (!result.IsWithinWordLimit)
                 {
                     return ValidationResult.Error(
-                        $"[red]{Markup.Escape(_text.Text("Setup.PreambleTooLong", result.WordCount, PromptInjectionProtectionService.MaximumPreambleWords))}[/]");
+                        $"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.PreambleTooLong", result.WordCount, PromptInjectionProtectionService.MaximumPreambleWords))}[/]");
                 }
 
                 return result.IsSafe
                     ? ValidationResult.Success()
-                    : ValidationResult.Error($"[red]{Markup.Escape(_text.Text("Setup.PreambleUnsafe"))}[/]");
+                    : ValidationResult.Error($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.PreambleUnsafe"))}[/]");
             });
         if (!string.IsNullOrWhiteSpace(current))
         {
@@ -412,6 +421,7 @@ public sealed class SetupView : ISetupView
             "AiSettings.ContextBudget", "Setup.MaxMessage");
         AddSummaryRow(grid, _text.Text("Setup.MaxCommandOutput"), settings.MaxCommandOutputCharacters.ToString("N0", _text.Culture));
         AddSummaryRow(grid, _text.Text("Setup.CommandTimeout"), settings.CommandTimeoutSeconds.ToString("N0", _text.Culture));
+        AddSummaryRow(grid, _text.Text("Theme.Select"), settings.Theme);
         _console.Write(grid);
         _console.WriteLine();
     }

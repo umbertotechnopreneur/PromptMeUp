@@ -66,7 +66,7 @@ public sealed class ChatView : IChatView
         var input = _console.Prompt(
             new TextPrompt<string>($"[bold {TerminalTheme.Accent}]{Markup.Escape(label)}[/] ")
                 .AllowEmpty()
-                .ValidationErrorMessage($"[red]{Markup.Escape(_text.Text("Chat.InputTooLong", maximumCharacters))}[/]")
+                .ValidationErrorMessage($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Chat.InputTooLong", maximumCharacters))}[/]")
                 .Validate(value => value.Length <= maximumCharacters
                     ? ValidationResult.Success()
                     : ValidationResult.Error()));
@@ -132,7 +132,7 @@ public sealed class ChatView : IChatView
 
     /// <summary>Notifies the user when old active-context messages were pruned but remain in the session ledger.</summary>
     public void RenderMemoryPruned(int messageCount) =>
-        _console.MarkupLine($"[yellow]{Markup.Escape(_text.Text("Chat.Pruned", messageCount))}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Chat.Pruned", messageCount))}[/]");
 
     /// <summary>Renders one slash command and its localized behavior as a compact two-column guide.</summary>
     private void RenderCommandHint(string command, string descriptionKey) =>

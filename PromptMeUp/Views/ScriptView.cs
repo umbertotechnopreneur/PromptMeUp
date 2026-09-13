@@ -19,11 +19,15 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
     public void Render(ScriptArtifact artifact, string? original)
     {
         TerminalTheme.WriteRule(console, text.Text("Script.Help"), TerminalTheme.Accent);
-        console.Write(new Panel(new Text(artifact.Explanation)).BorderColor(Color.Cyan1));
-        console.Write(new Panel(new Text(artifact.Source)).Header(text.Text("Script.Source")).BorderColor(Color.Cyan1));
+        console.Write(new Text(artifact.Explanation, Style.Parse(TerminalTheme.Primary)));
+        console.WriteLine();
+        TerminalTheme.WriteRule(console, text.Text("Script.Source"), TerminalTheme.Info);
+        console.Write(new Text(artifact.Source, Style.Parse(TerminalTheme.Primary)));
+        console.WriteLine();
+        console.WriteLine();
         if (original is not null && original != artifact.Source)
         {
-            var diff = new Table().Border(TableBorder.Rounded).AddColumn("-").AddColumn("+");
+            var diff = new Table().Border(TableBorder.Simple).AddColumn("-").AddColumn("+");
             var before = original.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
             var after = artifact.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
             for (var index = 0; index < Math.Max(before.Length, after.Length); index++)

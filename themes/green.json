@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "green",
+  "name": "Green",
+  "colors": {
+    "background": "#0A1B14",
+    "primary": "#F0FFF4",
+    "muted": "#BBD6C7",
+    "accent": "#8BE8B3",
+    "info": "#A3E8DF",
+    "divider": "#7C9F8C",
+    "success": "#A2ED9C",
+    "warning": "#FFE08A",
+    "error": "#FFA5A5",
+    "selectionBackground": "#8BE8B3",
+    "selectionForeground": "#0A1B14"
+  }
+}

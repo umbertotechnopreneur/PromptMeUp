@@ -57,7 +57,7 @@ public sealed class CommandSuggestionView(
     private string Label(MenuEntry entry) => entry.Action switch
     {
         CommandSuggestionAction.DoNotExecute =>
-            $"[bold yellow]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "🛑", "x"))}{Markup.Escape(text.Text("CommandMenu.None"))}[/]",
+            $"[bold {TerminalTheme.Warning}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "🛑", "x"))}{Markup.Escape(text.Text("CommandMenu.None"))}[/]",
         CommandSuggestionAction.StartChat =>
             $"[bold {TerminalTheme.Accent}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "💬", ">"))}{Markup.Escape(text.Text("CommandMenu.StartChat"))}[/]",
         CommandSuggestionAction.SelectCommand when entry.Command is not null =>

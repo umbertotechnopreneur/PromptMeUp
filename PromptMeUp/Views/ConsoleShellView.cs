@@ -149,7 +149,13 @@ public sealed class ConsoleShellView : IConsoleShellView
     }
 
     /// <summary>Displays the shared project banner on exit unless help has already shown it.</summary>
-    public void RenderFooter() => RenderProjectBanner();
+    public void RenderFooter()
+    {
+        if (!Options.SuppressFooter)
+        {
+            RenderProjectBanner();
+        }
+    }
 
     /// <summary>Renders the localized thanks, project links, and copyright once per invocation.</summary>
     public void RenderProjectBanner()
@@ -164,11 +170,8 @@ public sealed class ConsoleShellView : IConsoleShellView
         content.AddRow(new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Footer.Support"))}[/]"));
         content.AddRow(new Markup($"[{TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"));
         content.AddRow(new Markup($"[{TerminalTheme.Muted}]Copyright (c) [link=https://umbertogiacobbi.biz]umbertogiacobbi.biz[/][/]"));
-        _console.WriteLine();
-        _console.Write(new Panel(content)
-            .Header(TerminalTheme.IconPrefix(Options, "👋", "*") + "hm · help me")
-            .Border(BoxBorder.Rounded)
-            .BorderStyle(Style.Parse(TerminalTheme.Accent)));
+        TerminalTheme.WriteRule(_console, TerminalTheme.IconPrefix(Options, "👋", "*") + "hm · help me", TerminalTheme.Accent);
+        _console.Write(content);
         _console.WriteLine();
         _projectBannerRendered = true;
     }
@@ -179,7 +182,7 @@ public sealed class ConsoleShellView : IConsoleShellView
             _console,
             TerminalTheme.IconPrefix(Options, "❌", "x") + _text.Text("Common.Error"),
             message,
-            "red");
+            TerminalTheme.Error);
 
     /// <summary>Shows a short frameless informational message.</summary>
     public void RenderNotice(string message)
@@ -197,7 +200,7 @@ public sealed class ConsoleShellView : IConsoleShellView
 
     /// <summary>Shows one recoverable warning using the shared terminal palette.</summary>
     public void RenderWarning(string message) =>
-        _console.MarkupLine($"[yellow]{Markup.Escape(message)}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(message)}[/]");
 
     /// <summary>Shows low-emphasis explanatory text without leaking Spectre into the application layer.</summary>
     public void RenderMuted(string message) =>
@@ -262,7 +265,7 @@ public sealed class ConsoleShellView : IConsoleShellView
                 : _text.Text("Status.Disabled");
             var stateColor = settings.AiEnabled && hasApiKey
                 ? TerminalTheme.Success
-                : settings.AiEnabled ? "yellow" : TerminalTheme.Muted;
+                : settings.AiEnabled ? TerminalTheme.Warning : TerminalTheme.Muted;
             var stateIcon = settings.AiEnabled && hasApiKey
                 ? TerminalTheme.Icon(Options, "●", "+")
                 : TerminalTheme.Icon(Options, "!", "!");

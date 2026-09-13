@@ -14,8 +14,32 @@ public sealed class SetupWorkflow(
     ApplicationActivityRecorder activity,
     ISetupView setupView,
     IConsoleShellView shell,
-    ILocalizationService text)
+    ILocalizationService text,
+    IThemeView? themeView = null,
+    IThemeCatalogService? themes = null)
 {
+    /// <summary>Persists only the chosen theme after the view has completed its preview and review.</summary>
+    public async Task<int> RunThemeAsync(AppSettings current, CancellationToken cancellationToken)
+    {
+        if (themeView is null || themes is null)
+        {
+            throw new InvalidOperationException("The theme workflow is not configured.");
+        }
+        var selected = themeView.Collect(current.Theme);
+        if (selected is null)
+        {
+            shell.RenderNotice(text.Text("Common.Cancelled"));
+            await activity.TryRecordAsync("theme", "cancelled", null, new { }).ConfigureAwait(false);
+            return 0;
+        }
+        var theme = themes.Resolve(selected);
+        await settings.SaveAsync(current with { Theme = selected, UpdatedAt = DateTimeOffset.UtcNow }, cancellationToken).ConfigureAwait(false);
+        TerminalTheme.Apply(theme);
+        shell.RenderSuccess(text.Text("Theme.Saved"));
+        await activity.TryRecordAsync("theme", "completed", null, new { Theme = selected }).ConfigureAwait(false);
+        return 0;
+    }
+
     /// <summary>Edits only AI preferences after initial setup without touching secrets or other configuration.</summary>
     public async Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken)
     {
@@ -82,6 +106,10 @@ public sealed class SetupWorkflow(
         }
 
         await settings.SaveAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
+        if (themes is not null)
+        {
+            TerminalTheme.Apply(themes.Resolve(submission.Settings.Theme));
+        }
         text.SetLanguage(submission.Settings.Language);
         shell.RenderSuccess(text.Text("Setup.Saved"));
         foreach (var guidance in secretGuidance)
@@ -99,6 +127,7 @@ public sealed class SetupWorkflow(
             new
             {
                 submission.Settings.Language,
+                submission.Settings.Theme,
                 submission.Settings.Model,
                 submission.Settings.ReasoningEffort,
                 submission.Settings.OutputDetail,

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "amber",
+  "name": "Amber",
+  "colors": {
+    "background": "#211708",
+    "primary": "#FFF8E8",
+    "muted": "#DED0B3",
+    "accent": "#FFD176",
+    "info": "#9EDDE8",
+    "divider": "#AA9671",
+    "success": "#BAE69C",
+    "warning": "#FFE49A",
+    "error": "#FFAC9C",
+    "selectionBackground": "#FFD176",
+    "selectionForeground": "#211708"
+  }
+}

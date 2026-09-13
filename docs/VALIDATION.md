@@ -93,7 +93,7 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] Older complete turns are pruned to fit the turn limit and effective input budget, with room reserved for the answer.
 - [ ] A question that cannot fit is rejected before sending. Chat stays open and accepts a shorter question or `/clear`.
 - [ ] Clearing messages or forgetting a note does not erase request history or reset usage already recorded for the session.
-- [ ] A schema-v1 database upgrades to v2 with existing settings/history intact; invalid stored note data is reported instead of silently ignored.
+- [ ] Schema-v1 and schema-v2 databases upgrade to v3 with existing settings/history intact and the Cyan theme selected; invalid stored note data is reported instead of silently ignored.
 
 ## Validate usage visibility and local history
 

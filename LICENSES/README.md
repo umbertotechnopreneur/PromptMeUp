@@ -2,6 +2,8 @@
 
 PromptMeUp's own code and documentation use the root MIT license. The files here preserve the licenses and notices of the projects that power the application; they do not change those projects' terms.
 
+The legacy Lenna terminal portrait has separate [attribution](lenna-NOTICE.txt) and [source terms](lenna-legacy-LICENSE.txt). Both are included in release exports alongside the dependency notices.
+
 These texts were retrieved from the following upstream sources. Review them when changing dependencies, including transitive packages.
 
 | File | Source |

@@ -28,9 +28,20 @@ Dependencies are wired through `Microsoft.Extensions.DependencyInjection`. Appli
 
 The invocation orchestrator delegates settings and credential forms to `SetupWorkflow` and reviewed PATH, executable-location, and font operations to `InstallationWorkflow`. `ApplicationActivityRecorder` shares best-effort non-session audit recording. `AuditSessionScope` opens and closes workflow sessions with explicit typed outcomes, including cleanup after cancellation.
 
+`LennaWorkflow` is a small local display path. The composition root selects it before resolving the main application's settings, theme files, or AI configuration. Its service reads a bounded embedded RGB resource, and its passive view centers a Spectre canvas. It opens no database, calls no provider, and does not clear terminal history.
+
+`HelpWorkflow` also runs before that initialization. Explicit help opens navigable sections in a supported live terminal and keeps grouped scrolling output elsewhere. Invalid command lines use the scrolling reference so the error remains visible. Terminal views use open layouts and separators; cards require an explicit product request.
+
 `hm --ai-settings` takes a shorter path through `SetupWorkflow` after initial setup. It requires an interactive terminal and saves only AI enablement, model, reasoning, response detail, advisory command review, caching, and conversation limits. It preserves credentials, saved language, preamble, location preference, and command execution settings. An invocation-only `--language` choice changes the form's display language without changing the saved language. This path does not refresh pricing or call the provider.
 
 UI translations have one definition per key and language in the functionality-grouped `Services/Localization/UiTextCatalog.*.cs` files. Each entry names all six translations explicitly, and catalog assembly rejects duplicate keys. `LocalizationService` retains language selection and culture-aware formatting; runtime AI instructions remain in `/prompt`.
+
+`AdaptiveSetupView` selects fullscreen forms or the sequential compatibility path.
+The fullscreen form owns keyboard focus and a temporary alternate terminal buffer;
+it returns a draft for `SetupWorkflow` to save. Theme preview changes are reverted
+when the view exits and applied after successful persistence. `ThemeCatalogService`
+loads validated versioned JSON palettes from the packaged `themes` directory;
+settings store only the selected identifier. `hm --theme` changes only that setting.
 
 ## From question to answer
 
@@ -72,7 +83,7 @@ No AI response can create authorization and `--yes` never applies to `/run`. A m
 
 ## Persistence
 
-SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `2`. Initialization upgrades older supported databases in a transaction, adding the saved context budget and note storage while retaining settings and history. A database from a newer schema is rejected.
+SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `3`. Initialization upgrades older supported databases in a transaction, adding the saved context budget, note storage, and theme selection while retaining settings and history. A database from a newer schema is rejected.
 
 | Table | Purpose |
 | --- | --- |

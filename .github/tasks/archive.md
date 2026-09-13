@@ -2,6 +2,61 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-14 — Release checkpoint and main-branch policy
+
+- Prepared the completed fullscreen forms, themes, navigable help, local image display, artwork, and MSIX packaging changes for the requested commit and push on `main`.
+- Reviewed the complete file inventory and confirmed that only intended source, documentation, redistribution notices, themes, and curated artwork are included. Build output, signing material, logs, and local data remain excluded.
+- Verified that GitHub already requires pull requests and the existing quality checks on `main`, with administrator bypass enabled. Force pushes and branch deletion remain disabled; no protection settings needed changing.
+
+Validation: preflight, restore, formatting verification, XML method summaries, and the Release build passed with zero warnings or errors. The remote branch matched the local starting commit. Automated tests and application smoke tests were not run.
+
+## 2026-09-13 — Open terminal layouts, fullscreen help, and Matrix artwork
+
+- Removed cards and enclosing frames from runtime views and recorded the no-card rule in both repository instruction files. Forms align labels to the right and values to the left in two columns, with one blank row between fields, semantic navigation colors, and a single action separator.
+- Kept long values on one terminal row with Unicode-aware clipping and sized the editor from the actual value column. Reviewed focus visibility, review scrolling, narrow layouts, and resize behavior.
+- Added fullscreen help with five navigable sections, scrollable descriptions, keyboard hints in all six languages, and Escape/Q exit. Supported terminals use a disposable alternate buffer; redirected output and CLI errors retain the scrolling reference.
+- Recovered the Lenna ANSI resource from the author's archived YAi! project and preserved its 78-by-78 RGB pixels in a compact embedded image. `hm lenna` and `hm --lenna` render it with Spectre.Console, centered in both directions, without AI configuration, a database connection, or a download. Preserved the legacy attribution and source license in release notices.
+- Gave the 128- and 256-pixel icon frames green phosphor, glow, and scanlines while preserving smaller frames byte-for-byte. Removed the banner's horizontal underscore and retained its separate block cursor.
+- Updated product guides, artwork provenance, and the displayed dependency versions. Produced, signed, and installed MSIX revision `0.1.5.3` after the user closed the earlier running session.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build, and self-contained Windows publish passed with no warnings or errors. Independent source reviews covered both fullscreen layouts and standalone command routing. Checked icon frame invariance, visual artwork, exact RGB dimensions, the published embedded resource, exported notices, package manifest, and signing verification. Installed registration reports `Ok`, all 263 payload files match their source hashes, and `hm` resolves through the WindowsApps execution alias. Automated tests and application smoke tests were not run.
+
+## 2026-09-13 — Install the current build and verify command resolution
+
+- Published the current working tree as a self-contained Windows x64 build and installed signed MSIX revision `0.1.5.2` using the existing package identity and trusted signing certificate.
+- Verified healthy installed registration and SHA-256 equality for all 261 packaged files, including the application assembly, themes, prompts, and manifest.
+- Confirmed both current-process and persisted machine/user PATH resolve `hm` exclusively through the WindowsApps execution alias; inspected its AppExecLink data to verify that it targets the newly installed revision. No persistent PATH change was necessary.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build, self-contained publish, license export, manifest validation, package signing, signature verification, installation integrity, and command-resolution checks passed. No automated tests or application smoke tests were run; verification did not launch the application.
+
+## 2026-09-13 — Signed MSIX installation and project icon
+
+- Added a repeatable MSIX packaging script for prepared self-contained Windows builds, including prompts, themes, redistribution notices, architecture checks, manifest validation, certificate-store signing, and signature verification.
+- Installed local MSIX revision `0.1.5.1` with the `hm.exe` execution alias and normal Win32 application-data behavior, using an already trusted certificate without exporting its private key or changing trust settings.
+- Removed the previous per-user MSI with its standard uninstaller and verified that its executable and user PATH entry were removed while the existing database remained unchanged.
+- Added `assets/PromptMeUp.ico`, a reproducible vector-based generator, and provenance notes. The seven icon resolutions are embedded in the executable and reused for the MSIX tiles.
+- Documented local MSIX packaging, signing, installation, updates, aliases, and removal alongside the existing MSI instructions.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, Release build, and self-contained publish passed with zero warnings or errors. Validated the ICO frame directory, visually inspected the icon and executable resource, and verified the SDK package signature, healthy installed registration, matching executable/tile hashes, and WindowsApps command resolution. No automated tests or CLI smoke tests were run; application processes were not launched during validation. Existing unrelated source changes were preserved.
+
+## 2026-09-13 — Command notice spacing and STDERR emphasis
+
+- Added a blank line before and after the combined command-risk advisory and output-sharing notice.
+- Confirmed both output warning icons use the shared helper's surrounding spaces; isolated slow blinking to the STDERR label, respecting disabled animations and keeping the icon and output content steady.
+
+Validation: preflight, restore, formatting verification, XML method summaries, and Release build passed with zero warnings or errors. No automated tests or CLI smoke tests were run. Blink appearance depends on terminal support; the installed executable was not replaced.
+
+## 2026-09-13 — Fullscreen setup and JSON terminal themes
+
+- Implemented revisitable fullscreen setup sections, the focused AI settings form, and a standalone `hm --theme` chooser with live palette preview and explicit review/save.
+- Kept draft settings and non-echoing credential inputs local to the views. Added keyboard focus, bounded text editing, Unicode-aware cursor windows, internal scrolling, resize handling, six-language hints, and a sequential compatibility path.
+- Preserved main terminal history through a disposable alternate buffer and aligned both repository instruction files with that behavior.
+- Added validated Cyan, AS/400 Green, and Amber JSON palettes, applied semantic colors throughout shared views, and persisted the selected identifier with a transactional schema-v3 upgrade.
+- Included theme resources in build/publish output and Windows ZIP/MSI staging, documented customization, and added regression sources for validation, migration, and command routing.
+- Reviewed cancellation, secret rendering, startup and menu integration; corrected focused menu saves so a temporary display-language override cannot change the saved language.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build with 0 warnings/errors, whitespace review, and inspection of copied theme JSON resources passed. Automated tests and CLI smoke tests were not run; new regression sources compiled only. Interactive terminal behavior still requires an explicitly requested smoke/manual check. The installed executable was not replaced; no branch or commit was created by this task.
+
 ## 2026-09-13 — GitHub Actions failure fixes
 
 - Traced the main quality-gate failures to ANSI styling in semantic output assertions and a second SQLite connection pool left open during Windows fixture cleanup.

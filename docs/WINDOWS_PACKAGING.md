@@ -144,3 +144,47 @@ msiexec.exe /x .\artifacts\release\0.1.5\packages\PromptMeUp-0.1.5-win-x64.msi
 ```
 
 The build never reads or packages `OPENAI_API_KEY`, `OPENAI_ADMIN_KEY`, settings, databases, logs, or the local application-data directory. Code signing is intentionally separate and must happen before final SHA-256 calculation and WinGet manifest generation.
+
+## Install with the `hm` execution alias
+
+The optional MSIX package registers `hm.exe` through Windows' app execution aliases. You can then type `hm` without adding the build or installation folder to `PATH`. Portable archives and the MSI remain available.
+
+Use Windows 10 version 2004 or later, PowerShell 7, a Windows SDK containing `MakeAppx.exe` and `SignTool.exe`, and an existing trusted code-signing certificate with its private key in `CurrentUser\My`. The signing certificate's subject becomes the package publisher. Keep that certificate and package name consistent for future updates.
+
+Prepare a fresh self-contained folder and its redistribution notices. This example uses x64; use `win-arm64` and `-Architecture arm64` for Arm64:
+
+```powershell
+dotnet publish .\PromptMeUp\PromptMeUp.csproj --configuration Release `
+  --runtime win-x64 --self-contained true -p:PublishSingleFile=false `
+  -p:DebugType=None -p:DebugSymbols=false --output .\artifacts\msix\local\publish
+pwsh -NoProfile -File .\scripts\export-third-party-notices.ps1 `
+  -OutputDirectory .\artifacts\msix\local\publish -Runtime win-x64
+
+pwsh -NoProfile -File .\scripts\build-msix.ps1 `
+  -PublishDirectory .\artifacts\msix\local\publish `
+  -OutputDirectory .\artifacts\msix\local\package `
+  -Architecture x64 -CertificateThumbprint '<your existing code-signing certificate thumbprint>'
+```
+
+The thumbprint identifies a public certificate; no key value or exported certificate is passed to the script. Packaging copies the prepared application, runtime DLLs, prompts, themes, and license metadata, derives the tile images from `assets/PromptMeUp.ico`, validates the manifest, signs the MSIX, and verifies its signature. It rejects existing output directories, links, and unexpected files such as local databases, logs, or credential files. It does not install the app, change certificate trust or `PATH`, or run the app or tests.
+
+The four-part package version defaults to the published executable's file version. Use `-Version 0.1.5.1` when a packaging revision needs a higher version. Use `-SdkBinDirectory` to select the directory containing the SDK tools. An optional `-TimestampServer https://...` adds an RFC 3161 timestamp from your chosen signing service; without one, the signature's validity is limited by the certificate's expiry.
+
+After reviewing the generated manifest under `package/payload`, install the signed package for the current user:
+
+```powershell
+Add-AppxPackage -Path .\artifacts\msix\local\package\PromptMeUp-0.1.5.0-win-x64.msix
+Get-Command hm -CommandType Application
+```
+
+Windows exposes the alias through the user's `Microsoft\WindowsApps` directory. If another installation's `hm.exe` appears first, remove that installation's old `PATH` entry or uninstall it after checking which copy is active. Windows' **App execution aliases** settings let you enable or disable the MSIX alias. Do not run `hm --path install` for the MSIX copy.
+
+The package uses the `win32App` runtime behavior and a normal console process. It keeps the existing local application-data and current-user environment behavior, and approved commands still run through the installed `pwsh`. The package declares only `runFullTrust`; it does not add a background service. See Microsoft's [packaged application types](https://devblogs.microsoft.com/insidemsix/types-of-packaged-applications/) and [execution alias schema](https://learn.microsoft.com/en-us/uwp/schemas/appxpackage/uapmanifestschema/element-uap5-appexecutionalias).
+
+To remove the default MSIX package and its alias:
+
+```powershell
+Get-AppxPackage -Name UmbertoGiacobbi.PromptMeUp | Remove-AppxPackage
+```
+
+Your ordinary PromptMeUp data directory remains separate from the package. Removing the MSIX does not remove that saved history or your current-user API key environment variables.

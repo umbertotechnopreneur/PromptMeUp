@@ -8,6 +8,7 @@ To try `hm` for the first time, start with the [README](../README.md#get-started
 | --- | --- |
 | Find a command or see an example | [CLI reference](CLI_REFERENCE.md) |
 | Change the model or context limits with `hm --ai-settings` | [AI settings](CLI_REFERENCE.md#change-the-model-or-conversation-limits) |
+| Choose terminal colors or customize a JSON palette | [Terminal themes](TERMINAL_THEMES.md) |
 | Save useful notes or understand the token counters | [Memory, context, and costs](OPENAI_COSTS_AND_CACHING.md) |
 | Check what is saved locally and what is sent to OpenAI | [Privacy](PRIVACY.md) |
 | Get help or report a problem | [Support](../SUPPORT.md) |

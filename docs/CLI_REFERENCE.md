@@ -31,19 +31,63 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | `--recipes [action]` | — | Lists, saves, imports, exports, or reuses personal command recipes. |
 | `--setup` | — | Opens the full setup form, including language, credentials, and AI settings. |
 | `--ai-settings` | — | Changes the model, response preferences, and conversation limits after initial setup. |
+| `--theme` | — | Previews and saves a terminal color theme without changing other preferences. |
 | `--test-ai` | — | Checks that the configured model can answer a short request in your chosen language. |
 | `--costs` | — | Shows usage and cost estimates, refreshing public prices and any available organization costs. |
 | `--status` | — | Shows local configuration and storage readiness. |
+| `--lenna` | `lenna` | Shows the bundled calibration portrait centered in the terminal, without an AI request. |
 | `--third-party` | — | Shows direct runtime packages, versions, and licenses. |
 | `--where` | `-where` | Prints the exact running executable and directory, then offers the native file manager or a change-directory command. |
 | `--path [install\|remove\|status]` | `--path=<action>` | Manages only the current executable directory in the persistent user PATH. |
 | `--install-font` | — | Runs the opt-in JetBrainsMono Nerd Font helper through an existing Oh My Posh installation. |
-| `--help` | `-h`, `/?` | Shows the command reference grouped by AI work, insight, setup, and safety. |
-| `--version` | `-v` | Shows the PromptMeUp About box, application/.NET/platform details, GitHub repository, and creator site. |
+| `--help` | `-h`, `/?` | Opens a keyboard guide with examples and sections for AI work, insight, setup, and safety. |
+| `--version` | `-v` | Shows application, .NET, and platform versions with links to the GitHub repository and creator site. |
 
 Only one top-level command can be selected per invocation.
 
+Setup, AI settings, and the theme chooser use fullscreen forms in supported live
+terminals. Tab moves between fields, left/right changes a choice, PgUp/PgDn changes
+sections, and F10 opens the review before saving. Escape cancels the form and
+restores the original terminal history. Smaller or less capable terminals use
+sequential prompts. See [terminal themes](TERMINAL_THEMES.md) for the Cyan, AS/400
+Green, and Amber palettes and their editable JSON definitions.
+
 `hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
+
+## Browse the command guide
+
+```powershell
+hm --help
+```
+
+In a supported live terminal of at least 60 columns by 20 rows, help opens a
+fullscreen guide. The section list stays visible while you read commands and
+their descriptions. Left/Right, PgUp/PgDn, or Tab changes the section; Shift+Tab
+moves back. Up/Down scrolls longer sections, and Home/End jumps to their beginning
+or end. Esc or Q closes the guide and restores your original terminal output.
+
+Help works without setup or an API key. Small terminals, redirected output, and
+terminals without an alternate buffer receive the full scrolling reference.
+Help shown after an invalid command also stays in the current buffer, so the
+error remains visible. Resizing an open guide redraws it; a window below the
+minimum size shows a short instruction until you enlarge it or close help.
+
+## Check terminal image rendering
+
+```powershell
+hm lenna
+hm --lenna
+```
+
+This local command shows the bundled Lenna calibration portrait centered in the
+terminal. It works offline and needs neither first-run setup nor an API key.
+The picture fits the current window while preserving its proportions and the
+terminal's scrollback. Use a terminal with ANSI color support; a window that is
+too small produces a short explanation instead of a cropped picture.
+
+Only the standalone positional word `lenna` selects this command, regardless of
+casing. `hm --query lenna` and longer questions that mention Lenna remain AI
+queries. Use one command per invocation, as with the other commands.
 
 ## Change the model or conversation limits
 

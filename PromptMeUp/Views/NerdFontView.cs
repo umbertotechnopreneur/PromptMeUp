@@ -44,7 +44,7 @@ public sealed class NerdFontView(
         var message = result.DryRun
             ? text.Text("Font.Preview")
             : result.Changed ? text.Text("Font.Ready", result.FontName) : text.Text("Font.Unsupported");
-        var color = result.DryRun ? TerminalTheme.Info : result.Changed ? TerminalTheme.Success : "yellow";
+        var color = result.DryRun ? TerminalTheme.Info : result.Changed ? TerminalTheme.Success : TerminalTheme.Warning;
         var icon = result.DryRun ? "🧪" : result.Changed ? "✅" : "⚠";
         var fallbackIcon = result.DryRun ? "~" : result.Changed ? "+" : "!";
         TerminalTheme.WriteRule(
@@ -59,7 +59,7 @@ public sealed class NerdFontView(
 
         if (result.Changed)
         {
-            console.MarkupLine($"[yellow]{Markup.Escape(text.Text("Font.TerminalHint"))}[/]");
+            console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(text.Text("Font.TerminalHint"))}[/]");
         }
     }
 }

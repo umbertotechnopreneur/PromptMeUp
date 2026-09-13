@@ -259,6 +259,13 @@ internal static partial class UiTextCatalog
             German: "Führt den YAML-Verbindungsprompt mit Fernschreiber-Effekt aus.",
             Spanish: "Ejecuta el prompt YAML de conexión con efecto teletipo.",
             Vietnamese: "Chạy prompt YAML kiểm tra kết nối với hiệu ứng máy đánh chữ."));
+        entries.Add("Help.Lenna", new(
+            English: "Show the bundled Lenna calibration portrait centered in the terminal. Works offline.",
+            Italian: "Mostra al centro del terminale il ritratto di calibrazione Lenna incluso. Funziona offline.",
+            French: "Affiche au centre du terminal le portrait de calibration Lenna fourni. Fonctionne hors ligne.",
+            German: "Zeigt das mitgelieferte Lenna-Kalibrierporträt mittig im Terminal. Funktioniert offline.",
+            Spanish: "Muestra centrado en el terminal el retrato de calibración Lenna incluido. Funciona sin conexión.",
+            Vietnamese: "Hiển thị ảnh chân dung hiệu chuẩn Lenna đi kèm ở giữa terminal. Hoạt động ngoại tuyến."));
         entries.Add("Help.ThirdParty", new(
             English: "Show direct dependencies and third-party licenses.",
             Italian: "Mostra dipendenze dirette e licenze di terze parti.",

@@ -41,6 +41,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
     private readonly ArtifactLimits _artifactLimits;
+    private readonly IThemeCatalogService? _themes;
+    private readonly LennaWorkflow? _lenna;
 
     /// <summary>Creates the application orchestrator while keeping business services independent from Spectre views.</summary>
     public PromptMeUpApplication(
@@ -68,7 +70,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IThirdPartyView thirdPartyView,
         AppPaths paths,
         ILogger<PromptMeUpApplication> logger,
-        ArtifactLimits? artifactLimits = null)
+        ArtifactLimits? artifactLimits = null,
+        IThemeCatalogService? themes = null,
+        LennaWorkflow? lenna = null)
     {
         _parser = parser;
         _database = database;
@@ -95,6 +99,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _paths = paths;
         _logger = logger;
         _artifactLimits = artifactLimits ?? ArtifactLimits.Default;
+        _themes = themes;
+        _lenna = lenna;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -107,17 +113,26 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         {
             _shell.RenderHeader("?", null, false, Environment.CurrentDirectory);
             _shell.RenderError(parse.Error ?? _text.Text("Cli.Invalid"));
-            _helpView.Render();
+            _helpView.RenderStatic();
             return 2;
         }
 
         var options = parse.Options!;
+        if (options.Command == AppCommand.Lenna)
+        {
+            return (_lenna ?? throw new InvalidOperationException(_text.Text("Lenna.LoadError")))
+                .Run(options, cancellationToken);
+        }
         _shell.Configure(new ConsoleRenderOptions(options.NoAnimation, options.NoEmoji));
         await _database.InitializeAsync(cancellationToken).ConfigureAwait(false);
         var promptCount = (await _prompts.ListAsync(cancellationToken).ConfigureAwait(false)).Count;
         var settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (_themes is not null)
+        {
+            TerminalTheme.Apply(_themes.Resolve(settings.Theme));
+        }
         _text.SetLanguage(options.Language ?? settings.Language);
-        if (options.Command != AppCommand.AiSettings)
+        if (options.Command is not (AppCommand.AiSettings or AppCommand.Theme))
         {
             settings = settings with { Language = _text.Language };
         }
@@ -208,6 +223,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 return await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.AiSettings:
                 return await RunAiSettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+            case AppCommand.Theme:
+                EnsureInteractive();
+                return await _setup.RunThemeAsync(settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Status:
                 await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
                 return 0;
@@ -344,6 +362,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                         settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
                         _text.SetLanguage(settings.Language);
                         break;
+                    case MainMenuAction.AiSettings:
+                        await RunAiSettingsAsync(await _settings.LoadAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                        settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+                        break;
+                    case MainMenuAction.Theme:
+                        await _setup.RunThemeAsync(await _settings.LoadAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                        settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+                        break;
                     case MainMenuAction.TestAi:
                         EnsureAiReady(settings);
                         await _conversationWorkflow.RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
@@ -478,6 +504,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         AppCommand.TestAi => "test-ai",
         AppCommand.AiSettings => "ai-settings",
+        AppCommand.Theme => "theme",
         AppCommand.InstallFont => "install-font",
         AppCommand.ThirdParty => "third-party",
         _ => command.ToString().ToLowerInvariant()
