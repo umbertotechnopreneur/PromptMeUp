@@ -7,7 +7,23 @@ namespace PromptMeUp.Views;
 public sealed record SetupViewState(
     AppSettings Settings,
     bool ApiKeyConfigured,
-    bool AdminKeyConfigured);
+    bool AdminKeyConfigured)
+{
+    public SettingsSection InitialSection { get; init; } = SettingsSection.General;
+
+    public bool ContextBudgetOverridden { get; init; }
+}
+
+public enum SettingsSection
+{
+    General,
+    Ai,
+    Credentials,
+    Context,
+    Commands,
+    Personalization,
+    Theme
+}
 
 public sealed record SetupSubmission(
     AppSettings Settings,

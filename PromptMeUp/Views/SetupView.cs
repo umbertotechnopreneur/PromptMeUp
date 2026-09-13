@@ -9,8 +9,6 @@ namespace PromptMeUp.Views;
 public interface ISetupView
 {
     SetupSubmission? Collect(SetupViewState state);
-
-    AppSettings? CollectAiSettings(AppSettings current);
 }
 
 public sealed class SetupView : ISetupView
@@ -406,10 +404,11 @@ public sealed class SetupView : ISetupView
         var no = _text.Text("Common.No");
         var ready = _text.Text("Status.Ready");
         var missing = _text.Text("Status.Missing");
+        var language = SupportedLanguages.All.First(item => item.Code == settings.Language);
         AddSummaryRow(
             grid,
             _text.Text("Setup.Language"),
-            SupportedLanguages.All.First(item => item.Code == settings.Language).NativeName);
+            TerminalTheme.IconPrefix(_shell.Options, language.Flag, "@") + language.NativeName + " (" + language.Code + ")");
         AddAiSummaryRows(grid, aiValues, "Setup.AiEnabled");
         AddSummaryRow(grid, _text.Text("Status.ApiKey"), hasApiKey ? ready : missing);
         AddSummaryRow(grid, _text.Text("Status.AdminKey"), hasAdminKey ? ready : missing);

@@ -2,6 +2,34 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-14 — Unified settings workspace and clearer terminal feedback
+
+- Consolidated General, AI, Credentials, Conversation, Commands, Personalization, and Theme into one settings draft with an emoji sidebar. Setup, AI setup (including the existing AI settings alias), and theme switches only choose the opening section; the main menu has one Settings entry.
+- Removed the fullscreen summary and F10 step. Save validates and persists directly; Cancel restores the draft language and palette. Tab reaches Save/Cancel and Left/Right moves between their buttons. Shortcuts distinguish muted key labels from brighter actions.
+- Preserved section navigation in compact terminals and added a shared section-menu compatibility view. Exposed complete focused labels, hid credential replacements, previewed theme colors, and kept connection checks opt-in after initial setup.
+- Moved the operating budget onto its own row with a Spectre progress bar and the existing localized estimate, capacity, and percentage. Added a blank line immediately after the closing thank-you message.
+- Updated all six UI languages and the product guides while preserving concurrent command-clarification work separately.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered routing, keyboard focus, compact geometry, cancellation, and privacy. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Consistent setup and help navigation
+
+- Added a shared fullscreen header with a divider, app version, and project link aligned to the right. Reopened setup starts in the section list; Up/Down selects sections and Enter/Right moves to fields while preserving the draft and review/save step.
+- Removed sidebar numbers, added meaningful section icons, and kept country flags, native names, and language codes consistent in choices and summaries. Emoji-free rendering remains available.
+- Matched help to the setup layout and focus model. Help entries show complete examples with lowercase white `hm`, colored options and values, descriptions using the same colors, and explanations of useful arguments. All new text is available in the six supported languages.
+- Added a blank line after the closing project separator and removed the redundant application-status heading. Updated the product guides to describe the new navigation and examples.
+- Published, signed, and installed MSIX revision `0.1.5.4`, including the coordinated fullscreen footer and conditional range improvements.
+
+Validation: the shared preflight, restore, formatting verification, XML method summaries, and Release build passed with zero warnings or errors. Independent source reviews covered keyboard focus, draft preservation, narrow layouts, and example rendering. Windows publish and package signature verification passed; installed registration reports `Ok`, all 263 payload files match their source hashes, and the WindowsApps execution alias targets the updated package. Automated tests and application smoke tests were not run.
+
+## 2026-09-14 — Conditional help range and consistent fullscreen footers
+
+- Show the localized displayed-line range only when the visible help content overflows. Remove trailing empty spacing rows from the count, retain scroll clamping on resize, and render primary white text with bold numbers on one bounded row.
+- Share the notice, separator, action, and shortcut layout between fullscreen help and forms, preserving two-column margins, variable form notices, semantic action colors, and compact localized hints. Both surfaces use the shared fullscreen header.
+- Updated the displayed-line wording in all six supported languages, including "Righe visualizzate" in Italian, and prepared an illustrative layout preview outside the repository.
+
+Validation: preflight, restore, full formatting verification, XML method summaries, and the Release build passed with zero warnings or errors. Independent source review covered footer geometry, range visibility, clipping, focus, and resize behavior. Automated tests and CLI smoke tests were not run.
+
 ## 2026-09-14 — Release checkpoint and main-branch policy
 
 - Prepared the completed fullscreen forms, themes, navigable help, local image display, artwork, and MSIX packaging changes for the requested commit and push on `main`.

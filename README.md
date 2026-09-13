@@ -76,13 +76,15 @@ Notes without `global` belong to the current project. They remain available the 
 
 Each request can include up to five selected notes, within 800 estimated tokens. Project notes are matched by shared words in your question; global notes can be included across projects. Saving a note makes no extra AI call. [How memories work](docs/OPENAI_COSTS_AND_CACHING.md).
 
-## Change the model without repeating setup
+## Keep your settings in one place
 
 ```powershell
-hm --ai-settings
+hm --setup
+hm --ai-setup
+hm --theme
 ```
 
-After the first setup, this opens just the AI preferences: model, reasoning level, answer length, command review, caching, and conversation limits. Your language, keys, and other settings stay as they are.
+All three commands open the same Settings screen with General, AI, or Theme selected. `--ai-settings` remains an alias for `--ai-setup`. Use the left sidebar to reach General, AI, Credentials, Conversation, Commands, Personalization, and Theme. Move freely between sections, then choose Save to keep the draft or Cancel to discard it. Theme colors update as you preview them.
 
 Ordinary questions and chat use a default input budget of **16,000 estimated tokens**. In chat, `/context` or `/status` shows how much is currently retained, the model's capacity, and your chosen budget. The last call's input/output tokens and the session totals appear separately. A `~` marks a local estimate.
 
@@ -123,8 +125,9 @@ Give `hm` a build log to investigate, ask it for a script draft, or work through
 | Work through a plan and resume it later | `hm --plan "your goal"` |
 | Inspect file effects before approval | `hm --preview copy --file report.txt --output backup` |
 | Save or reuse a personal routine | `hm --recipes` |
-| Change only AI preferences and context limits | `hm --ai-settings` |
-| Change language, keys, or other preferences | `hm --setup` |
+| Open settings at AI preferences | `hm --ai-setup` or `hm --ai-settings` |
+| Open settings at general preferences | `hm --setup` |
+| Open settings at the theme preview | `hm --theme` |
 | Check configuration | `hm --status` |
 | Understand usage and estimates | `hm --costs` |
 | See commands and options | `hm --help` |

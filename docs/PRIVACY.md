@@ -66,7 +66,7 @@ The runtime snapshot excludes user name, host name, network identity, device ser
 
 The ordinary question and chat budget defaults to 16,000 estimated input tokens, including instructions, runtime details, selected notes, and recent messages. Older turns are removed as needed to fit. `/context` and `/status` show the retained context estimate separately from the last response's token counts and the session's cumulative usage. A smaller active context does not undo requests already sent or charges already incurred.
 
-After initial setup, `hm --ai-settings` changes the model, response preferences, and context limits locally. It does not send a test request or refresh pricing. See the [CLI reference](CLI_REFERENCE.md) for the settings and limits.
+`hm --setup`, `hm --ai-setup` (also `--ai-settings`), and `hm --theme` open one Settings screen with a different section selected. Saving the draft is local and does not refresh pricing. A provider request is sent only if you enable the optional connection check in Credentials; that check defaults to off after initial setup. See the [CLI reference](CLI_REFERENCE.md) for the settings and limits.
 
 Prompt-injection screening is deterministic defense in depth, not a proof that arbitrary text is safe. The preamble is limited to 500 words, cannot contain the provider-facing delimiter, and is rejected when local rules recognize instruction overrides or role forgery in any supported language. The YAML system prompt independently tells the model to treat the delimited preamble only as untrusted style or format preferences.
 

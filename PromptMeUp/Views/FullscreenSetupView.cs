@@ -4,6 +4,7 @@ using System.Globalization;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -39,14 +40,21 @@ public sealed class FullscreenSetupView
         ArgumentNullException.ThrowIfNull(state);
         var originalLanguage = _text.Language;
         var originalTheme = TerminalTheme.Current;
-        var draft = new SetupDraft(state.Settings);
+        var draft = new SetupDraft(state.Settings) { TestConnection = !state.Settings.SetupCompleted };
         try
         {
-            _text.SetLanguage(draft.Settings.Language);
             TerminalTheme.Apply(_themes.Resolve(draft.Settings.Theme));
             var pages = CreateSetupPages(draft, state);
-            var saved = new FullscreenForm(_console, _text).Run(
-                "Main.Setup", pages, () => CreateSetupSummary(draft, state), () => ValidatePages(pages));
+            var initialPage = pages.ToList().FindIndex(page => page.TitleKey == "Settings." + state.InitialSection);
+            if (initialPage < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(state), "Unsupported settings section.");
+            }
+            var saved = FullscreenForm.CanUse(_console)
+                ? new FullscreenForm(_console, _text, _shell.Options).Run(
+                    "Settings.Title", pages, () => ValidatePages(pages), initialPage: initialPage)
+                : new SettingsPromptForm(_console, _text, _shell.Options).Run(
+                    pages, initialPage, () => ValidatePages(pages));
             if (!saved)
             {
                 return null;
@@ -60,8 +68,8 @@ public sealed class FullscreenSetupView
             };
             return new SetupSubmission(
                 settings,
-                settings.AiEnabled ? draft.ApiKey : null,
-                settings.AiEnabled ? draft.AdminKey : null,
+                draft.ApiKey,
+                draft.AdminKey,
                 settings.AiEnabled && HasApiKey(draft, state) && draft.TestConnection);
         }
         finally
@@ -71,67 +79,59 @@ public sealed class FullscreenSetupView
         }
     }
 
-    /// <summary>Edits the ten focused AI settings while keeping unrelated preferences and secrets untouched.</summary>
-    public AppSettings? CollectAiSettings(AppSettings current)
+    /// <summary>Groups every preference into stable sidebar sections that share one local draft.</summary>
+    private IReadOnlyList<FormPage> CreateSetupPages(SetupDraft draft, SetupViewState state)
     {
-        ArgumentNullException.ThrowIfNull(current);
-        var draft = new SetupDraft(current);
-        var fields = new List<FormField>
+        var ai = new List<FormField>
         {
             Toggle("Setup.AiEnabled", () => draft.Settings.AiEnabled,
                 value => draft.Settings = draft.Settings with { AiEnabled = value })
         };
-        fields.AddRange(CreateModelFields(draft));
-        fields.Add(Toggle("Setup.CommandReview", () => draft.Settings.ReviewCommandsWithAi,
+        ai.AddRange(CreateModelFields(draft));
+        ai.Add(Toggle("Setup.CommandReview", () => draft.Settings.ReviewCommandsWithAi,
             value => draft.Settings = draft.Settings with { ReviewCommandsWithAi = value }));
-        fields.Add(Toggle("Setup.PromptCaching", () => draft.Settings.PromptCachingEnabled,
+        ai.Add(Toggle("Setup.PromptCaching", () => draft.Settings.PromptCachingEnabled,
             value => draft.Settings = draft.Settings with { PromptCachingEnabled = value }));
-        fields.AddRange(CreateContextFields(draft));
-        FormPage[] pages = [new("AiSettings.Title", fields)];
-        return new FullscreenForm(_console, _text).Run(
-            "AiSettings.Title", pages, () => CreateAiSummary(draft.Settings), () => ValidatePages(pages))
-            ? draft.Settings
-            : null;
-    }
-
-    /// <summary>Groups all setup fields into six revisitable pages with conditional credential and AI choices.</summary>
-    private IReadOnlyList<FormPage> CreateSetupPages(SetupDraft draft, SetupViewState state)
-    {
-        var advanced = CreateContextFields(draft).ToList();
-        advanced.Add(Integer("Setup.MaxCommandOutput", () => draft.Settings.MaxCommandOutputCharacters,
-            value => draft.Settings = draft.Settings with { MaxCommandOutputCharacters = value }, 1_000, 32_768));
-        advanced.Add(Integer("Setup.CommandTimeout", () => draft.Settings.CommandTimeoutSeconds,
-            value => draft.Settings = draft.Settings with { CommandTimeoutSeconds = value }, 5, 300));
-        advanced.Add(new FormField("endpoint", "Setup.Endpoint", () => draft.Settings.Endpoint,
-            value => draft.Settings = draft.Settings with { Endpoint = value.Trim() })
+        var context = CreateContextFields(draft).ToArray();
+        if (state.ContextBudgetOverridden)
         {
-            Validate = value => OpenAiEndpointPolicy.IsAllowed(value) ? null : _text.Text("Setup.EndpointError"),
-            MaxLength = 2_048
-        });
+            context[0] = context[0] with { HelpKey = "AiSettings.ContextOverride" };
+        }
         return
         [
-            new("Form.General",
+            new("Settings.General",
             [
                 new("language", "Setup.Language", () => draft.Settings.Language, value => SetLanguage(draft, value))
                 {
-                    Choices = () => SupportedLanguages.All.Select(item => new FormChoice(item.Code,
-                        TerminalTheme.IconPrefix(_shell.Options, item.Flag, "@") + item.NativeName + " (" + item.Code + ")")).ToArray()
-                },
-                Toggle("Setup.AiEnabled", () => draft.Settings.AiEnabled,
-                    value => draft.Settings = draft.Settings with { AiEnabled = value })
-            ]),
-            new("Setup.Keys",
+                    Choices = () => SupportedLanguages.All.Select(item => new FormChoice(item.Code, LanguageLabel(item))).ToArray()
+                }
+            ]) { HelpKey = "Settings.GeneralHelp" },
+            new("Settings.Ai", ai) { HelpKey = "Settings.AiHelp" },
+            new("Settings.Credentials",
             [
-                Secret("api-key", "Form.ApiKeyReplacement", () => draft.ApiKey,
-                    value => draft.ApiKey = value, () => HasApiKey(draft, state), () => draft.Settings.AiEnabled),
-                Secret("admin-key", "Form.AdminKeyReplacement", () => draft.AdminKey,
+                Secret("api-key", "Status.ApiKey", () => draft.ApiKey,
+                    value => draft.ApiKey = value, () => HasApiKey(draft, state), () => true),
+                Secret("admin-key", "Status.AdminKey", () => draft.AdminKey,
                     value => draft.AdminKey = value, () => state.AdminKeyConfigured || draft.AdminKey is not null,
-                    () => draft.Settings.AiEnabled),
+                    () => true),
+                new("endpoint", "Setup.Endpoint", () => draft.Settings.Endpoint,
+                    value => draft.Settings = draft.Settings with { Endpoint = value.Trim() })
+                {
+                    Validate = value => OpenAiEndpointPolicy.IsAllowed(value) ? null : _text.Text("Setup.EndpointError"),
+                    MaxLength = 2_048
+                },
                 Toggle("Form.TestConnection", () => draft.TestConnection, value => draft.TestConnection = value,
                     () => draft.Settings.AiEnabled && HasApiKey(draft, state))
-            ]),
-            new("Setup.Model", CreateModelFields(draft)),
-            new("Setup.Preferences",
+            ]) { HelpKey = "Settings.CredentialsHelp" },
+            new("Settings.Context", context) { HelpKey = "Settings.ContextHelp" },
+            new("Settings.Commands",
+            [
+                Integer("Setup.CommandTimeout", () => draft.Settings.CommandTimeoutSeconds,
+                    value => draft.Settings = draft.Settings with { CommandTimeoutSeconds = value }, 5, 300),
+                Integer("Setup.MaxCommandOutput", () => draft.Settings.MaxCommandOutputCharacters,
+                    value => draft.Settings = draft.Settings with { MaxCommandOutputCharacters = value }, 1_000, 32_768)
+            ]) { HelpKey = "Settings.CommandsHelp" },
+            new("Settings.Personalization",
             [
                 new("custom-instruction", "Setup.Custom", () => draft.Settings.CustomInstruction,
                     value => draft.Settings = draft.Settings with { CustomInstruction = _protection.Protect(value).SanitizedText })
@@ -140,22 +140,29 @@ public sealed class FullscreenSetupView
                     HelpKey = "Form.PreambleHelp"
                 },
                 Toggle("Setup.Location", () => draft.Settings.IncludeWindowsLocation,
-                    value => draft.Settings = draft.Settings with { IncludeWindowsLocation = value }),
-                Toggle("Setup.CommandReview", () => draft.Settings.ReviewCommandsWithAi,
-                    value => draft.Settings = draft.Settings with { ReviewCommandsWithAi = value }, () => draft.Settings.AiEnabled),
-                Toggle("Setup.PromptCaching", () => draft.Settings.PromptCachingEnabled,
-                    value => draft.Settings = draft.Settings with { PromptCachingEnabled = value }, () => draft.Settings.AiEnabled)
-            ]),
-            new("Form.Advanced", advanced),
-            new("Theme.Title",
+                    value => draft.Settings = draft.Settings with { IncludeWindowsLocation = value })
+            ]) { HelpKey = "Settings.PersonalizationHelp" },
+            new("Settings.Theme",
             [
                 new("theme", "Theme.Select", () => draft.Settings.Theme, value => SetTheme(draft, value))
                 {
                     Choices = () => _themes.Themes.Select(theme => new FormChoice(theme.Id, ThemeName(theme))).ToArray(),
                     HelpKey = "Theme.Preview"
                 }
-            ])
+            ]) { HelpKey = "Settings.ThemeHelp", Preview = CreateThemePreview, PreviewRows = 3 }
         ];
+    }
+
+    /// <summary>Shows live semantic color samples without persisting or leaving the settings workspace.</summary>
+    private IRenderable CreateThemePreview()
+    {
+        var samples = new Grid().AddColumn().AddColumn().AddColumn();
+        samples.AddRow(
+            new Text(_text.Text("Status.Ready"), Style.Parse("bold " + TerminalTheme.Success)),
+            new Text(_text.Text("Form.Cancel"), Style.Parse("bold " + TerminalTheme.Warning)),
+            new Text(_text.Text("Common.Error"), Style.Parse("bold " + TerminalTheme.Error)));
+        return new Rows(new Text(_text.Text("Settings.ThemePreview"), Style.Parse(TerminalTheme.Muted)),
+            new Text(" "), samples);
     }
 
     /// <summary>Builds the shared model, supported reasoning, and answer detail selectors.</summary>
@@ -222,7 +229,7 @@ public sealed class FullscreenSetupView
         new(key, labelKey, () => read() ?? string.Empty, value => write(value.Length == 0 ? null : value))
         {
             Secret = true,
-            Display = () => _text.Text(configured() ? "Status.Ready" : "Status.Missing"),
+            Display = () => _text.Text(read() is not null ? "Form.SecretEntered" : configured() ? "Status.Ready" : "Status.Missing"),
             Validate = value => value.Length == 0 || OpenAiKeyPolicy.IsPlausible(value) ? null : _text.Text("Setup.KeyError"),
             IsVisible = visible,
             HelpKey = "Form.CredentialsHelp"
@@ -288,49 +295,9 @@ public sealed class FullscreenSetupView
         draft.Settings = draft.Settings with { Model = model.Id, ReasoningEffort = reasoning };
     }
 
-    /// <summary>Creates a review of all settings using only credential status and custom-instruction presence.</summary>
-    private IReadOnlyList<FormSummary> CreateSetupSummary(SetupDraft draft, SetupViewState state)
-    {
-        var settings = draft.Settings;
-        var rows = new List<FormSummary>
-        {
-            Summary("Setup.Language", SupportedLanguages.All.First(item => item.Code == settings.Language).NativeName),
-            Summary("Status.ApiKey", _text.Text(state.ApiKeyConfigured || (settings.AiEnabled && draft.ApiKey is not null)
-                ? "Status.Ready" : "Status.Missing")),
-            Summary("Status.AdminKey", _text.Text(state.AdminKeyConfigured || (settings.AiEnabled && draft.AdminKey is not null)
-                ? "Status.Ready" : "Status.Missing"))
-        };
-        rows.AddRange(CreateAiSummary(settings));
-        rows.Add(Summary("Setup.Custom", YesNo(!string.IsNullOrWhiteSpace(settings.CustomInstruction))));
-        rows.Add(Summary("Setup.Location", YesNo(settings.IncludeWindowsLocation)));
-        rows.Add(Summary("Setup.MaxCommandOutput", settings.MaxCommandOutputCharacters.ToString("N0", _text.Culture)));
-        rows.Add(Summary("Setup.CommandTimeout", settings.CommandTimeoutSeconds.ToString("N0", _text.Culture)));
-        rows.Add(Summary("Setup.Endpoint", settings.Endpoint));
-        rows.Add(Summary("Theme.Select", ThemeName(_themes.Resolve(settings.Theme))));
-        rows.Add(Summary("Form.TestConnection", YesNo(settings.AiEnabled && HasApiKey(draft, state) && draft.TestConnection)));
-        return rows;
-    }
-
-    /// <summary>Creates a focused review containing exactly the ten AI settings that will be saved.</summary>
-    private IReadOnlyList<FormSummary> CreateAiSummary(AppSettings settings) =>
-    [
-        Summary("Setup.AiEnabled", YesNo(settings.AiEnabled)),
-        Summary("Setup.Model", AiModelCatalog.Resolve(settings.Model).DisplayName),
-        Summary("Setup.Reasoning", _text.Text("Reasoning." + settings.ReasoningEffort)),
-        Summary("Setup.Detail", DetailName(settings.OutputDetail)),
-        Summary("Setup.CommandReview", YesNo(settings.ReviewCommandsWithAi)),
-        Summary("Setup.PromptCaching", YesNo(settings.PromptCachingEnabled)),
-        Summary("AiSettings.ContextBudget", settings.ContextTokenBudget.ToString("N0", _text.Culture)),
-        Summary("Setup.MaxTurns", settings.MaxConversationTurns.ToString("N0", _text.Culture)),
-        Summary("Setup.MaxMessage", settings.MaxMessageCharacters.ToString("N0", _text.Culture)),
-        Summary("Setup.MaxContext", settings.MaxContextPercent.ToString(_text.Culture) + "%")
-    ];
-
-    /// <summary>Resolves a localized summary label while keeping its value plain text.</summary>
-    private FormSummary Summary(string key, string value) => new(_text.Text(key), value);
-
-    /// <summary>Formats a boolean preference in the active draft language.</summary>
-    private string YesNo(bool value) => _text.Text(value ? "Common.Yes" : "Common.No");
+    /// <summary>Shows the same flag, native language name, and code in choices and the setup review.</summary>
+    private string LanguageLabel(SupportedLanguage language) =>
+        TerminalTheme.IconPrefix(_shell.Options, language.Flag, "@") + language.NativeName + " (" + language.Code + ")";
 
     /// <summary>Resolves the three supported answer-detail labels without inventing an unknown choice.</summary>
     private string DetailName(string value) => _text.Text(value switch
@@ -361,6 +328,6 @@ public sealed class FullscreenSetupView
         public AppSettings Settings { get; set; }
         public string? ApiKey { get; set; }
         public string? AdminKey { get; set; }
-        public bool TestConnection { get; set; } = true;
+        public bool TestConnection { get; set; }
     }
 }

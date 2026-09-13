@@ -29,7 +29,7 @@ public sealed class HelpView(
             try
             {
                 shell.Configure(originalOptions with { SuppressFooter = true });
-                new FullscreenHelpView(console, text).Render(CreateSections());
+                new FullscreenHelpView(console, text, shell.Options).Render(CreateSections());
             }
             finally
             {
@@ -60,44 +60,103 @@ public sealed class HelpView(
     [
         new("⚡", text.Text("Help.Examples"), text.Text("Help.Browse.Examples"),
             [
-                new($"hm \"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Query")),
+                new($"hm \"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Query"))
+                {
+                    Arguments = [new($"\"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Argument.Question"))]
+                },
                 new("hm --chat", text.Text("Help.Chat")),
                 new("hm --help", text.Text("Help.Usage"))
             ]),
         new("💬", text.Text("Help.Group.Ai"), text.Text("Help.Browse.Ai"),
             [
-                new(text.Text("Help.QuerySyntax"), text.Text("Help.Query")),
-                new("--diagnose [--file <path>]", text.Text("Diagnose.Help")),
-                new("--script <request> [--file <path>] [--output <path>]", text.Text("Script.Help")),
-                new("--plan <goal> | --plan --resume <id>", text.Text("Plan.Help")),
-                new("--preview <copy|move|rename|delete> --file <path>", text.Text("Preview.Help")),
-                new("--recipes [list|show|save|import|export|run]", text.Text("Recipe.Help")),
+                new(text.Text("Help.QuerySyntax"), text.Text("Help.Query"))
+                {
+                    Example = $"hm --query \"{text.Text("Help.ExamplePrompt")}\"",
+                    Arguments = [new($"\"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Argument.Question"))]
+                },
+                new("--diagnose [--file <path>]", text.Text("Diagnose.Help"))
+                {
+                    Example = $"hm --diagnose \"{text.Text("Help.Browse.DiagnoseExample")}\"",
+                    Arguments = [new($"\"{text.Text("Help.Browse.DiagnoseExample")}\"", text.Text("Help.Argument.Error"))]
+                },
+                new("--script <request> [--file <path>] [--output <path>]", text.Text("Script.Help"))
+                {
+                    Example = $"hm --script \"{text.Text("Help.Browse.ScriptExample")}\"",
+                    Arguments = [new($"\"{text.Text("Help.Browse.ScriptExample")}\"", text.Text("Help.Argument.Script"))]
+                },
+                new("--plan <goal> | --plan --resume <id>", text.Text("Plan.Help"))
+                {
+                    Example = $"hm --plan \"{text.Text("Help.Browse.PlanExample")}\"",
+                    Arguments = [new($"\"{text.Text("Help.Browse.PlanExample")}\"", text.Text("Help.Argument.Goal"))]
+                },
+                new("--preview <copy|move|rename|delete> --file <path>", text.Text("Preview.Help"))
+                {
+                    Example = "hm --preview rename --file . --pattern '*.txt' --prefix reviewed-",
+                    Arguments =
+                    [
+                        new("rename", text.Text("Help.Argument.Rename")),
+                        new("--file", text.Text("Help.Argument.File")),
+                        new(".", text.Text("Help.Argument.CurrentFolder")),
+                        new("--pattern", text.Text("Help.Argument.Pattern")),
+                        new("'*.txt'", text.Text("Help.Argument.TextFiles")),
+                        new("reviewed-", text.Text("Help.Argument.Prefix"))
+                    ]
+                },
+                new("--recipes [list|show|save|import|export|run]", text.Text("Recipe.Help"))
+                {
+                    Example = "hm --recipes list",
+                    Arguments = [new("list", text.Text("Help.Argument.List"))]
+                },
                 new("--chat", text.Text("Help.Chat")),
                 new("--test-ai", text.Text("Help.Test"))
             ]),
         new("📊", text.Text("Help.Group.Insight"), text.Text("Help.Browse.Insight"),
             [
-                new("--version, -v", text.Text("Help.Version")),
+                new("--version, -v", text.Text("Help.Version")) { Example = "hm --version" },
                 new("--status", text.Text("Help.Status")),
-                new("--lenna, lenna", text.Text("Help.Lenna")),
+                new("--lenna, lenna", text.Text("Help.Lenna")) { Example = "hm lenna" },
                 new("--costs", text.Text("Help.Costs")),
-                new("--where, -where", text.Text("Help.Where")),
+                new("--where, -where", text.Text("Help.Where")) { Example = "hm --where" },
                 new("--third-party", text.Text("Help.ThirdParty"))
             ]),
         new("⚙", text.Text("Help.Group.Setup"), text.Text("Help.Browse.Setup"),
             [
                 new("--setup", text.Text("Help.Setup")),
-                new("--ai-settings", text.Text("AiSettings.Help")),
+                new("--ai-setup, --ai-settings", text.Text("AiSettings.Help")) { Example = "hm --ai-setup" },
                 new("--theme", text.Text("Theme.Help")),
-                new("--path [install|remove|status]", text.Text("Help.Path")),
-                new("--install-font [--dry-run]", text.Text("Help.Font")),
+                new("--path [install|remove|status]", text.Text("Help.Path"))
+                {
+                    Example = "hm --path status",
+                    Arguments = [new("status", text.Text("Help.Argument.PathStatus"))]
+                },
+                new("--install-font [--dry-run]", text.Text("Help.Font")) { Example = "hm --install-font" },
                 new(text.Text("Help.LanguageSyntax"), text.Text("Help.Language"))
+                {
+                    Example = $"hm --status --language {text.Language}",
+                    Arguments = [new(text.Language, text.Text("Help.Argument.Language"))]
+                }
             ]),
         new("🛡", text.Text("Help.Group.Safety"), text.Text("Help.Browse.Safety"),
             [
-                new("--no-animation | --no-emoji", text.Text("Help.Rendering")),
-                new("--yes, -y", text.Text("Help.Yes")),
+                new("--no-animation | --no-emoji", text.Text("Help.Rendering"))
+                {
+                    Example = "hm --status --no-animation --no-emoji",
+                    Arguments =
+                    [
+                        new("--no-animation", text.Text("Help.Argument.NoAnimation")),
+                        new("--no-emoji", text.Text("Help.Argument.NoEmoji"))
+                    ]
+                },
+                new("--yes, -y", text.Text("Help.Yes"))
+                {
+                    Example = "hm --install-font --yes",
+                    Arguments = [new("--yes", text.Text("Help.Argument.Yes"))]
+                },
                 new("--dry-run", text.Text("Help.DryRun"))
+                {
+                    Example = "hm --install-font --dry-run",
+                    Arguments = [new("--dry-run", text.Text("Help.Argument.DryRun"))]
+                }
             ])
     ];
 
@@ -152,8 +211,6 @@ public sealed class MainMenuView(
                 MainMenuAction.Costs,
                 MainMenuAction.Status,
                 MainMenuAction.Setup,
-                MainMenuAction.AiSettings,
-                MainMenuAction.Theme,
                 MainMenuAction.TestAi,
                 MainMenuAction.Where,
                 MainMenuAction.Path,
@@ -169,7 +226,7 @@ public sealed class MainMenuView(
         MainMenuAction.Chat => MenuLabel("💬", ">", text.Text("Main.Chat")),
         MainMenuAction.Costs => MenuLabel("📊", "=", text.Text("Main.Costs")),
         MainMenuAction.Status => MenuLabel("🪞", "=", text.Text("Main.Status")),
-        MainMenuAction.Setup => MenuLabel("⚙", "~", text.Text("Main.Setup")),
+        MainMenuAction.Setup => MenuLabel("⚙", "~", text.Text("Settings.Title")),
         MainMenuAction.AiSettings => MenuLabel("⚙", "~", text.Text("AiSettings.Title")),
         MainMenuAction.Theme => MenuLabel("◈", "*", text.Text("Theme.Title")),
         MainMenuAction.TestAi => MenuLabel("↻", "~", text.Text("Main.Test")),

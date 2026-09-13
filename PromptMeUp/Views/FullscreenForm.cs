@@ -21,25 +21,29 @@ internal sealed record FormField(string Key, string LabelKey, Func<string> Read,
     public string? HelpKey { get; init; }
 }
 
-internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields);
-
-internal sealed record FormSummary(string Label, string Value);
+internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields)
+{
+    public string? HelpKey { get; init; }
+    public Func<IRenderable>? Preview { get; init; }
+    public int PreviewRows { get; init; }
+}
 
 /// <summary>Owns keyboard navigation and rendering for temporary, passive terminal forms.</summary>
-internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService text)
+internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions? options = null)
 {
     private const int RowsPerField = 2;
-    // Header, section title, navigation, shortcuts, and the reserved terminal row.
-    private const int FixedBodyRows = 9;
+    // Shared chrome, section heading, and the reserved terminal row, excluding the variable notice height.
+    private const int FixedBodyRows = FullscreenHeader.Height + FullscreenFooter.ActionsRows + FullscreenFooter.HintRows + 3;
+    private readonly ConsoleRenderOptions _options = options ?? new(false, false);
     private int _page;
     private int _focus;
-    private bool _review;
-    private int _reviewScroll;
+    private bool _allowSectionNavigation;
+    private bool _sectionsFocused;
     private string? _error;
     private FormField? _editing;
     private string _input = string.Empty;
     private int _caret;
-    private int _messageHeight = 2;
+    private int _messageHeight = FullscreenFooter.NoticeRows;
     private (int Width, int Height, string Theme)? _lastFrame;
 
     /// <summary>Checks terminal capabilities before opting into a fullscreen form.</summary>
@@ -49,23 +53,28 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         && !Console.IsInputRedirected && !Console.IsOutputRedirected
         && console.Profile.Width >= 60 && console.Profile.Height >= 20;
 
-    /// <summary>Returns a reviewed submission while always restoring the original terminal buffer.</summary>
+    /// <summary>Returns an explicitly saved draft while always restoring the original terminal buffer.</summary>
     internal bool Run(
         string titleKey,
         IReadOnlyList<FormPage> pages,
-        Func<IReadOnlyList<FormSummary>> summary,
-        Func<string?>? validate = null)
+        Func<string?>? validate = null,
+        int initialPage = 0)
     {
         ArgumentNullException.ThrowIfNull(pages);
         if (pages.Count == 0)
         {
             throw new ArgumentException("A fullscreen form needs at least one page.", nameof(pages));
         }
+        ArgumentOutOfRangeException.ThrowIfNegative(initialPage);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(initialPage, pages.Count);
         if (!CanUse(console))
         {
             throw new InvalidOperationException(text.Text("Form.Unavailable"));
         }
 
+        _page = initialPage;
+        _allowSectionNavigation = pages.Count > 1;
+        _sectionsFocused = _allowSectionNavigation;
         var saved = false;
         try
         {
@@ -74,7 +83,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 console.Cursor.Hide();
                 try
                 {
-                    saved = RunLoop(titleKey, pages, summary, validate);
+                    saved = RunLoop(titleKey, pages, validate);
                 }
                 finally
                 {
@@ -92,8 +101,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     }
 
     /// <summary>Processes one focused control at a time without nesting Spectre prompts or Live displays.</summary>
-    private bool RunLoop(string titleKey, IReadOnlyList<FormPage> pages,
-        Func<IReadOnlyList<FormSummary>> summary, Func<string?>? validate)
+    private bool RunLoop(string titleKey, IReadOnlyList<FormPage> pages, Func<string?>? validate)
     {
         while (true)
         {
@@ -104,8 +112,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             }
             _page = Math.Clamp(_page, 0, visiblePages.Length - 1);
             var fields = visiblePages[_page].Fields.Where(IsVisible).ToArray();
-            _focus = Math.Clamp(_focus, 0, _review ? 1 : fields.Length + 2);
-            void Paint() => Render(titleKey, visiblePages, fields, summary());
+            _focus = Math.Clamp(_focus, 0, fields.Length + 1);
+            void Paint() => Render(titleKey, visiblePages, fields);
             Paint();
             var key = ReadKey(Paint);
             if (key.Key == ConsoleKey.Escape)
@@ -121,25 +129,22 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 Edit(key);
                 continue;
             }
-            if (_review)
+            _error = null;
+            if (_allowSectionNavigation && visiblePages.Length > 1
+                && HandleSectionNavigation(key, fields.Length, visiblePages.Length))
             {
-                if (HandleReview(key, summary().Count, validate))
-                {
-                    return true;
-                }
                 continue;
             }
-            _error = null;
             switch (key.Key)
             {
                 case ConsoleKey.Tab:
-                    MoveFocus((key.Modifiers & ConsoleModifiers.Shift) != 0 ? -1 : 1, fields.Length + 3);
+                    MoveFocus((key.Modifiers & ConsoleModifiers.Shift) != 0 ? -1 : 1, fields.Length + 2);
                     break;
                 case ConsoleKey.UpArrow:
-                    MoveFocus(-1, fields.Length + 3);
+                    MoveFocus(-1, fields.Length + 2);
                     break;
                 case ConsoleKey.DownArrow:
-                    MoveFocus(1, fields.Length + 3);
+                    MoveFocus(1, fields.Length + 2);
                     break;
                 case ConsoleKey.PageUp:
                     ChangePage(-1, visiblePages.Length);
@@ -147,14 +152,15 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 case ConsoleKey.PageDown:
                     ChangePage(1, visiblePages.Length);
                     break;
-                case ConsoleKey.F10:
-                    OpenReview();
-                    break;
                 case ConsoleKey.LeftArrow:
                 case ConsoleKey.RightArrow:
                     if (_focus < fields.Length)
                     {
                         CycleChoice(fields[_focus], key.Key == ConsoleKey.LeftArrow ? -1 : 1);
+                    }
+                    else
+                    {
+                        _focus = fields.Length + (1 - (_focus - fields.Length));
                     }
                     break;
                 case ConsoleKey.Enter:
@@ -164,65 +170,65 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                     }
                     else if (_focus == fields.Length)
                     {
-                        ChangePage(-1, visiblePages.Length);
-                    }
-                    else if (_focus == fields.Length + 1 && _page < visiblePages.Length - 1)
-                    {
-                        ChangePage(1, visiblePages.Length);
-                    }
-                    else if (_focus == fields.Length + 2)
-                    {
-                        return false;
+                        _error = validate?.Invoke();
+                        if (_error is null)
+                        {
+                            return true;
+                        }
                     }
                     else
                     {
-                        OpenReview();
+                        return false;
                     }
                     break;
             }
         }
     }
 
-    /// <summary>Requires an explicit Save action after displaying the review and validating the complete draft.</summary>
-    private bool HandleReview(ConsoleKeyInfo key, int rows, Func<string?>? validate)
+    /// <summary>Moves focus between the section list and fields without accepting unfinished edits or saving the draft.</summary>
+    private bool HandleSectionNavigation(ConsoleKeyInfo key, int fieldCount, int pageCount)
     {
-        switch (key.Key)
+        var backwards = (key.Modifiers & ConsoleModifiers.Shift) != 0;
+        if (_sectionsFocused)
         {
-            case ConsoleKey.Tab:
-            case ConsoleKey.LeftArrow:
-            case ConsoleKey.RightArrow:
-            case ConsoleKey.UpArrow:
-            case ConsoleKey.DownArrow:
-                _focus = 1 - _focus;
-                break;
-            case ConsoleKey.PageUp:
-                _reviewScroll = Math.Max(0, _reviewScroll - ReviewCapacity());
-                break;
-            case ConsoleKey.PageDown:
-                _reviewScroll = Math.Min(Math.Max(0, rows - ReviewCapacity()), _reviewScroll + ReviewCapacity());
-                break;
-            case ConsoleKey.Enter:
-                if (_focus == 0)
-                {
-                    _review = false;
+            switch (key.Key)
+            {
+                case ConsoleKey.UpArrow:
+                case ConsoleKey.PageUp:
+                    ChangePage(-1, pageCount);
+                    break;
+                case ConsoleKey.DownArrow:
+                case ConsoleKey.PageDown:
+                    ChangePage(1, pageCount);
+                    break;
+                case ConsoleKey.Home:
+                    ChangePage(-pageCount, pageCount);
+                    break;
+                case ConsoleKey.End:
+                    ChangePage(pageCount, pageCount);
+                    break;
+                case ConsoleKey.Enter:
+                case ConsoleKey.RightArrow:
+                case ConsoleKey.F6:
+                    _sectionsFocused = false;
                     _focus = 0;
-                }
-                else
-                {
-                    _error = validate?.Invoke();
-                    return _error is null;
-                }
-                break;
+                    break;
+                case ConsoleKey.Tab:
+                    _sectionsFocused = false;
+                    _focus = backwards ? fieldCount + 1 : 0;
+                    break;
+            }
+            return true;
+        }
+
+        if (key.Key == ConsoleKey.F6
+            || key.Key == ConsoleKey.LeftArrow && (key.Modifiers & ConsoleModifiers.Control) != 0
+            || key.Key == ConsoleKey.Tab && (backwards ? _focus == 0 : _focus == fieldCount + 1))
+        {
+            _sectionsFocused = true;
+            return true;
         }
         return false;
-    }
-
-    /// <summary>Opens the review without making its Save action the default selection.</summary>
-    private void OpenReview()
-    {
-        _review = true;
-        _focus = 0;
-        _reviewScroll = 0;
     }
 
     /// <summary>Moves keyboard focus cyclically through fields and navigation actions.</summary>
@@ -363,8 +369,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
 
     /// <summary>Draws a fixed viewport with sections, focus, contextual guidance and persistent actions.</summary>
-    private void Render(string titleKey, IReadOnlyList<FormPage> pages, IReadOnlyList<FormField> fields,
-        IReadOnlyList<FormSummary> summary)
+    private void Render(string titleKey, IReadOnlyList<FormPage> pages, IReadOnlyList<FormField> fields)
     {
         var frame = (console.Profile.Width, console.Profile.Height, TerminalTheme.Current.Id);
         console.WriteAnsi(writer =>
@@ -384,47 +389,99 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             return;
         }
 
-        var focused = !_review && _focus < fields.Count ? fields[_focus] : null;
-        var hint = _error ?? focused?.Help?.Invoke() ?? text.Text(focused?.HelpKey ?? "Form.Help");
+        var sectionNavigation = _allowSectionNavigation && pages.Count > 1;
+        var focused = !_sectionsFocused && _focus < fields.Count ? fields[_focus] : null;
+        var helpKey = pages[_page].HelpKey ?? (sectionNavigation ? "Form.NavigationHelp" : "Form.Help");
+        var guidance = focused?.Help?.Invoke() ?? text.Text(focused?.HelpKey ?? helpKey);
+        var hint = _error ?? (focused is null ? guidance : text.Text(focused.LabelKey) + ": " + guidance);
         var hintWidth = Math.Max(1, frame.Width - 5);
-        var minimumBodyRows = RowsPerField + (_review ? 1 : 0);
+        var minimumBodyRows = RowsPerField;
         _messageHeight = Math.Clamp((int)Math.Ceiling(Segment.CellCount([new Segment(hint)]) / (double)hintWidth) + 1,
-            2, Math.Min(6, frame.Height - FixedBodyRows - minimumBodyRows));
-        var section = _review ? text.Text("Form.Review") : text.Text(pages[_page].TitleKey);
-        var header = new Grid().AddColumn().AddColumn(new GridColumn().RightAligned());
-        header.AddRow(Styled("hm / PromptMeUp", TerminalTheme.Accent), Styled(text.Text(titleKey), TerminalTheme.Primary));
+            FullscreenFooter.NoticeRows, Math.Min(6, frame.Height - FixedBodyRows - minimumBodyRows));
+        var section = SectionTitle(pages[_page]);
         var root = new Layout("root").SplitRows(
-            new Layout("header", new Rows(Inset(header), new Text(" "))).Size(2),
+            new Layout("header", FullscreenHeader.Create(text.Text(titleKey), _options)).Size(FullscreenHeader.Height),
             new Layout("body"),
-            new Layout("message").Size(_messageHeight),
-            new Layout("actions").Size(2),
-            new Layout("footer").Size(2));
-        var body = _review ? ReviewBody(summary) : FieldsBody(fields);
-        var sectionTitle = _review ? section : $"{section}  {_page + 1}/{pages.Count}";
-        var content = Inset(new Rows(Styled(sectionTitle, TerminalTheme.Accent), new Text(" "), body));
-        if (!_review && frame.Width >= 100)
+            new Layout("footer").Size(FullscreenFooter.Height(_messageHeight)));
+        var fieldBody = FieldsBody(fields);
+        if (pages[_page].Preview is { } preview && BodyRows() >= fields.Count * RowsPerField + pages[_page].PreviewRows)
         {
-            var navigation = new Rows(pages.Select((page, index) => Styled(
-                $"{index + 1:00}  {text.Text(page.TitleKey)}", index == _page ? TerminalTheme.SelectionForeground : TerminalTheme.Muted,
-                index == _page ? TerminalTheme.SelectionBackground : null)));
-            root["body"].SplitColumns(new Layout("sections", Inset(navigation)).Size(25), new Layout("fields", content));
+            fieldBody = new Rows(fieldBody, preview());
+        }
+        var content = Inset(new Rows(Styled(section, "bold " + TerminalTheme.Accent), new Text(" "), fieldBody));
+        if (sectionNavigation)
+        {
+            var navigationWidth = Math.Clamp(frame.Width / 4, 20, 30);
+            root["body"].SplitColumns(new Layout("sections", SectionNavigation(pages)).Size(navigationWidth), new Layout("fields", content));
         }
         else
         {
             root["body"].Update(content);
         }
-        root["message"].Update(new Rows(new Text(" "), Inset(new Text(SafeText(hint),
-            Style.Parse(_error is null ? TerminalTheme.Muted : TerminalTheme.Error)))));
-        root["actions"].Update(new Rows(
-            new Rule { Style = Style.Parse(TerminalTheme.Divider) },
-            Inset(Actions(fields.Count, pages.Count))));
-        var footerKey = _editing is not null ? "Form.EditFooter" : _review ? "Form.ReviewFooter" : "Form.Footer";
+        var footerKey = _editing is not null ? "Form.EditFooter"
+            : _sectionsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";
         if (Segment.CellCount([new Segment(text.Text(footerKey))]) > frame.Width - 5)
         {
             footerKey += "Compact";
         }
-        root["footer"].Update(new Rows(new Text(" "), Inset(Styled(text.Text(footerKey), TerminalTheme.Info))));
+        root["footer"].Update(FullscreenFooter.Create(
+            new Text(SafeText(hint), Style.Parse(_error is null ? TerminalTheme.Muted : TerminalTheme.Error)),
+            Actions(fields.Count),
+            FullscreenFooter.Shortcuts(text.Text(footerKey)),
+            _messageHeight));
         console.Write(new FormSurface(root));
+    }
+
+    /// <summary>Shows the current section and keeps the focused item visible in both wide and compact layouts.</summary>
+    private IRenderable SectionNavigation(IReadOnlyList<FormPage> pages)
+    {
+        var spacing = BodyRows() >= pages.Count * 2 ? 2 : 1;
+        var capacity = Math.Max(1, (BodyRows() - (pages.Count * spacing > BodyRows() ? 1 : 0)) / spacing);
+        var offset = Math.Clamp(_page - capacity + 1, 0, Math.Max(0, pages.Count - capacity));
+        var rows = new List<IRenderable>();
+        for (var index = offset; index < Math.Min(pages.Count, offset + capacity); index++)
+        {
+            var active = index == _page;
+            var selected = active && _sectionsFocused;
+            var marker = active ? ">" : " ";
+            var label = marker + (_options.NoEmoji ? " " : string.Empty) + SectionTitle(pages[index]);
+            rows.Add(Styled(label, selected ? TerminalTheme.SelectionForeground : active ? TerminalTheme.Accent : TerminalTheme.Primary,
+                selected ? TerminalTheme.SelectionBackground : null));
+            if (spacing == 2)
+            {
+                rows.Add(new Text(" "));
+            }
+        }
+        if (pages.Count > capacity)
+        {
+            var above = offset > 0 ? console.Profile.Capabilities.Unicode ? "↑ " : "^ " : string.Empty;
+            var below = offset + capacity < pages.Count ? console.Profile.Capabilities.Unicode ? " ↓" : " v" : string.Empty;
+            rows.Add(Styled(above + "..." + below, TerminalTheme.Info));
+        }
+        return Inset(new Rows(Styled(text.Text("Form.Sections"), TerminalTheme.Accent), new Text(" "), new Rows(rows)));
+    }
+
+    /// <summary>Adds meaningful setup section icons through the shared emoji and ASCII fallback helper.</summary>
+    private string SectionTitle(FormPage page)
+    {
+        var icon = page.TitleKey switch
+        {
+            "Form.General" => "⚙️",
+            "Setup.Keys" => "🔑",
+            "Setup.Model" => "🧠",
+            "Setup.Preferences" => "📝",
+            "Form.Advanced" => "🛠️",
+            "Theme.Title" => "🎨",
+            "Settings.General" => "⚙️",
+            "Settings.Ai" => "🧠",
+            "Settings.Credentials" => "🔑",
+            "Settings.Context" => "💬",
+            "Settings.Commands" => "⚡",
+            "Settings.Personalization" => "📝",
+            "Settings.Theme" => "🎨",
+            _ => null
+        };
+        return (icon is null ? string.Empty : TerminalTheme.IconPrefix(_options, icon, "-")) + text.Text(page.TitleKey);
     }
 
     /// <summary>Renders spaced editable fields while keeping the complete selected field inside the viewport.</summary>
@@ -436,9 +493,9 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         for (var index = offset; index < Math.Min(fields.Count, offset + capacity); index++)
         {
             var field = fields[index];
-            var selected = index == _focus;
+            var selected = !_sectionsFocused && index == _focus;
             rows.Add(FieldBlock(
-                Styled($"{(selected ? ">" : " ")} {text.Text(field.LabelKey)}", TerminalTheme.Muted),
+                Styled($"{(selected ? ">" : " ")} {text.Text(field.LabelKey)}", selected ? TerminalTheme.Accent : TerminalTheme.Primary),
                 width => Styled($"[ {FieldValue(field, width - 4)} ]",
                     selected ? TerminalTheme.SelectionForeground : TerminalTheme.Primary,
                     selected ? TerminalTheme.SelectionBackground : null)));
@@ -540,28 +597,10 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private int InputElementOffset(int[] elements, int element) =>
         element < elements.Length ? elements[element] : _input.Length;
 
-    /// <summary>Shows non-sensitive review rows and a visible scroll range.</summary>
-    private IRenderable ReviewBody(IReadOnlyList<FormSummary> summary)
-    {
-        var capacity = ReviewCapacity();
-        _reviewScroll = Math.Clamp(_reviewScroll, 0, Math.Max(0, summary.Count - capacity));
-        var rows = new List<IRenderable>();
-        foreach (var row in summary.Skip(_reviewScroll).Take(capacity))
-        {
-            rows.Add(FieldBlock(
-                Styled(row.Label, TerminalTheme.Muted),
-                _ => Styled(row.Value, TerminalTheme.Primary)));
-        }
-        rows.Add(Styled($"{_reviewScroll + 1}–{Math.Min(summary.Count, _reviewScroll + capacity)} / {summary.Count}", TerminalTheme.Info));
-        return new Rows(rows);
-    }
-
     /// <summary>Builds semantic navigation buttons with contrasting focus colors and an explicit focus marker.</summary>
-    private IRenderable Actions(int fieldCount, int pageCount)
+    private IRenderable Actions(int fieldCount)
     {
-        var labels = _review
-            ? new[] { "Form.Back", "Form.Save" }
-            : new[] { "Form.Back", _page < pageCount - 1 ? "Form.Next" : "Form.Review", "Form.Cancel" };
+        var labels = new[] { "Form.Save", "Form.Cancel" };
         var row = new Grid();
         foreach (var label in labels)
         {
@@ -569,7 +608,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
         row.AddRow(labels.Select((label, index) =>
         {
-            var selected = _focus == (_review ? index : fieldCount + index);
+            var selected = !_sectionsFocused && _focus == fieldCount + index;
             return Styled($"{(selected ? ">" : " ")} [ {text.Text(label)} ]",
                 selected ? TerminalTheme.SelectionForeground : ActionColor(label),
                 selected ? TerminalTheme.SelectionBackground : null);
@@ -580,8 +619,6 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     /// <summary>Assigns navigation, progression, saving, and cancellation their semantic theme colors.</summary>
     private static string ActionColor(string label) => label switch
     {
-        "Form.Back" => TerminalTheme.Info,
-        "Form.Next" or "Form.Review" => TerminalTheme.Accent,
         "Form.Save" => TerminalTheme.Success,
         "Form.Cancel" => TerminalTheme.Warning,
         _ => throw new InvalidOperationException("Unsupported fullscreen form action.")
@@ -592,9 +629,6 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
 
     /// <summary>Calculates field rows after the open headings and footer, preserving one complete spaced field.</summary>
     private int BodyRows() => Math.Max(RowsPerField, console.Profile.Height - FixedBodyRows - _messageHeight);
-
-    /// <summary>Fits complete spaced review fields while reserving one row for the scroll-range indicator.</summary>
-    private int ReviewCapacity() => Math.Max(1, (BodyRows() - 1) / RowsPerField);
 
     /// <summary>Checks field visibility against the current draft.</summary>
     private static bool IsVisible(FormField field) => field.IsVisible?.Invoke() != false;

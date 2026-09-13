@@ -21,10 +21,6 @@ public sealed class StatusView(
     public void Render(AppStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
-        TerminalTheme.WriteRule(
-            console,
-            TerminalTheme.IconPrefix(shell.Options, "🪞", "=") + text.Text("Status.Title"),
-            TerminalTheme.Accent);
         var configuration = TerminalTheme.PairGrid(
         [
             TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(shell.Options, "◈", "#") + text.Text("Status.Setup"), status.Settings.SetupCompleted ? text.Text("Status.Completed") : text.Text("Status.Required"), status.Settings.SetupCompleted ? TerminalTheme.Success : TerminalTheme.Warning),

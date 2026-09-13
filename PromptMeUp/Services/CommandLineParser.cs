@@ -150,7 +150,7 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(setupError);
                     }
                     break;
-                case "--ai-settings":
+                case "--ai-settings" or "--ai-setup":
                     if (!TrySelect(AppCommand.AiSettings, ref command, ref commandWasSelected, out var aiSettingsError))
                     {
                         return FailureMessage(aiSettingsError);

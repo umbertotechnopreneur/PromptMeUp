@@ -239,12 +239,12 @@ internal static partial class UiTextCatalog
             Spanish: "Desactiva animaciones o emoji para terminales limitados.",
             Vietnamese: "Tắt hoạt ảnh hoặc emoji cho terminal hạn chế."));
         entries.Add("Help.Setup", new(
-            English: "Open first-run / AI setup.",
-            Italian: "Apre la configurazione iniziale / AI.",
-            French: "Ouvre la configuration initiale et IA.",
-            German: "Öffnet die Erst- und KI-Einrichtung.",
-            Spanish: "Abre la configuración inicial y de IA.",
-            Vietnamese: "Mở thiết lập ban đầu và AI."));
+            English: "Open Settings with General selected.",
+            Italian: "Apre Impostazioni con Generali selezionato.",
+            French: "Ouvre les réglages sur la section Général.",
+            German: "Öffnet die Einstellungen mit dem Abschnitt Allgemein.",
+            Spanish: "Abre Configuración con General seleccionado.",
+            Vietnamese: "Mở Cài đặt và chọn mục Chung."));
         entries.Add("Help.Status", new(
             English: "Show configuration and local service status.",
             Italian: "Mostra configurazione e servizi locali.",
@@ -351,12 +351,12 @@ internal static partial class UiTextCatalog
             Spanish: "Prompt único",
             Vietnamese: "Prompt đơn"));
         entries.Add("Main.Setup", new(
-            English: "AI setup",
-            Italian: "Configurazione AI",
-            French: "Configuration IA",
-            German: "KI-Einrichtung",
-            Spanish: "Configuración de IA",
-            Vietnamese: "Thiết lập AI"));
+            English: "Settings",
+            Italian: "Impostazioni",
+            French: "Réglages",
+            German: "Einstellungen",
+            Spanish: "Configuración",
+            Vietnamese: "Cài đặt"));
         entries.Add("Main.Status", new(
             English: "Application status",
             Italian: "Stato applicazione",

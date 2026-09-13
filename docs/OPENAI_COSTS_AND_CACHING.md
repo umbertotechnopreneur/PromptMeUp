@@ -5,7 +5,7 @@ and check token usage as you work. These controls are available from the termina
 
 | What you want to do | Command |
 | --- | --- |
-| Change the model or conversation limits | `hm --ai-settings` after initial setup |
+| Open settings at the model preferences, then choose Conversation for its limits | `hm --ai-setup` or `hm --ai-settings` |
 | Check context and token usage during chat | `/status` or `/context` |
 | Save a project fact | `/remember project Build this project with dotnet build.` |
 | Save a preference across projects | `/remember global Keep terminal explanations concise.` |
@@ -80,9 +80,10 @@ conversation, earlier audit records, and usage records remain. See
 
 ## Choose how much conversation to keep
 
-Run `hm --ai-settings` after initial setup to change the model, reasoning effort,
-output detail, AI availability, AI command review, prompt caching, and these four
-conversation limits. The form shows a summary for confirmation before saving.
+Run `hm --ai-setup` (also `hm --ai-settings`) to open the shared Settings screen
+with AI selected. Choose Conversation in the left sidebar to change these four
+limits. All preferences stay in one draft as you move between sections. Save
+applies the draft directly; Cancel discards it.
 
 | Conversation limit | Default | Range |
 | --- | ---: | --- |
@@ -113,10 +114,11 @@ from later context. Ordinary responses have a 2 MiB body limit; scripts and plan
 use [configurable artifact limits](CLI_REFERENCE.md#configure-artifact-limits),
 with 16,384 output tokens by default.
 
-Use the full `hm --setup` form for the optional instruction preamble (up to 500
-Unicode words, checked locally for prompt injection), retained command output
-(1,000–32,768 characters, default 12,000), and command timeout (5–300 seconds,
-default 30). These settings are outside the shorter AI settings form.
+In the same Settings screen, Personalization contains the optional instruction
+preamble (up to 500 Unicode words, checked locally for prompt injection). Commands
+contains retained command output (1,000–32,768 characters, default 12,000) and
+command timeout (5–300 seconds, default 30). `hm --setup` opens the workspace with
+General selected.
 
 ## Read the cost estimate
 
@@ -158,9 +160,10 @@ With `OPENAI_ADMIN_KEY`, the same cost flow can refresh current-month organizati
 ## Prompt caching
 
 Prompt caching lets the provider reuse an unchanged prefix of a request when it
-is eligible. It is enabled by default; change it with `hm --ai-settings` or the
-full setup form. The conversation status shows the cache reads and writes the
-provider actually reports. Enabling caching does not guarantee a cache hit.
+is eligible. It is enabled by default; change it in the AI section of Settings,
+opened directly with `hm --ai-setup` or `hm --ai-settings`. Conversation status
+shows the cache reads and writes the provider actually reports. Enabling caching
+does not guarantee a cache hit.
 
 ### Request layout and model policies
 

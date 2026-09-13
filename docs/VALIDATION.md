@@ -71,14 +71,16 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] A simulated key in command output is visible locally but redacted in SQLite and the next AI prompt.
 - [ ] Timeout and output limits are honored.
 
-## Validate the shorter AI settings flow
+## Validate the shared settings screen
 
-- [ ] After initial setup, `hm --ai-settings` opens the model, response preferences, and conversation limits without asking for keys or running a connection test.
-- [ ] A fresh data directory reports that setup is required; redirected input/output does not open the interactive form.
-- [ ] Saving changes only the selected AI preferences and limits. Credentials, preamble, location, command limits, and saved language stay intact, including when `--language` changes the form's display language.
-- [ ] The context budget accepts 4,000–200,000 tokens, defaults to 16,000, and appears in the review before saving.
+- [ ] `hm --setup`, `hm --ai-setup` (also `--ai-settings`), and `hm --theme` open the same workspace with General, AI, or Theme selected, including with a fresh data directory.
+- [ ] At 60 columns by 20 rows or larger, the left sidebar keeps all seven sections accessible; redirected input/output does not open the interactive form.
+- [ ] Switching sections keeps edits in one draft. Save applies changes directly, without a summary or confirmation page. An invocation-only `--language` choice does not change the saved language unless its field is edited.
+- [ ] Tab reaches Save and Cancel, Left/Right moves between those buttons, and Enter activates the focused action. F6 moves between sidebar and fields.
+- [ ] Theme preview updates live; cancelling restores the previous palette. The compatibility section menu also offers direct Save and Cancel.
+- [ ] The context budget accepts 4,000–200,000 tokens and defaults to 16,000.
 - [ ] An active `PROMPTMEUP_CONTEXT_TOKENS` override is explained and remains effective without being copied into the saved setting.
-- [ ] Cancelling or pressing `Esc` leaves the previous settings intact. Saving neither refreshes pricing nor sends an AI request.
+- [ ] Cancelling or pressing `Esc` leaves the previous settings intact. Saving does not refresh pricing or send an AI request unless the connection check is enabled; that choice defaults to off after initial setup.
 
 ## Validate saved notes and context limits
 

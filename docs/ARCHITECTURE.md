@@ -32,16 +32,25 @@ The invocation orchestrator delegates settings and credential forms to `SetupWor
 
 `HelpWorkflow` also runs before that initialization. Explicit help opens navigable sections in a supported live terminal and keeps grouped scrolling output elsewhere. Invalid command lines use the scrolling reference so the error remains visible. Terminal views use open layouts and separators; cards require an explicit product request.
 
-`hm --ai-settings` takes a shorter path through `SetupWorkflow` after initial setup. It requires an interactive terminal and saves only AI enablement, model, reasoning, response detail, advisory command review, caching, and conversation limits. It preserves credentials, saved language, preamble, location preference, and command execution settings. An invocation-only `--language` choice changes the form's display language without changing the saved language. This path does not refresh pricing or call the provider.
+`hm --setup`, `hm --ai-setup` (also `--ai-settings`), and `hm --theme` enter the same `SetupWorkflow` with General, AI, or Theme selected. The selected section is navigation state; all settings remain available in one draft. An invocation-only `--language` choice changes the form's display language without changing the saved language. Save persists the draft directly, without a summary or confirmation page. Saving does not refresh pricing or call the provider unless the user enables the optional connection check, which defaults to off after initial setup.
 
 UI translations have one definition per key and language in the functionality-grouped `Services/Localization/UiTextCatalog.*.cs` files. Each entry names all six translations explicitly, and catalog assembly rejects duplicate keys. `LocalizationService` retains language selection and culture-aware formatting; runtime AI instructions remain in `/prompt`.
 
-`AdaptiveSetupView` selects fullscreen forms or the sequential compatibility path.
+`AdaptiveSetupView` selects the fullscreen workspace or a compatibility section menu.
 The fullscreen form owns keyboard focus and a temporary alternate terminal buffer;
 it returns a draft for `SetupWorkflow` to save. Theme preview changes are reverted
 when the view exits and applied after successful persistence. `ThemeCatalogService`
 loads validated versioned JSON palettes from the packaged `themes` directory;
-settings store only the selected identifier. `hm --theme` changes only that setting.
+settings store only the selected identifier. `hm --theme` selects Theme in the
+shared settings workspace.
+
+Fullscreen settings and help share the product header and footer layout. Settings
+keeps a sidebar visible from 60 columns, with General, AI, Credentials,
+Conversation, Commands, Personalization, and Theme. Switching sections keeps the
+local draft until Save or Cancel. Tab reaches those actions, and Left/Right moves
+between their buttons. Help uses the same section-navigation
+keys and presents colored command examples with matching parameter explanations.
+The views keep this presentation separate from command parsing and execution.
 
 ## From question to answer
 

@@ -99,7 +99,6 @@ public sealed class ConsoleShellView : IConsoleShellView
         {
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🧠", "AI")}{_text.Text("Shell.Model")}", status.Model),
             TerminalTheme.CompactMetric(_text.Text("Shell.ActiveContext"), FormatContextUsage(status.ActiveContextTokens, status.ContextWindowTokens), TerminalTheme.Info),
-            TerminalTheme.CompactMetric(_text.Text("Shell.ContextBudget"), FormatContextUsage(status.ActiveContextTokens, status.ContextBudgetTokens), TerminalTheme.Info),
             TerminalTheme.CompactMetric(_text.Text("Shell.MemoryUsage"), status.ActiveContextTokens.HasValue
                 ? _text.Text("Shell.MemoryUsageValue", status.MemoryCount, FormatTokens(status.MemoryTokens))
                 : _text.Text("Costs.Unavailable")),
@@ -119,6 +118,8 @@ public sealed class ConsoleShellView : IConsoleShellView
             $"{icon}{_text.Text("Shell.Session")}",
             metrics,
             preferredPairs: 2);
+        _console.WriteLine();
+        RenderContextBudget(status);
         _console.WriteLine();
     }
 
@@ -167,10 +168,12 @@ public sealed class ConsoleShellView : IConsoleShellView
         var content = new Grid();
         content.AddColumn();
         content.AddRow(new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(_text.Text("Footer.Thanks"))}[/]"));
+        content.AddRow(new Text(" "));
         content.AddRow(new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Footer.Support"))}[/]"));
         content.AddRow(new Markup($"[{TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"));
         content.AddRow(new Markup($"[{TerminalTheme.Muted}]Copyright (c) [link=https://umbertogiacobbi.biz]umbertogiacobbi.biz[/][/]"));
         TerminalTheme.WriteRule(_console, TerminalTheme.IconPrefix(Options, "👋", "*") + "hm · help me", TerminalTheme.Accent);
+        _console.WriteLine();
         _console.Write(content);
         _console.WriteLine();
         _projectBannerRendered = true;
@@ -305,6 +308,69 @@ public sealed class ConsoleShellView : IConsoleShellView
 
         TerminalTheme.WriteRule(_console, header, TerminalTheme.Accent);
         _console.Write(grid);
+    }
+
+    /// <summary>Gives the operating budget its own label, Spectre progress bar, and complete localized values.</summary>
+    private void RenderContextBudget(ShellRuntimeStatus status)
+    {
+        const int minimumBarWidth = 8;
+        const int maximumBarWidth = 36;
+        var width = Math.Max(1, _console.Profile.Width);
+        var labelText = _text.Text("Shell.ContextBudget") + ":";
+        var valueText = FormatContextUsage(status.ActiveContextTokens, status.ContextBudgetTokens);
+        var label = new Text(labelText, Style.Parse(TerminalTheme.Muted));
+        var value = new Text(valueText, Style.Parse($"bold {TerminalTheme.Info}"));
+        var labelWidth = new Segment(labelText).CellCount();
+        var valueWidth = new Segment(valueText).CellCount();
+        var barWidth = width - labelWidth - valueWidth - 4;
+        if (barWidth >= minimumBarWidth)
+        {
+            _console.Write(BudgetColumns(label, BudgetBar(status, Math.Min(maximumBarWidth, barWidth)), value));
+            return;
+        }
+
+        barWidth = width - valueWidth - 2;
+        IRenderable detail = barWidth >= minimumBarWidth
+            ? BudgetColumns(BudgetBar(status, Math.Min(maximumBarWidth, barWidth)), value)
+            : new Rows(BudgetBar(status, Math.Min(maximumBarWidth, width)), value);
+        _console.Write(new Rows(label, detail));
+    }
+
+    /// <summary>Renders a static Spectre progress bar without animation, timers, or division by an unavailable budget.</summary>
+    private IRenderable BudgetBar(ShellRuntimeStatus status, int width)
+    {
+        var percentage = status.ActiveContextTokens.HasValue && status.ContextBudgetTokens > 0
+            ? Math.Clamp(status.ActiveContextTokens.Value * 100d / status.ContextBudgetTokens, 0d, 100d)
+            : 0d;
+        var task = new ProgressTask(0, string.Empty, 100d, autoStart: false, timeProvider: TimeProvider.System)
+        {
+            Value = percentage
+        };
+        var column = new ProgressBarColumn
+        {
+            Width = width,
+            CompletedStyle = Style.Parse(TerminalTheme.Info),
+            FinishedStyle = Style.Parse(TerminalTheme.Info),
+            RemainingStyle = Style.Parse(TerminalTheme.Divider)
+        };
+        var options = new RenderOptions(_console.Profile.Capabilities, new Size(width, 1));
+        return column.Render(options, task, TimeSpan.Zero);
+    }
+
+    /// <summary>Aligns budget components on an open row with two spaces between columns.</summary>
+    private static Grid BudgetColumns(params IRenderable[] components)
+    {
+        var grid = new Grid();
+        for (var index = 0; index < components.Length; index++)
+        {
+            grid.AddColumn(new GridColumn
+            {
+                NoWrap = true,
+                Padding = new Padding(0, 0, index + 1 < components.Length ? 2 : 0, 0)
+            });
+        }
+        grid.AddRow(components);
+        return grid;
     }
 
     /// <summary>Formats small per-request USD amounts without hiding sub-cent costs.</summary>

@@ -105,13 +105,62 @@ internal static partial class UiTextCatalog
             German: "Abbrechen",
             Spanish: "Cancelar",
             Vietnamese: "Hủy"));
+        entries.Add("Form.Sections", new(
+            English: "Sections",
+            Italian: "Sezioni",
+            French: "Sections",
+            German: "Abschnitte",
+            Spanish: "Secciones",
+            Vietnamese: "Các mục"));
+        entries.Add("Form.SectionsHelp", new(
+            English: "Choose a section with Up/Down, then press Enter to edit. F6 switches between sections and fields. Changes stay in the draft until you choose Save.",
+            Italian: "Scegli una sezione con Su/Giù, poi premi Invio per modificare. F6 passa tra sezioni e campi. Le modifiche restano nella bozza finché scegli Salva.",
+            French: "Choisissez une section avec Haut/Bas, puis appuyez sur Entrée pour modifier. F6 alterne entre sections et champs. Les modifications restent en brouillon jusqu'à Enregistrer.",
+            German: "Wählen Sie mit Auf/Ab einen Abschnitt und drücken Sie Enter zum Bearbeiten. F6 wechselt zwischen Abschnitten und Feldern. Änderungen bleiben bis zum Speichern im Entwurf.",
+            Spanish: "Elige una sección con Arriba/Abajo y pulsa Intro para editar. F6 alterna entre secciones y campos. Los cambios quedan en el borrador hasta elegir Guardar.",
+            Vietnamese: "Chọn mục bằng Lên/Xuống, rồi nhấn Enter để sửa. F6 chuyển giữa mục và trường. Thay đổi được giữ trong bản nháp đến khi bạn chọn Lưu."));
+        entries.Add("Form.SectionsFooter", new(
+            English: "Up/Down: sections | Enter/Right/Tab: fields | F6: switch focus | Esc: cancel",
+            Italian: "Su/Giù: sezioni | Invio/Destra/Tab: campi | F6: cambia area | Esc: annulla",
+            French: "Haut/Bas : sections | Entrée/Droite/Tab : champs | F6 : changer de zone | Esc : annuler",
+            German: "Auf/Ab: Abschnitte | Enter/Rechts/Tab: Felder | F6: Fokus wechseln | Esc: abbrechen",
+            Spanish: "Arriba/Abajo: secciones | Intro/Derecha/Tab: campos | F6: cambiar foco | Esc: cancelar",
+            Vietnamese: "Lên/Xuống: mục | Enter/Phải/Tab: trường | F6: chuyển vùng | Esc: hủy"));
+        entries.Add("Form.SectionsFooterCompact", new(
+            English: "Up/Down: sections | Enter: fields | Esc: cancel",
+            Italian: "Su/Giù: sezioni | Invio: campi | Esc: annulla",
+            French: "Haut/Bas: sections | Entrée: champs | Esc: annuler",
+            German: "Auf/Ab: Abschnitte | Enter: Felder | Esc: Abbruch",
+            Spanish: "Arriba/Abajo: secciones | Intro: campos | Esc: cancelar",
+            Vietnamese: "Lên/Xuống: mục | Enter: trường | Esc: hủy"));
+        entries.Add("Form.NavigationFooter", new(
+            English: "Tab: fields/actions | F6: sections | Left/Right: buttons | Enter: choose | Esc: cancel",
+            Italian: "Tab: campi/azioni | F6: sezioni | Sinistra/Destra: pulsanti | Invio: scegli | Esc: annulla",
+            French: "Tab : champs/actions | F6 : sections | Gauche/Droite : boutons | Entrée : choisir | Esc : annuler",
+            German: "Tab: Felder/Aktionen | F6: Abschnitte | Links/Rechts: Schaltflächen | Enter: wählen | Esc: abbrechen",
+            Spanish: "Tab: campos/acciones | F6: secciones | Izquierda/Derecha: botones | Intro: elegir | Esc: cancelar",
+            Vietnamese: "Tab: trường/thao tác | F6: mục | Trái/Phải: nút | Enter: chọn | Esc: hủy"));
+        entries.Add("Form.NavigationFooterCompact", new(
+            English: "F6: sections | Enter: edit | Esc: cancel",
+            Italian: "F6: sezioni | Invio: modifica | Esc: annulla",
+            French: "F6: sections | Entrée: modifier | Esc: annuler",
+            German: "F6: Abschnitte | Enter: ändern | Esc: Abbruch",
+            Spanish: "F6: secciones | Intro: editar | Esc: cancelar",
+            Vietnamese: "F6: mục | Enter: sửa | Esc: hủy"));
+        entries.Add("Form.NavigationHelp", new(
+            English: "F6 switches between the sidebar and fields. Tab reaches Save and Cancel; Left/Right moves between the buttons. Enter chooses the focused action.",
+            Italian: "F6 passa tra barra laterale e campi. Tab raggiunge Salva e Annulla; Sinistra/Destra passa tra i pulsanti. Invio sceglie l'azione selezionata.",
+            French: "F6 alterne entre la barre latérale et les champs. Tab rejoint Enregistrer et Annuler ; Gauche/Droite passe entre les boutons. Entrée choisit l'action active.",
+            German: "F6 wechselt zwischen Seitenleiste und Feldern. Tab erreicht Speichern und Abbrechen; Links/Rechts wechselt zwischen den Schaltflächen. Enter wählt die aktive Aktion.",
+            Spanish: "F6 alterna entre la barra lateral y los campos. Tab llega a Guardar y Cancelar; Izquierda/Derecha cambia de botón. Intro elige la acción enfocada.",
+            Vietnamese: "F6 chuyển giữa thanh bên và trường. Tab đến Lưu và Hủy; Trái/Phải chuyển giữa các nút. Enter chọn thao tác đang được trỏ đến."));
         entries.Add("Form.Footer", new(
-            English: "Tab/arrows: fields | PgUp/PgDn: sections | Enter: edit | F10: review | Esc: cancel",
-            Italian: "Tab/frecce: campi | PgUp/PgDn: sezioni | Invio: modifica | F10: riepilogo | Esc: annulla",
-            French: "Tab/flèches : champs | PgUp/PgDn : sections | Entrée : modifier | F10 : vérifier | Esc : annuler",
-            German: "Tab/Pfeile: Felder | PgUp/PgDn: Abschnitte | Enter: bearbeiten | F10: prüfen | Esc: abbrechen",
-            Spanish: "Tab/flechas: campos | PgUp/PgDn: secciones | Intro: editar | F10: revisar | Esc: cancelar",
-            Vietnamese: "Tab/mũi tên: trường | PgUp/PgDn: mục | Enter: sửa | F10: xem lại | Esc: hủy"));
+            English: "Tab/arrows: fields | PgUp/PgDn: sections | Left/Right: buttons | Enter: choose | Esc: cancel",
+            Italian: "Tab/frecce: campi | PgUp/PgDn: sezioni | Sinistra/Destra: pulsanti | Invio: scegli | Esc: annulla",
+            French: "Tab/flèches : champs | PgUp/PgDn : sections | Gauche/Droite : boutons | Entrée : choisir | Esc : annuler",
+            German: "Tab/Pfeile: Felder | PgUp/PgDn: Abschnitte | Links/Rechts: Schaltflächen | Enter: wählen | Esc: abbrechen",
+            Spanish: "Tab/flechas: campos | PgUp/PgDn: secciones | Izquierda/Derecha: botones | Intro: elegir | Esc: cancelar",
+            Vietnamese: "Tab/mũi tên: trường | PgUp/PgDn: mục | Trái/Phải: nút | Enter: chọn | Esc: hủy"));
         entries.Add("Form.EditFooter", new(
             English: "Enter: accept | Ctrl+U: clear | Esc: cancel setup",
             Italian: "Invio: conferma | Ctrl+U: svuota | Esc: annulla configurazione",
@@ -120,19 +169,19 @@ internal static partial class UiTextCatalog
             Spanish: "Intro: aceptar | Ctrl+U: vaciar | Esc: cancelar configuración",
             Vietnamese: "Enter: chấp nhận | Ctrl+U: xóa | Esc: hủy thiết lập"));
         entries.Add("Form.FooterCompact", new(
-            English: "Esc cancel | F10 review | Enter edit | Tab next",
-            Italian: "Esc annulla | F10 riepilogo | Invio edita | Tab avanti",
-            French: "Esc annuler | F10 vérifier | Entrée éditer | Tab suite",
-            German: "Esc Abbruch | F10 prüfen | Enter ändern | Tab weiter",
-            Spanish: "Esc cancelar | F10 revisar | Intro editar | Tab seguir",
-            Vietnamese: "Esc hủy | F10 xem lại | Enter sửa | Tab tiếp"));
+            English: "Tab: next | Enter: choose | Esc: cancel",
+            Italian: "Tab: avanti | Invio: scegli | Esc: annulla",
+            French: "Tab: suite | Entrée: choisir | Esc: annuler",
+            German: "Tab: weiter | Enter: wählen | Esc: Abbruch",
+            Spanish: "Tab: siguiente | Intro: elegir | Esc: cancelar",
+            Vietnamese: "Tab: tiếp | Enter: chọn | Esc: hủy"));
         entries.Add("Form.EditFooterCompact", new(
-            English: "Esc cancel | Enter accept | Ctrl+U clear",
-            Italian: "Esc annulla | Invio conferma | Ctrl+U svuota",
-            French: "Esc annuler | Entrée valider | Ctrl+U vider",
-            German: "Esc Abbruch | Enter übernehmen | Strg+U leeren",
-            Spanish: "Esc cancelar | Intro aceptar | Ctrl+U vaciar",
-            Vietnamese: "Esc hủy | Enter chấp nhận | Ctrl+U xóa"));
+            English: "Esc: cancel | Enter: accept | Ctrl+U: clear",
+            Italian: "Esc: annulla | Invio: conferma | Ctrl+U: svuota",
+            French: "Esc: annuler | Entrée: valider | Ctrl+U: vider",
+            German: "Esc: Abbruch | Enter: übernehmen | Strg+U: leeren",
+            Spanish: "Esc: cancelar | Intro: aceptar | Ctrl+U: vaciar",
+            Vietnamese: "Esc: hủy | Enter: chấp nhận | Ctrl+U: xóa"));
         entries.Add("Form.ReviewFooter", new(
             English: "Tab/arrows: actions | PgUp/PgDn: scroll | Enter: choose | Esc: cancel",
             Italian: "Tab/frecce: azioni | PgUp/PgDn: scorri | Invio: scegli | Esc: annulla",
@@ -141,19 +190,19 @@ internal static partial class UiTextCatalog
             Spanish: "Tab/flechas: acciones | PgUp/PgDn: desplazar | Intro: elegir | Esc: cancelar",
             Vietnamese: "Tab/mũi tên: thao tác | PgUp/PgDn: cuộn | Enter: chọn | Esc: hủy"));
         entries.Add("Form.ReviewFooterCompact", new(
-            English: "Esc cancel | Enter choose | Tab action | PgUp/PgDn",
-            Italian: "Esc annulla | Invio scegli | Tab azione | PgUp/PgDn",
-            French: "Esc annuler | Entrée choisir | Tab action | PgUp/PgDn",
-            German: "Esc Abbruch | Enter wählen | Tab Aktion | PgUp/PgDn",
-            Spanish: "Esc cancelar | Intro elegir | Tab acción | PgUp/PgDn",
-            Vietnamese: "Esc hủy | Enter chọn | Tab thao tác | PgUp/PgDn"));
+            English: "Esc: cancel | Enter: choose | Tab: action | PgUp/PgDn",
+            Italian: "Esc: annulla | Invio: scegli | Tab: azione | PgUp/PgDn",
+            French: "Esc: annuler | Entrée: choisir | Tab: action | PgUp/PgDn",
+            German: "Esc: Abbruch | Enter: wählen | Tab: Aktion | PgUp/PgDn",
+            Spanish: "Esc: cancelar | Intro: elegir | Tab: acción | PgUp/PgDn",
+            Vietnamese: "Esc: hủy | Enter: chọn | Tab: thao tác | PgUp/PgDn"));
         entries.Add("Form.Help", new(
-            English: "Change a field, then review and save your choices.",
-            Italian: "Modifica un campo, poi controlla il riepilogo e salva le scelte.",
-            French: "Modifiez un champ, puis vérifiez et enregistrez vos choix.",
-            German: "Ändern Sie ein Feld, prüfen Sie Ihre Auswahl und speichern Sie sie.",
-            Spanish: "Cambia un campo, luego revisa y guarda tus elecciones.",
-            Vietnamese: "Thay đổi một trường, sau đó xem lại và lưu lựa chọn của bạn."));
+            English: "Change fields across sections, then choose Save or Cancel.",
+            Italian: "Modifica i campi nelle sezioni, poi scegli Salva o Annulla.",
+            French: "Modifiez les champs des sections, puis choisissez Enregistrer ou Annuler.",
+            German: "Ändern Sie Felder in den Abschnitten und wählen Sie Speichern oder Abbrechen.",
+            Spanish: "Cambia los campos de las secciones y elige Guardar o Cancelar.",
+            Vietnamese: "Sửa các trường trong từng mục, rồi chọn Lưu hoặc Hủy."));
         entries.Add("Form.PreambleHelp", new(
             English: "Optional instructions, up to 500 words. Do not include secrets or instructions that override safety rules.",
             Italian: "Istruzioni facoltative, fino a 500 parole. Non includere segreti o istruzioni che scavalcano le regole di sicurezza.",
@@ -204,12 +253,12 @@ internal static partial class UiTextCatalog
             Spanish: "Tema guardado.",
             Vietnamese: "Đã lưu giao diện."));
         entries.Add("Theme.Help", new(
-            English: "Choose and preview the terminal color theme",
-            Italian: "Scegli e visualizza il tema colori del terminale",
-            French: "Choisir et prévisualiser le thème de couleurs du terminal",
-            German: "Farbschema des Terminals auswählen und in der Vorschau ansehen",
-            Spanish: "Elegir y previsualizar el tema de colores del terminal",
-            Vietnamese: "Chọn và xem trước bảng màu của terminal"));
+            English: "Open Settings with Theme selected and preview its colors",
+            Italian: "Apre Impostazioni con Tema selezionato e mostra l'anteprima dei colori",
+            French: "Ouvre les réglages sur la section Thème et prévisualise ses couleurs",
+            German: "Öffnet die Einstellungen mit dem Abschnitt Design und einer Farbvorschau",
+            Spanish: "Abre Configuración con Tema seleccionado y previsualiza sus colores",
+            Vietnamese: "Mở Cài đặt, chọn mục Giao diện và xem trước các màu"));
         entries.Add("Theme.Cyan", new(
             English: "Cyan",
             Italian: "Ciano",
@@ -232,12 +281,12 @@ internal static partial class UiTextCatalog
             Spanish: "Ámbar",
             Vietnamese: "Hổ phách"));
         entries.Add("Form.Unavailable", new(
-            English: "Fullscreen is unavailable in this terminal; using sequential prompts.",
-            Italian: "La modalità a schermo intero non è disponibile in questo terminale; verranno usate domande in sequenza.",
-            French: "Le plein écran est indisponible dans ce terminal ; les questions seront posées à la suite.",
-            German: "Vollbild ist in diesem Terminal nicht verfügbar; die Fragen werden nacheinander gestellt.",
-            Spanish: "La pantalla completa no está disponible en este terminal; se usarán preguntas secuenciales.",
-            Vietnamese: "Terminal này không hỗ trợ toàn màn hình; các câu hỏi sẽ được hiển thị lần lượt."));
+            English: "Fullscreen is unavailable in this terminal; settings open in a section menu.",
+            Italian: "La modalità a schermo intero non è disponibile in questo terminale; le impostazioni si aprono in un menu a sezioni.",
+            French: "Le plein écran est indisponible dans ce terminal ; les réglages s'ouvrent dans un menu de sections.",
+            German: "Vollbild ist in diesem Terminal nicht verfügbar; die Einstellungen öffnen sich in einem Abschnittsmenü.",
+            Spanish: "La pantalla completa no está disponible en este terminal; la configuración se abre en un menú de secciones.",
+            Vietnamese: "Terminal này không hỗ trợ toàn màn hình; cài đặt sẽ mở trong menu các mục."));
         entries.Add("Form.TooSmall", new(
             English: "Enlarge the terminal to at least 60 columns and 20 rows, or press Escape to cancel.",
             Italian: "Allarga il terminale ad almeno 60 colonne e 20 righe, oppure premi Escape per annullare.",

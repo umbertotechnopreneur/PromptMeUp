@@ -1,6 +1,6 @@
 # Terminal themes
 
-Choose the colors that make PromptMeUp comfortable to read. Run `hm --theme` to open the theme chooser, preview a palette, and save your choice. Setup also includes a theme page, so you can choose the appearance alongside your other preferences.
+Choose the colors that make PromptMeUp comfortable to read. Run `hm --theme` to open the shared Settings screen with Theme selected. Preview a palette and choose Save when ready. General, AI, Credentials, Conversation, Commands, and Personalization remain accessible in the left sidebar; `--setup` and `--ai-setup` open this same screen with General or AI selected.
 
 The available built-in themes are:
 
@@ -10,29 +10,33 @@ The available built-in themes are:
 | AS/400 Green | Bright green accents inspired by classic terminal forms | `themes/green.json` |
 | Amber | Warm amber accents on a dark background | `themes/amber.json` |
 
-The saved theme applies to the shared terminal palette and fullscreen forms. The chooser saves a theme identifier in your settings; there is no need to edit settings or pass color values as command arguments.
+The saved theme applies to the shared terminal palette and fullscreen forms. Save stores the selected theme identifier with the rest of the draft. Cancel restores the original palette and discards the draft; there is no need to edit settings or pass color values as command arguments.
 
 ## Using fullscreen forms
 
-Forms keep related settings together and provide a review step before saving. Chat and short commands retain the scrolling terminal flow.
+The Settings screen keeps related preferences together and offers Save and Cancel directly. Chat and short commands retain the scrolling terminal flow.
 
-Labels align to the right and values to the left in two columns, with a blank line between fields. Headers and content use open layouts without cards. A single divider separates the form from its navigation buttons, with keyboard shortcuts underneath. Button colors distinguish navigation, saving, and cancellation; the focused button also has a visible `>` marker.
+Labels align to the right and values to the left in two columns, with a blank line between fields. Setup and help share an open layout without cards. The header shows the app version and a GitHub link on the right, with a divider underneath. Another divider separates the content from its action buttons and keyboard shortcuts. Button colors distinguish navigation, saving, and cancellation; the focused button also has a visible `>` marker.
+
+The sidebar remains visible in fullscreen terminals of at least 60 columns by 20 rows. Use the up/down arrows to go straight to the settings you need, then Enter or the right arrow to edit them. Your changes stay in the draft as you move between sections; choose Save to apply them directly. Section icons describe their purpose, and language choices show a flag, native name, and language code. Use `--no-emoji` for plain text alternatives.
 
 | Key | Action |
 | --- | --- |
-| Tab, Shift+Tab, or up/down arrows | Move between fields or actions |
-| Left/right arrows | Change the focused choice; move the cursor while editing text |
-| PgUp / PgDn | Change sections; scroll on the review page |
+| Up/down arrows | Select a section when the section list has focus; otherwise move between fields or actions |
+| Tab / Shift+Tab | Move between fields and Save/Cancel |
+| F6 | Switch between the sidebar and fields |
+| Ctrl+Left | Return to the sidebar |
+| Left/right arrows | Change the focused choice, move the cursor while editing text, or move between Save and Cancel when a button has focus |
+| PgUp / PgDn | Change sections |
 | Enter | Edit a field, accept its value, or choose an action |
 | Ctrl+U while editing | Empty the current input |
-| F10 | Open the review page |
 | Escape | Cancel the current form |
 
-Secret replacement fields never display their contents. Leave a replacement blank to keep the existing configured key. The review page reports configured or missing status without revealing key values or lengths.
+Secret replacement fields never display their contents. Leave a replacement blank to keep the existing configured key. Credentials reports configured or missing status without revealing key values or lengths.
 
 Fullscreen forms use a temporary alternate terminal buffer. Leaving a form restores the main terminal and its earlier scrollback. The form itself does not add its intermediate screens to that history. The application never clears the main screen or scrollback.
 
-Forms require an interactive terminal with ANSI and alternate-buffer support, at least 60 columns and 20 rows. If the terminal becomes smaller, enlarge it or press Escape to cancel. Less capable live terminals use sequential prompts with an explanatory notice. Redirected input/output cannot collect settings and retains the existing error behavior.
+Forms require an interactive terminal with ANSI and alternate-buffer support, at least 60 columns and 20 rows. If the terminal becomes smaller, enlarge it or press Escape to cancel. Less capable live terminals use a section menu with an explanatory notice and the same direct Save/Cancel actions. Redirected input/output cannot collect settings and retains the existing error behavior.
 
 ## Customizing a theme file
 

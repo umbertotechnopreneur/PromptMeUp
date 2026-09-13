@@ -2,6 +2,14 @@
 
 Date: 2026-09-13. Scope: design analysis of the current working tree, including the in-progress AI settings and persistent-memory changes. No runtime implementation is included. Counts describe this source snapshot, not a released executable.
 
+Implementation update, 2026-09-14: the settings design below has been superseded
+by one workspace with General, AI, Credentials, Conversation, Commands,
+Personalization, and Theme in a persistent left sidebar. `--setup`, `--ai-setup`
+(also `--ai-settings`), and `--theme` select its initial section. Save and Cancel
+act directly on the shared draft; settings has no summary page or F10 action.
+The earlier numbered inventory and interaction counts remain historical design
+notes. See [the CLI reference](CLI_REFERENCE.md) for current behavior.
+
 PromptMeUp can use temporary fullscreen forms for configuration and sustained review while retaining waterfall output for chat and short commands. The proposed inventory contains **12 functional pages and one optional navigation hub**. These are design groupings of existing behavior, not 12 existing fullscreen implementations.
 
 ## Stable screen numbers

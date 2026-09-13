@@ -15,79 +15,35 @@ public sealed class SetupWorkflow(
     ISetupView setupView,
     IConsoleShellView shell,
     ILocalizationService text,
-    IThemeView? themeView = null,
     IThemeCatalogService? themes = null)
 {
-    /// <summary>Persists only the chosen theme after the view has completed its preview and review.</summary>
-    public async Task<int> RunThemeAsync(AppSettings current, CancellationToken cancellationToken)
-    {
-        if (themeView is null || themes is null)
-        {
-            throw new InvalidOperationException("The theme workflow is not configured.");
-        }
-        var selected = themeView.Collect(current.Theme);
-        if (selected is null)
-        {
-            shell.RenderNotice(text.Text("Common.Cancelled"));
-            await activity.TryRecordAsync("theme", "cancelled", null, new { }).ConfigureAwait(false);
-            return 0;
-        }
-        var theme = themes.Resolve(selected);
-        await settings.SaveAsync(current with { Theme = selected, UpdatedAt = DateTimeOffset.UtcNow }, cancellationToken).ConfigureAwait(false);
-        TerminalTheme.Apply(theme);
-        shell.RenderSuccess(text.Text("Theme.Saved"));
-        await activity.TryRecordAsync("theme", "completed", null, new { Theme = selected }).ConfigureAwait(false);
-        return 0;
-    }
+    /// <summary>Opens the shared settings screen with appearance selected.</summary>
+    public Task<int> RunThemeAsync(AppSettings current, CancellationToken cancellationToken) =>
+        RunAsync(current, cancellationToken, SettingsSection.Theme);
 
-    /// <summary>Edits only AI preferences after initial setup without touching secrets or other configuration.</summary>
-    public async Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS")))
-        {
-            shell.RenderNotice(text.Text("AiSettings.ContextOverride"));
-        }
-        var selected = setupView.CollectAiSettings(current);
-        if (selected is null)
-        {
-            shell.RenderNotice(text.Text("Setup.Cancelled"));
-            await activity.TryRecordAsync("ai-settings", "cancelled", null, new { }).ConfigureAwait(false);
-            return 0;
-        }
+    /// <summary>Opens the shared settings screen with AI preferences selected.</summary>
+    public Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken) =>
+        RunAsync(current, cancellationToken, SettingsSection.Ai);
 
-        var updated = current with
-        {
-            AiEnabled = selected.AiEnabled,
-            Model = selected.Model,
-            ReasoningEffort = selected.ReasoningEffort,
-            OutputDetail = selected.OutputDetail,
-            ReviewCommandsWithAi = selected.ReviewCommandsWithAi,
-            PromptCachingEnabled = selected.PromptCachingEnabled,
-            MaxConversationTurns = selected.MaxConversationTurns,
-            MaxMessageCharacters = selected.MaxMessageCharacters,
-            MaxContextPercent = selected.MaxContextPercent,
-            ContextTokenBudget = selected.ContextTokenBudget,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
-        await settings.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
-        shell.RenderSuccess(text.Text("AiSettings.Saved"));
-        await activity.TryRecordAsync("ai-settings", "completed", null, new
-        {
-            updated.AiEnabled,
-            updated.Model,
-            updated.ReasoningEffort,
-            updated.ContextTokenBudget
-        }).ConfigureAwait(false);
-        return 0;
-    }
-
-    /// <summary>Collects setup settings, persists secrets safely, saves preferences, and optionally tests OpenAI.</summary>
-    public async Task<int> RunAsync(AppSettings current, CancellationToken cancellationToken)
+    /// <summary>Collects all settings from the requested section, saves the submitted draft, and optionally tests OpenAI.</summary>
+    public async Task<int> RunAsync(
+        AppSettings current,
+        CancellationToken cancellationToken,
+        SettingsSection initialSection = SettingsSection.General)
     {
+        ArgumentNullException.ThrowIfNull(current);
+        if (!Enum.IsDefined(initialSection))
+        {
+            throw new ArgumentOutOfRangeException(nameof(initialSection));
+        }
         var submission = setupView.Collect(new SetupViewState(
             current,
             secrets.IsConfigured(current.ApiKeyVariable),
-            secrets.IsConfigured(current.AdminKeyVariable)));
+            secrets.IsConfigured(current.AdminKeyVariable))
+        {
+            InitialSection = initialSection,
+            ContextBudgetOverridden = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS"))
+        });
         if (submission is null)
         {
             shell.RenderNotice(text.Text("Setup.Cancelled"));
@@ -95,6 +51,7 @@ public sealed class SetupWorkflow(
             return 0;
         }
 
+        var selectedTheme = themes?.Resolve(submission.Settings.Theme);
         var secretGuidance = new List<string>();
         if (submission.ApiKey is not null)
         {
@@ -106,11 +63,14 @@ public sealed class SetupWorkflow(
         }
 
         await settings.SaveAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
-        if (themes is not null)
+        if (selectedTheme is not null)
         {
-            TerminalTheme.Apply(themes.Resolve(submission.Settings.Theme));
+            TerminalTheme.Apply(selectedTheme);
         }
-        text.SetLanguage(submission.Settings.Language);
+        if (submission.Settings.Language != current.Language)
+        {
+            text.SetLanguage(submission.Settings.Language);
+        }
         shell.RenderSuccess(text.Text("Setup.Saved"));
         foreach (var guidance in secretGuidance)
         {

@@ -33,9 +33,8 @@ public sealed class ThemeView(IAnsiConsole console, ILocalizationService text,
                     Choices = () => themes.Themes.Select(theme => new FormChoice(theme.Id, Name(theme))).ToArray(),
                     HelpKey = "Theme.Preview"
                 };
-                var saved = new FullscreenForm(console, text).Run("Theme.Title",
-                    [new FormPage("Theme.Title", [field])],
-                    () => [new FormSummary(text.Text("Theme.Select"), Name(themes.Resolve(selected)))]);
+                var saved = new FullscreenForm(console, text, shell.Options).Run("Theme.Title",
+                    [new FormPage("Theme.Title", [field])]);
                 return saved ? selected : null;
             }
 

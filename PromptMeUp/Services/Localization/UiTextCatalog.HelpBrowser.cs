@@ -7,6 +7,7 @@ internal static partial class UiTextCatalog
     /// <summary>Adds section names and keyboard guidance for the fullscreen command reference in all supported languages.</summary>
     private static void AddHelpBrowserEntries(Dictionary<string, LocalizedText> entries)
     {
+        AddHelpArgumentEntries(entries);
         entries.Add("Help.Browse.Sections", new(
             English: "Sections",
             Italian: "Sezioni",
@@ -50,26 +51,61 @@ internal static partial class UiTextCatalog
             Spanish: "Seguridad",
             Vietnamese: "An toàn"));
         entries.Add("Help.Browse.SectionKeys", new(
-            English: "Left/Right, PgUp/PgDn, Tab: sections",
-            Italian: "Sinistra/Destra, PgUp/PgDn, Tab: sezioni",
-            French: "Gauche/Droite, PgUp/PgDn, Tab : sections",
-            German: "Links/Rechts, PgUp/PgDn, Tab: Abschnitte",
-            Spanish: "Izquierda/Derecha, PgUp/PgDn, Tab: secciones",
-            Vietnamese: "Trái/Phải, PgUp/PgDn, Tab: đổi mục"));
+            English: "Up/Down: sections | Enter/Right/Tab: commands | Esc/Q: close",
+            Italian: "Su/Giù: sezioni | Invio/Destra/Tab: comandi | Esc/Q: chiudi",
+            French: "Haut/Bas : sections | Entrée/Droite/Tab : commandes | Esc/Q : fermer",
+            German: "Auf/Ab: Abschnitte | Enter/Rechts/Tab: Befehle | Esc/Q: schließen",
+            Spanish: "Arriba/Abajo: secciones | Intro/Derecha/Tab: comandos | Esc/Q: cerrar",
+            Vietnamese: "Lên/Xuống: mục | Enter/Phải/Tab: lệnh | Esc/Q: đóng"));
+        entries.Add("Help.Browse.SectionKeysCompact", new(
+            English: "Up/Down: sections | Enter: read | Esc/Q: close",
+            Italian: "Su/Giù: sezioni | Invio: leggi | Esc/Q: chiudi",
+            French: "Haut/Bas: sections | Entrée: lire | Esc/Q: fermer",
+            German: "Auf/Ab: Abschnitte | Enter: lesen | Esc/Q: schließen",
+            Spanish: "Arriba/Abajo: secciones | Intro: leer | Esc/Q: cerrar",
+            Vietnamese: "Lên/Xuống: mục | Enter: đọc | Esc/Q: đóng"));
         entries.Add("Help.Browse.ScrollKeys", new(
-            English: "Up/Down: scroll | Esc/Q: close",
-            Italian: "Su/Giù: scorri | Esc/Q: chiudi",
-            French: "Haut/Bas : défiler | Esc/Q : fermer",
-            German: "Auf/Ab: scrollen | Esc/Q: schließen",
-            Spanish: "Arriba/Abajo: desplazar | Esc/Q: cerrar",
-            Vietnamese: "Lên/Xuống: cuộn | Esc/Q: đóng"));
+            English: "Up/Down/PgUp/PgDn: scroll | F6/Ctrl+Left: sections | Tab: close action | Esc/Q: close",
+            Italian: "Su/Giù/PgUp/PgDn: scorri | F6/Ctrl+Sinistra: sezioni | Tab: pulsante chiudi | Esc/Q: chiudi",
+            French: "Haut/Bas/PgUp/PgDn : défiler | F6/Ctrl+Gauche : sections | Tab : bouton fermer | Esc/Q : fermer",
+            German: "Auf/Ab/PgUp/PgDn: scrollen | F6/Strg+Links: Abschnitte | Tab: Schließen wählen | Esc/Q: schließen",
+            Spanish: "Arriba/Abajo/PgUp/PgDn: desplazar | F6/Ctrl+Izquierda: secciones | Tab: botón cerrar | Esc/Q: cerrar",
+            Vietnamese: "Lên/Xuống/PgUp/PgDn: cuộn | F6/Ctrl+Trái: mục | Tab: nút đóng | Esc/Q: đóng"));
+        entries.Add("Help.Browse.ScrollKeysCompact", new(
+            English: "Up/Down: scroll | F6: sections | Esc/Q: close",
+            Italian: "Su/Giù: scorri | F6: sezioni | Esc/Q: chiudi",
+            French: "Haut/Bas: défiler | F6: sections | Esc/Q: fermer",
+            German: "Auf/Ab: scrollen | F6: Abschnitte | Esc/Q: schließen",
+            Spanish: "Arriba/Abajo: desplaza | F6: secciones | Esc/Q: cerrar",
+            Vietnamese: "Lên/Xuống: cuộn | F6: mục | Esc/Q: đóng"));
+        entries.Add("Help.Browse.Close", new(
+            English: "Close",
+            Italian: "Chiudi",
+            French: "Fermer",
+            German: "Schließen",
+            Spanish: "Cerrar",
+            Vietnamese: "Đóng"));
+        entries.Add("Help.Browse.CloseKeys", new(
+            English: "Enter/Esc/Q: close | Tab: sections | Shift+Tab: commands",
+            Italian: "Invio/Esc/Q: chiudi | Tab: sezioni | Maiusc+Tab: comandi",
+            French: "Entrée/Esc/Q : fermer | Tab : sections | Maj+Tab : commandes",
+            German: "Enter/Esc/Q: schließen | Tab: Abschnitte | Umschalt+Tab: Befehle",
+            Spanish: "Intro/Esc/Q: cerrar | Tab: secciones | Mayús+Tab: comandos",
+            Vietnamese: "Enter/Esc/Q: đóng | Tab: mục | Shift+Tab: lệnh"));
+        entries.Add("Help.Browse.CloseKeysCompact", new(
+            English: "Enter/Esc/Q: close | Tab: sections",
+            Italian: "Invio/Esc/Q: chiudi | Tab: sezioni",
+            French: "Entrée/Esc/Q: fermer | Tab: sections",
+            German: "Enter/Esc/Q: schließen | Tab: Abschnitte",
+            Spanish: "Intro/Esc/Q: cerrar | Tab: secciones",
+            Vietnamese: "Enter/Esc/Q: đóng | Tab: mục"));
         entries.Add("Help.Browse.Range", new(
-            English: "Lines {0}–{1} of {2}",
-            Italian: "Righe {0}–{1} di {2}",
-            French: "Lignes {0}–{1} sur {2}",
-            German: "Zeilen {0}–{1} von {2}",
-            Spanish: "Líneas {0}–{1} de {2}",
-            Vietnamese: "Dòng {0}–{1} trên {2}"));
+            English: "Displayed lines {0}–{1} of {2}",
+            Italian: "Righe visualizzate {0}–{1} di {2}",
+            French: "Lignes affichées {0}–{1} sur {2}",
+            German: "Angezeigte Zeilen {0}–{1} von {2}",
+            Spanish: "Líneas mostradas {0}–{1} de {2}",
+            Vietnamese: "Các dòng hiển thị {0}–{1} trên {2}"));
         entries.Add("Help.Browse.TooSmall", new(
             English: "Enlarge the terminal to at least 60 columns and 20 rows. Esc or Q closes help.",
             Italian: "Allarga il terminale ad almeno 60 colonne e 20 righe. Esc o Q chiude la guida.",

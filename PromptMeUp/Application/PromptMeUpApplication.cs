@@ -132,7 +132,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             TerminalTheme.Apply(_themes.Resolve(settings.Theme));
         }
         _text.SetLanguage(options.Language ?? settings.Language);
-        if (options.Command is not (AppCommand.AiSettings or AppCommand.Theme))
+        if (options.Command is not (AppCommand.Setup or AppCommand.AiSettings or AppCommand.Theme)
+            && (options.Command != AppCommand.Main || settings.SetupCompleted))
         {
             settings = settings with { Language = _text.Language };
         }
@@ -222,10 +223,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             case AppCommand.Setup:
                 return await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.AiSettings:
-                return await RunAiSettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+                return await RunSetupAsync(settings, cancellationToken, SettingsSection.Ai).ConfigureAwait(false);
             case AppCommand.Theme:
-                EnsureInteractive();
-                return await _setup.RunThemeAsync(settings, cancellationToken).ConfigureAwait(false);
+                return await RunSetupAsync(settings, cancellationToken, SettingsSection.Theme).ConfigureAwait(false);
             case AppCommand.Status:
                 await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
                 return 0;
@@ -279,24 +279,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         return result;
     }
 
-    /// <summary>Checks initial setup and terminal access before editing focused AI preferences.</summary>
-    private async Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken)
-    {
-        if (!current.SetupCompleted)
-        {
-            _shell.RenderError(_text.Text("Error.SetupRequired"));
-            return 2;
-        }
-
-        EnsureInteractive();
-        return await _setup.RunAiSettingsAsync(current, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>Requires a live terminal before collecting setup settings and credentials.</summary>
-    private async Task<int> RunSetupAsync(AppSettings current, CancellationToken cancellationToken)
+    /// <summary>Requires a live terminal before opening the shared settings screen at the requested section.</summary>
+    private async Task<int> RunSetupAsync(
+        AppSettings current,
+        CancellationToken cancellationToken,
+        SettingsSection initialSection = SettingsSection.General)
     {
         EnsureInteractive();
-        return await _setup.RunAsync(current, cancellationToken).ConfigureAwait(false);
+        return await _setup.RunAsync(current, cancellationToken, initialSection).ConfigureAwait(false);
     }
 
     /// <summary>Builds and renders the current application status from local services.</summary>
@@ -358,17 +348,16 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                         await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
                         break;
                     case MainMenuAction.Setup:
-                        await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
-                        settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
-                        _text.SetLanguage(settings.Language);
-                        break;
                     case MainMenuAction.AiSettings:
-                        await RunAiSettingsAsync(await _settings.LoadAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
-                        settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
-                        break;
                     case MainMenuAction.Theme:
-                        await _setup.RunThemeAsync(await _settings.LoadAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
-                        settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+                        var section = action switch
+                        {
+                            MainMenuAction.AiSettings => SettingsSection.Ai,
+                            MainMenuAction.Theme => SettingsSection.Theme,
+                            _ => SettingsSection.General
+                        };
+                        await RunSetupAsync(await _settings.LoadAsync(cancellationToken).ConfigureAwait(false), cancellationToken, section).ConfigureAwait(false);
+                        settings = (await _settings.LoadAsync(cancellationToken).ConfigureAwait(false)) with { Language = _text.Language };
                         break;
                     case MainMenuAction.TestAi:
                         EnsureAiReady(settings);

@@ -29,9 +29,9 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | `--plan <goal>` | `--plan --resume <id>` | Breaks a task into steps you can approve, check, and resume. |
 | `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Shows which files a rename, copy, move, or deletion would affect. |
 | `--recipes [action]` | — | Lists, saves, imports, exports, or reuses personal command recipes. |
-| `--setup` | — | Opens the full setup form, including language, credentials, and AI settings. |
-| `--ai-settings` | — | Changes the model, response preferences, and conversation limits after initial setup. |
-| `--theme` | — | Previews and saves a terminal color theme without changing other preferences. |
+| `--setup` | — | Opens Settings with General selected. |
+| `--ai-setup` | `--ai-settings` | Opens the same Settings screen with AI selected. |
+| `--theme` | — | Opens the same Settings screen with Theme selected and a live palette preview. |
 | `--test-ai` | — | Checks that the configured model can answer a short request in your chosen language. |
 | `--costs` | — | Shows usage and cost estimates, refreshing public prices and any available organization costs. |
 | `--status` | — | Shows local configuration and storage readiness. |
@@ -45,12 +45,22 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 
 Only one top-level command can be selected per invocation.
 
-Setup, AI settings, and the theme chooser use fullscreen forms in supported live
-terminals. Tab moves between fields, left/right changes a choice, PgUp/PgDn changes
-sections, and F10 opens the review before saving. Escape cancels the form and
-restores the original terminal history. Smaller or less capable terminals use
-sequential prompts. See [terminal themes](TERMINAL_THEMES.md) for the Cyan, AS/400
-Green, and Amber palettes and their editable JSON definitions.
+Settings uses one fullscreen workspace in supported live terminals of at least
+60 columns by 20 rows. Its left sidebar keeps General, AI, Credentials,
+Conversation, Commands, Personalization, and Theme visible. Each settings switch
+only selects the initial section; every section remains accessible.
+
+Up/Down selects a section; Enter or Right moves into its fields. F6 switches
+between the sidebar and fields, and Ctrl+Left returns to the sidebar. Tab moves
+through fields to Save and Cancel. Left/Right changes a field choice or moves
+between the buttons when an action has focus; Enter activates the focused button.
+Save stores the draft directly. Cancel or Escape discards it and restores the
+original terminal history. There is no separate summary or confirmation step.
+Smaller or less capable terminals use a section menu with the same Save and
+Cancel actions. Language choices include their country flag, native name, and
+code, with plain text alternatives under `--no-emoji`. See
+[terminal themes](TERMINAL_THEMES.md) for the built-in palettes and their editable
+JSON definitions.
 
 `hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
 
@@ -61,10 +71,18 @@ hm --help
 ```
 
 In a supported live terminal of at least 60 columns by 20 rows, help opens a
-fullscreen guide. The section list stays visible while you read commands and
-their descriptions. Left/Right, PgUp/PgDn, or Tab changes the section; Shift+Tab
-moves back. Up/Down scrolls longer sections, and Home/End jumps to their beginning
-or end. Esc or Q closes the guide and restores your original terminal output.
+fullscreen guide with the same header, section list, and spacing as setup.
+The app version and project link sit at the right of the header. Sections have
+descriptive icons without number prefixes. Up/Down selects a section; Enter,
+Right, or Tab moves into its commands. There, Up/Down scrolls longer sections,
+and Home/End jumps to their beginning or end. F6 or Ctrl+Left returns to the list.
+On narrower windows, the section chooser and commands share the same space.
+Esc or Q closes the guide and restores your original terminal output.
+
+Each entry starts with a complete command example, followed by what it does.
+The lowercase `hm` is white; options and arguments use distinct colors so you
+can read the command's parts at a glance. Parameter explanations keep those same
+colors and explain what each argument means and which values you can change.
 
 Help works without setup or an API key. Small terminals, redirected output, and
 terminals without an alternate buffer receive the full scrolling reference.
@@ -91,13 +109,14 @@ queries. Use one command per invocation, as with the other commands.
 
 ## Change the model or conversation limits
 
-After your first setup, open the shorter settings form:
+Open Settings with the AI section selected:
 
 ```powershell
-hm --ai-settings
+hm --ai-setup
 ```
 
-The form lets you change these ten settings, then review and confirm them before saving:
+`hm --ai-settings` is an equivalent alias. AI preferences and conversation limits
+live in the same workspace as the other settings:
 
 | Setting | What it controls |
 | --- | --- |
@@ -112,9 +131,14 @@ The form lets you change these ten settings, then review and confirm them before
 | Characters per user message | `500`–`100,000`; default `16,000`. |
 | Share of the model context window | `10`–`95%`; default `70%`. |
 
-This form requires completed setup and a live terminal. Use `hm --setup` for
-language, credentials, the optional instruction preamble, and command execution
-limits. Cancelling the final confirmation keeps your saved settings.
+Use the sidebar to open Conversation for its four limits, Commands for execution
+limits, or any other section. General contains language; AI contains availability,
+model preferences, advisory command review, and caching. Credentials contains key
+replacement and an optional connection check. Personalization contains the
+instruction preamble and location preference.
+Save applies all draft changes directly; Cancel keeps the previous settings.
+After initial setup, the connection check defaults to off. Saving alone makes no
+provider request and does not refresh pricing.
 
 To override the saved input budget, set `PROMPTMEUP_CONTEXT_TOKENS` before launch:
 
@@ -378,9 +402,9 @@ When an AI answer cites command candidates, PromptMeUp presents a menu whose fir
 
 With no explicit command and no completed setup, `hm` opens setup. If input is redirected, PromptMeUp exits with an explanation instead of attempting an interactive form.
 
-After initial setup, use [`hm --ai-settings`](#change-the-model-or-conversation-limits)
-to change the model or conversation limits. The input budget is also available
-in the advanced section of full setup.
+Use [`hm --ai-setup`](#change-the-model-or-conversation-limits) to select AI in
+Settings, or `hm --setup` to select General. Conversation limits, including the
+input budget, are in the Conversation section of that same screen.
 
 Read-only commands such as `--help`, `--version`, `--status`, `--third-party`, and `--path=status` support redirected output. Mutating PATH and font operations require a live prompt or `--yes`; font dry-run is non-mutating and can run unattended.
 
