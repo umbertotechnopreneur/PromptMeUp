@@ -12,6 +12,11 @@ public sealed record AiUsageMetrics(
     long ReasoningTokens,
     long TotalTokens);
 
+public sealed record ConversationContextLimits(int? MaxInputTokens)
+{
+    public static ConversationContextLimits Default { get; } = new(MaxInputTokens: null);
+}
+
 public sealed record AiResponseAccounting(string? Id, string? Model, AiUsageMetrics Usage);
 
 public sealed record AiCostBreakdown(
@@ -28,7 +33,12 @@ public sealed record AiContextUsage(
     long ConversationTokens,
     long LatestUserPromptTokens,
     long ContextWindowTokens,
-    bool IsInputEstimate);
+    bool IsInputEstimate)
+{
+    public long InputBudgetTokens { get; init; }
+
+    public int ReservedOutputTokens { get; init; }
+}
 
 public sealed record SuggestedCommand(string Label, string Command);
 

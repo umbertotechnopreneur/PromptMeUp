@@ -9,6 +9,32 @@ public sealed class CommandLineParserTests
 {
     private readonly CommandLineParser _parser = new(new LocalizationService());
 
+    /// <summary>Verifies the focused AI settings switch accepts rendering and language preferences.</summary>
+    [Fact]
+    public void Parse_AiSettings_SelectsFocusedConfiguration()
+    {
+        var result = _parser.Parse(["--ai-settings", "--no-animation", "--no-emoji", "--language", "it"]);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(AppCommand.AiSettings, result.Options!.Command);
+        Assert.True(result.Options.NoAnimation);
+        Assert.True(result.Options.NoEmoji);
+        Assert.Equal("it", result.Options.Language);
+    }
+
+    /// <summary>Verifies AI settings cannot be mixed with another command or positional text.</summary>
+    [Theory]
+    [InlineData("--setup")]
+    [InlineData("--status")]
+    [InlineData("gpt-5.5")]
+    public void Parse_AiSettingsWithConflictingArgument_ReturnsError(string argument)
+    {
+        var result = _parser.Parse(["--ai-settings", argument]);
+
+        Assert.False(result.Succeeded);
+        Assert.NotNull(result.Error);
+    }
+
     /// <summary>Verifies that the two-letter command accepts a natural positional question.</summary>
     [Fact]
     public void Parse_PositionalQuestion_SelectsQueryCommand()

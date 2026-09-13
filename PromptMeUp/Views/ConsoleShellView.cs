@@ -91,24 +91,34 @@ public sealed class ConsoleShellView : IConsoleShellView
         var turnCost = status.PromptCostUsd.HasValue || status.ResponseCostUsd.HasValue
             ? FormatCost((status.PromptCostUsd ?? 0m) + (status.ResponseCostUsd ?? 0m))
             : _text.Text("Costs.Unavailable");
-        var context = status.ContextWindowTokens > 0
-            ? $"{(status.ContextIsEstimated ? "~" : string.Empty)}{FormatTokens(status.ContextTotalTokens)} / {FormatTokens(status.ContextWindowTokens)} · {status.ContextTotalTokens * 100d / status.ContextWindowTokens:0.0}%"
-            : _text.Text("Costs.Unavailable");
         var cache = status.CachedInputTokens > 0 || status.CacheWriteTokens > 0
             ? $"{FormatTokens(status.CachedInputTokens)} / {FormatTokens(status.CacheWriteTokens)}"
             : _text.Text("Costs.Unavailable");
         var icon = TerminalTheme.IconPrefix(Options, "📊", "=");
+        var metrics = new List<CompactTerminalMetric>
+        {
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🧠", "AI")}{_text.Text("Shell.Model")}", status.Model),
+            TerminalTheme.CompactMetric(_text.Text("Shell.ActiveContext"), FormatContextUsage(status.ActiveContextTokens, status.ContextWindowTokens), TerminalTheme.Info),
+            TerminalTheme.CompactMetric(_text.Text("Shell.ContextBudget"), FormatContextUsage(status.ActiveContextTokens, status.ContextBudgetTokens), TerminalTheme.Info),
+            TerminalTheme.CompactMetric(_text.Text("Shell.MemoryUsage"), status.ActiveContextTokens.HasValue
+                ? _text.Text("Shell.MemoryUsageValue", status.MemoryCount, FormatTokens(status.MemoryTokens))
+                : _text.Text("Costs.Unavailable")),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↘", "in")}{_text.Text("Shell.LastInput")}", FormatTokens(status.InputTokens), TerminalTheme.Info),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↗", "out")}{_text.Text("Shell.LastOutput")}", FormatTokens(status.OutputTokens), TerminalTheme.Info),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◈", "$")}{_text.Text("Shell.TurnCost")}", turnCost, TerminalTheme.Info),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "✓", "+")}{_text.Text("Shell.SessionCost")}", FormatCost(status.RunningCostUsd), TerminalTheme.Success),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "▣", "#")}{_text.Text("Shell.Cache")}", cache)
+        };
+        if (status.HasSessionUsage)
+        {
+            metrics.Add(TerminalTheme.CompactMetric(_text.Text("Shell.SessionInput"), FormatTokens(status.SessionInputTokens), TerminalTheme.Info));
+            metrics.Add(TerminalTheme.CompactMetric(_text.Text("Shell.SessionOutput"), FormatTokens(status.SessionOutputTokens), TerminalTheme.Info));
+        }
+
         RenderSessionSnapshot(
             $"{icon}{_text.Text("Shell.Session")}",
-            [
-                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🧠", "AI")}{_text.Text("Shell.Model")}", status.Model),
-                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◌", "~")}{_text.Text("Shell.Context")}", context, TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↘", "in")}{_text.Text("Shell.Input")}", FormatTokens(status.InputTokens), TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↗", "out")}{_text.Text("Shell.Output")}", FormatTokens(status.OutputTokens), TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◈", "$")}{_text.Text("Shell.TurnCost")}", turnCost, TerminalTheme.Info),
-                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "✓", "+")}{_text.Text("Shell.SessionCost")}", FormatCost(status.RunningCostUsd), TerminalTheme.Success),
-                TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "▣", "#")}{_text.Text("Shell.Cache")}", cache)
-            ]);
+            metrics,
+            preferredPairs: 2);
         _console.WriteLine();
     }
 
@@ -280,16 +290,15 @@ public sealed class ConsoleShellView : IConsoleShellView
     private static bool IsInteractiveInvocation(string command) =>
         command is "main" or "setup" or "chat" or "where" or "path" or "install-font";
 
-    /// <summary>Renders no more than two compact metric rows beneath a subtle frameless divider.</summary>
-    private void RenderSessionSnapshot(string header, IReadOnlyList<CompactTerminalMetric> metrics)
+    /// <summary>Renders compact metric rows that adapt to the available terminal width.</summary>
+    private void RenderSessionSnapshot(string header, IReadOnlyList<CompactTerminalMetric> metrics, int preferredPairs = 4)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(header);
         ArgumentNullException.ThrowIfNull(metrics);
         var grid = TerminalTheme.PairGrid(
             metrics,
-            preferredPairs: 4,
-            width: _console.Profile.Width,
-            preservePairCount: true);
+            preferredPairs: preferredPairs,
+            width: _console.Profile.Width);
 
         TerminalTheme.WriteRule(_console, header, TerminalTheme.Accent);
         _console.Write(grid);
@@ -297,6 +306,21 @@ public sealed class ConsoleShellView : IConsoleShellView
 
     /// <summary>Formats small per-request USD amounts without hiding sub-cent costs.</summary>
     private static string FormatCost(decimal value) => $"${value:0.00000000}";
+
+    /// <summary>Distinguishes an estimated active request from unavailable context measurements.</summary>
+    private string FormatContextUsage(long? usedTokens, long capacityTokens)
+    {
+        if (!usedTokens.HasValue)
+        {
+            return capacityTokens > 0
+                ? $"{_text.Text("Costs.Unavailable")} / {capacityTokens.ToString("N0", _text.Culture)}"
+                : _text.Text("Costs.Unavailable");
+        }
+
+        return capacityTokens > 0
+            ? $"~{usedTokens.Value.ToString("N0", _text.Culture)} / {capacityTokens.ToString("N0", _text.Culture)} · {(usedTokens.Value * 100d / capacityTokens).ToString("0.0", _text.Culture)}%"
+            : $"~{usedTokens.Value.ToString("N0", _text.Culture)} / {_text.Text("Costs.Unavailable")}";
+    }
 
     /// <summary>Formats token counts compactly so context summaries remain readable at terminal width.</summary>
     private static string FormatTokens(long value) => value switch

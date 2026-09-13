@@ -50,6 +50,10 @@ public sealed class ChatView : IChatView
         RenderCommandHint("/clear", "Chat.Command.Clear");
         RenderCommandHint("/costs", "Chat.Command.Costs");
         RenderCommandHint("/status", "Chat.Command.Status");
+        RenderCommandHint("/context", "Chat.Command.Context");
+        RenderCommandHint(_text.Text("Chat.Command.RememberSyntax"), "Chat.Command.Remember");
+        RenderCommandHint("/memories", "Chat.Command.Memories");
+        RenderCommandHint("/forget <id>", "Chat.Command.Forget");
         RenderCommandHint("/exit", "Chat.Command.Exit");
         _console.WriteLine();
     }

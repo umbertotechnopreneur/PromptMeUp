@@ -132,7 +132,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         var promptCount = (await _prompts.ListAsync(cancellationToken).ConfigureAwait(false)).Count;
         var settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
         _text.SetLanguage(options.Language ?? settings.Language);
-        settings = settings with { Language = _text.Language };
+        if (options.Command != AppCommand.AiSettings)
+        {
+            settings = settings with { Language = _text.Language };
+        }
         var hasApiKey = _secrets.IsConfigured(settings.ApiKeyVariable);
         var commandName = ToCommandName(options.Command);
         _shell.RenderHeader(commandName, settings, hasApiKey, Environment.CurrentDirectory);
@@ -218,6 +221,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 return 0;
             case AppCommand.Setup:
                 return await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
+            case AppCommand.AiSettings:
+                return await RunAiSettingsAsync(settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Status:
                 await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
                 return 0;
@@ -269,6 +274,54 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
         var result = await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
         return result;
+    }
+
+    /// <summary>Edits only AI preferences after initial setup without touching secrets or other configuration.</summary>
+    private async Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken)
+    {
+        if (!current.SetupCompleted)
+        {
+            _shell.RenderError(_text.Text("Error.SetupRequired"));
+            return 2;
+        }
+
+        EnsureInteractive();
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS")))
+        {
+            _shell.RenderNotice(_text.Text("AiSettings.ContextOverride"));
+        }
+        var selected = _setupView.CollectAiSettings(current);
+        if (selected is null)
+        {
+            _shell.RenderNotice(_text.Text("Setup.Cancelled"));
+            await TryAuditAsync("ai-settings", "cancelled", null, new { }).ConfigureAwait(false);
+            return 0;
+        }
+
+        var updated = current with
+        {
+            AiEnabled = selected.AiEnabled,
+            Model = selected.Model,
+            ReasoningEffort = selected.ReasoningEffort,
+            OutputDetail = selected.OutputDetail,
+            ReviewCommandsWithAi = selected.ReviewCommandsWithAi,
+            PromptCachingEnabled = selected.PromptCachingEnabled,
+            MaxConversationTurns = selected.MaxConversationTurns,
+            MaxMessageCharacters = selected.MaxMessageCharacters,
+            MaxContextPercent = selected.MaxContextPercent,
+            ContextTokenBudget = selected.ContextTokenBudget,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        await _settings.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
+        _shell.RenderSuccess(_text.Text("AiSettings.Saved"));
+        await TryAuditAsync("ai-settings", "completed", null, new
+        {
+            updated.AiEnabled,
+            updated.Model,
+            updated.ReasoningEffort,
+            updated.ContextTokenBudget
+        }).ConfigureAwait(false);
+        return 0;
     }
 
     /// <summary>Collects setup settings, persists secrets safely, saves preferences, and optionally tests OpenAI.</summary>
@@ -611,6 +664,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private static string ToCommandName(AppCommand command) => command switch
     {
         AppCommand.TestAi => "test-ai",
+        AppCommand.AiSettings => "ai-settings",
         AppCommand.InstallFont => "install-font",
         AppCommand.ThirdParty => "third-party",
         _ => command.ToString().ToLowerInvariant()

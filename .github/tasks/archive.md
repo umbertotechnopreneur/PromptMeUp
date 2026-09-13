@@ -2,6 +2,16 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-13 — Bounded memories, context accounting, and AI settings
+
+- Added explicit project/global memories with local relevance selection, credential protection, and an 800-estimated-token request envelope.
+- Separated retained active context, operational input budget, last-call provider counters, and cumulative conversation usage; `/status`, `/context`, and `/clear` preserve accounting.
+- Added a persisted 16,000-token default input budget, an optional invocation override, and an additive SQLite version-two migration.
+- Added `hm --ai-settings` to change only model behavior and context limits without repeating setup or changing credentials.
+- Kept oversized chat requests recoverable without discarding earlier turns, and documented all commands and limits.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors. Regression test sources were added and compiled; automated tests and CLI smoke tests were not run because they were not requested.
+
 ## 2026-09-13 — Repository checkpoint validation
 
 - Reviewed the accumulated console presentation, language flags, Windows key guidance, shared project banner, and MSI directory-cleanup changes before publishing the repository checkpoint.

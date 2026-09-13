@@ -32,6 +32,20 @@ public sealed record ShellRuntimeStatus(
     long CachedInputTokens,
     long CacheWriteTokens)
 {
+    public long? ActiveContextTokens { get; init; }
+
+    public long ContextBudgetTokens { get; init; }
+
+    public long MemoryTokens { get; init; }
+
+    public int MemoryCount { get; init; }
+
+    public long SessionInputTokens { get; init; }
+
+    public long SessionOutputTokens { get; init; }
+
+    public bool HasSessionUsage { get; init; }
+
     /// <summary>Creates an idle status-bar snapshot from persisted settings.</summary>
     public static ShellRuntimeStatus FromSettings(AppSettings? settings) => new(
         settings?.AiEnabled == false ? "local" : "OpenAI",

@@ -30,6 +30,7 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Inspects concrete local file effects before individual command review. |
 | `--recipes [action]` | — | Lists, saves, imports, exports, or reuses personal command recipes. |
 | `--setup` | — | Opens the full first-run and AI settings form. |
+| `--ai-settings` | — | Edits only AI parameters and the conversation input budget after initial setup. |
 | `--test-ai` | — | Runs the localized `connection-test.yaml` prompt and verifies the exact expected response. |
 | `--costs` | — | Forces a pricing refresh, optionally refreshes organization costs, and renders the cost dashboard. |
 | `--status` | — | Shows local configuration and storage readiness. |
@@ -201,20 +202,85 @@ PromptMeUp is scoped to terminal tasks. It does not generate images or rewrite, 
 | Control | Behavior |
 | --- | --- |
 | `/run <command>` | Performs local and optional AI risk review, displays the exact command, asks for authorization, runs it if approved, and offers its bounded result to the next AI turn. |
-| `/clear` | Clears active in-memory context. Persistent session events remain intact. |
+| `/remember [global\|project] <text>` | Saves an explicit persistent note; the default scope is the current project. |
+| `/memories` | Lists saved global and current-project notes with their IDs. |
+| `/forget <id>` | Deletes a saved global or current-project note from future selection. |
+| `/clear` | Clears active conversation messages; persistent notes, session events, and usage counters remain intact. |
 | `/costs` | Shows the cost dashboard without ending the chat. |
-| `/status` | Reprints the compact session snapshot. |
+| `/status` or `/context` | Refreshes the active-context estimate, operational budget, and selected-note count while preserving last-request and cumulative session usage. |
 | `/exit` | Closes the session and marks its ledger complete. |
 | `Esc` | Cancels the current interactive command; from the command center it exits the current flow. |
 | `Ctrl+C` | Cancels the whole application and returns exit code `130`. |
 
 There is no command that silently approves `/run`. The authorization prompt must be answered in a live terminal for every command.
 
+### Save small, explicit memories
+
+```text
+/remember Prefer PowerShell examples for this project.
+/remember global Keep terminal explanations concise.
+/memories
+/forget <id>
+```
+
+Each note accepts at most 1,000 characters, and each scope holds at most 100 notes.
+Project notes belong to the nearest ancestor with `.git`, or the current directory
+when no repository is found. Global notes apply across projects sharing the same
+local data directory. Notes are kept in the existing SQLite database with a hashed
+project identifier.
+
+Query and chat select at most five relevant notes, with a combined limit of 800
+estimated tokens including the localized wrapper and JSON data. Selection is
+local and makes no additional AI calls. The notes are shared with the provider
+when selected; they do not authorize commands or override the latest request.
+Recognizable credentials are rejected on save and loaded content is redacted
+before transmission.
+
+`/clear` keeps these saved notes. `/forget` removes a note from future selection,
+but does not erase earlier audited requests or usage records.
+
+### Read context and usage
+
+`/status` and `/context` show estimated active input against the model window and
+the operational budget, plus the number and estimated size of selected notes.
+The estimate includes populated instructions, current runtime context, selected
+notes, and retained conversation messages. It is refreshed after pruning and
+cannot include a future question that has not been entered. A `~` marks local
+estimates.
+
+The last assistant request's provider-reported input/output and cumulative
+input/output for the session are shown separately. Session totals cover the
+current conversation's locally recorded calls, including failed requests that
+report usage. AI command reviews have separate audit sessions and appear in
+overall `/costs` totals. Session totals count repeated input on every call and do
+not represent currently occupied context. Refreshing status or using `/clear`
+does not reset those counters.
+
+Ordinary query and chat use a default operational input budget of 16,000 estimated
+tokens. Change the saved budget with `hm --ai-settings`; accepted values range
+from `4000` to `200000`. Set `PROMPTMEUP_CONTEXT_TOKENS` before launch to override
+the saved budget for that invocation using the same range. The effective budget
+is the smallest of the saved or overridden value, the
+configured model-window percentage, and the model window minus reserved output
+tokens. Populated instructions, selected notes, and retained messages all count
+toward it. Older complete turns are removed to fit; an oversized new request is
+rejected visibly. This setting applies only to ordinary query and chat.
+
+See
+[memory, costs, and caching](OPENAI_COSTS_AND_CACHING.md) for the accounting details.
+
 When an AI answer cites command candidates, PromptMeUp presents a menu whose first and default item is **Do not execute commands**. Picking a candidate only opens the normal exact-preview and authorization flow; it never runs a command by itself.
 
 ## First run and redirected output
 
 With no explicit command and no completed setup, `hm` opens setup. If input is redirected, PromptMeUp exits with an explanation instead of attempting an interactive form.
+
+After initial setup, use `hm --ai-settings` to change AI availability, model,
+reasoning effort, output detail, AI command review, prompt caching, and conversation
+limits. The command shows an AI-only summary for confirmation, then saves the
+settings. It requires a live terminal and completed setup; it does not open the
+full setup wizard when setup is missing. The conversation input budget is also
+available in the advanced section of full setup.
 
 Read-only commands such as `--help`, `--version`, `--status`, `--third-party`, and `--path=status` support redirected output. Mutating PATH and font operations require a live prompt or `--yes`; font dry-run is non-mutating and can run unattended.
 

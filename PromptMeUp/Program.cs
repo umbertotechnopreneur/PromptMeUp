@@ -95,6 +95,8 @@ internal static class Program
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton(provider => ArtifactLimitConfiguration.Load(
             Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
+        services.AddSingleton(provider => ContextBudgetConfiguration.Load(
+            Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
         services.AddSingleton<IDatabaseService, SqliteDatabaseService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
@@ -105,6 +107,7 @@ internal static class Program
         services.AddSingleton<IAiCostCalculator, AiCostCalculator>();
         services.AddSingleton<IActivityAuditService, ActivityAuditService>();
         services.AddSingleton<IConversationMemoryService, ConversationMemoryService>();
+        services.AddSingleton<PersistentMemoryService>();
         services.AddSingleton<ICommandRiskAssessmentService, CommandRiskAssessmentService>();
         services.AddSingleton<ICommandExecutionService, CommandExecutionService>();
         services.AddSingleton<IPortablePathService, PortablePathService>();
@@ -128,6 +131,7 @@ internal static class Program
         services.AddSingleton<IStatusView, StatusView>();
         services.AddSingleton<ICostsView, CostsView>();
         services.AddSingleton<IChatView, ChatView>();
+        services.AddSingleton<IMemoryView, MemoryView>();
         services.AddSingleton<ICommandSuggestionView, CommandSuggestionView>();
         services.AddSingleton<IHelpView, HelpView>();
         services.AddSingleton<IMainMenuView, MainMenuView>();

@@ -66,6 +66,7 @@ public sealed class HelpView(
             "Help.Group.Setup",
             [
                 ("--setup", text.Text("Help.Setup")),
+                ("--ai-settings", text.Text("AiSettings.Help")),
                 ("--path [install|remove|status]", text.Text("Help.Path")),
                 ("--install-font [--dry-run]", text.Text("Help.Font")),
                 (text.Text("Help.LanguageSyntax"), text.Text("Help.Language"))
