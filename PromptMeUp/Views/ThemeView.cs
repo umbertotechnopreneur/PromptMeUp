@@ -62,6 +62,16 @@ public sealed class ThemeView(IAnsiConsole console, ILocalizationService text,
         "cyan" => text.Text("Theme.Cyan"),
         "green" => text.Text("Theme.Green"),
         "amber" => text.Text("Theme.Amber"),
+        "ocean" => text.Text("Theme.Ocean"),
+        "cobalt" => text.Text("Theme.Cobalt"),
+        "violet" => text.Text("Theme.Violet"),
+        "rose" => text.Text("Theme.Rose"),
+        "coral" => text.Text("Theme.Coral"),
+        "forest" => text.Text("Theme.Forest"),
+        "mint" => text.Text("Theme.Mint"),
+        "midnight" => text.Text("Theme.Midnight"),
+        "coffee" => text.Text("Theme.Coffee"),
+        "graphite" => text.Text("Theme.Graphite"),
         _ => theme.Name
     };
 }

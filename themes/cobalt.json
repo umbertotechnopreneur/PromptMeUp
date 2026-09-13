@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "id": "cobalt",
+  "name": "Cobalt",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Electric blue accents over dark cobalt, with cool neutral text.",
+  "colors": {
+    "background": "#0B1530",
+    "primary": "#F0F5FF",
+    "muted": "#BECBE8",
+    "accent": "#91B6FF",
+    "info": "#79DAFF",
+    "divider": "#7E93BA",
+    "success": "#9BE6B4",
+    "warning": "#FFDB8C",
+    "error": "#FFABB5",
+    "selectionBackground": "#91B6FF",
+    "selectionForeground": "#0B1530"
+  }
+}

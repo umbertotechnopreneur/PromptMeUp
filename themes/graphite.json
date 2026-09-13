@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "id": "graphite",
+  "name": "Graphite",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Neutral silver accents on charcoal with distinct colored status messages.",
+  "colors": {
+    "background": "#151719",
+    "primary": "#F5F5F5",
+    "muted": "#C6CDD2",
+    "accent": "#DDE4EA",
+    "info": "#9BCDF2",
+    "divider": "#8C969F",
+    "success": "#A3E0B2",
+    "warning": "#F4D38A",
+    "error": "#F1A6A6",
+    "selectionBackground": "#DDE4EA",
+    "selectionForeground": "#151719"
+  }
+}

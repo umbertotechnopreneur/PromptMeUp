@@ -15,7 +15,8 @@ public sealed class SetupWorkflow(
     ISetupView setupView,
     IConsoleShellView shell,
     ILocalizationService text,
-    IThemeCatalogService? themes = null)
+    IThemeCatalogService? themes = null,
+    IPricingService? pricing = null)
 {
     /// <summary>Opens the shared settings screen with appearance selected.</summary>
     public Task<int> RunThemeAsync(AppSettings current, CancellationToken cancellationToken) =>
@@ -42,6 +43,7 @@ public sealed class SetupWorkflow(
             secrets.IsConfigured(current.AdminKeyVariable))
         {
             InitialSection = initialSection,
+            Costs = pricing is null ? null : await pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false),
             ContextBudgetOverridden = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS"))
         });
         if (submission is null)

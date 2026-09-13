@@ -2,6 +2,49 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-14 — Consistent help and settings workspaces
+
+- Unified help and settings through the same responsive workspace and action-button renderers. Help retains its sidebar at every supported width and matches settings navigation spacing, section emphasis, margins, and footer actions.
+- Kept `hm` explicitly white in commands, descriptions, usage hints, and the shared header. Descriptions and examples use two-space insets, with four-space argument notes and preserved wrapped-line indentation. Static help uses the same entry renderer.
+- Distinguished optional square-bracket groups with the theme's yellow/amber color, preserving spaces, nested groups, and quoted values.
+- Built, signed, and installed MSIX revision `0.1.5.9`; verified healthy registration, all 273 installed payload hashes, and the WindowsApps alias targeting that revision.
+- Included the subsequent optional-parameter coloring in MSIX revision `0.1.5.10`, repeated the non-test validation gate, and verified its signature, healthy registration, all 273 payload hashes, and updated alias target before preparing the complete source changes for main.
+
+Validation: preflight, restore, solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, whitespace checks, signature validation, and installation integrity checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — About artwork and richer settings overviews
+
+- Added `hm about` and `hm --about`, with a six-language fullscreen information page, the original HELP ME gradient artwork and white H/M initials, project links, version, and attribution. The standalone command opens before settings or AI services are resolved; compact and redirected terminals receive scrolling output, and fullscreen exit restores the main buffer.
+- Added the selected theme's complete source path, author, website hyperlink, and description to Theme settings. Metadata follows the live draft and uses the existing scrollable overview. Schema version 3 adds a validated website to all 13 bundled palettes; versions 1 and 2 remain readable, and the computed local source path is excluded from serialization.
+- Shared the existing model-price comparison between Costs and AI settings, highlighting the selected model and retaining supported models with unavailable rates. The comparison uses cached standard short-context prices and adapts its columns to the available width. Short settings viewports reserve space for both focused fields and scrollable details.
+- Updated six-language UI labels, theme and CLI guidance, and existing theme assertions while preserving unrelated work in the shared checkout.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered routing, alternate-buffer restoration, compact layout, metadata privacy, backward compatibility, and price semantics. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — General overview, help entry point, and expanded themes
+
+- Replaced the command center with help for plain `hm`, including first launch and redirected output. General settings now combines draft application status with cached usage and costs; short terminals can scroll the overview with Ctrl+Up/Down, and the scrolling compatibility view shows it too.
+- Aligned the operating-budget label with the session overview's first label column while retaining the separate Spectre progress bar and localized values.
+- Added semantic explanations beside palette samples, whitesmoke settings values, and clear Save/Cancel action emojis. Added ten bundled themes, backfilled version-two author/description metadata for the original three, and retained explicit support for legacy version-one theme files.
+- Built, signed, and installed MSIX revision `0.1.5.8`. Verified healthy registration, all 273 installed payload hashes, and the WindowsApps `hm` alias target.
+
+Validation: preflight, restore, solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, whitespace checks, package identity/signature verification, and installed payload integrity checks passed. Automated tests and CLI smoke checks were not run. Concurrent work in the shared checkout was preserved.
+
+## 2026-09-14 — Fix the budget bar and align leading emoji
+
+- Removed redundant leading padding from the shared icon-prefix helper while retaining trailing separation, intentional layout margins, and spacing after fullscreen navigation markers. Aligned both contributor instruction files and updated the existing spacing assertions.
+- Fixed the operating-budget crash by providing Spectre's progress task with the localized budget label instead of an empty description. Extremely narrow terminals retain the budget text without constructing a bar below its minimum width.
+- Published, signed, and installed MSIX revision `0.1.5.7` with the latest fixes. Confirmed healthy registration, matching SHA-256 hashes for all 263 installed payload files, and a WindowsApps execution alias targeting that version.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, manifest and signature verification, and installed-file integrity checks passed. Independent source review confirmed emoji call-site spacing and the exact Spectre package's progress contracts. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Install the unified settings MSIX
+
+- Published the current working tree as a self-contained Windows x64 application, exported redistribution notices, and signed MSIX revision `0.1.5.5` with the existing trusted certificate.
+- Installed the update and verified healthy registration, matching SHA-256 hashes for all 263 payload files, and an AppExecLink targeting the new version through the WindowsApps `hm.exe` alias.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build, Windows publish, manifest validation, and package signature verification passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
 ## 2026-09-14 — Unified settings workspace and clearer terminal feedback
 
 - Consolidated General, AI, Credentials, Conversation, Commands, Personalization, and Theme into one settings draft with an emoji sidebar. Setup, AI setup (including the existing AI settings alias), and theme switches only choose the opening section; the main menu has one Settings entry.
@@ -11,6 +54,14 @@ This archive tracks completed development tasks for reference and review.
 - Updated all six UI languages and the product guides while preserving concurrent command-clarification work separately.
 
 Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered routing, keyboard focus, compact geometry, cancellation, and privacy. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Clarify ambiguous requests without closing the session
+
+- Fixed the suggestion menu page size for answers with no suggested commands and chat answers with only one suggestion.
+- Added an explicit clarification/chat continuation choice and neutral finish guidance when no commands are suggested, using the existing conversation and authorization workflow. Updated all six UI languages and the CLI reference.
+- Versioned the query and chat prompts to ask a focused clarification question and withhold commands until necessary details are available, with guidance in all six languages and matching existing version assertions.
+
+Validation: preflight, restore, XML method summaries, Release build with zero warnings/errors, scoped formatting verification, and `git diff --check` passed. Full-solution formatting verification reported line-ending and encoding issues in unrelated concurrent settings/UI changes; those files were preserved. Independent source review covered small menus, defaults, conversation continuity, privacy, authorization, and localization. Automated tests and CLI smoke checks were not run; the installed executable was not replaced.
 
 ## 2026-09-14 — Consistent setup and help navigation
 

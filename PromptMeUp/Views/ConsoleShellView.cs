@@ -114,12 +114,17 @@ public sealed class ConsoleShellView : IConsoleShellView
             metrics.Add(TerminalTheme.CompactMetric(_text.Text("Shell.SessionOutput"), FormatTokens(status.SessionOutputTokens), TerminalTheme.Info));
         }
 
+        var pairs = _console.Profile.Width >= 72 ? 2 : 1;
+        var labelWidth = metrics.Where((_, index) => index % pairs == 0)
+            .Select(metric => new Segment(metric.Label + ":").CellCount())
+            .Append(new Segment(_text.Text("Shell.ContextBudget") + ":").CellCount()).Max();
         RenderSessionSnapshot(
             $"{icon}{_text.Text("Shell.Session")}",
             metrics,
-            preferredPairs: 2);
+            preferredPairs: 2,
+            firstLabelWidth: labelWidth);
         _console.WriteLine();
-        RenderContextBudget(status);
+        RenderContextBudget(status, labelWidth);
         _console.WriteLine();
     }
 
@@ -297,29 +302,37 @@ public sealed class ConsoleShellView : IConsoleShellView
         command is "main" or "setup" or "chat" or "where" or "path" or "install-font";
 
     /// <summary>Renders compact metric rows that adapt to the available terminal width.</summary>
-    private void RenderSessionSnapshot(string header, IReadOnlyList<CompactTerminalMetric> metrics, int preferredPairs = 4)
+    private void RenderSessionSnapshot(string header, IReadOnlyList<CompactTerminalMetric> metrics, int preferredPairs = 4, int? firstLabelWidth = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(header);
         ArgumentNullException.ThrowIfNull(metrics);
         var grid = TerminalTheme.PairGrid(
             metrics,
             preferredPairs: preferredPairs,
-            width: _console.Profile.Width);
+            width: _console.Profile.Width,
+            firstLabelWidth: firstLabelWidth);
 
         TerminalTheme.WriteRule(_console, header, TerminalTheme.Accent);
         _console.Write(grid);
     }
 
     /// <summary>Gives the operating budget its own label, Spectre progress bar, and complete localized values.</summary>
-    private void RenderContextBudget(ShellRuntimeStatus status)
+    private void RenderContextBudget(ShellRuntimeStatus status, int firstLabelWidth)
     {
         const int minimumBarWidth = 8;
         const int maximumBarWidth = 36;
         var width = Math.Max(1, _console.Profile.Width);
         var labelText = _text.Text("Shell.ContextBudget") + ":";
+        labelText = new string(' ', Math.Max(0, Math.Min(firstLabelWidth, width) - new Segment(labelText).CellCount())) + labelText;
         var valueText = FormatContextUsage(status.ActiveContextTokens, status.ContextBudgetTokens);
         var label = new Text(labelText, Style.Parse(TerminalTheme.Muted));
         var value = new Text(valueText, Style.Parse($"bold {TerminalTheme.Info}"));
+        if (width < 4)
+        {
+            // Spectre bars require at least four terminal cells; preserve the text during extreme resizing.
+            _console.Write(new Rows(label, value));
+            return;
+        }
         var labelWidth = new Segment(labelText).CellCount();
         var valueWidth = new Segment(valueText).CellCount();
         var barWidth = width - labelWidth - valueWidth - 4;
@@ -342,7 +355,7 @@ public sealed class ConsoleShellView : IConsoleShellView
         var percentage = status.ActiveContextTokens.HasValue && status.ContextBudgetTokens > 0
             ? Math.Clamp(status.ActiveContextTokens.Value * 100d / status.ContextBudgetTokens, 0d, 100d)
             : 0d;
-        var task = new ProgressTask(0, string.Empty, 100d, autoStart: false, timeProvider: TimeProvider.System)
+        var task = new ProgressTask(0, _text.Text("Shell.ContextBudget"), 100d, autoStart: false, timeProvider: TimeProvider.System)
         {
             Value = percentage
         };

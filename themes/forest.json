@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "id": "forest",
+  "name": "Forest",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Leaf green highlights and cool teal details on a deep forest background.",
+  "colors": {
+    "background": "#101F13",
+    "primary": "#F3FFF0",
+    "muted": "#C3D4BD",
+    "accent": "#ADD98A",
+    "info": "#91DAD7",
+    "divider": "#829F7B",
+    "success": "#9DE8AD",
+    "warning": "#F5D985",
+    "error": "#FFA8A0",
+    "selectionBackground": "#ADD98A",
+    "selectionForeground": "#101F13"
+  }
+}

@@ -35,9 +35,18 @@ public sealed class ThemeCatalogServiceTests
     {
         var catalog = new ThemeCatalogService(Path.Combine(AppContext.BaseDirectory, "themes"));
 
-        Assert.Equal(TerminalThemeDefinition.Default, catalog.Resolve("cyan"));
+        Assert.Equal(TerminalThemeDefinition.Default, catalog.Resolve("cyan") with { SourcePath = null });
         Assert.Contains(catalog.Themes, theme => theme.Id == "green");
         Assert.Contains(catalog.Themes, theme => theme.Id == "amber");
+        Assert.Equal(13, catalog.Themes.Count);
+        Assert.All(catalog.Themes, theme =>
+        {
+            Assert.Equal(3, theme.Version);
+            Assert.False(string.IsNullOrWhiteSpace(theme.Author));
+            Assert.False(string.IsNullOrWhiteSpace(theme.Description));
+            Assert.Equal("https://github.com/umbertotechnopreneur/PromptMeUp", theme.Website);
+            Assert.Equal(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "themes", theme.Id + ".json")), theme.SourcePath);
+        });
     }
 
     /// <summary>Rejects malformed JSON and incomplete documents instead of replacing them with default colors.</summary>
@@ -80,7 +89,7 @@ public sealed class ThemeCatalogServiceTests
         switch (scenario)
         {
             case "version":
-                definition["version"] = 2;
+                definition["version"] = 4;
                 break;
             case "unknown":
                 definition["unexpected"] = true;
@@ -144,7 +153,37 @@ public sealed class ThemeCatalogServiceTests
         var catalog = new ThemeCatalogService(fixture.Paths.DataDirectory);
 
         Assert.Equal("Readable test palette", catalog.Resolve("cyan").Name);
+        Assert.Null(catalog.Resolve("cyan").Author);
+        Assert.Null(catalog.Resolve("cyan").Description);
         Assert.Throws<InvalidOperationException>(() => catalog.Resolve("missing"));
+    }
+
+    /// <summary>Rejects missing, empty, padded, or multiline metadata in the enriched theme schema.</summary>
+    [Theory]
+    [InlineData("author", null)]
+    [InlineData("author", "")]
+    [InlineData("author", " Author")]
+    [InlineData("description", null)]
+    [InlineData("description", "")]
+    [InlineData("description", "First\nSecond")]
+    public void Catalog_InvalidMetadata_IsRejected(string property, string? value)
+    {
+        using var fixture = new RegressionFixture();
+        var definition = JsonNode.Parse(ValidTheme)!;
+        definition["version"] = 2;
+        definition["author"] = "Theme author";
+        definition["description"] = "A readable palette.";
+        if (value is null)
+        {
+            definition.AsObject().Remove(property);
+        }
+        else
+        {
+            definition[property] = value;
+        }
+        WriteTheme(fixture, definition.ToJsonString());
+
+        Assert.Throws<InvalidOperationException>(() => new ThemeCatalogService(fixture.Paths.DataDirectory));
     }
 
     /// <summary>Writes only a disposable fixture palette without changing packaged application resources.</summary>

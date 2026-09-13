@@ -105,8 +105,13 @@ public sealed class FullscreenSetupView
                 {
                     Choices = () => SupportedLanguages.All.Select(item => new FormChoice(item.Code, LanguageLabel(item))).ToArray()
                 }
-            ]) { HelpKey = "Settings.GeneralHelp" },
-            new("Settings.Ai", ai) { HelpKey = "Settings.AiHelp" },
+            ]) { HelpKey = "Settings.GeneralHelp", Overview = () => CreateGeneralOverview(draft, state) },
+            new("Settings.Ai", ai)
+            {
+                HelpKey = "Settings.AiHelp",
+                Overview = () => ModelPricingTable.Create(_text, _shell.Options, state.Costs?.Prices ?? [],
+                    draft.Settings.Model, selectableModelsOnly: true)
+            },
             new("Settings.Credentials",
             [
                 Secret("api-key", "Status.ApiKey", () => draft.ApiKey,
@@ -149,20 +154,92 @@ public sealed class FullscreenSetupView
                     Choices = () => _themes.Themes.Select(theme => new FormChoice(theme.Id, ThemeName(theme))).ToArray(),
                     HelpKey = "Theme.Preview"
                 }
-            ]) { HelpKey = "Settings.ThemeHelp", Preview = CreateThemePreview, PreviewRows = 3 }
+            ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) }
         ];
     }
 
-    /// <summary>Shows live semantic color samples without persisting or leaving the settings workspace.</summary>
-    private IRenderable CreateThemePreview()
+    /// <summary>Combines current draft status and cached usage in one passive, unboxed overview.</summary>
+    private IRenderable CreateGeneralOverview(SetupDraft draft, SetupViewState state)
     {
-        var samples = new Grid().AddColumn().AddColumn().AddColumn();
+        var costs = state.Costs;
+        var unavailable = _text.Text("Costs.Unavailable");
+        var status = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn();
+        AddOverviewMetric(status, "Status.Setup", _text.Text(state.Settings.SetupCompleted ? "Status.Completed" : "Status.Required"));
+        AddOverviewMetric(status, "Setup.AiEnabled", _text.Text(draft.Settings.AiEnabled ? "Common.Yes" : "Common.No"));
+        AddOverviewMetric(status, "Status.Model", draft.Settings.Model);
+        AddOverviewMetric(status, "Status.ApiKey", _text.Text(HasApiKey(draft, state) ? "Status.Ready" : "Status.Missing"));
+        AddOverviewMetric(status, "Status.AdminKey", _text.Text(state.AdminKeyConfigured || draft.AdminKey is not null ? "Status.Ready" : "Status.Missing"));
+        var usage = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn();
+        AddOverviewMetric(usage, "Costs.TodayEstimate", costs is null ? unavailable : $"${costs.EstimatedCostTodayUsd.ToString("0.########", _text.Culture)}");
+        AddOverviewMetric(usage, "Costs.MonthEstimate", costs is null ? unavailable : $"${costs.EstimatedCostCurrentMonthUsd.ToString("0.########", _text.Culture)}");
+        AddOverviewMetric(usage, "Costs.ApiCost", costs?.ActualOrganizationCostCurrentMonthUsd is { } actual ? $"${actual.ToString("0.########", _text.Culture)}" : unavailable);
+        AddOverviewMetric(usage, "Costs.Requests", costs?.RequestsToday.ToString("N0", _text.Culture) ?? unavailable);
+        AddOverviewMetric(usage, "Costs.Tokens", costs?.TotalTokensToday.ToString("N0", _text.Culture) ?? unavailable);
+        AddOverviewMetric(usage, "Costs.LastSync", costs?.LastPricingSync?.ToLocalTime().ToString("g", _text.Culture) ?? unavailable);
+        return new Rows(
+            new Text(TerminalTheme.IconPrefix(_shell.Options, "🪞", "=") + _text.Text("Main.Status"), Style.Parse("bold " + TerminalTheme.Accent)),
+            status, new Text(" "),
+            new Text(TerminalTheme.IconPrefix(_shell.Options, "📊", "=") + _text.Text("Main.Costs"), Style.Parse("bold " + TerminalTheme.Accent)),
+            usage);
+    }
+
+    /// <summary>Separates each muted summary label from its whitesmoke value without editable brackets.</summary>
+    private void AddOverviewMetric(Grid grid, string labelKey, string value) => grid.AddRow(
+        new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)),
+        new Text(value, Style.Parse("bold " + TerminalTheme.FieldValue)));
+
+    /// <summary>Shows the selected file's full attribution and live palette samples without accessing the filesystem.</summary>
+    private IRenderable CreateThemeOverview(SetupDraft draft)
+    {
+        var theme = _themes.Resolve(draft.Settings.Theme);
+        var metadata = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
+        AddThemeMetadata(metadata, "Theme.Metadata.Path", theme.SourcePath);
+        AddThemeMetadata(metadata, "Theme.Metadata.Author", theme.Author);
+        AddThemeMetadata(metadata, "Theme.Metadata.Website", theme.Website, link: theme.Website);
+        AddThemeMetadata(metadata, "Theme.Metadata.Description", theme.Description);
+        var samples = new Grid().AddColumn(new GridColumn().NoWrap()).AddColumn();
         samples.AddRow(
-            new Text(_text.Text("Status.Ready"), Style.Parse("bold " + TerminalTheme.Success)),
-            new Text(_text.Text("Form.Cancel"), Style.Parse("bold " + TerminalTheme.Warning)),
-            new Text(_text.Text("Common.Error"), Style.Parse("bold " + TerminalTheme.Error)));
-        return new Rows(new Text(_text.Text("Settings.ThemePreview"), Style.Parse(TerminalTheme.Muted)),
+            new Text(_text.Text("Theme.Semantic.Success"), Style.Parse("bold " + TerminalTheme.Success)),
+            new Text(_text.Text("Theme.Semantic.SuccessHelp"), Style.Parse(TerminalTheme.Primary)));
+        samples.AddRow(
+            new Text(_text.Text("Theme.Semantic.Warning"), Style.Parse("bold " + TerminalTheme.Warning)),
+            new Text(_text.Text("Theme.Semantic.WarningHelp"), Style.Parse(TerminalTheme.Primary)));
+        samples.AddRow(
+            new Text(_text.Text("Theme.Semantic.Error"), Style.Parse("bold " + TerminalTheme.Error)),
+            new Text(_text.Text("Theme.Semantic.ErrorHelp"), Style.Parse(TerminalTheme.Primary)));
+        return new Rows(metadata, new Text(_text.Text("Settings.ThemePreview"), Style.Parse(TerminalTheme.Muted)),
             new Text(" "), samples);
+    }
+
+    /// <summary>Wraps complete metadata values and gives validated website URLs a terminal hyperlink.</summary>
+    private void AddThemeMetadata(Grid grid, string labelKey, string? value, string? link = null)
+    {
+        var display = value is null ? _text.Text("Theme.Metadata.Unavailable")
+            : new string(value.Select(character => char.IsControl(character) ? ' ' : character).ToArray());
+        IRenderable renderedValue = link is null ? new Text(display, Style.Parse(TerminalTheme.FieldValue))
+            : new ThemeLink(display, link);
+        grid.AddRow(new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)), renderedValue);
+        grid.AddEmptyRow();
+    }
+
+    /// <summary>Attaches a validated hyperlink while retaining literal, wrapped website text.</summary>
+    private sealed class ThemeLink(string value, string url) : IRenderable
+    {
+        private readonly IRenderable _value = new Text(value, Style.Parse("underline " + TerminalTheme.Info));
+        private readonly Link _link = new(url);
+
+        /// <summary>Measures website text using the same wrapping rules as other metadata.</summary>
+        public Measurement Measure(RenderOptions options, int maxWidth) => _value.Measure(options, maxWidth);
+
+        /// <summary>Preserves line boundaries while applying the link to each visible text segment.</summary>
+        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
+        {
+            foreach (var segment in _value.Render(options, maxWidth))
+            {
+                yield return segment.IsLineBreak || segment.IsControlCode ? segment
+                    : new Segment(segment.Text, segment.Style, _link);
+            }
+        }
     }
 
     /// <summary>Builds the shared model, supported reasoning, and answer detail selectors.</summary>
@@ -314,6 +391,16 @@ public sealed class FullscreenSetupView
         "cyan" => _text.Text("Theme.Cyan"),
         "green" => _text.Text("Theme.Green"),
         "amber" => _text.Text("Theme.Amber"),
+        "ocean" => _text.Text("Theme.Ocean"),
+        "cobalt" => _text.Text("Theme.Cobalt"),
+        "violet" => _text.Text("Theme.Violet"),
+        "rose" => _text.Text("Theme.Rose"),
+        "coral" => _text.Text("Theme.Coral"),
+        "forest" => _text.Text("Theme.Forest"),
+        "mint" => _text.Text("Theme.Mint"),
+        "midnight" => _text.Text("Theme.Midnight"),
+        "coffee" => _text.Text("Theme.Coffee"),
+        "graphite" => _text.Text("Theme.Graphite"),
         _ => theme.Name
     };
 

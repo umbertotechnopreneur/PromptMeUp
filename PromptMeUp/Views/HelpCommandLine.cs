@@ -67,7 +67,7 @@ internal static class HelpCommandLine
         var tokens = new List<CommandToken>
         {
             new(example[..start], TerminalTheme.Primary, false),
-            new("hm", "white", false)
+            new("hm", "#FFFFFF", false)
         };
         var index = end;
         while (index < example.Length)
@@ -88,6 +88,11 @@ internal static class HelpCommandLine
             {
                 index = QuotedEnd(example, index);
                 color = TerminalTheme.Success;
+            }
+            else if (example[index] == '[')
+            {
+                index = OptionalEnd(example, index);
+                color = TerminalTheme.Warning;
             }
             else
             {
@@ -114,6 +119,15 @@ internal static class HelpCommandLine
         var index = 0;
         while (index < description.Length)
         {
+            if (description[index] == '[')
+            {
+                var optionalEnd = OptionalEnd(description, index);
+                Append(paragraph, description[plainStart..index], TerminalTheme.Primary);
+                Append(paragraph, description[index..optionalEnd], TerminalTheme.Warning);
+                index = optionalEnd;
+                plainStart = index;
+                continue;
+            }
             var match = candidates.FirstOrDefault(token => Matches(description, index, token.Value));
             if (match is null)
             {
@@ -147,6 +161,28 @@ internal static class HelpCommandLine
 
     /// <summary>Stores a literal example span and its shared command, description, and argument-note color.</summary>
     private sealed record CommandToken(string Value, string Color, bool IsParameter);
+
+    /// <summary>Keeps optional syntax groups together, including spaces, nested groups, and quoted values.</summary>
+    private static int OptionalEnd(string value, int start)
+    {
+        var depth = 0;
+        for (var index = start; index < value.Length; index++)
+        {
+            if (value[index] is '\'' or '"')
+            {
+                index = QuotedEnd(value, index) - 1;
+            }
+            else if (value[index] == '[')
+            {
+                depth++;
+            }
+            else if (value[index] == ']' && --depth == 0)
+            {
+                return index + 1;
+            }
+        }
+        return value.Length;
+    }
 
     /// <summary>Finds a quoted string boundary while preserving PowerShell escapes and doubled quote characters.</summary>
     private static int QuotedEnd(string example, int start)

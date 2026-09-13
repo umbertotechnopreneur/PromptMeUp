@@ -54,8 +54,8 @@ For several related questions, start with `hm --chat`. Your earlier terminal out
 </td>
 <td width="50%" valign="top">
 <strong>Your starting point</strong><br /><br />
-<img src="docs/assets/screen-center-violet.png" alt="Violet and cyan CRT rendering of the command center, showing sample settings and navigation." />
-<br />A question, a conversation, or a quick look at your settings.
+Run <code>hm</code> to browse help, or <code>hm --setup</code> to open settings.<br /><br />
+General brings application status and local usage and costs together. The sidebar keeps AI, credentials, conversation limits, and themes within reach.
 </td>
 </tr>
 </table>

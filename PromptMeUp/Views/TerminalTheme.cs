@@ -14,6 +14,7 @@ internal static class TerminalTheme
     internal static string Accent => Current.Colors.Accent;
     internal static string Info => Current.Colors.Info;
     internal static string Primary => Current.Colors.Primary;
+    internal const string FieldValue = "#F5F5F5";
     internal static string Muted => Current.Colors.Muted;
     internal static string Divider => Current.Colors.Divider;
     internal static string Success => Current.Colors.Success;
@@ -39,9 +40,9 @@ internal static class TerminalTheme
         return options.NoEmoji ? fallback : icon;
     }
 
-    /// <summary>Returns a visual icon with visible surrounding spaces, or an ASCII fallback followed by a non-breaking space.</summary>
+    /// <summary>Starts a label with an icon and one trailing space, leaving leading indentation to the layout.</summary>
     internal static string IconPrefix(ConsoleRenderOptions options, string icon, string fallback) =>
-        options.NoEmoji ? $"{Icon(options, icon, fallback)}\u00A0" : $" {Icon(options, icon, fallback)} ";
+        options.NoEmoji ? $"{Icon(options, icon, fallback)}\u00A0" : $"{Icon(options, icon, fallback)} ";
 
     /// <summary>Creates one compact label-value metric for a dense, frameless session summary.</summary>
     internal static CompactTerminalMetric CompactMetric(string label, string value, string? valueColor = null) =>
@@ -52,7 +53,8 @@ internal static class TerminalTheme
         IReadOnlyList<CompactTerminalMetric> metrics,
         int preferredPairs,
         int width,
-        bool preservePairCount = false)
+        bool preservePairCount = false,
+        int? firstLabelWidth = null)
     {
         ArgumentNullException.ThrowIfNull(metrics);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(preferredPairs);
@@ -61,7 +63,7 @@ internal static class TerminalTheme
         var grid = new Grid();
         for (var pair = 0; pair < pairs; pair++)
         {
-            grid.AddColumn(new GridColumn().RightAligned().NoWrap());
+            grid.AddColumn(new GridColumn { Width = pair == 0 ? firstLabelWidth : null }.RightAligned().NoWrap());
             grid.AddColumn(new GridColumn().LeftAligned());
         }
 

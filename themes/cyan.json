@@ -1,7 +1,10 @@
 {
-  "version": 1,
+  "version": 3,
   "id": "cyan",
   "name": "Cyan",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Bright cyan and blue accents on a deep blue background.",
   "colors": {
     "background": "#081820",
     "primary": "#F4FAFF",

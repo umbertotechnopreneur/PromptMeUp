@@ -22,7 +22,6 @@ internal sealed record HelpSection(string Icon, string Title, string NavigationL
 /// <summary>Browses command sections in a temporary open layout without changing the original terminal buffer.</summary>
 internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions? options = null)
 {
-    private const int SidebarWidth = 25;
     private const int HeadingRows = 2;
     private readonly ConsoleRenderOptions _options = options ?? new(false, false);
     private int _section;
@@ -187,7 +186,7 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
     /// <summary>Starts each newly selected section at its first command.</summary>
     private void ChangeSection(int delta, int count)
     {
-        _section = (_section + delta + count) % count;
+        _section = Math.Clamp(_section + delta, 0, count - 1);
         _offset = 0;
     }
 
@@ -241,9 +240,8 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             return;
         }
 
-        var wide = console.Profile.Width >= 100;
         var bodyHeight = height - FullscreenHeader.Height - FullscreenFooter.Height();
-        var contentWidth = width - (wide ? SidebarWidth : 0) - 4;
+        var contentWidth = width - FullscreenWorkspace.SidebarWidth(console.Profile.Width) - 4;
         _visibleRows = bodyHeight - HeadingRows;
         var active = sections[_section];
         var entries = new Rows(active.Entries.Select(RenderEntry));
@@ -258,32 +256,18 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         _offset = Math.Clamp(_offset, 0, Math.Max(0, _lineCount - _visibleRows));
 
         var heading = $"{(_focus == HelpFocus.Commands ? "> " : string.Empty)}{SectionTitle(active, compact: false)}";
-        var content = Inset(new Rows(Line(heading, TerminalTheme.Accent), new Text(" "),
+        var content = Inset(new Rows(Line(heading, "bold " + TerminalTheme.Accent), new Text(" "),
             new HelpLines(lines.Skip(_offset).Take(_visibleRows).ToArray())));
-        var root = new Layout("help").SplitRows(
-            new Layout("header", FullscreenHeader.Create(text.Text("Help.Title"), _options)).Size(FullscreenHeader.Height),
-            new Layout("body"),
-            new Layout("footer").Size(FullscreenFooter.Height()));
-        if (wide)
-        {
-            root["body"].SplitColumns(
-                new Layout("sections", SectionNavigation(sections, bodyHeight)).Size(SidebarWidth),
-                new Layout("commands", content));
-        }
-        else
-        {
-            root["body"].Update(_focus == HelpFocus.Sections ? SectionNavigation(sections, bodyHeight) : content);
-        }
 
         var range = text.Text("Help.Browse.Range", _lineCount == 0 ? 0 : _offset + 1,
             Math.Min(_lineCount, _offset + _visibleRows), _lineCount);
-        IRenderable message = _lineCount > _visibleRows && (wide || _focus != HelpFocus.Sections)
+        IRenderable message = _lineCount > _visibleRows
             ? new HelpRange(range)
-            : _focus == HelpFocus.Sections ? Line(text.Text("Help.Usage"), TerminalTheme.Muted) : Text.Empty;
+            : HelpCommandLine.CreateDescription(text.Text("Help.Usage"), "hm");
         var closeSelected = _focus == HelpFocus.Close;
-        var actions = Line($"{(closeSelected ? ">" : " ")} [ {text.Text("Help.Browse.Close")} ]",
-            closeSelected ? TerminalTheme.SelectionForeground : TerminalTheme.Warning,
-            closeSelected ? TerminalTheme.SelectionBackground : null);
+        var actions = new Grid().AddColumn();
+        actions.AddRow(FullscreenFooter.Button(
+            TerminalTheme.IconPrefix(_options, "↩️", "x") + text.Text("Help.Browse.Close"), TerminalTheme.Warning, closeSelected));
         var footerKey = _focus switch
         {
             HelpFocus.Sections => "Help.Browse.SectionKeys",
@@ -294,26 +278,33 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         {
             footerKey += "Compact";
         }
-        root["footer"].Update(FullscreenFooter.Create(message, actions, FullscreenFooter.Shortcuts(text.Text(footerKey))));
-        console.Write(new FormSurface(root));
+        var footer = FullscreenFooter.Create(message, actions, FullscreenFooter.Shortcuts(text.Text(footerKey)));
+        console.Write(FullscreenWorkspace.Create(text.Text("Help.Title"), _options, console.Profile.Width,
+            content, SectionNavigation(sections, bodyHeight), footer, FullscreenFooter.NoticeRows));
     }
 
     /// <summary>Shows contiguous icon labels and keeps the selected section visible without number prefixes.</summary>
     private IRenderable SectionNavigation(IReadOnlyList<HelpSection> sections, int bodyHeight)
     {
-        var capacity = Math.Max(1, bodyHeight - HeadingRows);
+        var availableRows = bodyHeight - HeadingRows;
+        var spacing = availableRows >= sections.Count * 2 ? 2 : 1;
+        var capacity = Math.Max(1, availableRows / spacing);
         var offset = Math.Clamp(_section - capacity + 1, 0, Math.Max(0, sections.Count - capacity));
         var navigation = new List<IRenderable>
         {
-            Line(text.Text("Help.Browse.Sections"), TerminalTheme.Accent), new Text(" ")
+            Line(text.Text("Form.Sections"), TerminalTheme.Accent), new Text(" ")
         };
         for (var index = offset; index < Math.Min(sections.Count, offset + capacity); index++)
         {
             var active = index == _section;
             var selected = active && _focus == HelpFocus.Sections;
-            navigation.Add(Line($"{(selected ? ">" : " ")}{(_options.NoEmoji ? " " : string.Empty)}{SectionTitle(sections[index], compact: true)}",
-                selected ? TerminalTheme.SelectionForeground : active ? TerminalTheme.Accent : TerminalTheme.Muted,
+            navigation.Add(Line($"{(active ? ">" : " ")} {SectionTitle(sections[index], compact: true)}",
+                selected ? TerminalTheme.SelectionForeground : active ? TerminalTheme.Accent : TerminalTheme.Primary,
                 selected ? TerminalTheme.SelectionBackground : null));
+            if (spacing == 2)
+            {
+                navigation.Add(new Text(" "));
+            }
         }
         return Inset(new Rows(navigation));
     }
@@ -361,16 +352,21 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
     private static string CommandExample(HelpEntry entry) => entry.Example
         ?? (entry.Command.StartsWith("hm ", StringComparison.Ordinal) ? entry.Command : "hm " + entry.Command);
 
-    /// <summary>Keeps example tokens, their description references, and argument explanations in matching semantic colors.</summary>
-    private static IRenderable RenderEntry(HelpEntry entry)
+    /// <summary>Separates syntax, indented explanations, and concrete examples while keeping hm white.</summary>
+    internal static IRenderable RenderEntry(HelpEntry entry)
     {
         var example = CommandExample(entry);
         var rows = new List<IRenderable>
         {
-            HelpCommandLine.Create(example),
-            HelpCommandLine.CreateDescription(entry.Description, example)
+            HelpCommandLine.Create(entry.Command.StartsWith("hm ", StringComparison.Ordinal) ? entry.Command : "hm " + entry.Command),
+            new Padder(HelpCommandLine.CreateDescription(entry.Description, example), new Padding(2, 0, 0, 0))
         };
-        rows.AddRange(entry.Arguments.Select(argument => HelpCommandLine.CreateArgument(example, argument.Token, argument.Description)));
+        if (entry.Example is not null)
+        {
+            rows.Add(new Padder(HelpCommandLine.Create(example), new Padding(2, 1, 0, 0)));
+        }
+        rows.AddRange(entry.Arguments.Select(argument => new Padder(
+            HelpCommandLine.CreateArgument(example, argument.Token, argument.Description), new Padding(4, 0, 0, 0))));
         rows.Add(new Text(" "));
         return new Rows(rows);
     }

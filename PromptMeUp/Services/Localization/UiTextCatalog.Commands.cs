@@ -210,6 +210,27 @@ internal static partial class UiTextCatalog
             German: "Was möchten Sie tun?",
             Spanish: "¿Qué quieres hacer?",
             Vietnamese: "Bạn muốn làm gì?"));
+        entries.Add("CommandMenu.ContinueHint", new(
+            English: "Add details or answer the assistant's question. The conversation keeps your original request and this answer.",
+            Italian: "Aggiungi dettagli o rispondi alla domanda dell'assistente. La conversazione conserva la richiesta originale e questa risposta.",
+            French: "Ajoutez des précisions ou répondez à la question de l'assistant. La conversation conserve votre demande initiale et cette réponse.",
+            German: "Ergänzen Sie Details oder beantworten Sie die Frage des Assistenten. Ihre ursprüngliche Anfrage und diese Antwort bleiben im Gespräch erhalten.",
+            Spanish: "Añade detalles o responde a la pregunta del asistente. La conversación conserva tu solicitud original y esta respuesta.",
+            Vietnamese: "Bổ sung chi tiết hoặc trả lời câu hỏi của trợ lý. Cuộc trò chuyện giữ lại yêu cầu ban đầu và câu trả lời này."));
+        entries.Add("CommandMenu.ContinueTitle", new(
+            English: "Continue the conversation",
+            Italian: "Continua la conversazione",
+            French: "Continuer la conversation",
+            German: "Gespräch fortsetzen",
+            Spanish: "Continuar la conversación",
+            Vietnamese: "Tiếp tục cuộc trò chuyện"));
+        entries.Add("CommandMenu.Finish", new(
+            English: "Finish here",
+            Italian: "Termina qui",
+            French: "Terminer ici",
+            German: "Hier beenden",
+            Spanish: "Terminar aquí",
+            Vietnamese: "Kết thúc tại đây"));
         entries.Add("CommandMenu.Hint", new(
             English: "Suggestions never run automatically. Select a command only to inspect its exact preview and risk check.",
             Italian: "I suggerimenti non vengono mai eseguiti automaticamente. Seleziona un comando solo per ispezionarne anteprima esatta e rischio.",
@@ -225,12 +246,12 @@ internal static partial class UiTextCatalog
             Spanish: "No ejecutar comandos",
             Vietnamese: "Không chạy lệnh nào"));
         entries.Add("CommandMenu.StartChat", new(
-            English: "Start chat from this answer",
-            Italian: "Avvia chat da questa risposta",
-            French: "Démarrer le chat depuis cette réponse",
-            German: "Chat mit dieser Antwort starten",
-            Spanish: "Iniciar chat desde esta respuesta",
-            Vietnamese: "Bắt đầu chat từ câu trả lời này"));
+            English: "Clarify the request or continue in chat",
+            Italian: "Chiarisci la richiesta o continua in chat",
+            French: "Préciser la demande ou continuer le chat",
+            German: "Anfrage präzisieren oder im Chat fortfahren",
+            Spanish: "Aclarar la solicitud o continuar en el chat",
+            Vietnamese: "Làm rõ yêu cầu hoặc tiếp tục chat"));
         entries.Add("CommandMenu.Title", new(
             English: "Suggested next step",
             Italian: "Prossimo passo suggerito",

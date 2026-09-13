@@ -26,6 +26,7 @@ internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields
     public string? HelpKey { get; init; }
     public Func<IRenderable>? Preview { get; init; }
     public int PreviewRows { get; init; }
+    public Func<IRenderable>? Overview { get; init; }
 }
 
 /// <summary>Owns keyboard navigation and rendering for temporary, passive terminal forms.</summary>
@@ -44,6 +45,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private string _input = string.Empty;
     private int _caret;
     private int _messageHeight = FullscreenFooter.NoticeRows;
+    private int _overviewOffset;
+    private int _overviewMaximumOffset;
     private (int Width, int Height, string Theme)? _lastFrame;
 
     /// <summary>Checks terminal capabilities before opting into a fullscreen form.</summary>
@@ -130,6 +133,12 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 continue;
             }
             _error = null;
+            if (visiblePages[_page].Overview is not null && (key.Modifiers & ConsoleModifiers.Control) != 0
+                && key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow)
+            {
+                _overviewOffset = Math.Clamp(_overviewOffset + (key.Key == ConsoleKey.UpArrow ? -1 : 1), 0, _overviewMaximumOffset);
+                continue;
+            }
             if (_allowSectionNavigation && visiblePages.Length > 1
                 && HandleSectionNavigation(key, fields.Length, visiblePages.Length))
             {
@@ -239,6 +248,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     {
         _page = Math.Clamp(_page + delta, 0, count - 1);
         _focus = 0;
+        _overviewOffset = 0;
     }
 
     /// <summary>Applies one current choice without opening a separate sequential prompt.</summary>
@@ -372,6 +382,10 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private void Render(string titleKey, IReadOnlyList<FormPage> pages, IReadOnlyList<FormField> fields)
     {
         var frame = (console.Profile.Width, console.Profile.Height, TerminalTheme.Current.Id);
+        if (_lastFrame.HasValue && _lastFrame.Value.Theme != frame.Id)
+        {
+            _overviewOffset = 0;
+        }
         console.WriteAnsi(writer =>
         {
             if (_lastFrame != frame)
@@ -393,43 +407,48 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         var focused = !_sectionsFocused && _focus < fields.Count ? fields[_focus] : null;
         var helpKey = pages[_page].HelpKey ?? (sectionNavigation ? "Form.NavigationHelp" : "Form.Help");
         var guidance = focused?.Help?.Invoke() ?? text.Text(focused?.HelpKey ?? helpKey);
+        if (pages[_page].Overview is not null)
+        {
+            guidance += " " + text.Text("Settings.OverviewScroll");
+        }
         var hint = _error ?? (focused is null ? guidance : text.Text(focused.LabelKey) + ": " + guidance);
         var hintWidth = Math.Max(1, frame.Width - 5);
-        var minimumBodyRows = RowsPerField;
+        var minimumBodyRows = RowsPerField + (pages[_page].Overview is not null ? 3 : 0);
         _messageHeight = Math.Clamp((int)Math.Ceiling(Segment.CellCount([new Segment(hint)]) / (double)hintWidth) + 1,
             FullscreenFooter.NoticeRows, Math.Min(6, frame.Height - FixedBodyRows - minimumBodyRows));
         var section = SectionTitle(pages[_page]);
-        var root = new Layout("root").SplitRows(
-            new Layout("header", FullscreenHeader.Create(text.Text(titleKey), _options)).Size(FullscreenHeader.Height),
-            new Layout("body"),
-            new Layout("footer").Size(FullscreenFooter.Height(_messageHeight)));
-        var fieldBody = FieldsBody(fields);
+        var availableRows = BodyRows();
+        var fieldRows = pages[_page].Overview is null ? availableRows
+            : Math.Min(fields.Count * RowsPerField, Math.Max(RowsPerField, (availableRows - 3) / RowsPerField * RowsPerField));
+        var fieldBody = FieldsBody(fields, fieldRows);
+        if (pages[_page].Overview is { } overview)
+        {
+            var overviewWidth = frame.Width - 5 - (sectionNavigation ? FullscreenWorkspace.SidebarWidth(frame.Width) : 0);
+            var overviewHeight = availableRows - Math.Min(fields.Count, fieldRows / RowsPerField) * RowsPerField;
+            var renderOptions = new RenderOptions(console.Profile.Capabilities, new Size(frame.Width, frame.Height));
+            var lines = Segment.SplitLines(overview().Render(renderOptions, overviewWidth)).ToArray();
+            _overviewMaximumOffset = Math.Max(0, lines.Length - overviewHeight);
+            _overviewOffset = Math.Clamp(_overviewOffset, 0, _overviewMaximumOffset);
+            fieldBody = new Rows(fieldBody, new OverviewLines(lines.Skip(_overviewOffset).Take(overviewHeight).ToArray()));
+        }
         if (pages[_page].Preview is { } preview && BodyRows() >= fields.Count * RowsPerField + pages[_page].PreviewRows)
         {
             fieldBody = new Rows(fieldBody, preview());
         }
         var content = Inset(new Rows(Styled(section, "bold " + TerminalTheme.Accent), new Text(" "), fieldBody));
-        if (sectionNavigation)
-        {
-            var navigationWidth = Math.Clamp(frame.Width / 4, 20, 30);
-            root["body"].SplitColumns(new Layout("sections", SectionNavigation(pages)).Size(navigationWidth), new Layout("fields", content));
-        }
-        else
-        {
-            root["body"].Update(content);
-        }
         var footerKey = _editing is not null ? "Form.EditFooter"
             : _sectionsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";
         if (Segment.CellCount([new Segment(text.Text(footerKey))]) > frame.Width - 5)
         {
             footerKey += "Compact";
         }
-        root["footer"].Update(FullscreenFooter.Create(
+        var footer = FullscreenFooter.Create(
             new Text(SafeText(hint), Style.Parse(_error is null ? TerminalTheme.Muted : TerminalTheme.Error)),
             Actions(fields.Count),
             FullscreenFooter.Shortcuts(text.Text(footerKey)),
-            _messageHeight));
-        console.Write(new FormSurface(root));
+            _messageHeight);
+        console.Write(FullscreenWorkspace.Create(text.Text(titleKey), _options, frame.Width, content,
+            sectionNavigation ? SectionNavigation(pages) : null, footer, _messageHeight));
     }
 
     /// <summary>Shows the current section and keeps the focused item visible in both wide and compact layouts.</summary>
@@ -444,7 +463,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             var active = index == _page;
             var selected = active && _sectionsFocused;
             var marker = active ? ">" : " ";
-            var label = marker + (_options.NoEmoji ? " " : string.Empty) + SectionTitle(pages[index]);
+            var label = marker + " " + SectionTitle(pages[index]);
             rows.Add(Styled(label, selected ? TerminalTheme.SelectionForeground : active ? TerminalTheme.Accent : TerminalTheme.Primary,
                 selected ? TerminalTheme.SelectionBackground : null));
             if (spacing == 2)
@@ -485,9 +504,9 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     }
 
     /// <summary>Renders spaced editable fields while keeping the complete selected field inside the viewport.</summary>
-    private IRenderable FieldsBody(IReadOnlyList<FormField> fields)
+    private IRenderable FieldsBody(IReadOnlyList<FormField> fields, int availableRows)
     {
-        var capacity = Math.Max(1, BodyRows() / RowsPerField);
+        var capacity = Math.Max(1, availableRows / RowsPerField);
         var offset = Math.Clamp(_focus - capacity + 1, 0, Math.Max(0, fields.Count - capacity));
         var rows = new List<IRenderable>();
         for (var index = offset; index < Math.Min(fields.Count, offset + capacity); index++)
@@ -497,8 +516,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             rows.Add(FieldBlock(
                 Styled($"{(selected ? ">" : " ")} {text.Text(field.LabelKey)}", selected ? TerminalTheme.Accent : TerminalTheme.Primary),
                 width => Styled($"[ {FieldValue(field, width - 4)} ]",
-                    selected ? TerminalTheme.SelectionForeground : TerminalTheme.Primary,
-                    selected ? TerminalTheme.SelectionBackground : null)));
+                    (selected ? "bold underline " : string.Empty) + TerminalTheme.FieldValue)));
         }
         return new Rows(rows);
     }
@@ -609,9 +627,10 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         row.AddRow(labels.Select((label, index) =>
         {
             var selected = !_sectionsFocused && _focus == fieldCount + index;
-            return Styled($"{(selected ? ">" : " ")} [ {text.Text(label)} ]",
-                selected ? TerminalTheme.SelectionForeground : ActionColor(label),
-                selected ? TerminalTheme.SelectionBackground : null);
+            var icon = label == "Form.Save"
+                ? TerminalTheme.IconPrefix(_options, "💾", "+")
+                : TerminalTheme.IconPrefix(_options, "↩️", "x");
+            return FullscreenFooter.Button(icon + text.Text(label), ActionColor(label), selected);
         }).ToArray());
         return row;
     }
@@ -669,6 +688,26 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             foreach (var segment in value(valueWidth).Render(options, valueWidth))
             {
                 yield return segment;
+            }
+        }
+    }
+
+    /// <summary>Displays a scrollable slice of the general overview without changing its measured columns.</summary>
+    private sealed class OverviewLines(IReadOnlyList<SegmentLine> lines) : IRenderable
+    {
+        /// <summary>Accepts the width of the settings content region.</summary>
+        public Measurement Measure(RenderOptions options, int maxWidth) => new(0, maxWidth);
+
+        /// <summary>Preserves semantic colors and the line boundaries of the selected overview rows.</summary>
+        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
+        {
+            foreach (var line in lines)
+            {
+                foreach (var segment in Segment.Truncate(line, maxWidth))
+                {
+                    yield return segment;
+                }
+                yield return Segment.LineBreak;
             }
         }
     }

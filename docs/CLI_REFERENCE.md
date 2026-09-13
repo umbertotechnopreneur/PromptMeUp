@@ -18,6 +18,14 @@ hm how do I list running dotnet processes?
 
 Quote a question when the current shell would otherwise interpret punctuation, variables, pipes, redirection, or wildcard characters.
 
+If your request is unclear, the assistant asks a focused question before suggesting
+commands. In a live terminal, choose **Clarify the request or continue in chat** to
+answer with more detail in the same conversation, keeping your original request
+and the assistant's answer. Choose **Finish here** to stop when no commands were
+suggested. In an existing chat, simply type the clarification at the next prompt;
+`/exit` ends the conversation. Redirected input or output does not open an
+interactive continuation menu.
+
 ## Commands
 
 | Command | Aliases | Behavior |
@@ -35,6 +43,7 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 | `--test-ai` | — | Checks that the configured model can answer a short request in your chosen language. |
 | `--costs` | — | Shows usage and cost estimates, refreshing public prices and any available organization costs. |
 | `--status` | — | Shows local configuration and storage readiness. |
+| `--about` | `about` | Shows the HELP ME banner, project information, author, and license. |
 | `--lenna` | `lenna` | Shows the bundled calibration portrait centered in the terminal, without an AI request. |
 | `--third-party` | — | Shows direct runtime packages, versions, and licenses. |
 | `--where` | `-where` | Prints the exact running executable and directory, then offers the native file manager or a change-directory command. |
@@ -76,19 +85,44 @@ The app version and project link sit at the right of the header. Sections have
 descriptive icons without number prefixes. Up/Down selects a section; Enter,
 Right, or Tab moves into its commands. There, Up/Down scrolls longer sections,
 and Home/End jumps to their beginning or end. F6 or Ctrl+Left returns to the list.
-On narrower windows, the section chooser and commands share the same space.
+The sidebar remains beside the commands at every supported fullscreen width.
+Help and settings share the same responsive workspace and button renderer;
+Tab reaches the emoji Close button in the footer.
 Esc or Q closes the guide and restores your original terminal output.
 
-Each entry starts with a complete command example, followed by what it does.
-The lowercase `hm` is white; options and arguments use distinct colors so you
+Each entry starts with its command syntax. Descriptions and concrete examples
+are indented two spaces, and argument notes four spaces; wrapped lines preserve
+these insets. The lowercase `hm` stays white in every theme, including in the
+header and scrolling reference; options and arguments use distinct colors so you
 can read the command's parts at a glance. Parameter explanations keep those same
 colors and explain what each argument means and which values you can change.
+Optional groups in square brackets use the theme's yellow/amber warning color,
+including groups with spaces or nested options, so they stand apart from switches.
 
 Help works without setup or an API key. Small terminals, redirected output, and
 terminals without an alternate buffer receive the full scrolling reference.
 Help shown after an invalid command also stays in the current buffer, so the
 error remains visible. Resizing an open guide redraws it; a window below the
 minimum size shows a short instruction until you enlarge it or close help.
+
+## About PromptMeUp
+
+```powershell
+hm about
+hm --about
+```
+
+About presents the HELP ME banner with bright white H and M letters and a cyan,
+violet, and pink gradient, followed by the app version, supported platforms,
+author, project links, and MIT license. In a supported live terminal of at least
+60 columns by 20 rows, it opens a fullscreen view. Up/Down and PgUp/PgDn scroll
+the content; Enter or Esc closes it and restores your terminal history.
+Small terminals and redirected output receive a scrolling view. Narrow windows
+and terminals without Unicode support use a compact HELP ME wordmark.
+The command works offline without setup or an API key.
+
+Only the standalone positional word `about` selects this command, regardless of
+casing. Use `hm --query about` to ask an AI question containing that word.
 
 ## Check terminal image rendering
 
@@ -139,6 +173,11 @@ instruction preamble and location preference.
 Save applies all draft changes directly; Cancel keeps the previous settings.
 After initial setup, the connection check defaults to off. Saving alone makes no
 provider request and does not refresh pricing.
+
+The AI section also lists supported models and cached standard token prices per
+million tokens, with the selected model highlighted. Prices cover input, cached
+input, and output; missing cached prices are marked unavailable. Use Ctrl+Up and
+Ctrl+Down to scroll the overview. Opening it does not refresh prices.
 
 To override the saved input budget, set `PROMPTMEUP_CONTEXT_TOKENS` before launch:
 
@@ -316,7 +355,7 @@ PromptMeUp is scoped to terminal tasks. It does not generate images or rewrite, 
 | `/costs` | Shows the cost dashboard without ending the chat. |
 | `/status` or `/context` | Shows current context, the input budget, loaded notes, and token usage. |
 | `/exit` | Ends the conversation. |
-| `Esc` | Cancels the current interactive command; from the command center it exits the current flow. |
+| `Esc` | Closes help or cancels the current interactive command without saving unfinished settings. |
 | `Ctrl+C` | Cancels the whole application and returns exit code `130`. |
 
 There is no command that silently approves `/run`. The authorization prompt must be answered in a live terminal for every command.
@@ -400,13 +439,18 @@ When an AI answer cites command candidates, PromptMeUp presents a menu whose fir
 
 ## First run and redirected output
 
-With no explicit command and no completed setup, `hm` opens setup. If input is redirected, PromptMeUp exits with an explanation instead of attempting an interactive form.
+With no explicit command, `hm` opens help, including on first launch. Redirected output prints the command reference without opening an interactive view. Run `hm --setup` when you want to configure the application.
 
 Use [`hm --ai-setup`](#change-the-model-or-conversation-limits) to select AI in
 Settings, or `hm --setup` to select General. Conversation limits, including the
 input budget, are in the Conversation section of that same screen.
 
-Read-only commands such as `--help`, `--version`, `--status`, `--third-party`, and `--path=status` support redirected output. Mutating PATH and font operations require a live prompt or `--yes`; font dry-run is non-mutating and can run unattended.
+General also contains the application-status and cached usage/cost overview. Use
+`Ctrl+Up` / `Ctrl+Down` to scroll that overview in a short terminal. The standalone
+`--status` and `--costs` commands remain available. The operating-budget bar occupies
+its own row with its label aligned to the session overview's first label column.
+
+Read-only commands such as `--help`, `--about`, `--version`, `--status`, `--third-party`, and `--path=status` support redirected output. Mutating PATH and font operations require a live prompt or `--yes`; font dry-run is non-mutating and can run unattended.
 
 ## Take `hm` with you
 

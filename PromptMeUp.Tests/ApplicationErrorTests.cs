@@ -78,7 +78,6 @@ public sealed class ApplicationErrorTests
                 return null;
             }),
             helpView: null!,
-            mainMenuView: null!,
             thirdPartyView: null!,
             paths: null!,
             logger: NullLogger<PromptMeUpApplication>.Instance);

@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "id": "coffee",
+  "name": "Coffee",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Caramel and cream accents on a dark coffee brown background.",
+  "colors": {
+    "background": "#211913",
+    "primary": "#FFF8EF",
+    "muted": "#D9CBBD",
+    "accent": "#EFC18F",
+    "info": "#A9D9E5",
+    "divider": "#A49483",
+    "success": "#B9DDA3",
+    "warning": "#F4D88B",
+    "error": "#F5ABA3",
+    "selectionBackground": "#EFC18F",
+    "selectionForeground": "#211913"
+  }
+}

@@ -3,7 +3,6 @@
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
-using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -87,66 +86,9 @@ public sealed class CostsView(
         console.Write(metrics);
         console.WriteLine();
 
-        var table = new Table()
-            .Border(TableBorder.Simple)
-            .BorderStyle(Style.Parse(TerminalTheme.Divider));
-        table.Title = new TableTitle($"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Costs.Models"))}[/]");
-        table.AddColumn(new TableColumn(text.Text("Costs.Model")).NoWrap());
-        table.AddColumn(new TableColumn(text.Text("Costs.Tier")).Centered().NoWrap());
-        table.AddColumn(new TableColumn(text.Text("Costs.Input")).RightAligned());
-        table.AddColumn(new TableColumn(text.Text("Costs.Cached")).RightAligned());
-        table.AddColumn(new TableColumn(text.Text("Costs.Output")).RightAligned());
-        foreach (var price in overview.Prices
-                     .OrderBy(price => Classify(price))
-                     .ThenBy(price => price.InputUsdPerMillionTokens + price.OutputUsdPerMillionTokens)
-                     .ThenBy(price => price.Model, StringComparer.OrdinalIgnoreCase))
-        {
-            table.AddRow(
-                new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(price.Model)}[/]"),
-                CostChip(Classify(price)),
-                new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(FormatUsd(price.InputUsdPerMillionTokens))}[/]"),
-                new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(price.CachedInputUsdPerMillionTokens.HasValue ? FormatUsd(price.CachedInputUsdPerMillionTokens.Value) : "—")}[/]"),
-                new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(FormatUsd(price.OutputUsdPerMillionTokens))}[/]"));
-        }
-        console.Write(table);
-    }
-
-    /// <summary>Assigns a semantic band from the official input-plus-output price per million tokens.</summary>
-    private static CostBand Classify(AiModelPrice price)
-    {
-        ArgumentNullException.ThrowIfNull(price);
-        var total = price.InputUsdPerMillionTokens + price.OutputUsdPerMillionTokens;
-        return total switch
-        {
-            <= 2m => CostBand.Cheap,
-            <= 20m => CostBand.Affordable,
-            <= 90m => CostBand.Premium,
-            _ => CostBand.Extreme
-        };
-    }
-
-    /// <summary>Renders a high-contrast semantic chip for a model pricing band.</summary>
-    private IRenderable CostChip(CostBand band)
-    {
-        var (icon, fallback, label, color) = band switch
-        {
-            CostBand.Cheap => ("🌱", "$", text.Text("Costs.Cheap"), TerminalTheme.Success),
-            CostBand.Affordable => ("✓", "+", text.Text("Costs.Affordable"), TerminalTheme.Info),
-            CostBand.Premium => ("◆", "*", text.Text("Costs.Premium"), TerminalTheme.Accent),
-            _ => ("⚠", "!", text.Text("Costs.Extreme"), TerminalTheme.Error)
-        };
-        return new Markup(
-            $"[bold {color}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, icon, fallback))}{Markup.Escape(label)}[/]");
+        console.Write(ModelPricingTable.Create(text, shell.Options, overview.Prices));
     }
 
     /// <summary>Formats USD amounts using invariant decimal notation.</summary>
     private static string FormatUsd(decimal value) => $"${value:0.########}";
-
-    private enum CostBand
-    {
-        Cheap,
-        Affordable,
-        Premium,
-        Extreme
-    }
 }

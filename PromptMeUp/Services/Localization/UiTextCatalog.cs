@@ -22,6 +22,7 @@ internal static partial class UiTextCatalog
     private static IReadOnlyDictionary<string, LocalizedText> CreateEntries()
     {
         var entries = new Dictionary<string, LocalizedText>(StringComparer.Ordinal);
+        AddAboutEntries(entries);
         AddApplicationEntries(entries);
         AddArtifactsEntries(entries);
         AddCommandsEntries(entries);
@@ -35,6 +36,7 @@ internal static partial class UiTextCatalog
         AddSetupEntries(entries);
         AddStatusEntries(entries);
         AddSystemIntegrationEntries(entries);
+        AddThemeEntries(entries);
         return entries;
     }
 }

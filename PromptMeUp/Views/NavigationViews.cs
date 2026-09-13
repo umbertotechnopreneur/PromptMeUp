@@ -47,7 +47,8 @@ public sealed class HelpView(
             console,
             TerminalTheme.IconPrefix(shell.Options, "⌨", ">") + text.Text("Help.Title"),
             TerminalTheme.Accent);
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Help.Usage"))}[/]");
+        console.Write(HelpCommandLine.CreateDescription(text.Text("Help.Usage"), "hm"));
+        console.WriteLine();
         foreach (var section in CreateSections())
         {
             RenderGroup(section);
@@ -113,6 +114,7 @@ public sealed class HelpView(
         new("📊", text.Text("Help.Group.Insight"), text.Text("Help.Browse.Insight"),
             [
                 new("--version, -v", text.Text("Help.Version")) { Example = "hm --version" },
+                new("--about, about", text.Text("Help.About")) { Example = "hm about" },
                 new("--status", text.Text("Help.Status")),
                 new("--lenna, lenna", text.Text("Help.Lenna")) { Example = "hm lenna" },
                 new("--costs", text.Text("Help.Costs")),
@@ -163,84 +165,15 @@ public sealed class HelpView(
     /// <summary>Renders one cohesive command category without turning the help screen into a flat flag dump.</summary>
     private void RenderGroup(HelpSection section)
     {
-        var table = new Table().Border(TableBorder.None).HideHeaders();
-        table.AddColumn(new TableColumn("command").RightAligned().NoWrap());
-        table.AddColumn(new TableColumn("description"));
-        foreach (var (command, description) in section.Entries)
-        {
-            table.AddRow(
-                new Markup($"[bold {TerminalTheme.Accent}]{Markup.Escape(command)}[/]"),
-                new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(description)}[/]"));
-        }
-
         TerminalTheme.WriteRule(
             console,
             $"{TerminalTheme.IconPrefix(shell.Options, section.Icon, ">")}{section.Title}",
             TerminalTheme.Accent);
-        console.Write(table);
+        console.Write(new Rows(section.Entries.Select(FullscreenHelpView.RenderEntry)));
         console.WriteLine();
     }
 }
 
-public interface IMainMenuView
-{
-    MainMenuAction Select();
-}
-
-public sealed class MainMenuView(
-    IAnsiConsole console,
-    ILocalizationService text,
-    IConsoleShellView shell) : IMainMenuView
-{
-    /// <summary>Returns one action from the branded interactive command center.</summary>
-    public MainMenuAction Select()
-    {
-        TerminalTheme.WriteRule(
-            console,
-            $"{TerminalTheme.IconPrefix(shell.Options, "🎛", ">")}{text.Text("Main.Title")}",
-            TerminalTheme.Accent);
-        return console.Prompt(
-            new SelectionPrompt<MainMenuAction>()
-            .Title($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Main.Choose"))}[/]")
-            .PageSize(14)
-            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-            .UseConverter(Label)
-            .AddChoices(
-                MainMenuAction.Query,
-                MainMenuAction.Chat,
-                MainMenuAction.Costs,
-                MainMenuAction.Status,
-                MainMenuAction.Setup,
-                MainMenuAction.TestAi,
-                MainMenuAction.Where,
-                MainMenuAction.Path,
-                MainMenuAction.InstallFont,
-                MainMenuAction.ThirdParty,
-                MainMenuAction.Exit));
-    }
-
-    /// <summary>Maps menu actions to localized labels with portable icon fallbacks.</summary>
-    private string Label(MainMenuAction action) => action switch
-    {
-        MainMenuAction.Query => MenuLabel("✦", ">", text.Text("Main.Query")),
-        MainMenuAction.Chat => MenuLabel("💬", ">", text.Text("Main.Chat")),
-        MainMenuAction.Costs => MenuLabel("📊", "=", text.Text("Main.Costs")),
-        MainMenuAction.Status => MenuLabel("🪞", "=", text.Text("Main.Status")),
-        MainMenuAction.Setup => MenuLabel("⚙", "~", text.Text("Settings.Title")),
-        MainMenuAction.AiSettings => MenuLabel("⚙", "~", text.Text("AiSettings.Title")),
-        MainMenuAction.Theme => MenuLabel("◈", "*", text.Text("Theme.Title")),
-        MainMenuAction.TestAi => MenuLabel("↻", "~", text.Text("Main.Test")),
-        MainMenuAction.Where => MenuLabel("⌖", "@", text.Text("Main.Where")),
-        MainMenuAction.Path => MenuLabel("↔", "<>", text.Text("Path.Title")),
-        MainMenuAction.InstallFont => MenuLabel("✎", "#", text.Text("Main.Font")),
-        MainMenuAction.ThirdParty => MenuLabel("⚖", "=", text.Text("ThirdParty.Title")),
-        _ => MenuLabel("↩", "x", text.Text("Main.Exit"))
-    };
-
-    /// <summary>Formats one menu label with a high-contrast leading visual cue.</summary>
-    private string MenuLabel(string icon, string fallback, string label) =>
-        $"[{TerminalTheme.Info}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, icon, fallback))}[/][bold {TerminalTheme.Primary}]{Markup.Escape(label)}[/]";
-}
 
 public interface IExecutableLocationView
 {

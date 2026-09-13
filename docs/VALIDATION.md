@@ -43,7 +43,7 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 
 ## Validate the first-run experience
 
-- [ ] A clean first launch opens the frameless staged setup with clear whitespace, headings, and shortcuts.
+- [ ] A clean first launch opens help; `hm --setup` opens the shared settings workspace with clear whitespace, headings, and shortcuts.
 - [ ] All six languages can be selected and the remaining form changes language immediately.
 - [ ] API and admin key input reveals neither the value nor its character count, and is never reprinted.
 - [ ] Model, thinking, detail, 500-word AI preamble, coarse location, command review, and prompt caching are visible.
@@ -52,7 +52,7 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] Every memory, output, and timeout limit rejects values outside its displayed range.
 - [ ] The summary appears before save.
 - [ ] Cancelling leaves setup incomplete.
-- [ ] `Esc` cancels setup without saving and returns to the command center when setup was opened from it.
+- [ ] `Esc` cancels setup without saving and restores the main terminal buffer.
 - [ ] `Ctrl+C` terminates an active prompt cleanly with exit code `130`.
 - [ ] Saving persists non-secret settings and reports platform-appropriate key guidance.
 - [ ] The optional connection test renders a short user prompt, progress indicator, formatted answer, and token snapshot, then rejects an unexpected response.

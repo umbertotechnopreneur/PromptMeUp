@@ -1,7 +1,10 @@
 {
-  "version": 1,
+  "version": 3,
   "id": "green",
   "name": "Green",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Bright green accents inspired by classic AS/400 terminal forms.",
   "colors": {
     "background": "#0A1B14",
     "primary": "#F0FFF4",

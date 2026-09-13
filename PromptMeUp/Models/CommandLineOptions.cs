@@ -24,7 +24,8 @@ public enum AppCommand
     Where,
     InstallFont,
     Path,
-    Lenna
+    Lenna,
+    About
 }
 
 public sealed record CommandLineOptions(

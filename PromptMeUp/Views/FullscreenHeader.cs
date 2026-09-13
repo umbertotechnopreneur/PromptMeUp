@@ -42,7 +42,7 @@ internal static class FullscreenHeader
             if (width < metadataWidth + 5)
             {
                 yield return new Segment(Fit($"hm  v{Version}", width, options.Capabilities.Unicode),
-                    Style.Parse(TerminalTheme.Accent));
+                    Style.Parse("#FFFFFF"));
                 yield break;
             }
 
@@ -52,7 +52,7 @@ internal static class FullscreenHeader
             if (left.StartsWith(icon + "hm", StringComparison.Ordinal))
             {
                 yield return new Segment(icon, Style.Parse(TerminalTheme.Accent));
-                yield return new Segment("hm", new Style(Color.White));
+                yield return new Segment("hm", Style.Parse("#FFFFFF"));
                 yield return new Segment(left[(icon.Length + 2)..], Style.Parse(TerminalTheme.Primary));
             }
             else

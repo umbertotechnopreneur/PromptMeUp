@@ -12,6 +12,8 @@ public sealed record SetupViewState(
     public SettingsSection InitialSection { get; init; } = SettingsSection.General;
 
     public bool ContextBudgetOverridden { get; init; }
+
+    public CostOverview? Costs { get; init; }
 }
 
 public enum SettingsSection
@@ -89,20 +91,3 @@ public enum CommandSuggestionAction
 public sealed record CommandSuggestionDecision(
     CommandSuggestionAction Action,
     SuggestedCommand? SuggestedCommand);
-
-public enum MainMenuAction
-{
-    Query,
-    Chat,
-    Costs,
-    Status,
-    Setup,
-    AiSettings,
-    Theme,
-    TestAi,
-    Where,
-    Path,
-    InstallFont,
-    ThirdParty,
-    Exit
-}

@@ -18,7 +18,9 @@ public sealed class ThemeCatalogService : IThemeCatalogService
 {
     private const int MaximumThemeCount = 32;
     private const int MaximumThemeFileBytes = 16 * 1024;
-    private static readonly string[] DefinitionProperties = ["version", "id", "name", "colors"];
+    private static readonly string[] LegacyDefinitionProperties = ["version", "id", "name", "colors"];
+    private static readonly string[] AttributionDefinitionProperties = ["version", "id", "name", "author", "description", "colors"];
+    private static readonly string[] DefinitionProperties = ["version", "id", "name", "author", "website", "description", "colors"];
     private static readonly string[] ColorProperties =
     [
         "background", "primary", "muted", "accent", "info", "divider", "success", "warning", "error",
@@ -93,12 +95,18 @@ public sealed class ThemeCatalogService : IThemeCatalogService
 
             using var document = JsonDocument.Parse(buffer.AsMemory(0, count), new JsonDocumentOptions { MaxDepth = 4 });
             var root = document.RootElement;
-            RequireProperties(root, DefinitionProperties);
-            if (root.GetProperty("version").ValueKind != JsonValueKind.Number
-                || !root.GetProperty("version").TryGetInt32(out var version) || version != 1)
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("version", out var schema)
+                || schema.ValueKind != JsonValueKind.Number
+                || !schema.TryGetInt32(out var version) || version is not (1 or 2 or 3))
             {
-                throw new InvalidOperationException("Only theme schema version 1 is supported.");
+                throw new InvalidOperationException("Only theme schema versions 1, 2, and 3 are supported.");
             }
+            RequireProperties(root, version switch
+            {
+                1 => LegacyDefinitionProperties,
+                2 => AttributionDefinitionProperties,
+                _ => DefinitionProperties
+            });
 
             var id = ReadString(root, "id");
             var name = ReadString(root, "name");
@@ -117,7 +125,13 @@ public sealed class ThemeCatalogService : IThemeCatalogService
             var palette = new TerminalThemeColors(values[0], values[1], values[2], values[3], values[4], values[5],
                 values[6], values[7], values[8], values[9], values[10]);
             ValidateContrast(palette);
-            return new TerminalThemeDefinition(version, id, name, palette);
+            return new TerminalThemeDefinition(version, id, name, palette)
+            {
+                Author = version >= 2 ? ReadMetadata(root, "author", 80) : null,
+                Website = version >= 3 ? ReadWebsite(root) : null,
+                Description = version >= 2 ? ReadMetadata(root, "description", 240) : null,
+                SourcePath = Path.GetFullPath(file)
+            };
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
@@ -153,6 +167,32 @@ public sealed class ThemeCatalogService : IThemeCatalogService
             ? element.GetProperty(property).GetString()!
             : throw new InvalidOperationException($"Theme property '{property}' must be a string.");
 
+    /// <summary>Validates bounded, single-line theme attribution without accepting empty or padded metadata.</summary>
+    private static string ReadMetadata(JsonElement element, string property, int maximumLength)
+    {
+        var value = ReadString(element, property);
+        if (string.IsNullOrWhiteSpace(value) || value.Length > maximumLength || value != value.Trim() || value.Any(char.IsControl))
+        {
+            throw new InvalidOperationException($"Theme '{property}' must contain 1 to {maximumLength} visible characters without surrounding whitespace.");
+        }
+        return value;
+    }
+
+    /// <summary>Accepts a bounded absolute HTTP(S) website without credentials or malformed URL syntax.</summary>
+    private static string ReadWebsite(JsonElement element)
+    {
+        var value = ReadMetadata(element, "website", 2048);
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var website)
+            || website.Scheme is not ("http" or "https")
+            || string.IsNullOrWhiteSpace(website.Host)
+            || !string.IsNullOrEmpty(website.UserInfo)
+            || !website.IsWellFormedOriginalString())
+        {
+            throw new InvalidOperationException("Theme 'website' must be an absolute HTTP(S) URL without credentials.");
+        }
+        return value;
+    }
+
     /// <summary>Accepts only explicit six-digit RGB colors without terminal markup or named colors.</summary>
     private static string ReadColor(JsonElement element, string property)
     {
@@ -168,7 +208,7 @@ public sealed class ThemeCatalogService : IThemeCatalogService
     /// <summary>Requires readable text and distinct dividers against each theme's explicit background.</summary>
     private static void ValidateContrast(TerminalThemeColors colors)
     {
-        string[] textColors = [colors.Primary, colors.Muted, colors.Accent, colors.Info, colors.Success, colors.Warning, colors.Error];
+        string[] textColors = [colors.Primary, colors.Muted, colors.Accent, colors.Info, colors.Success, colors.Warning, colors.Error, "#F5F5F5"];
         if (textColors.Any(color => ContrastRatio(color, colors.Background) < 4.5d)
             || ContrastRatio(colors.SelectionForeground, colors.SelectionBackground) < 4.5d
             || ContrastRatio(colors.Divider, colors.Background) < 3d)

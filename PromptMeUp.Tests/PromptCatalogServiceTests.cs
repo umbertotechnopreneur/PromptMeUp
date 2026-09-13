@@ -54,8 +54,8 @@ public sealed class PromptCatalogServiceTests
         var chat = await catalog.GetAsync("chat-system", CancellationToken.None);
         var query = await catalog.GetAsync("query-system", CancellationToken.None);
 
-        Assert.Equal(4, chat.Version);
-        Assert.Equal(3, query.Version);
+        Assert.Equal(5, chat.Version);
+        Assert.Equal(4, query.Version);
         Assert.Equal(SupportedLanguages.Codes.OrderBy(language => language), chat.Texts.Keys.OrderBy(language => language));
         Assert.Equal(SupportedLanguages.Codes.OrderBy(language => language), query.Texts.Keys.OrderBy(language => language));
         Assert.Contains("JSON object", query.ResolveText("en"), StringComparison.Ordinal);

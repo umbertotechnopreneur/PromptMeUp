@@ -19,11 +19,21 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
             TerminalTheme.WriteSection(console,
                 TerminalTheme.IconPrefix(options, "⚙️", "~") + text.Text("Settings.Title"), text.Text(page.TitleKey));
             RenderFields(fields);
+            if (page.Overview is { } overview)
+            {
+                console.Write(overview());
+                console.WriteLine();
+            }
+            if (page.Preview is { } preview)
+            {
+                console.Write(preview());
+                console.WriteLine();
+            }
             var actions = fields.Select((field, index) => new PromptAction("field", index, text.Text(field.LabelKey)))
                 .Concat(pages.Select((section, index) => new PromptAction("section", index,
                     text.Text("Form.Sections") + ": " + text.Text(section.TitleKey))))
-                .Append(new PromptAction("save", 0, text.Text("Form.Save")))
-                .Append(new PromptAction("cancel", 0, text.Text("Form.Cancel")))
+                .Append(new PromptAction("save", 0, TerminalTheme.IconPrefix(options, "💾", "+") + text.Text("Form.Save")))
+                .Append(new PromptAction("cancel", 0, TerminalTheme.IconPrefix(options, "↩️", "x") + text.Text("Form.Cancel")))
                 .ToArray();
             var selected = console.Prompt(new SelectionPrompt<PromptAction>()
                 .Title(Markup.Escape(text.Text(page.HelpKey ?? "Form.Help")))
@@ -66,7 +76,7 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
                 : field.Choices?.Invoke().FirstOrDefault(choice => choice.Value == field.Read())?.Label ?? field.Read();
             grid.AddRow(
                 new Text(text.Text(field.LabelKey), Style.Parse(TerminalTheme.Muted)),
-                new Text(SafeText(value), Style.Parse(TerminalTheme.Primary)));
+                new Text(SafeText(value), Style.Parse(TerminalTheme.FieldValue)));
             grid.AddRow(new Text(" "), new Text(" "));
         }
         console.Write(grid);
