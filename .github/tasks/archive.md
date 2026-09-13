@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-13 — GitHub Actions failure fixes
+
+- Traced the main quality-gate failures to ANSI styling in semantic output assertions and a second SQLite connection pool left open during Windows fixture cleanup.
+- Preserved all visible-text assertions and narrow-terminal coverage while removing ANSI control sequences from comparisons; released both fixture-specific database pools without clearing other fixtures' pools.
+- Fixed the attribution failure on dependency PR #8 by recognizing the native SQLite package and checking its declared license file against the reviewed upstream text. Unknown or changed license declarations still stop packaging.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors in a temporary source snapshot, preserving concurrent fullscreen/theme work. Notice export passed for the current main dependency graph (26 packages) and the exact PR #8 graph with SQLite 3.53.4 (27 packages). No local automated tests or CLI smoke tests were run; the existing GitHub Actions workflows provide those checks after push.
+
 ## 2026-09-13 — Product documentation refresh
 
 - Reworked the README around everyday terminal tasks, with direct examples for saved notes, context counters, and the shorter AI settings flow.

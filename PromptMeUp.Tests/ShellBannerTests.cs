@@ -135,6 +135,7 @@ public sealed class ShellBannerTests
         return (console, output, text, shell);
     }
 
-    /// <summary>Removes layout whitespace and panel borders when checking wrapped semantic content.</summary>
-    private static string Compact(string value) => Regex.Replace(value, @"[\s│]", string.Empty);
+    /// <summary>Removes ANSI formatting, layout whitespace, and panel borders while preserving wrapped visible text.</summary>
+    private static string Compact(string value) =>
+        Regex.Replace(value, @"\x1B\[[0-?]*[ -/]*[@-~]|[\s│]", string.Empty, RegexOptions.CultureInvariant);
 }

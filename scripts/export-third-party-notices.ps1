@@ -36,7 +36,22 @@ function Add-PackageNotices {
     $metadata = $spec.SelectSingleNode('/*[local-name()="package"]/*[local-name()="metadata"]')
     $license = $metadata.SelectSingleNode('*[local-name()="license"]')
     if ($null -eq $license) { throw "Missing declared license: $Id/$Version" }
-    if ($license.GetAttribute('type') -ne 'expression' -or $license.InnerText -notin @('MIT', 'Apache-2.0')) {
+    if ($Id -eq 'SQLite') {
+        # SQLite declares a public-domain file; require the exact reviewed text before accepting it.
+        if ($license.GetAttribute('type') -ne 'file' -or $license.InnerText -cne 'LICENSE.txt') {
+            throw "Review the changed SQLite license before packaging: $Id/$Version"
+        }
+        $packageLicense = Join-Path $Directory 'LICENSE.txt'
+        $reviewedLicense = Join-Path $licenseRoot 'sqlite-LICENSE.txt'
+        if (-not (Test-Path -LiteralPath $packageLicense -PathType Leaf) -or
+            -not (Test-Path -LiteralPath $reviewedLicense -PathType Leaf)) {
+            throw "Missing reviewed SQLite license: $Id/$Version"
+        }
+        $packageText = (Get-Content -LiteralPath $packageLicense -Raw).Replace("`r`n", "`n").Trim()
+        $reviewedText = (Get-Content -LiteralPath $reviewedLicense -Raw).Replace("`r`n", "`n").Trim()
+        if ($packageText -cne $reviewedText) { throw "Review the changed SQLite license before packaging: $Id/$Version" }
+    }
+    elseif ($license.GetAttribute('type') -ne 'expression' -or $license.InnerText -notin @('MIT', 'Apache-2.0')) {
         throw "Review the new license before packaging: $Id/$Version"
     }
     $noticeFiles = [System.Collections.Generic.List[string]]::new()
@@ -79,6 +94,7 @@ foreach ($entry in $assets.libraries.GetEnumerator() | Sort-Object Key) {
         'Serilog.Extensions.Logging' { @('serilog-extensions-logging-LICENSE.txt'); break }
         'Serilog.Sinks.File' { @('serilog-sinks-file-LICENSE.txt'); break }
         'Spectre.Console*' { @('spectre-console-LICENSE.txt'); break }
+        'SQLite' { @('sqlite-LICENSE.txt'); break }
         'SQLitePCLRaw.*' { @('sqlitepclraw-LICENSE.txt', 'sqlitepclraw-NOTICE.txt'); break }
         'YamlDotNet' { @('yamldotnet-LICENSE.txt', 'libyaml-LICENSE.txt'); break }
         default { throw "Add upstream license attribution for new package: $id/$version" }
