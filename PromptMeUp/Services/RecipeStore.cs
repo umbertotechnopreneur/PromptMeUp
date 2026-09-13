@@ -160,22 +160,14 @@ public sealed class RecipeStore(AppPaths paths, PlanStore plans, ISensitiveDataR
     /// <summary>Writes complete JSON before publishing a new file, preserving any existing destination.</summary>
     private async Task WriteNewAsync(string path, CommandRecipe recipe, CancellationToken cancellationToken)
     {
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(recipe with { Steps = Pending(recipe.Steps) }, JsonOptions), cancellationToken).ConfigureAwait(false);
-            File.Move(temporary, path, overwrite: false);
+            await AtomicFileWriter.WriteAllTextAsync(path, JsonSerializer.Serialize(recipe with { Steps = Pending(recipe.Steps) }, JsonOptions),
+                overwrite: false, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             throw new InvalidOperationException(text.Text("Recipe.SaveError"));
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
         }
     }
 

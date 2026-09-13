@@ -28,31 +28,23 @@ public sealed class FilePreviewWorkflow(
         {
             return 0;
         }
-        var session = Guid.NewGuid().ToString("N");
-        await audit.StartSessionAsync(session, "file-preview", settings, new { preview.Operation, count = preview.Effects.Count }, cancellationToken).ConfigureAwait(false);
-        var status = "paused";
-        try
+        await using var session = await AuditSessionScope.StartAsync(
+            audit, "file-preview", settings, new { preview.Operation, count = preview.Effects.Count }, AuditSessionOutcome.Paused, cancellationToken).ConfigureAwait(false);
+        foreach (var effect in preview.Effects)
         {
-            foreach (var effect in preview.Effects)
+            cancellationToken.ThrowIfCancellationRequested();
+            var command = service.BuildCommand(preview, effect);
+            var result = await commands.RunForResultAsync(session.Id, command, settings, cancellationToken).ConfigureAwait(false);
+            if (result is null)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var command = service.BuildCommand(preview, effect);
-                var result = await commands.RunForResultAsync(session, command, settings, cancellationToken).ConfigureAwait(false);
-                if (result is null)
-                {
-                    return 0;
-                }
-                if (result.TimedOut || result.ExitCode != 0)
-                {
-                    return 1;
-                }
+                return 0;
             }
-            status = "completed";
-            return 0;
+            if (result.TimedOut || result.ExitCode != 0)
+            {
+                return 1;
+            }
         }
-        finally
-        {
-            await audit.CloseSessionAsync(session, status, CancellationToken.None).ConfigureAwait(false);
-        }
+        session.Outcome = AuditSessionOutcome.Completed;
+        return 0;
     }
 }

@@ -10,6 +10,27 @@ namespace PromptMeUp.Tests;
 
 public sealed class TerminalViewTests
 {
+    /// <summary>Verifies that visual emoji receive one visible space on both sides while ASCII fallbacks stay compact.</summary>
+    [Fact]
+    public void IconPrefix_UsesSymmetricEmojiSpacing()
+    {
+        Assert.Equal(" 🇮🇹 ", TerminalTheme.IconPrefix(new ConsoleRenderOptions(false, false), "🇮🇹", "@"));
+        Assert.Equal("@\u00A0", TerminalTheme.IconPrefix(new ConsoleRenderOptions(false, true), "🇮🇹", "@"));
+    }
+
+    /// <summary>Verifies that every setup language choice starts with its spaced country flag.</summary>
+    [Fact]
+    public void SetupLanguageChoices_RenderCountryFlags()
+    {
+        var options = new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false);
+
+        foreach (var language in SupportedLanguages.All)
+        {
+            var rendered = SetupView.FormatLanguageChoice(language, options);
+            Assert.StartsWith($" {language.Flag} {language.NativeName}", rendered, StringComparison.Ordinal);
+        }
+    }
+
     /// <summary>Verifies that the localized chat guide explains every slash command without panel borders.</summary>
     [Fact]
     public void ChatIntro_ExplainsEveryCommandWithoutCards()
@@ -28,6 +49,10 @@ public sealed class TerminalViewTests
         Assert.Contains("/clear", rendered, StringComparison.Ordinal);
         Assert.Contains("/costs", rendered, StringComparison.Ordinal);
         Assert.Contains("/status", rendered, StringComparison.Ordinal);
+        Assert.Contains("/context", rendered, StringComparison.Ordinal);
+        Assert.Contains("/remember [global|project] <testo>", rendered, StringComparison.Ordinal);
+        Assert.Contains("/memories", rendered, StringComparison.Ordinal);
+        Assert.Contains("/forget <id>", rendered, StringComparison.Ordinal);
         Assert.Contains("/exit", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╭", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╮", rendered, StringComparison.Ordinal);

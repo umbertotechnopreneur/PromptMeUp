@@ -2,17 +2,16 @@
   <img src="docs/assets/promptmeup-banner.png" alt="PromptMeUp — Ask naturally. Understand first. You decide. A weekend idea. An everyday helper." width="100%" />
 </p>
 
-<h1 align="center">PromptMeUp — a safety-first AI assistant for your terminal</h1>
+<h1 align="center">PromptMeUp — help with your next terminal command</h1>
 
 <p align="center">
-  A little help. Still your terminal.<br />
-  Ask in your own words. Get a clearer next step.<br />
-  Run a command only after you have seen it and said yes.
+  Ask a question, understand the answer, and decide what to run.<br />
+  Available as <code>hm</code> on Windows, Linux, and macOS.
 </p>
 
 <p align="center">
   <a href="#meet-hm"><strong>Meet hm</strong></a> ·
-  <a href="#try-it-this-weekend"><strong>Try it</strong></a> ·
+  <a href="#get-started"><strong>Get started</strong></a> ·
   <a href="https://umbertogiacobbi.biz/promptmeup/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_product_page"><strong>Product page</strong></a> ·
   <a href="docs/PRIVACY.md"><strong>Privacy</strong></a> ·
   <a href="https://github.com/umbertotechnopreneur/PromptMeUp/discussions"><strong>Join the conversation</strong></a>
@@ -25,40 +24,24 @@
   <img src="https://img.shields.io/badge/early%20preview-F59E0B" alt="Early preview" />
 </p>
 
-PromptMeUp is a lightweight, open-source AI command-line assistant for Windows, Linux, and macOS. It explains terminal tasks, proposes PowerShell commands, and runs one only after an exact preview and explicit approval.
+Use `hm` when you need help with a command, a flag, or an error message. Describe the problem in your own words. PromptMeUp uses your OpenAI API account to explain what to do and suggest PowerShell commands, which you can review before running.
 
 > [!NOTE]
-> PromptMeUp is currently pre-production. Public binary releases are not published yet; the supported early-access path is to [build it from source](#try-it-this-weekend).
-
-## A weekend project that stayed
-
-PromptMeUp started as a **pet project built over a weekend**. Then we kept reaching for it. What began as a small experiment turned out to be more useful than expected in our team at **[UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story)**.
-
-So here it is: a small, open-source helper for the everyday terminal questions that interrupt your flow. Still personal. Still evolving. Already earning its place in our working day.
-
-*Yet another CLI AI assistant :-)*
+> PromptMeUp is an early source preview. There are no public binary releases yet. To try it, [build it locally](#get-started).
 
 ## Meet `hm`
 
-`hm` means **help me**. Tell it what you want to do, read the explanation, and choose your next step.
+`hm` means **help me**. Start with a question:
 
 ```powershell
 hm "How do I undo my last local commit without losing my changes?"
 ```
 
-<table>
-<tr>
-<td width="33%" valign="top"><strong>Ask naturally</strong><br /><br />Describe the outcome. Spend less time trying to remember the right command or flag.</td>
-<td width="33%" valign="top"><strong>Understand first</strong><br /><br />Get an explanation in your terminal. Ask a follow-up when you need more context.</td>
-<td width="33%" valign="top"><strong>You decide</strong><br /><br />Inspect the exact command and its risk review. Authorize that one command, or cancel.</td>
-</tr>
-</table>
+Read the answer, continue into a conversation, or inspect a suggested command. Nothing in the answer runs automatically. You can decline a command and keep asking questions.
 
-Nothing in an AI answer runs automatically. Every command starts as a proposal.
+For several related questions, start with `hm --chat`. Your earlier terminal output stays visible, and `hm` stops when you exit; there is no background agent.
 
 ## A few moments with `hm`
-
-**One question. A clearer next step.**
 
 ![Green CRT rendering of a question about finding large files, an explanation, a suggested command, and a menu with execution declined.](docs/assets/screen-ask-green.png)
 
@@ -67,7 +50,7 @@ Nothing in an AI answer runs automatically. Every command starts as a proposal.
 <td width="50%" valign="top">
 <strong>Pause before you run</strong><br /><br />
 <img src="docs/assets/screen-review-amber.png" alt="Amber and cyan CRT rendering of the exact command, local risk review, and explicit approval or cancellation." />
-<br />See the command. Understand the effect. Make the call.
+<br />Review the exact command before approving it.
 </td>
 <td width="50%" valign="top">
 <strong>Your starting point</strong><br /><br />
@@ -77,22 +60,35 @@ Nothing in an AI answer runs automatically. Every command starts as a proposal.
 </tr>
 </table>
 
-*These are illustrative product renderings with sample content. The retro colors, scanlines, wording, and layouts are presentation treatments, not selectable app themes or exact screenshots. The real interface adapts to your terminal.*
+*These images illustrate the product with sample content. They are not screenshots or selectable themes; the real layout adapts to your terminal.*
 
-## Small enough to fit your day
+## Remember the details you keep repeating
 
-- **A quick answer or a short conversation.** Use `hm "…"` or `hm --chat`.
-- **Six interface languages.** English, Italian, French, German, Spanish, and Vietnamese.
-- **Your terminal stays yours.** No background agent; previous terminal output stays visible.
-- **Portable by design.** Windows, Linux, and macOS, with x64 and Arm64 publish targets.
-- **Visible usage.** Check session usage, local cost estimates, and optional organization costs.
-- **Readable without extras.** High-contrast output works without a special font; emoji and animation can be disabled.
+Save a preference or a useful project fact from inside chat:
 
-PromptMeUp focuses on terminal tasks. General writing, translation, and image generation are outside its scope.
+```text
+/remember global Prefer short explanations.
+/remember This project uses .NET 10.
+/memories
+```
 
-## Try it this weekend
+Notes without `global` belong to the current project. They remain available the next time you open `hm`. Use `/memories` to see what is saved and `/forget <id>` to remove a note.
 
-**Early source preview:** there are no public binary releases yet. The [Releases page](https://github.com/umbertotechnopreneur/PromptMeUp/releases) is where future downloads will appear.
+Each request can include up to five selected notes, within 800 estimated tokens. Project notes are matched by shared words in your question; global notes can be included across projects. Saving a note makes no extra AI call. [How memories work](docs/OPENAI_COSTS_AND_CACHING.md).
+
+## Change the model without repeating setup
+
+```powershell
+hm --ai-settings
+```
+
+After the first setup, this opens just the AI preferences: model, reasoning level, answer length, command review, caching, and conversation limits. Your language, keys, and other settings stay as they are.
+
+Ordinary questions and chat use a default input budget of **16,000 estimated tokens**. In chat, `/context` or `/status` shows how much is currently retained, the model's capacity, and your chosen budget. The last call's input/output tokens and the session totals appear separately. A `~` marks a local estimate.
+
+Use `/clear` to start a fresh conversation within the session. It keeps saved notes and usage totals. If a question is too large, `hm` leaves the chat open so you can shorten it and try again.
+
+## Get started
 
 To build locally, install the **.NET 10 SDK**, **Git**, and **PowerShell 7**. AI features use your own OpenAI API account.
 
@@ -104,19 +100,19 @@ dotnet run --project PromptMeUp/PromptMeUp.csproj -- --setup
 dotnet run --project PromptMeUp/PromptMeUp.csproj -- "How do I list the largest files here?"
 ```
 
-Setup guides you through language, model, answer style, and command review. Enter credentials through setup or your preferred secret manager; never put a key in a command argument. On Windows, setup can save the key to your current user's environment. On Linux and macOS, an entered key lasts for that process; configure your shell or secret manager for future launches.
+Setup asks for your language, model, answer style, and command-review preferences. The interface supports English, Italian, French, German, Spanish, and Vietnamese. It works without a special font; use `--no-emoji` or `--no-animation` if you prefer simpler output.
 
-After publishing or installing a portable build, the command is `hm`. The [CLI reference](docs/CLI_REFERENCE.md) explains setup, publishing, and the optional user-PATH helpers.
+Enter your API key through setup or your preferred secret manager, never as a command argument. On Windows, setup can save it to your current user's environment. The new key works immediately in the current `hm` process; before the next launch, fully close and reopen the terminal application, including the IDE if it hosts the terminal. On Linux and macOS, an entered key lasts for that process; configure your shell or secret manager for future launches.
 
-### No installation required
+The examples elsewhere in this README use the `hm` command from a published build. While working from source, use `dotnet run --project PromptMeUp/PromptMeUp.csproj --` followed by the same arguments. Future downloads will appear on [GitHub Releases](https://github.com/umbertotechnopreneur/PromptMeUp/releases).
 
-The portable archive is enough. Extract it wherever you prefer, then add the folder containing `hm` to your user `PATH` and open a new terminal. There is no background service and no machine-wide installation requirement. From an already running copy, `hm --path install` previews and adds only its own folder to the user `PATH`; `hm --path status` and `hm --path remove` let you check or undo that entry.
+### Use a portable build
 
-### New ways to work safely
+You can publish a portable build for Windows, Linux, or macOS on x64 or Arm64. Keep its files together and add the folder containing `hm` to your user `PATH`. From a running copy, `hm --path install` previews that change; `hm --path status` and `hm --path remove` let you check or undo it. See [packaging a local build](docs/RELEASING.md#rehearse-a-release) for the commands.
 
-The latest CLI additions turn common terminal chores into guided, reviewable flows. Use `hm --diagnose` with an error, a log file, or piped output to separate evidence from likely causes. Use `hm --script` to create or revise a PowerShell draft without running it, and `hm --plan` to carry out a small, resumable sequence with a separate check for each step. Before copying, moving, renaming, or deleting files, `hm --preview` shows the exact local effects and collisions. Finally, `hm --recipes` saves a completed plan or imports a reviewed definition so a trusted routine can be started again with fresh approvals.
+## More than a single command
 
-For a printable one-page command card and a short guide to these workflows, see the [retro CLI manual](docs/PromptMeUp-CLI-Manual.pdf).
+Give `hm` a build log to investigate, ask it for a script draft, or work through a plan one step at a time. Scripts are saved for review; plans and recipes ask for fresh approval before running commands. File previews show the proposed changes and any collisions before you proceed.
 
 | When you want to… | Use |
 | --- | --- |
@@ -124,30 +120,37 @@ For a printable one-page command card and a short guide to these workflows, see 
 | Keep the conversation going | `hm --chat` |
 | Diagnose an error or log | `hm --diagnose --file build.log` |
 | Draft or revise a PowerShell script | `hm --script "your request"` |
-| Work through a verified, resumable plan | `hm --plan "your goal"` |
+| Work through a plan and resume it later | `hm --plan "your goal"` |
 | Inspect file effects before approval | `hm --preview copy --file report.txt --output backup` |
 | Save or reuse a personal routine | `hm --recipes` |
-| Change your preferences | `hm --setup` |
+| Change only AI preferences and context limits | `hm --ai-settings` |
+| Change language, keys, or other preferences | `hm --setup` |
 | Check configuration | `hm --status` |
 | Understand usage and estimates | `hm --costs` |
 | See commands and options | `hm --help` |
 | See the libraries behind the app | `hm --third-party` |
 
-## Confidence comes from control
+See the [CLI reference](docs/CLI_REFERENCE.md) for options and examples. PromptMeUp is for terminal work: commands, tools, errors, files, and scripts. General writing and image generation are outside its scope.
 
-Before execution, `hm` shows the exact command and always runs a deterministic local risk review. An optional AI review can add context, but cannot approve anything. Your approval applies only to that displayed command and expires.
+## Before you run a command
 
-Commands run as your current user through PowerShell, with a timeout and bounded captured output. PromptMeUp is not a sandbox: inspect the command and its effects before authorizing it.
+`hm` checks each command locally and shows its risk assessment with the exact text to be run. The optional AI review adds an opinion; you still make the decision. An approval applies to that command only and expires.
 
-Settings, diagnostic logs, and an audit history stay in local application data. Recognizable credentials are redacted before persistence or AI follow-up. When AI is enabled, the configured provider receives your question, bounded conversation context, a filtered runtime snapshot, and any authorized output used for a follow-up. Redaction is not a guarantee that arbitrary confidential content will be removed.
+Approved commands run as your current user through PowerShell, with a time limit and a limit on captured output. They can change real files and system state. PromptMeUp does not sandbox them.
+
+Settings, saved notes, logs, and request history are stored on your machine. For an AI answer, OpenAI receives your question, recent conversation, selected notes, some information about your terminal environment, and any command output you choose to share for a follow-up. `hm` filters recognizable credentials, but cannot identify every kind of confidential information.
 
 Read [Privacy and data flow](docs/PRIVACY.md) for the details. OpenAI service terms and API charges are separate from this MIT-licensed app.
 
-## Help shape the next weekend
+## A weekend project that stayed
+
+PromptMeUp started as a pet project built over a weekend. We kept using it for everyday terminal questions in our team at [UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story), so we decided to share it. It is still a small project, and feedback from real use helps us decide what to work on next.
+
+## Get involved
 
 Found a rough edge? Have a small improvement in mind? Start a [discussion](https://github.com/umbertotechnopreneur/PromptMeUp/discussions), [report a bug](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose), or read the [contribution guide](CONTRIBUTING.md).
 
-Repository writing is in English; the application keeps its six supported languages. Both `AGENTS.md` and GitHub Copilot instructions carry the same rule.
+Documentation and contributions are in English; the app supports all six interface languages.
 
 | For users | For contributors |
 | --- | --- |
@@ -158,7 +161,7 @@ Repository writing is in English; the application keeps its six supported langua
 
 Security issue? [Report it privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new), following our [security policy](SECURITY.md).
 
-## Open source, with credit where it belongs
+## License and credits
 
 PromptMeUp is released under the **[MIT License](LICENSE)**. Use it, adapt it, and build on it while keeping the copyright and license notice.
 
@@ -167,7 +170,6 @@ Created by **Umberto Giacobbi**, with appreciation for every contributor and the
 ---
 
 <h2 align="center">More from the same workshop</h2>
-<p align="center">Useful ideas deserve to make it out of the weekend.</p>
 
 <table>
 <tr>

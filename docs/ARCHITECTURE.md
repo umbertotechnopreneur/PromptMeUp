@@ -1,6 +1,6 @@
 # PromptMeUp architecture
 
-PromptMeUp is built around one product promise: help with the terminal without silently taking control of it. A small .NET 10 console host keeps data, behavior, rendering, and command authority in explicit boundaries. It does not automate a graphical interface and it does not run a background agent.
+PromptMeUp helps you understand and use your terminal. It answers questions, remembers notes you choose to save, and asks before running commands. The .NET 10 console host separates those choices from storage, provider calls, rendering, and process execution. It runs only when invoked through `hm`.
 
 ```mermaid
 flowchart LR
@@ -18,13 +18,19 @@ flowchart LR
 ## Product boundaries in code
 
 - `Models/` contains immutable settings, AI usage, pricing, command authorization, memory, status, and audit contracts.
-- `Services/` owns SQLite, OpenAI, pricing, prompt loading, localization, short-term memory, command risk, command execution, secrets, PATH, font support, redaction, and cost calculation.
+- `Services/` owns SQLite, OpenAI, pricing, prompt loading, localization, recent conversation memory, saved notes, command risk, command execution, secrets, PATH, font support, redaction, and cost calculation.
 - `Views/` owns Spectre.Console rendering and user input. Views do not call OpenAI, SQLite, or PowerShell.
 - `Application/` coordinates one invocation through focused conversation and authorized-command workflows and is the only place that combines services with views.
 - `Infrastructure/` resolves local application paths.
 - `/prompt` contains versioned runtime instructions and metadata. `/prompts` contains contributor-facing development prompts and is not sent by the application.
 
 Dependencies are wired through `Microsoft.Extensions.DependencyInjection`. Application code consumes `ILogger<T>`; Serilog is configured only at the composition root.
+
+The invocation orchestrator delegates settings and credential forms to `SetupWorkflow` and reviewed PATH, executable-location, and font operations to `InstallationWorkflow`. `ApplicationActivityRecorder` shares best-effort non-session audit recording. `AuditSessionScope` opens and closes workflow sessions with explicit typed outcomes, including cleanup after cancellation.
+
+`hm --ai-settings` takes a shorter path through `SetupWorkflow` after initial setup. It requires an interactive terminal and saves only AI enablement, model, reasoning, response detail, advisory command review, caching, and conversation limits. It preserves credentials, saved language, preamble, location preference, and command execution settings. An invocation-only `--language` choice changes the form's display language without changing the saved language. This path does not refresh pricing or call the provider.
+
+UI translations have one definition per key and language in the functionality-grouped `Services/Localization/UiTextCatalog.*.cs` files. Each entry names all six translations explicitly, and catalog assembly rejects duplicate keys. `LocalizationService` retains language selection and culture-aware formatting; runtime AI instructions remain in `/prompt`.
 
 ## From question to answer
 
@@ -37,9 +43,10 @@ sequenceDiagram
     participant SQLite
 
     User->>App: hm question or chat turn
-    App->>Memory: Add bounded user message
+    App->>SQLite: Select saved notes locally
+    App->>Memory: Reserve instructions and notes, then add user message
     Memory-->>App: Snapshot and prune count
-    App->>OpenAI: YAML instruction + protected preamble + sanitized runtime snapshot + active messages
+    App->>OpenAI: YAML instruction + protected preamble + runtime snapshot + selected notes + active messages
     OpenAI-->>App: Structured Markdown answer + cited command candidates + usage
     App->>SQLite: Redacted request and ordered session events
     App-->>User: Markdown answer + cost/context status
@@ -65,11 +72,12 @@ No AI response can create authorization and `--yes` never applies to `/run`. A m
 
 ## Persistence
 
-SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `1`.
+SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `2`. Initialization upgrades older supported databases in a transaction, adding the saved context budget and note storage while retaining settings and history. A database from a newer schema is rejected.
 
 | Table | Purpose |
 | --- | --- |
 | `app_settings` | Singleton non-secret setup and memory settings. |
+| `persistent_memories` | Explicit note text, ID, project/global scope, and last-updated timestamp. |
 | `ai_model_pricing` | Daily normalized model price snapshots. |
 | `organization_costs` | Optional admin Costs API buckets. |
 | `sync_state` | Named synchronization timestamps. |
@@ -85,15 +93,39 @@ JSON payloads are validated before insertion. Credential-shaped properties and s
 Artifacts use matching read/write limits and a separate generation budget; see
 [configuration](CLI_REFERENCE.md#configure-artifact-limits).
 
+Plans, recipes, and scripts share `AtomicFileWriter` for temporary-file publication and cleanup. Callers retain validation and localized errors and explicitly select overwrite behavior: plans replace progress files, while recipes and scripts require a new destination.
+
 Commands and font helpers share bounded process I/O and cancellation cleanup.
 Large approved commands travel over standard input. Font checks time out after
 15 seconds; installation after two minutes. Command approval remains mandatory.
 
-## Short-term memory
+## Recent conversation and saved notes
 
-Each query or chat receives an isolated `ConversationMemory`. It keeps recent user/assistant messages only, caps user-input size, reserves instruction space, and removes oldest complete turns when the turn or token budget is exceeded. Completed answers are rendered before memory pruning; an oversized completed turn can be dropped entirely from future context. It does not summarize or vectorize history.
+Each query or chat receives an isolated `ConversationMemory`. It keeps recent user/assistant messages, caps user-input size, and removes the oldest complete turns to fit the turn and token limits. The default is 12 turns. Completed answers are rendered before pruning; an oversized completed turn can be dropped entirely from future context. There is no automatic summary.
 
-The persistent event ledger is not reloaded into active context. A new invocation starts with fresh model memory even though its audit trail remains available locally.
+`PersistentMemoryService` stores only notes explicitly saved through `/remember`. A note is limited to 1,000 characters, with up to 100 notes per scope. The project scope is a SHA-256 hash of the nearest Git root, falling back to the current working directory. Global notes are available from any project. Saving an identical note in the same scope refreshes its timestamp.
+
+Selection uses local Unicode word overlap, with no provider call or embedding index. Global notes are always eligible; project notes require overlap with the current question. Candidates are sorted by overlap, project scope before global on ties, and recency. Selection removes duplicate text and keeps at most five notes within a 650-token content estimate. The localized `memory-context.yaml` wrapper and JSON note list form a user message capped at 800 estimated tokens; lower-ranked notes are removed until it fits. That message is prepended once per request and is not added to the conversation window.
+
+New notes containing recognizable credentials are rejected. Reads reapply redaction and repair stored text when needed. Invalid note input leaves chat open; invalid stored data and database failures propagate rather than silently dropping memories.
+
+The event ledger is not replayed into context. A new invocation starts with fresh recent messages and may recall saved notes. `/clear` removes recent messages while preserving saved notes, local history, the latest response metrics, and cumulative session usage. `/forget` deletes the selected note record; it does not rewrite old requests or retained assistant replies.
+
+## Context budget and usage
+
+For ordinary questions and chat, the input budget is the smallest of:
+
+- the saved `ContextTokenBudget` (16,000 by default), or the `PROMPTMEUP_CONTEXT_TOKENS` override when present;
+- the configured percentage of the model's context window;
+- the model's context window minus the reserved response budget.
+
+The saved budget and environment override accept 4,000–200,000 tokens. The environment value affects the current process and is not persisted. Plans and scripts use their separate artifact limits.
+
+Before adding a question, `AiConversationWorkflow` reserves the populated instructions, runtime details, and selected notes, then gives the remaining input allowance to recent messages. If the new question and those fixed parts cannot fit, the request is rejected before an HTTP call. In chat, the limit error leaves the conversation open so the user can shorten the question or clear recent messages.
+
+`ContextTokenEstimator` uses UTF-8 byte count divided by four, rounded up, with small message/request allowances. This is a local estimate, not provider tokenization. The status display marks it with `~` and compares retained input against both model capacity and the effective input budget. `/status` and `/context` recalculate this estimate, including any newly selected notes.
+
+The latest response's provider input/output counters are kept separately in `ConversationState`. Cumulative input/output counts come from the session's recorded `ai_requests`. These counters describe usage already incurred; neither pruning nor `/clear` resets them. Diagnostic connection tests show their own latest-call usage without a retained chat-context estimate.
 
 ## Cross-platform boundaries
 

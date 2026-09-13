@@ -2,6 +2,120 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-13 — GitHub Actions failure fixes
+
+- Traced the main quality-gate failures to ANSI styling in semantic output assertions and a second SQLite connection pool left open during Windows fixture cleanup.
+- Preserved all visible-text assertions and narrow-terminal coverage while removing ANSI control sequences from comparisons; released both fixture-specific database pools without clearing other fixtures' pools.
+- Fixed the attribution failure on dependency PR #8 by recognizing the native SQLite package and checking its declared license file against the reviewed upstream text. Unknown or changed license declarations still stop packaging.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors in a temporary source snapshot, preserving concurrent fullscreen/theme work. Notice export passed for the current main dependency graph (26 packages) and the exact PR #8 graph with SQLite 3.53.4 (27 packages). No local automated tests or CLI smoke tests were run; the existing GitHub Actions workflows provide those checks after push.
+
+## 2026-09-13 — Product documentation refresh
+
+- Reworked the README around everyday terminal tasks, with direct examples for saved notes, context counters, and the shorter AI settings flow.
+- Updated the CLI, memory/cost, privacy, architecture, validation, and prompt guides to match the implemented behavior and limits.
+- Simplified the documentation index and support copy; identified the printable manual as an earlier edition and directed readers to the current web guides.
+- Checked 51 local links and heading targets and reviewed the guides against the implementation.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors on a temporary source snapshot of `a9f0532` plus this documentation update. The shared workspace's formatting and build checks encountered concurrent, unfinished fullscreen/theme edits, which were preserved outside this change. Automated tests and CLI smoke tests were not run because they were not requested.
+
+## 2026-09-13 — Commit the remaining local work
+
+- Included the remaining credential-redaction fixes, synthetic regression sources, full terminal/IDE restart guidance, repository validation rules, review resolution, and fullscreen design analysis in one user-requested checkpoint.
+- Reviewed the pending file inventory and privacy changes before staging all non-ignored work.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors. Automated tests and CLI smoke tests were not run because they were not requested.
+
+## 2026-09-13 — Shared workflow, storage, and localization behavior
+
+- Centralized audit session lifecycles with typed outcomes and cancellation-independent cleanup; script validation now records its actual result.
+- Shared chat turn submission and action handling while retaining completed-turn cost across recoverable input-limit failures.
+- Reused settings-summary formatting and atomic artifact writes, preserving row order, encoding, validation, and explicit overwrite policies.
+- Consolidated 396 UI keys into nine functional catalogs with six named translations per key; static source comparison preserved all 2,376 effective translations.
+- Extracted setup and installation workflows from the invocation orchestrator and shared non-session activity recording.
+- Preserved unrelated local privacy fixes and documentation changes outside the refactoring commit, including their relocated translation entries.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors. Existing localization test source was adapted and compiled; automated tests and CLI smoke tests were not run because they were not requested.
+
+## 2026-09-13 — Bounded memories, context accounting, and AI settings
+
+- Added explicit project/global memories with local relevance selection, credential protection, and an 800-estimated-token request envelope.
+- Separated retained active context, operational input budget, last-call provider counters, and cumulative conversation usage; `/status`, `/context`, and `/clear` preserve accounting.
+- Added a persisted 16,000-token default input budget, an optional invocation override, and an additive SQLite version-two migration.
+- Added `hm --ai-settings` to change only model behavior and context limits without repeating setup or changing credentials.
+- Kept oversized chat requests recoverable without discarding earlier turns, and documented all commands and limits.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors. Regression test sources were added and compiled; automated tests and CLI smoke tests were not run because they were not requested.
+
+## 2026-09-13 — Fullscreen terminal design census
+
+- Added [the fullscreen UX analysis](../../docs/FULLSCREEN_UX_ANALYSIS.md) with stable selection numbers for 12 functional pages and one optional navigation hub, source-backed interaction counts, and flows that should retain waterfall output.
+- Reviewed Spectre.Console feasibility, alternate-buffer history preservation, keyboard behavior, shared forms and individual command authorization.
+- Prepared and visually inspected three ImageGen concepts: cyan setup, green setup, and an amber plan workspace. Kept generated previews and prompts in the ignored local artifacts directory.
+- Completed analysis only; implementation scope remains for the user to select. Preserved unrelated work and created no branch or commit.
+
+Validation: preflight, restore, formatting verification, XML method summaries, and Release build passed with 0 warnings/errors. Whitespace review passed. No automated tests or CLI smoke tests were run.
+
+## 2026-09-13 — Privacy and key-guidance review fixes
+
+- Resolved all four findings from [the September 13 review](review-2026-09-13.md).
+- Shared credential-field classification between text and structural audit redaction, covering common token/key names and preserving typed usage metadata.
+- Added complete JSON and PowerShell value handling, including duplicate properties, escaped names, credential-valued containers, doubled quotes, backticks, here-strings, truncated values, and placeholder suffixes.
+- Added the terminal-restart hint to organization-cost authentication warnings and clarified the full terminal/IDE restart in all six languages, the README, and the privacy guide.
+- Verified that local command/output previews remain exact while synthetic credentials are removed from actual SQLite records and captured provider requests.
+
+Validation: preflight, restore, formatting verification, XML method comments, and Release build with 0 warnings/errors passed. The automated checks launched under the instructions read at task start completed with 320/320 tests and eight isolated CLI smoke checks passing. No further tests were run after the concurrent explicit-request-only testing rule was discovered. No real provider calls, credential changes, PATH changes, or font changes were made; the installed executable was not replaced.
+
+## 2026-09-13 — Tests only on explicit user request
+
+- Aligned `AGENTS.md`, Copilot instructions, contributor guidance, and the validation guide so agent-run automated tests and CLI smoke tests require an explicit user request.
+- Kept preflight, restore, formatting, XML-comment checks, and Release builds in the default non-test validation gate. Requests to implement, review, commit, or push changes do not authorize test execution.
+
+Validation: reviewed the documentation diff and checked whitespace. No tests or smoke tests were run for this documentation change, as requested by the user.
+
+## 2026-09-13 — Repository checkpoint validation
+
+- Reviewed the accumulated console presentation, language flags, Windows key guidance, shared project banner, and MSI directory-cleanup changes before publishing the repository checkpoint.
+- Confirmed that the four findings in the September 13 review remain tracked separately.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, 225/225 tests, and 15 isolated CLI smoke checks passed. Smoke checks covered help/status in all six languages, version output, invalid arguments, and missing setup; they verified one project banner per invocation and preserved terminal scrollback. No real credentials, provider requests, PATH changes, or font changes were used.
+
+## 2026-09-13 — Current directory and shared project banner
+
+- Added a dedicated current-directory row to the invocation header, supplied by the application and escaped for terminal display.
+- Added `RenderProjectBanner` with localized thanks for using hm (help me), a GitHub star/suggestion invitation, the repository link, and linked copyright attribution.
+- Reused the banner at the end of help and on process exit without duplicate output; normal, application-error, and initialization-error exits retain their expected exit codes.
+- Reviewed the new UI and existing credential, authorization, execution, and redaction paths. Four open findings are documented in [the September 13 code review](review-2026-09-13.md) and tracked separately in the active task list.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, and 225/225 tests passed. Fifteen isolated CLI smoke checks covered help/status in all six languages, invalid arguments, missing setup, and invalid startup configuration. Narrow-terminal, literal bracketed-path, emoji-option, and banner-deduplication rendering tests passed. No real provider requests, credential changes, PATH changes, or font changes were made. The installed application was not replaced.
+
+## 2026-09-13 — API key session-restart guidance
+
+- Added localized restart guidance after API or admin key changes on Windows, where an existing terminal can retain a stale process environment value.
+- Added the same guidance to HTTP 401 authentication failures and locally detected missing or invalid API keys without changing unrelated provider errors.
+- Covered authentication, non-authentication, and non-Windows error rendering with focused regression tests.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, and 221/221 tests passed.
+
+## 2026-09-13 — Updated per-user MSI installation
+
+- Downloaded the official WiX Toolset 3.14.1 binaries for an isolated, non-administrator build after the system installer required elevation and .NET Framework 3.5.
+- Repaired MSI harvesting for container-only payload directories by attaching uninstall cleanup to a descendant component.
+- Built and WinGet-validated the current x64 portable ZIP and per-user MSI, then verified the MSI against `SHA256SUMS.txt`.
+- Installed the MSI successfully, removed the obsolete portable PATH entry and moved its versioned directory to the Recycle Bin.
+- Verified MSI registration, the stable `%LOCALAPPDATA%\Programs\PromptMeUp` executable, exactly one user PATH entry, no machine PATH entry, and the installed six-flag setup menu.
+
+Validation: MSI SHA-256 is `EF4BB8C0EB908CFB3265156C31225CD361C4FDFA1EBADA75AC2284A3F314A151`; Windows Installer returned exit code `0`; preflight, restore, formatting verification, XML comments, Release build with 0 warnings/errors, 218/218 tests, packaged smoke tests, WinGet validation, and installed interactive setup smoke passed.
+
+## 2026-09-13 — Emoji spacing, language flags, and light accent
+
+- Standardized user-facing emoji rendering with one visible space before and after every icon while preserving compact ASCII fallbacks for `--no-emoji`.
+- Added country-flag emoji to all six language choices in setup.
+- Replaced the purple accent and selection highlight with the shared very-light near-cyan `lightskyblue1` color.
+- Added the emoji-spacing rule to both repository-wide instruction files and regression coverage for spacing and flags.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with 0 warnings/errors, 218/218 tests, isolated CLI `--version`/`--help`/`--status` smoke checks, and emoji-enabled rendering passed.
+
 ## 2026-09-06 — Automatic formatting fixes before the CI gate
 
 - Added `scripts/format.ps1` with applying and read-only verification modes.

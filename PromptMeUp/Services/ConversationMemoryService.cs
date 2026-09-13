@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Text;
 using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
@@ -22,9 +21,8 @@ public sealed class ConversationMemoryService : IConversationMemoryService
 
 public sealed class ConversationMemory
 {
-    private const long InstructionTokenReserve = 2_048;
     private readonly AppSettings _settings;
-    private readonly long _tokenBudget;
+    private long _tokenBudget;
     private readonly List<ChatMessage> _messages = [];
     private int _totalPrunedMessages;
 
@@ -34,7 +32,7 @@ public sealed class ConversationMemory
         _settings = settings;
         var contextWindow = AiModelCatalog.Resolve(settings.Model).ContextWindowTokens;
         var configuredBudget = checked(contextWindow * settings.MaxContextPercent / 100);
-        _tokenBudget = Math.Max(1, configuredBudget - InstructionTokenReserve);
+        _tokenBudget = Math.Max(1, configuredBudget);
     }
 
     /// <summary>Adds one user, assistant, or tool-output message and prunes the oldest complete turns when needed.</summary>
@@ -68,6 +66,16 @@ public sealed class ConversationMemory
         _messages.Clear();
     }
 
+    /// <summary>Applies the actual remaining request budget and removes complete old turns before the next send.</summary>
+    public ConversationMemoryUpdate SetTokenBudget(long tokenBudget)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(tokenBudget);
+        _tokenBudget = tokenBudget;
+        var pruned = PruneToLimits();
+        _totalPrunedMessages += pruned;
+        return new ConversationMemoryUpdate(pruned, Snapshot());
+    }
+
     /// <summary>Returns an immutable view of the exact messages that would be sent on the next request.</summary>
     public ConversationMemorySnapshot Snapshot() => new(
         _messages.ToArray(),
@@ -95,7 +103,7 @@ public sealed class ConversationMemory
 
     /// <summary>Estimates serialized message tokens using the same lightweight UTF-8 heuristic as preflight display.</summary>
     private static long EstimateMessages(IEnumerable<ChatMessage> messages) =>
-        messages.Sum(message => Math.Max(1, (long)Math.Ceiling(Encoding.UTF8.GetByteCount(message.Content) / 4d)) + 4);
+        ContextTokenEstimator.Messages(messages);
 
     /// <summary>Restricts local memory roles to user and assistant.</summary>
     private static string NormalizeRole(string role) => role.Equals("assistant", StringComparison.OrdinalIgnoreCase)

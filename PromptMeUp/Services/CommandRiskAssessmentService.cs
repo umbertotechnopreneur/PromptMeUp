@@ -118,7 +118,7 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
     private static string Translate(string language, string key, params object?[] args)
     {
         var normalized = SupportedLanguages.Normalize(language);
-        if (!FeatureText.TryGet(key, normalized, out var template))
+        if (!UiTextCatalog.TryGet(key, normalized, out var template))
         {
             throw new InvalidOperationException("Missing risk-review translation.");
         }

@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Text.Json;
 using PromptMeUp.Application;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
@@ -9,6 +10,65 @@ namespace PromptMeUp.Tests;
 
 public sealed class AuthorizedCommandWorkflowTests
 {
+    /// <summary>Verifies reviewed credential formats are removed from persistence and AI evidence while local previews stay exact.</summary>
+    [Theory]
+    [InlineData("{\"accessToken\":\"synthetic-output-syntheticSuffixSentinel\",\"safe\":\"keep\",\"inputTokens\":23}", "{\"Credentials\":{\"SecretAccessKey\":\"synthetic-error-syntheticSuffixSentinel\",\"SessionToken\":\"synthetic-session-syntheticSuffixSentinel\"},\"safe\":\"error-keep\"}")]
+    [InlineData("PASSWORD='synthetic-output''syntheticSuffixSentinel'; safe=keep", "PASSWORD='synthetic-error''syntheticSuffixSentinel'; safe=error-keep")]
+    [InlineData("PASSWORD=\"synthetic-output`\"syntheticSuffixSentinel\"; safe=keep", "PASSWORD=\"synthetic-error`\"syntheticSuffixSentinel\"; safe=error-keep")]
+    [InlineData("safe=keep; PASSWORD=\"synthetic-output head syntheticSuffixSentinel", "safe=error-keep; PASSWORD='synthetic-error head syntheticSuffixSentinel")]
+    public async Task RunAsync_ReviewedCredentialFormats_PreservesLocalPreviewAndRedactsPersistence(string stdout, string stderr)
+    {
+        using var persistence = new RegressionFixture();
+        await persistence.Database.InitializeAsync(default);
+        await persistence.Audit.StartSessionAsync("privacy-workflow", "chat", AppSettings.Default, null, default);
+        const string command = "$env:PASSWORD='synthetic-command''syntheticSuffixSentinel'; Get-Location";
+        var executionResult = new CommandExecutionResult(command, 0, stdout, stderr, false, false, 5);
+        var fixture = new WorkflowFixture(authorized: true, executionResult, audit: persistence.Audit);
+
+        var followUp = await fixture.Workflow.RunAsync("privacy-workflow", command, AppSettings.Default, default);
+
+        Assert.NotNull(followUp);
+        Assert.Equal(command, fixture.CommandView.PreviewedCommand);
+        Assert.Equal(command, fixture.Execution.ExecutedCommand);
+        Assert.Same(executionResult, fixture.CommandView.RenderedResult);
+        Assert.DoesNotContain("synthetic-", followUp, StringComparison.Ordinal);
+        Assert.DoesNotContain("syntheticSuffixSentinel", followUp, StringComparison.Ordinal);
+        Assert.Contains("keep", ExtractSection(followUp, "Standard output:", "Standard error:"), StringComparison.Ordinal);
+        Assert.Contains("error-keep", ExtractSection(followUp, "Standard error:", "Analyze this result"), StringComparison.Ordinal);
+
+        foreach (var eventType in new[] { "command_preview", "command_output" })
+        {
+            var stored = Assert.IsType<string>(await persistence.ScalarAsync(
+                "SELECT payload_json FROM ai_session_events WHERE event_type = $type;", ("$type", eventType)));
+            Assert.DoesNotContain("synthetic-", stored, StringComparison.Ordinal);
+            Assert.DoesNotContain("syntheticSuffixSentinel", stored, StringComparison.Ordinal);
+            using var payload = JsonDocument.Parse(stored);
+            if (eventType == "command_output")
+            {
+                var storedOutput = payload.RootElement.GetProperty("standardOutput").GetString()!;
+                var storedError = payload.RootElement.GetProperty("standardError").GetString()!;
+                Assert.Contains("keep", storedOutput, StringComparison.Ordinal);
+                Assert.Contains("error-keep", storedError, StringComparison.Ordinal);
+                Assert.Equal(0, payload.RootElement.GetProperty("ExitCode").GetInt32());
+                Assert.Equal(5, payload.RootElement.GetProperty("ElapsedMilliseconds").GetInt64());
+                if (stdout.StartsWith('{'))
+                {
+                    using var outputJson = JsonDocument.Parse(storedOutput);
+                    using var errorJson = JsonDocument.Parse(storedError);
+                    Assert.Equal(23, outputJson.RootElement.GetProperty("inputTokens").GetInt32());
+                    Assert.Equal("keep", outputJson.RootElement.GetProperty("safe").GetString());
+                    Assert.Equal("error-keep", errorJson.RootElement.GetProperty("safe").GetString());
+                }
+            }
+        }
+
+        var authorization = Assert.IsType<string>(await persistence.ScalarAsync("SELECT payload_json FROM activity_audit;"));
+        Assert.DoesNotContain("synthetic-", authorization, StringComparison.Ordinal);
+        Assert.DoesNotContain("syntheticSuffixSentinel", authorization, StringComparison.Ordinal);
+        using var authorizationJson = JsonDocument.Parse(authorization);
+        Assert.Equal(15, authorizationJson.RootElement.GetProperty("Score").GetInt32());
+    }
+
     /// <summary>Verifies JSON credentials in both command streams are removed before the AI follow-up is assembled.</summary>
     [Fact]
     public async Task RunAsync_JsonCredentialsInStreams_RedactsProviderFollowUp()
@@ -193,7 +253,8 @@ public sealed class AuthorizedCommandWorkflowTests
         public WorkflowFixture(
             bool authorized,
             CommandExecutionResult? executionResult = null,
-            bool cancelAuthorization = false)
+            bool cancelAuthorization = false,
+            IActivityAuditService? audit = null)
         {
             var assessment = new CommandRiskAssessment(
                 15,
@@ -216,7 +277,7 @@ public sealed class AuthorizedCommandWorkflowTests
             Workflow = new AuthorizedCommandWorkflow(
                 RiskAssessment,
                 Execution,
-                Audit,
+                audit ?? Audit,
                 new SensitiveDataRedactor(),
                 CommandView,
                 Shell,
@@ -261,6 +322,8 @@ public sealed class AuthorizedCommandWorkflowTests
 
         public int CallCount { get; private set; }
 
+        public string? ExecutedCommand { get; private set; }
+
         /// <summary>Records one execution request and returns the in-memory result.</summary>
         public Task<CommandExecutionResult> ExecuteAsync(
             ApprovedCommand command,
@@ -268,6 +331,7 @@ public sealed class AuthorizedCommandWorkflowTests
             CancellationToken cancellationToken)
         {
             CallCount++;
+            ExecutedCommand = command.Text;
             return Task.FromResult(_result);
         }
     }
@@ -328,9 +392,14 @@ public sealed class AuthorizedCommandWorkflowTests
 
         public int RenderCount { get; private set; }
 
+        public string? PreviewedCommand { get; private set; }
+
+        public CommandExecutionResult? RenderedResult { get; private set; }
+
         /// <summary>Returns an execution capability only when the fixture is configured to approve.</summary>
         public ApprovedCommand? PreviewAndAuthorize(string command, CommandRiskAssessment assessment)
         {
+            PreviewedCommand = command;
             if (_cancelAuthorization)
             {
                 throw new InteractiveFlowCanceledException();
@@ -340,7 +409,11 @@ public sealed class AuthorizedCommandWorkflowTests
         }
 
         /// <summary>Records rendering of the fixed execution result.</summary>
-        public void RenderExecutionResult(CommandExecutionResult result) => RenderCount++;
+        public void RenderExecutionResult(CommandExecutionResult result)
+        {
+            RenderCount++;
+            RenderedResult = result;
+        }
     }
 
     private sealed class FakeConsoleShellView : IConsoleShellView
@@ -353,7 +426,7 @@ public sealed class AuthorizedCommandWorkflowTests
         public void Configure(ConsoleRenderOptions options) => Options = options;
 
         /// <summary>Rejects unexpected header rendering in this focused workflow fixture.</summary>
-        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey) =>
+        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey, string currentDirectory) =>
             throw new InvalidOperationException("Header rendering is outside this workflow.");
 
         /// <summary>Rejects unexpected runtime-status rendering in this focused workflow fixture.</summary>
@@ -364,8 +437,12 @@ public sealed class AuthorizedCommandWorkflowTests
         public Task<T> RunWithStatusAsync<T>(string message, Func<Task<T>> action) => action();
 
         /// <summary>Rejects unexpected footer rendering in this focused workflow fixture.</summary>
-        public void RenderFooter(string command) =>
+        public void RenderFooter() =>
             throw new InvalidOperationException("Footer rendering is outside this workflow.");
+
+        /// <summary>Rejects unexpected project-banner rendering in this focused workflow fixture.</summary>
+        public void RenderProjectBanner() =>
+            throw new InvalidOperationException("Project-banner rendering is outside this workflow.");
 
         /// <summary>Rejects unexpected error rendering in this focused workflow fixture.</summary>
         public void RenderError(string message) =>

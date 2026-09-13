@@ -1,26 +1,32 @@
 # PromptMeUp validation guide
 
-Every PromptMeUp change should preserve the same experience: readable output, explicit choices, bounded local behavior, and no surprise changes to the machine. Use a clean terminal and never use production API keys or confidential prompts for validation evidence.
+Check that people can read the answer, understand the limits, and decide what runs. Use a clean terminal and disposable data. Keep production API keys and confidential prompts out of validation evidence.
+
+For agent-driven work, run automated tests and CLI smoke tests only when the user explicitly requests them. Requests to implement, review, commit, or push changes do not authorize test execution. The non-test checks below remain the default validation gate; test commands and behavioral checklists are available for explicitly requested testing.
 
 ## Prove the build is healthy
 
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
 dotnet restore .\PromptMeUp.slnx
-pwsh -NoProfile -File .\scripts\format.ps1
-pwsh -NoProfile -File .\scripts\format.ps1 -Verify
+dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
+```
+
+When the user explicitly requests the automated test suite:
+
+```powershell
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-The formatting helper applies supported fixes before the read-only verification step. The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. It runs the repository preflight, applies and verifies formatting, checks XML comments, then builds and tests on Windows, Linux, and macOS.
+The local gate verifies formatting without editing files. To fix a reported formatting issue, use `scripts/format.ps1` and review its changes. The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. CI applies and verifies formatting, checks XML comments, then builds, tests, and checks portable packages on Windows, Linux, and macOS.
 
 Regression tests cover quoted/serialized JSON credentials, provider-bound command output, rejected and legacy preambles, Serilog exception privacy, HTTP body deadlines and limits, inherited process pipes, conservative command risk, long-answer visibility, Unix shell context, model-specific pricing bands, and indexed request summaries. HTTP and credential providers are synthetic; process tests run only inert PowerShell output/sleep commands and clean up their test child. The review-to-test mapping is recorded in [the September 2 review](../.github/tasks/review-2026-09-02.md).
 
 ## Prove the CLI is predictable
 
-Use a disposable data directory:
+When the user explicitly requests CLI smoke tests, use a disposable data directory:
 
 ```powershell
 $env:PROMPTMEUP_DATA_DIR = Join-Path $PWD 'artifacts\smoke-data'
@@ -54,9 +60,9 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 ## Validate questions, chat, and command control
 
 - [ ] A one-off query creates and closes one session.
-- [ ] A one-off query and every completed chat turn display total context plus separate provider input/output token counts.
+- [ ] A one-off query and every completed chat turn distinguish the estimated retained context, effective input budget, latest provider input/output counts, and cumulative session input/output counts.
 - [ ] A short chat retains prior turns, displays session cost, and exits cleanly.
-- [ ] `/clear` clears active context and adds an audit event.
+- [ ] `/clear` removes recent messages and adds an audit event while retaining saved notes, latest response metrics, and cumulative session usage.
 - [ ] `/run Get-Location` shows a low local risk assessment and exact command preview.
 - [ ] Denying authorization executes nothing and records denial.
 - [ ] Approving runs exactly once without elevation, displays output, and lets the next AI turn explain it.
@@ -64,6 +70,30 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] The output-sharing warning is visible before approval.
 - [ ] A simulated key in command output is visible locally but redacted in SQLite and the next AI prompt.
 - [ ] Timeout and output limits are honored.
+
+## Validate the shorter AI settings flow
+
+- [ ] After initial setup, `hm --ai-settings` opens the model, response preferences, and conversation limits without asking for keys or running a connection test.
+- [ ] A fresh data directory reports that setup is required; redirected input/output does not open the interactive form.
+- [ ] Saving changes only the selected AI preferences and limits. Credentials, preamble, location, command limits, and saved language stay intact, including when `--language` changes the form's display language.
+- [ ] The context budget accepts 4,000–200,000 tokens, defaults to 16,000, and appears in the review before saving.
+- [ ] An active `PROMPTMEUP_CONTEXT_TOKENS` override is explained and remains effective without being copied into the saved setting.
+- [ ] Cancelling or pressing `Esc` leaves the previous settings intact. Saving neither refreshes pricing nor sends an AI request.
+
+## Validate saved notes and context limits
+
+- [ ] `/remember` saves a project note, `/remember global` saves a shared preference, and `/memories` lists their IDs without an AI call.
+- [ ] `/forget <id>` removes a listed note. Malformed IDs, empty notes, notes over 1,000 characters, and recognizable credentials report an error and leave chat open.
+- [ ] Notes survive restart, remain available from subdirectories of the same Git root, and stay isolated from other projects. Outside Git, the current directory defines the scope.
+- [ ] Saving the same note twice in one scope updates the existing record; a new note is rejected at the 100-note scope limit.
+- [ ] Project notes are selected only when words match the question. Global notes remain eligible, but the final selection never exceeds five notes or 800 estimated tokens including its localized wrapper.
+- [ ] Selected notes appear once in the outgoing context and cannot authorize a command or override the latest request.
+- [ ] `/context` and `/status` retain the last response's input/output counts and show the same current estimate. Local commands do not add provider usage.
+- [ ] The context estimate includes populated instructions, runtime details, selected notes, and retained messages, with `~` marking estimates.
+- [ ] Older complete turns are pruned to fit the turn limit and effective input budget, with room reserved for the answer.
+- [ ] A question that cannot fit is rejected before sending. Chat stays open and accepts a shorter question or `/clear`.
+- [ ] Clearing messages or forgetting a note does not erase request history or reset usage already recorded for the session.
+- [ ] A schema-v1 database upgrades to v2 with existing settings/history intact; invalid stored note data is reported instead of silently ignored.
 
 ## Validate usage visibility and local history
 

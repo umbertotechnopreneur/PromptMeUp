@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using PromptMeUp.Infrastructure;
 using PromptMeUp.Services;
@@ -8,6 +9,34 @@ namespace PromptMeUp.Tests;
 
 public sealed class PromptCatalogServiceTests
 {
+    /// <summary>Verifies that every memory wrapper uses the user role and leaves room for bounded saved-note data.</summary>
+    [Fact]
+    public async Task GetAsync_MemoryContext_ProvidesBoundedLocalizedUserDataWrapper()
+    {
+        var paths = new AppPaths(
+            "unused-data",
+            "unused-data/promptmeup.db",
+            "unused-data/logs",
+            "unused-data/logs/promptmeup-.log",
+            Path.Combine(AppContext.BaseDirectory, "prompt"));
+        var catalog = new YamlPromptCatalogService(
+            paths,
+            NullLogger<YamlPromptCatalogService>.Instance);
+
+        var prompt = await catalog.GetAsync("memory-context", CancellationToken.None);
+
+        Assert.Equal("user", prompt.Metadata["role"]);
+        Assert.Equal("800", prompt.Metadata["max-estimated-tokens"]);
+        Assert.Equal(SupportedLanguages.Codes.OrderBy(language => language), prompt.Texts.Keys.OrderBy(language => language));
+        foreach (var language in SupportedLanguages.Codes)
+        {
+            var sections = prompt.ResolveText(language).Split("{memories}", StringSplitOptions.None);
+            Assert.Equal(2, sections.Length);
+            var estimatedWrapperTokens = (long)Math.Ceiling(Encoding.UTF8.GetByteCount(string.Concat(sections)) / 4d) + 4;
+            Assert.InRange(estimatedWrapperTokens, 1, 150);
+        }
+    }
+
     /// <summary>Verifies that both scoped assistant prompt contracts are packaged with every supported language.</summary>
     [Fact]
     public async Task GetAsync_AssistantPrompts_LoadsChatAndSingleQueryContracts()

@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Reflection;
 using PromptMeUp.Services;
 
 namespace PromptMeUp.Tests;
@@ -11,24 +10,15 @@ public sealed class LocalizationTests
     [Fact]
     public void Catalogs_AllSupportedLanguages_AreComplete()
     {
-        var type = typeof(LocalizationService);
-        var english = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string>>(
-            type.GetField("English", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null));
-        var overrides = Assert.IsAssignableFrom<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>(
-            type.GetField("Overrides", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null));
-
-        foreach (var language in SupportedLanguages.Codes.Where(code => code != "en"))
+        Assert.NotEmpty(UiTextCatalog.Entries);
+        foreach (var (key, translations) in UiTextCatalog.Entries)
         {
-            Assert.True(overrides.TryGetValue(language, out var localized));
-            Assert.Empty(english.Keys.Except(localized!.Keys, StringComparer.Ordinal));
-        }
-
-        var features = Assert.IsAssignableFrom<IReadOnlyDictionary<string, string[]>>(
-            typeof(FeatureText).GetField("Entries", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null));
-        foreach (var translations in features.Values)
-        {
-            Assert.Equal(SupportedLanguages.Codes.Count, translations.Length);
-            Assert.All(translations, translation => Assert.False(string.IsNullOrWhiteSpace(translation)));
+            foreach (var language in SupportedLanguages.Codes)
+            {
+                Assert.False(
+                    string.IsNullOrWhiteSpace(translations.ForLanguage(language)),
+                    $"Missing {language} translation for {key}.");
+            }
         }
     }
 }

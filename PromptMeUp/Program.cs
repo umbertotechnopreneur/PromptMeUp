@@ -39,12 +39,14 @@ internal static class Program
             shutdown.Cancel();
         };
         Console.CancelKeyPress += cancelHandler;
+        IConsoleShellView? shell = null;
 
         try
         {
             var services = new ServiceCollection();
             ConfigureServices(services, paths, shutdown.Token);
             await using var provider = services.BuildServiceProvider();
+            shell = provider.GetRequiredService<IConsoleShellView>();
             return await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
@@ -64,7 +66,14 @@ internal static class Program
         finally
         {
             Console.CancelKeyPress -= cancelHandler;
-            await Log.CloseAndFlushAsync();
+            try
+            {
+                shell?.RenderFooter();
+            }
+            finally
+            {
+                await Log.CloseAndFlushAsync();
+            }
         }
     }
 
@@ -86,6 +95,8 @@ internal static class Program
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton(provider => ArtifactLimitConfiguration.Load(
             Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
+        services.AddSingleton(provider => ContextBudgetConfiguration.Load(
+            Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
         services.AddSingleton<IDatabaseService, SqliteDatabaseService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
@@ -96,6 +107,7 @@ internal static class Program
         services.AddSingleton<IAiCostCalculator, AiCostCalculator>();
         services.AddSingleton<IActivityAuditService, ActivityAuditService>();
         services.AddSingleton<IConversationMemoryService, ConversationMemoryService>();
+        services.AddSingleton<PersistentMemoryService>();
         services.AddSingleton<ICommandRiskAssessmentService, CommandRiskAssessmentService>();
         services.AddSingleton<ICommandExecutionService, CommandExecutionService>();
         services.AddSingleton<IPortablePathService, PortablePathService>();
@@ -119,6 +131,7 @@ internal static class Program
         services.AddSingleton<IStatusView, StatusView>();
         services.AddSingleton<ICostsView, CostsView>();
         services.AddSingleton<IChatView, ChatView>();
+        services.AddSingleton<IMemoryView, MemoryView>();
         services.AddSingleton<ICommandSuggestionView, CommandSuggestionView>();
         services.AddSingleton<IHelpView, HelpView>();
         services.AddSingleton<IMainMenuView, MainMenuView>();
@@ -145,6 +158,9 @@ internal static class Program
         services.AddSingleton<RecipeStore>();
         services.AddSingleton<IRecipeView, RecipeView>();
         services.AddSingleton<RecipeWorkflow>();
+        services.AddSingleton<ApplicationActivityRecorder>();
+        services.AddSingleton<SetupWorkflow>();
+        services.AddSingleton<InstallationWorkflow>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
     }
 }

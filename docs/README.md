@@ -1,14 +1,25 @@
 # PromptMeUp documentation
 
-Choose the guide that matches the PromptMeUp outcome you need, then go as deep as the work requires:
+To try `hm` for the first time, start with the [README](../README.md#get-started).
 
-- [CLI reference](CLI_REFERENCE.md) — commands, switches, chat controls, exit codes, and portability.
-- [Retro CLI manual (PDF)](PromptMeUp-CLI-Manual.pdf) — printable command card on page one, followed by a short guide to the newer safe-workflow commands.
-- [Architecture](ARCHITECTURE.md) — model/view/service boundaries, request flow, persistence, and safety gates.
-- [Privacy and data flow](PRIVACY.md) — what remains local, what reaches OpenAI, and how credentials are handled.
-- [Memory, costs, and caching](OPENAI_COSTS_AND_CACHING.md) — bounded context, token accounting, pricing refresh, and OpenAI cache semantics.
-- [Windows release packaging](WINDOWS_PACKAGING.md) — portable ZIPs, WinGet manifests, MSI generation, and local install testing.
-- [Release process](RELEASING.md) — CI checks, portable archives, dependency notices, checksums, and release drafts.
-- [Validation guide](VALIDATION.md) — repeatable build, lint, test, and manual acceptance checks.
+## Using `hm`
 
-New durable design notes can start from [`document.template.md`](../document.template.md).
+| I want to… | Read |
+| --- | --- |
+| Find a command or see an example | [CLI reference](CLI_REFERENCE.md) |
+| Change the model or context limits with `hm --ai-settings` | [AI settings](CLI_REFERENCE.md#change-the-model-or-conversation-limits) |
+| Save useful notes or understand the token counters | [Memory, context, and costs](OPENAI_COSTS_AND_CACHING.md) |
+| Check what is saved locally and what is sent to OpenAI | [Privacy](PRIVACY.md) |
+| Get help or report a problem | [Support](../SUPPORT.md) |
+
+The [printable CLI manual](PromptMeUp-CLI-Manual.pdf) is an earlier edition. Use the web guides above for saved memories, context counters, and `--ai-settings`.
+
+## Working on PromptMeUp
+
+- [Contributing](../CONTRIBUTING.md) covers the local build and contribution process.
+- [Architecture](ARCHITECTURE.md) explains the application structure, request flow, storage, and command approval.
+- [Validation](VALIDATION.md) lists the development checks and manual review cases.
+- [Releasing](RELEASING.md) covers portable packages, CI, and GitHub release drafts.
+- [Windows packaging](WINDOWS_PACKAGING.md) covers optional MSI and WinGet artifacts.
+
+Use [`document.template.md`](../document.template.md) when adding a design note.

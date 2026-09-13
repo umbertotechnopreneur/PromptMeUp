@@ -6,7 +6,7 @@ namespace PromptMeUp.Services.Sqlite;
 internal static class SqliteSchema
 {
     /// <summary>Identifies the schema version supported by this application build.</summary>
-    internal const int Version = 1;
+    internal const int Version = 2;
 
     /// <summary>Enables the persistent write-ahead logging mode before schema creation starts.</summary>
     internal const string EnableWriteAheadLoggingSql = "PRAGMA journal_mode = WAL;";
@@ -28,6 +28,7 @@ internal static class SqliteSchema
             max_conversation_turns INTEGER NOT NULL CHECK (max_conversation_turns BETWEEN 2 AND 50),
             max_message_characters INTEGER NOT NULL CHECK (max_message_characters BETWEEN 500 AND 100000),
             max_context_percent INTEGER NOT NULL CHECK (max_context_percent BETWEEN 10 AND 95),
+            context_token_budget INTEGER NOT NULL DEFAULT 16000 CHECK (context_token_budget BETWEEN 4000 AND 200000),
             max_command_output_characters INTEGER NOT NULL CHECK (max_command_output_characters BETWEEN 1000 AND 32768),
             command_timeout_seconds INTEGER NOT NULL CHECK (command_timeout_seconds BETWEEN 5 AND 300),
             endpoint TEXT NOT NULL,
@@ -63,6 +64,14 @@ internal static class SqliteSchema
         );
         CREATE INDEX IF NOT EXISTS ix_ai_requests_occurred ON ai_requests (occurred_unix);
         CREATE INDEX IF NOT EXISTS ix_ai_requests_conversation ON ai_requests (conversation_id, occurred_unix);
+
+        CREATE TABLE IF NOT EXISTS persistent_memories (
+            id TEXT NOT NULL PRIMARY KEY CHECK (length(id) = 32),
+            scope_key TEXT NOT NULL CHECK (scope_key = 'global' OR length(scope_key) = 64),
+            body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 1000),
+            updated_unix INTEGER NOT NULL CHECK (updated_unix >= 0)
+        );
+        CREATE INDEX IF NOT EXISTS ix_persistent_memories_scope ON persistent_memories (scope_key, updated_unix);
 
         CREATE TABLE IF NOT EXISTS ai_sessions (
             id TEXT NOT NULL PRIMARY KEY,

@@ -58,22 +58,14 @@ public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILoca
             throw new InvalidOperationException(text.Text("Script.OutputOption"));
         }
         var fullPath = Path.GetFullPath(path);
-        var temporary = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            await File.WriteAllTextAsync(temporary, source, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
-            File.Move(temporary, fullPath, overwrite: false);
+            await AtomicFileWriter.WriteAllTextAsync(fullPath, source,
+                overwrite: false, cancellationToken, new UTF8Encoding(false)).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             throw new InvalidOperationException(text.Text("Script.SaveError"));
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
         }
     }
 

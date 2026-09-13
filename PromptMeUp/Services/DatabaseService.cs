@@ -32,6 +32,8 @@ public interface IDatabaseService
 
     Task<AiRequestSummary> GetAiRequestSummaryAsync(CancellationToken cancellationToken);
 
+    Task<AiUsageMetrics> GetSessionUsageAsync(string sessionId, CancellationToken cancellationToken);
+
     Task<decimal?> GetOrganizationCostCurrentMonthAsync(CancellationToken cancellationToken);
 
     Task EnsureAiSessionAsync(AiSessionRecord session, CancellationToken cancellationToken);
@@ -100,7 +102,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
 
             await EnsureCurrentSchemaAsync(
                 connection,
-                setVersion: currentVersion == 0,
+                currentVersion,
                 cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("SQLite database initialized. SchemaVersion={SchemaVersion}", SqliteSchema.Version);
@@ -121,7 +123,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                    custom_instruction, include_windows_location, review_commands_with_ai,
                    prompt_caching_enabled, max_conversation_turns, max_message_characters,
                    max_context_percent, max_command_output_characters, command_timeout_seconds,
-                   endpoint, api_key_variable, admin_key_variable, updated_unix
+                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget
             FROM app_settings
             WHERE id = 1;
             """;
@@ -150,7 +152,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
             reader.GetString(15),
             reader.GetString(16),
             reader.GetString(17),
-            DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(18)));
+            DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(18)))
+        {
+            ContextTokenBudget = reader.GetInt32(19)
+        };
         var normalizedPreamble = _promptProtection.Protect(settings.CustomInstruction).SanitizedText;
         var safePreamble = _redactor.Redact(normalizedPreamble);
         if (!string.Equals(normalizedPreamble, safePreamble, StringComparison.Ordinal))
@@ -192,6 +197,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                     max_conversation_turns = $maxConversationTurns,
                     max_message_characters = $maxMessageCharacters,
                     max_context_percent = $maxContextPercent,
+                    context_token_budget = $contextTokenBudget,
                     max_command_output_characters = $maxCommandOutputCharacters,
                     command_timeout_seconds = $commandTimeoutSeconds,
                     endpoint = $endpoint,
@@ -213,6 +219,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.Parameters.AddWithValue("$maxConversationTurns", settings.MaxConversationTurns);
             command.Parameters.AddWithValue("$maxMessageCharacters", settings.MaxMessageCharacters);
             command.Parameters.AddWithValue("$maxContextPercent", settings.MaxContextPercent);
+            command.Parameters.AddWithValue("$contextTokenBudget", settings.ContextTokenBudget);
             command.Parameters.AddWithValue("$maxCommandOutputCharacters", settings.MaxCommandOutputCharacters);
             command.Parameters.AddWithValue("$commandTimeoutSeconds", settings.CommandTimeoutSeconds);
             command.Parameters.AddWithValue("$endpoint", settings.Endpoint);
@@ -498,6 +505,25 @@ public sealed class SqliteDatabaseService : IDatabaseService
             reader.GetInt64(5));
     }
 
+    /// <summary>Totals recorded conversation usage including reported failures; standalone advisory sessions remain separate.</summary>
+    public async Task<AiUsageMetrics> GetSessionUsageAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT COALESCE(SUM(input_tokens), 0), COALESCE(SUM(cached_input_tokens), 0),
+                   COALESCE(SUM(cache_write_tokens), 0), COALESCE(SUM(output_tokens), 0),
+                   COALESCE(SUM(reasoning_tokens), 0), COALESCE(SUM(total_tokens), 0)
+            FROM ai_requests WHERE conversation_id = $session;
+            """;
+        command.Parameters.AddWithValue("$session", sessionId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return new AiUsageMetrics(reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2),
+            reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(5));
+    }
+
     /// <summary>Aggregates downloaded organization cost buckets for the current local month.</summary>
     public async Task<decimal?> GetOrganizationCostCurrentMonthAsync(CancellationToken cancellationToken)
     {
@@ -664,15 +690,19 @@ public sealed class SqliteDatabaseService : IDatabaseService
     /// <summary>Atomically reapplies idempotent schema objects, seeds settings, and versions a new database.</summary>
     private static async Task EnsureCurrentSchemaAsync(
         SqliteConnection connection,
-        bool setVersion,
+        int currentVersion,
         CancellationToken cancellationToken)
     {
         await using var transaction = connection.BeginTransaction();
         try
         {
             await CreateSchemaAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            if (currentVersion < 2)
+            {
+                await EnsureContextBudgetColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
-            if (setVersion)
+            if (currentVersion != SqliteSchema.Version)
             {
                 await SetSchemaVersionAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
@@ -683,6 +713,25 @@ public sealed class SqliteDatabaseService : IDatabaseService
         {
             await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
             throw;
+        }
+    }
+
+    /// <summary>Adds the context setting to legacy databases while preserving their existing preferences and history.</summary>
+    private static async Task EnsureContextBudgetColumnAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'context_token_budget';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            command.CommandText = """
+                ALTER TABLE app_settings ADD COLUMN context_token_budget INTEGER NOT NULL DEFAULT 16000
+                    CHECK (context_token_budget BETWEEN 4000 AND 200000);
+                """;
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -803,6 +852,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             || settings.MaxConversationTurns is < 2 or > 50
             || settings.MaxMessageCharacters is < 500 or > 100_000
             || settings.MaxContextPercent is < 10 or > 95
+            || settings.ContextTokenBudget is < 4_000 or > 200_000
             || settings.MaxCommandOutputCharacters is < 1_000 or > 32_768
             || settings.CommandTimeoutSeconds is < 5 or > 300)
         {

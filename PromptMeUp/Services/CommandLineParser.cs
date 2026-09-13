@@ -150,6 +150,12 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(setupError);
                     }
                     break;
+                case "--ai-settings":
+                    if (!TrySelect(AppCommand.AiSettings, ref command, ref commandWasSelected, out var aiSettingsError))
+                    {
+                        return FailureMessage(aiSettingsError);
+                    }
+                    break;
                 case "--status":
                     if (!TrySelect(AppCommand.Status, ref command, ref commandWasSelected, out var statusError))
                     {
@@ -427,6 +433,7 @@ public sealed class CommandLineParser : ICommandLineParser
     private static string ToSwitch(AppCommand command) => command switch
     {
         AppCommand.TestAi => "test-ai",
+        AppCommand.AiSettings => "ai-settings",
         AppCommand.InstallFont => "install-font",
         AppCommand.ThirdParty => "third-party",
         AppCommand.Path => "path",

@@ -19,10 +19,12 @@ alwaysApply: true
 - Keep typed usage/cost fields normalized and flexible audit/session payloads valid JSON.
 - Preserve terminal scrollback in every application flow: never call a terminal clear operation. Mark new flows with intentional whitespace and accessible separators instead.
 - Treat contrast as a product requirement: do not render user-facing information in dark grey. Use the shared terminal palette, with bright primary text and only high-contrast muted nuances for secondary metadata.
+- Render every user-facing emoji with one visible space before and after it; keep emoji spacing in shared view helpers so icons never touch adjacent text.
 - Use Spectre.Console layout primitives purposefully (for example panels, grids, rules, and selection prompts) to convey hierarchy; do not reduce command, help, or status surfaces to undifferentiated text walls.
 - Preserve unrelated work, obtain explicit user authorization before creating any Git branch or worktree, avoid broad formatting churn, use `pwsh -NoProfile` for PowerShell automation, and fail fast on invalid or unsupported state.
-- After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; keep the full validation gate before committing.
+- Run automated tests and CLI smoke tests only when the user explicitly requests them. Implementation, review, commit, and push requests do not authorize test execution.
+- After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; complete the non-test validation gate before committing.
 - Keep `AGENTS.md` and this file aligned when repository-wide rules change.
 - Exclude credentials, `.env`, SQLite data, logs, private absolute paths, `bin/`, `obj/`, `artifacts/`, and `.vs/` from commits.
 
-Before handoff, run preflight, `dotnet format --verify-no-changes`, `scripts/check-xml-comments.ps1`, Release build with warnings as errors, tests, and safe CLI smoke checks with a disposable `PROMPTMEUP_DATA_DIR`.
+Before handoff, run preflight, restore, `dotnet format --verify-no-changes`, `scripts/check-xml-comments.ps1`, and a Release build with warnings as errors. Run automated tests or CLI smoke checks only when explicitly requested by the user; use a disposable `PROMPTMEUP_DATA_DIR` for requested smoke checks.

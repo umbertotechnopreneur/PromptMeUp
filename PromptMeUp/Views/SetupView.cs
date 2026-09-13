@@ -9,6 +9,8 @@ namespace PromptMeUp.Views;
 public interface ISetupView
 {
     SetupSubmission? Collect(SetupViewState state);
+
+    AppSettings? CollectAiSettings(AppSettings current);
 }
 
 public sealed class SetupView : ISetupView
@@ -49,6 +51,51 @@ public sealed class SetupView : ISetupView
         }
     }
 
+    /// <summary>Collects only model behavior and context limits while preserving all unrelated preferences.</summary>
+    public AppSettings? CollectAiSettings(AppSettings current)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        BeginStage(1, _text.Text("AiSettings.Title"), _text.Text("AiSettings.Subtitle"));
+        var aiEnabled = _console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.AiEnabled")))
+        {
+            DefaultValue = current.AiEnabled
+        });
+        var (model, reasoning, detail) = CollectModelSettings(current);
+        var reviewCommands = _console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.CommandReview")))
+        {
+            DefaultValue = current.ReviewCommandsWithAi
+        });
+        var promptCaching = _console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.PromptCaching")))
+        {
+            DefaultValue = current.PromptCachingEnabled
+        });
+
+        BeginStage(2, _text.Text("Setup.MemoryLimits"));
+        var contextTokenBudget = PromptForBoundedInteger("AiSettings.ContextBudget", current.ContextTokenBudget, 4_000, 200_000);
+        var maxTurns = PromptForBoundedInteger("Setup.MaxTurns", current.MaxConversationTurns, 2, 50);
+        var maxMessageCharacters = PromptForBoundedInteger("Setup.MaxMessage", current.MaxMessageCharacters, 500, 100_000);
+        var maxContextPercent = PromptForBoundedInteger("Setup.MaxContext", current.MaxContextPercent, 10, 95);
+        var settings = current with
+        {
+            AiEnabled = aiEnabled,
+            Model = model,
+            ReasoningEffort = reasoning,
+            OutputDetail = detail,
+            ReviewCommandsWithAi = reviewCommands,
+            PromptCachingEnabled = promptCaching,
+            ContextTokenBudget = contextTokenBudget,
+            MaxConversationTurns = maxTurns,
+            MaxMessageCharacters = maxMessageCharacters,
+            MaxContextPercent = maxContextPercent
+        };
+        BeginStage(3, _text.Text("Setup.Summary"));
+        RenderAiSummary(settings);
+        return _console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.Confirm")))
+        {
+            DefaultValue = true
+        }) ? settings : null;
+    }
+
     /// <summary>Runs the localized wizard while the public boundary preserves the live session language.</summary>
     private SetupSubmission? CollectCore(SetupViewState state)
     {
@@ -62,7 +109,7 @@ public sealed class SetupView : ISetupView
         var language = _console.Prompt(
             new SelectionPrompt<SupportedLanguage>()
                 .Title(Markup.Escape(_text.Text("Setup.Language")))
-                .UseConverter(item => $"{Markup.Escape(item.NativeName)}  [{TerminalTheme.Muted}]({Markup.Escape(item.Code)})[/]")
+                .UseConverter(item => FormatLanguageChoice(item, _shell.Options))
                 .AddChoices(languageChoices));
         _text.SetLanguage(language.Code);
 
@@ -91,29 +138,7 @@ public sealed class SetupView : ISetupView
         }
 
         BeginStage(++stage, _text.Text("Setup.Model"));
-        var model = PromptForModel(current.Model);
-        var descriptor = AiModelCatalog.Resolve(model);
-        var reasoningChoices = descriptor.ReasoningEfforts
-            .OrderBy(value => value == current.ReasoningEffort ? 0 : 1)
-            .ToArray();
-        var reasoning = _console.Prompt(
-            new SelectionPrompt<string>()
-                .Title(Markup.Escape(_text.Text("Setup.Reasoning")))
-                .UseConverter(value => _text.Text($"Reasoning.{value}"))
-                .AddChoices(reasoningChoices));
-        var detailChoices = new[] { "compact", "balanced", "detailed" }
-            .OrderBy(value => value == current.OutputDetail ? 0 : 1)
-            .ToArray();
-        var detail = _console.Prompt(
-            new SelectionPrompt<string>()
-                .Title(Markup.Escape(_text.Text("Setup.Detail")))
-                .UseConverter(value => _text.Text(value switch
-                {
-                    "compact" => "Setup.Compact",
-                    "detailed" => "Setup.Detailed",
-                    _ => "Setup.Balanced"
-                }))
-                .AddChoices(detailChoices));
+        var (model, reasoning, detail) = CollectModelSettings(current);
 
         BeginStage(++stage, _text.Text("Setup.Preferences"));
         var customInstruction = PromptForPreamble(current.CustomInstruction);
@@ -141,6 +166,7 @@ public sealed class SetupView : ISetupView
         var maxTurns = current.MaxConversationTurns;
         var maxMessageCharacters = current.MaxMessageCharacters;
         var maxContextPercent = current.MaxContextPercent;
+        var contextTokenBudget = current.ContextTokenBudget;
         var maxCommandOutputCharacters = current.MaxCommandOutputCharacters;
         var commandTimeoutSeconds = current.CommandTimeoutSeconds;
         var endpoint = current.Endpoint;
@@ -150,6 +176,7 @@ public sealed class SetupView : ISetupView
         }))
         {
             BeginStage(++stage, _text.Text("Setup.MemoryLimits"));
+            contextTokenBudget = PromptForBoundedInteger("AiSettings.ContextBudget", contextTokenBudget, 4_000, 200_000);
             maxTurns = PromptForBoundedInteger("Setup.MaxTurns", maxTurns, 2, 50);
             maxMessageCharacters = PromptForBoundedInteger("Setup.MaxMessage", maxMessageCharacters, 500, 100_000);
             maxContextPercent = PromptForBoundedInteger("Setup.MaxContext", maxContextPercent, 10, 95);
@@ -178,6 +205,7 @@ public sealed class SetupView : ISetupView
             MaxConversationTurns = maxTurns,
             MaxMessageCharacters = maxMessageCharacters,
             MaxContextPercent = maxContextPercent,
+            ContextTokenBudget = contextTokenBudget,
             MaxCommandOutputCharacters = maxCommandOutputCharacters,
             CommandTimeoutSeconds = commandTimeoutSeconds,
             Endpoint = endpoint.Trim(),
@@ -219,7 +247,7 @@ public sealed class SetupView : ISetupView
             _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(subtitle)}[/]");
         }
 
-        _console.MarkupLine($"[mediumpurple2]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Accent}]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
         _console.WriteLine();
     }
 
@@ -268,7 +296,7 @@ public sealed class SetupView : ISetupView
             .Title(Markup.Escape(_text.Text("Setup.Model")))
             .PageSize(8)
             .UseConverter(model => $"[bold {TerminalTheme.Primary}]{Markup.Escape(model.DisplayName)}[/]  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text($"Model.{model.Id}"))}[/]")
-            .HighlightStyle(new Style(Color.MediumPurple2))
+            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
             .AddChoices(choices);
 
         return _console.Prompt(prompt);
@@ -276,6 +304,44 @@ public sealed class SetupView : ISetupView
 
     /// <summary>Returns only the stable model identifier selected from the model choices.</summary>
     private string PromptForModel(string currentModel) => PromptForModelDescriptor(currentModel).Id;
+
+    /// <summary>Collects the shared model, supported reasoning level, and answer-detail choices.</summary>
+    private (string Model, string Reasoning, string Detail) CollectModelSettings(AppSettings current)
+    {
+        var model = PromptForModel(current.Model);
+        var descriptor = AiModelCatalog.Resolve(model);
+        var reasoningChoices = descriptor.ReasoningEfforts
+            .OrderBy(value => value == current.ReasoningEffort ? 0 : 1)
+            .ToArray();
+        var reasoning = _console.Prompt(
+            new SelectionPrompt<string>()
+                .Title(Markup.Escape(_text.Text("Setup.Reasoning")))
+                .UseConverter(value => _text.Text($"Reasoning.{value}"))
+                .AddChoices(reasoningChoices));
+        var detailChoices = new[] { "compact", "balanced", "detailed" }
+            .OrderBy(value => value == current.OutputDetail ? 0 : 1)
+            .ToArray();
+        var detail = _console.Prompt(
+            new SelectionPrompt<string>()
+                .Title(Markup.Escape(_text.Text("Setup.Detail")))
+                .UseConverter(value => _text.Text(value switch
+                {
+                    "compact" => "Setup.Compact",
+                    "detailed" => "Setup.Detailed",
+                    _ => "Setup.Balanced"
+                }))
+                .AddChoices(detailChoices));
+        return (model, reasoning, detail);
+    }
+
+    /// <summary>Formats one language choice with its country flag and stable language code.</summary>
+    internal static string FormatLanguageChoice(SupportedLanguage item, ConsoleRenderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(options);
+        return $"{Markup.Escape(TerminalTheme.IconPrefix(options, item.Flag, "@"))}" +
+            $"{Markup.Escape(item.NativeName)}  [{TerminalTheme.Muted}]({Markup.Escape(item.Code)})[/]";
+    }
 
     /// <summary>Collects one integer setting while showing its accepted inclusive range.</summary>
     private int PromptForBoundedInteger(string key, int current, int minimum, int maximum) =>
@@ -325,9 +391,8 @@ public sealed class SetupView : ISetupView
     /// <summary>Renders the setup choices as a compact borderless summary before saving.</summary>
     private void RenderSummary(AppSettings settings, bool hasApiKey, bool hasAdminKey)
     {
-        var grid = new Grid();
-        grid.AddColumn(new GridColumn().RightAligned().NoWrap());
-        grid.AddColumn(new GridColumn().LeftAligned());
+        var grid = CreateSummaryGrid();
+        var aiValues = CreateAiSummaryValues(settings);
         var yes = _text.Text("Common.Yes");
         var no = _text.Text("Common.No");
         var ready = _text.Text("Status.Ready");
@@ -336,28 +401,74 @@ public sealed class SetupView : ISetupView
             grid,
             _text.Text("Setup.Language"),
             SupportedLanguages.All.First(item => item.Code == settings.Language).NativeName);
-        AddSummaryRow(grid, _text.Text("Setup.AiEnabled"), settings.AiEnabled ? yes : no);
+        AddAiSummaryRows(grid, aiValues, "Setup.AiEnabled");
         AddSummaryRow(grid, _text.Text("Status.ApiKey"), hasApiKey ? ready : missing);
         AddSummaryRow(grid, _text.Text("Status.AdminKey"), hasAdminKey ? ready : missing);
-        AddSummaryRow(grid, _text.Text("Setup.Model"), settings.Model);
-        AddSummaryRow(grid, _text.Text("Setup.Reasoning"), _text.Text($"Reasoning.{settings.ReasoningEffort}"));
-        AddSummaryRow(grid, _text.Text("Setup.Detail"), _text.Text(settings.OutputDetail switch
-        {
-            "compact" => "Setup.Compact",
-            "detailed" => "Setup.Detailed",
-            _ => "Setup.Balanced"
-        }));
+        AddAiSummaryRows(grid, aiValues, "Setup.Model", "Setup.Reasoning", "Setup.Detail");
         AddSummaryRow(grid, _text.Text("Setup.Custom"), string.IsNullOrWhiteSpace(settings.CustomInstruction) ? no : yes);
         AddSummaryRow(grid, _text.Text("Setup.Location"), settings.IncludeWindowsLocation ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.CommandReview"), settings.ReviewCommandsWithAi ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.PromptCaching"), settings.PromptCachingEnabled ? yes : no);
-        AddSummaryRow(grid, _text.Text("Setup.MaxTurns"), settings.MaxConversationTurns.ToString("N0", _text.Culture));
-        AddSummaryRow(grid, _text.Text("Setup.MaxContext"), $"{settings.MaxContextPercent}%");
-        AddSummaryRow(grid, _text.Text("Setup.MaxMessage"), settings.MaxMessageCharacters.ToString("N0", _text.Culture));
+        AddAiSummaryRows(grid, aiValues,
+            "Setup.CommandReview", "Setup.PromptCaching", "Setup.MaxTurns", "Setup.MaxContext",
+            "AiSettings.ContextBudget", "Setup.MaxMessage");
         AddSummaryRow(grid, _text.Text("Setup.MaxCommandOutput"), settings.MaxCommandOutputCharacters.ToString("N0", _text.Culture));
         AddSummaryRow(grid, _text.Text("Setup.CommandTimeout"), settings.CommandTimeoutSeconds.ToString("N0", _text.Culture));
         _console.Write(grid);
         _console.WriteLine();
+    }
+
+    /// <summary>Previews only the AI preferences that the focused settings command will save.</summary>
+    private void RenderAiSummary(AppSettings settings)
+    {
+        var grid = CreateSummaryGrid();
+        AddAiSummaryRows(grid, CreateAiSummaryValues(settings),
+            "Setup.AiEnabled", "Setup.Model", "Setup.Reasoning", "Setup.Detail",
+            "Setup.CommandReview", "Setup.PromptCaching", "AiSettings.ContextBudget",
+            "Setup.MaxTurns", "Setup.MaxMessage", "Setup.MaxContext");
+        _console.Write(grid);
+        _console.WriteLine();
+    }
+
+    /// <summary>Creates the shared borderless label/value layout for both settings summaries.</summary>
+    private static Grid CreateSummaryGrid()
+    {
+        var grid = new Grid();
+        grid.AddColumn(new GridColumn().RightAligned().NoWrap());
+        grid.AddColumn(new GridColumn().LeftAligned());
+        return grid;
+    }
+
+    /// <summary>Formats each shared AI preference once while leaving row order to its summary surface.</summary>
+    private IReadOnlyDictionary<string, string> CreateAiSummaryValues(AppSettings settings)
+    {
+        var yes = _text.Text("Common.Yes");
+        var no = _text.Text("Common.No");
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Setup.AiEnabled"] = settings.AiEnabled ? yes : no,
+            ["Setup.Model"] = settings.Model,
+            ["Setup.Reasoning"] = _text.Text($"Reasoning.{settings.ReasoningEffort}"),
+            ["Setup.Detail"] = _text.Text(settings.OutputDetail switch
+            {
+                "compact" => "Setup.Compact",
+                "detailed" => "Setup.Detailed",
+                _ => "Setup.Balanced"
+            }),
+            ["Setup.CommandReview"] = settings.ReviewCommandsWithAi ? yes : no,
+            ["Setup.PromptCaching"] = settings.PromptCachingEnabled ? yes : no,
+            ["AiSettings.ContextBudget"] = settings.ContextTokenBudget.ToString("N0", _text.Culture),
+            ["Setup.MaxTurns"] = settings.MaxConversationTurns.ToString("N0", _text.Culture),
+            ["Setup.MaxMessage"] = settings.MaxMessageCharacters.ToString("N0", _text.Culture),
+            ["Setup.MaxContext"] = $"{settings.MaxContextPercent}%"
+        };
+    }
+
+    /// <summary>Adds shared AI preferences in the exact order selected by the calling summary.</summary>
+    private void AddAiSummaryRows(Grid grid, IReadOnlyDictionary<string, string> values, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            AddSummaryRow(grid, _text.Text(key), values[key]);
+        }
     }
 
     /// <summary>Adds one escaped label/value pair to the setup summary grid.</summary>

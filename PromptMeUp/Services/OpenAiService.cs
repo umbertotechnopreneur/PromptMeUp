@@ -43,6 +43,7 @@ public sealed class OpenAiService : IOpenAiService
 {
     private const string Provider = "openai";
     private readonly ArtifactLimits _limits;
+    private readonly ConversationContextLimits _contextLimits;
     private readonly HttpClient _http;
     private readonly IEnvironmentSecretService _secrets;
     private readonly IPromptCatalogService _prompts;
@@ -66,7 +67,8 @@ public sealed class OpenAiService : IOpenAiService
         ISensitiveDataRedactor redactor,
         IPromptInjectionProtectionService promptProtection,
         ILogger<OpenAiService> logger,
-        ArtifactLimits? limits = null)
+        ArtifactLimits? limits = null,
+        ConversationContextLimits? contextLimits = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
@@ -79,6 +81,7 @@ public sealed class OpenAiService : IOpenAiService
         _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _limits = limits ?? ArtifactLimits.Default;
+        _contextLimits = contextLimits ?? ConversationContextLimits.Default;
     }
 
     /// <summary>Sends one bounded multi-turn conversation through the configured OpenAI Responses endpoint.</summary>
@@ -169,6 +172,7 @@ public sealed class OpenAiService : IOpenAiService
         ArgumentNullException.ThrowIfNull(settings);
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
         settings = ProtectPreamble(settings);
+        var maxOutputTokens = OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail, _limits);
         return OpenAiRequestBuilder.EstimateContext(
             OpenAiRequestBuilder.BuildInstructions(
                 prompt,
@@ -176,7 +180,11 @@ public sealed class OpenAiService : IOpenAiService
                 language,
                 _runtimeContext.GetCurrent(), _limits),
             messages,
-            settings.Model);
+            settings.Model) with
+        {
+            InputBudgetTokens = OpenAiRequestBuilder.ResolveInputBudget(prompt, settings, maxOutputTokens, _contextLimits),
+            ReservedOutputTokens = maxOutputTokens
+        };
     }
 
     /// <summary>Requests an advisory AI risk review for a command; final authorization remains local and manual.</summary>
@@ -236,11 +244,10 @@ public sealed class OpenAiService : IOpenAiService
         var endpoint = new Uri(settings.Endpoint, UriKind.Absolute);
         var latestUserText = messages.Last(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)).Content;
         var estimatedContext = OpenAiRequestBuilder.EstimateContext(instructions, messages, settings.Model);
-        var configuredContextLimit = checked(estimatedContext.ContextWindowTokens * settings.MaxContextPercent / 100);
-        var inputLimit = Math.Min(configuredContextLimit, estimatedContext.ContextWindowTokens - maxOutputTokens);
+        var inputLimit = OpenAiRequestBuilder.ResolveInputBudget(prompt, settings, maxOutputTokens, _contextLimits);
         if (estimatedContext.InputTokens > inputLimit)
         {
-            if (!FeatureText.TryGet("Input.ContextBudget", settings.Language, out var template))
+            if (!UiTextCatalog.TryGet("Input.ContextBudget", settings.Language, out var template))
             {
                 throw new InvalidOperationException("Missing context-budget translation.");
             }

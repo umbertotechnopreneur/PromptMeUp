@@ -131,7 +131,7 @@ internal static class OpenAiRequestBuilder
         string model)
     {
         var instructionTokens = EstimateTokens(instructions);
-        var conversationTokens = messages.Sum(message => EstimateTokens(message.Content) + 4L);
+        var conversationTokens = ContextTokenEstimator.Messages(messages);
         var latestPromptTokens = messages.LastOrDefault(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)) is { } latest
             ? EstimateTokens(latest.Content)
             : 0;
@@ -143,6 +143,20 @@ internal static class OpenAiRequestBuilder
             latestPromptTokens,
             AiModelCatalog.Resolve(model).ContextWindowTokens,
             true);
+    }
+
+    /// <summary>Shares the complete input ceiling between pre-send pruning, display, and the final provider guard.</summary>
+    internal static long ResolveInputBudget(
+        PromptDefinition prompt,
+        AppSettings settings,
+        int maxOutputTokens,
+        ConversationContextLimits limits)
+    {
+        var window = AiModelCatalog.Resolve(settings.Model).ContextWindowTokens;
+        var budget = Math.Min(checked(window * settings.MaxContextPercent / 100), window - maxOutputTokens);
+        return prompt.Id is "chat-system" or "query-system"
+            ? Math.Min(budget, limits.MaxInputTokens ?? settings.ContextTokenBudget)
+            : budget;
     }
 
     /// <summary>Chooses a bounded response budget and honors a smaller YAML diagnostic limit.</summary>
@@ -240,9 +254,7 @@ internal static class OpenAiRequestBuilder
     };
 
     /// <summary>Approximates text tokens from UTF-8 payload size until provider usage supplies the exact count.</summary>
-    private static long EstimateTokens(string text) => string.IsNullOrEmpty(text)
-        ? 0
-        : Math.Max(1, (long)Math.Ceiling(Encoding.UTF8.GetByteCount(text) / 4d));
+    private static long EstimateTokens(string text) => ContextTokenEstimator.Text(text);
 
     /// <summary>Maps output-detail preference to the Responses API verbosity vocabulary.</summary>
     private static string ResolveVerbosity(string detail) => detail switch

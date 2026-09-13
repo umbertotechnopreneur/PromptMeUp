@@ -28,6 +28,7 @@ These instructions apply to every change in this repository.
 - Keep flexible audit/session data valid JSON and normalized usage/cost data in typed columns.
 - Preserve terminal scrollback in every application flow: never call a terminal clear operation. Mark new flows with intentional whitespace and accessible separators instead.
 - Treat contrast as a product requirement: do not render user-facing information in dark grey. Use the shared terminal palette, with bright primary text and only high-contrast muted nuances for secondary metadata.
+- Render every user-facing emoji with one visible space before and after it; keep emoji spacing in shared view helpers so icons never touch adjacent text.
 - Use Spectre.Console layout primitives purposefully (for example panels, grids, rules, and selection prompts) to convey hierarchy; do not reduce command, help, or status surfaces to undifferentiated text walls.
 - Keep `AGENTS.md` and `.github/copilot-instructions.md` aligned when repository-wide rules change.
 - Do not commit credentials, `.env` files, local databases, logs, build output, private absolute paths, or generated artifacts.
@@ -40,10 +41,13 @@ These instructions apply to every change in this repository.
 - Use PowerShell 7 as `pwsh -NoProfile` for Windows automation.
 - Use `apply_patch` for deliberate tracked-file edits and avoid broad formatting churn.
 - Fail fast on invalid input and unsupported state; do not conceal failures with silent fallbacks.
-- After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; keep the full validation gate before committing.
+- Run automated tests and CLI smoke tests only when the user explicitly requests them. Implementation, review, commit, and push requests do not authorize test execution.
+- After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; complete the non-test validation gate before committing.
 - Record active work in `.github/tasks/todo.md` and move completed work to `.github/tasks/archive.md`.
 
 ## Required validation
+
+Run the following non-test checks by default:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
@@ -51,7 +55,6 @@ dotnet restore .\PromptMeUp.slnx
 dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
-dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-Run proportionate CLI smoke tests with a disposable `PROMPTMEUP_DATA_DIR`. Do not use real secrets or mutate PATH/fonts during routine validation.
+Only when explicitly requested by the user, run the appropriate automated tests, such as `dotnet test .\PromptMeUp.slnx --configuration Release --no-build`, or proportionate CLI smoke tests with a disposable `PROMPTMEUP_DATA_DIR`. Do not use real secrets or mutate PATH/fonts during validation.

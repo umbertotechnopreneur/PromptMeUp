@@ -8,6 +8,7 @@ public enum AppCommand
     Help,
     Version,
     Setup,
+    AiSettings,
     Status,
     Query,
     Diagnose,
