@@ -145,7 +145,7 @@ public sealed class ActivityAuditService : IActivityAuditService
         {
             foreach (var property in jsonObject.ToArray())
             {
-                if (IsSecretProperty(property.Key))
+                if (CredentialFieldPolicy.IsSecret(property.Key))
                 {
                     jsonObject[property.Key] = "[redacted]";
                 }
@@ -174,16 +174,5 @@ public sealed class ActivityAuditService : IActivityAuditService
                 }
             }
         }
-    }
-
-    /// <summary>Identifies credential fields while allowing usage properties such as token counts.</summary>
-    private static bool IsSecretProperty(string name)
-    {
-        var normalized = name.Replace("_", string.Empty, StringComparison.Ordinal).ToLowerInvariant();
-        return normalized.Contains("apikey", StringComparison.Ordinal)
-               || normalized.Contains("adminkey", StringComparison.Ordinal)
-               || normalized.Contains("password", StringComparison.Ordinal)
-               || normalized.Contains("authorization", StringComparison.Ordinal)
-               || normalized.EndsWith("secret", StringComparison.Ordinal);
     }
 }

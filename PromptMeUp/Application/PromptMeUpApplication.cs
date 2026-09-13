@@ -400,7 +400,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             _logger.LogWarning("Daily pricing refresh failed; cached data remains available. ErrorType={ErrorType}", exception.GetType().Name);
             if (force)
             {
-                _shell.RenderWarning(exception.Message);
+                _shell.RenderWarning(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
             }
         }
     }

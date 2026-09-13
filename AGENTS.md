@@ -41,10 +41,13 @@ These instructions apply to every change in this repository.
 - Use PowerShell 7 as `pwsh -NoProfile` for Windows automation.
 - Use `apply_patch` for deliberate tracked-file edits and avoid broad formatting churn.
 - Fail fast on invalid input and unsupported state; do not conceal failures with silent fallbacks.
-- After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; keep the full validation gate before committing.
+- Run automated tests and CLI smoke tests only when the user explicitly requests them. Implementation, review, commit, and push requests do not authorize test execution.
+- After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; complete the non-test validation gate before committing.
 - Record active work in `.github/tasks/todo.md` and move completed work to `.github/tasks/archive.md`.
 
 ## Required validation
+
+Run the following non-test checks by default:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
@@ -52,7 +55,6 @@ dotnet restore .\PromptMeUp.slnx
 dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
-dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-Run proportionate CLI smoke tests with a disposable `PROMPTMEUP_DATA_DIR`. Do not use real secrets or mutate PATH/fonts during routine validation.
+Only when explicitly requested by the user, run the appropriate automated tests, such as `dotnet test .\PromptMeUp.slnx --configuration Release --no-build`, or proportionate CLI smoke tests with a disposable `PROMPTMEUP_DATA_DIR`. Do not use real secrets or mutate PATH/fonts during validation.

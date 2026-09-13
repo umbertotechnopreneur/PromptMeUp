@@ -267,12 +267,12 @@ internal static partial class UiTextCatalog
             Spanish: "Clave API de OpenAI",
             Vietnamese: "Khóa API OpenAI"));
         entries.Add("Setup.KeyRestartRequired", new(
-            English: "Restart the terminal prompt or open a new session before running hm again so the updated key takes effect.",
-            Italian: "Riavvia il prompt del terminale o apri una nuova sessione prima di eseguire di nuovo hm, affinché la chiave aggiornata diventi effettiva.",
-            French: "Redémarrez l’invite du terminal ou ouvrez une nouvelle session avant de relancer hm afin que la clé mise à jour soit prise en compte.",
-            German: "Starten Sie die Terminal-Eingabeaufforderung neu oder öffnen Sie eine neue Sitzung, bevor Sie hm erneut ausführen, damit der aktualisierte Schlüssel wirksam wird.",
-            Spanish: "Reinicia el terminal o abre una sesión nueva antes de volver a ejecutar hm para que la clave actualizada surta efecto.",
-            Vietnamese: "Khởi động lại dấu nhắc terminal hoặc mở phiên mới trước khi chạy lại hm để khóa đã cập nhật có hiệu lực."));
+            English: "The updated key is already available in this hm process. Before the next launch of hm, fully close and reopen the terminal application (including the IDE for an integrated terminal).",
+            Italian: "La chiave aggiornata è già disponibile nel processo hm in esecuzione. Prima del prossimo avvio di hm, chiudi completamente e riapri l'applicazione del terminale (anche l'IDE se usi un terminale integrato).",
+            French: "La clé mise à jour est déjà disponible dans ce processus hm. Avant le prochain lancement de hm, fermez complètement puis rouvrez l’application du terminal (y compris l’IDE pour un terminal intégré).",
+            German: "Der aktualisierte Schlüssel ist in diesem hm-Prozess bereits verfügbar. Schließen Sie vor dem nächsten Start von hm die Terminalanwendung vollständig und öffnen Sie sie erneut (bei einem integrierten Terminal auch die IDE).",
+            Spanish: "La clave actualizada ya está disponible en este proceso de hm. Antes del próximo inicio de hm, cierra por completo y vuelve a abrir la aplicación del terminal (también el IDE si usas un terminal integrado).",
+            Vietnamese: "Khóa đã cập nhật có sẵn ngay trong tiến trình hm này. Trước lần khởi chạy hm tiếp theo, hãy đóng hoàn toàn rồi mở lại ứng dụng terminal (bao gồm cả IDE nếu dùng terminal tích hợp)."));
         entries.Add("Setup.KeyStatus", new(
             English: "OPENAI_API_KEY status",
             Italian: "Stato OPENAI_API_KEY",

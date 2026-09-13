@@ -104,7 +104,7 @@ dotnet run --project PromptMeUp/PromptMeUp.csproj -- --setup
 dotnet run --project PromptMeUp/PromptMeUp.csproj -- "How do I list the largest files here?"
 ```
 
-Setup guides you through language, model, answer style, and command review. Enter credentials through setup or your preferred secret manager; never put a key in a command argument. On Windows, setup can save the key to your current user's environment. On Linux and macOS, an entered key lasts for that process; configure your shell or secret manager for future launches.
+Setup guides you through language, model, answer style, and command review. Enter credentials through setup or your preferred secret manager; never put a key in a command argument. On Windows, setup can save the key to your current user's environment. The new key works immediately in the current `hm` process; before the next launch, fully close and reopen the terminal application, including the IDE if it hosts the terminal. On Linux and macOS, an entered key lasts for that process; configure your shell or secret manager for future launches.
 
 After publishing or installing a portable build, the command is `hm`. The [CLI reference](docs/CLI_REFERENCE.md) explains setup, publishing, and the optional user-PATH helpers.
 

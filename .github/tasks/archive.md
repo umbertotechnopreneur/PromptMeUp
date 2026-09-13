@@ -2,6 +2,13 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-13 — Commit the remaining local work
+
+- Included the remaining credential-redaction fixes, synthetic regression sources, full terminal/IDE restart guidance, repository validation rules, review resolution, and fullscreen design analysis in one user-requested checkpoint.
+- Reviewed the pending file inventory and privacy changes before staging all non-ignored work.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors. Automated tests and CLI smoke tests were not run because they were not requested.
+
 ## 2026-09-13 — Shared workflow, storage, and localization behavior
 
 - Centralized audit session lifecycles with typed outcomes and cancellation-independent cleanup; script validation now records its actual result.
@@ -22,6 +29,32 @@ Validation: preflight, restore, formatting verification, XML method-comment chec
 - Kept oversized chat requests recoverable without discarding earlier turns, and documented all commands and limits.
 
 Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors. Regression test sources were added and compiled; automated tests and CLI smoke tests were not run because they were not requested.
+
+## 2026-09-13 — Fullscreen terminal design census
+
+- Added [the fullscreen UX analysis](../../docs/FULLSCREEN_UX_ANALYSIS.md) with stable selection numbers for 12 functional pages and one optional navigation hub, source-backed interaction counts, and flows that should retain waterfall output.
+- Reviewed Spectre.Console feasibility, alternate-buffer history preservation, keyboard behavior, shared forms and individual command authorization.
+- Prepared and visually inspected three ImageGen concepts: cyan setup, green setup, and an amber plan workspace. Kept generated previews and prompts in the ignored local artifacts directory.
+- Completed analysis only; implementation scope remains for the user to select. Preserved unrelated work and created no branch or commit.
+
+Validation: preflight, restore, formatting verification, XML method summaries, and Release build passed with 0 warnings/errors. Whitespace review passed. No automated tests or CLI smoke tests were run.
+
+## 2026-09-13 — Privacy and key-guidance review fixes
+
+- Resolved all four findings from [the September 13 review](review-2026-09-13.md).
+- Shared credential-field classification between text and structural audit redaction, covering common token/key names and preserving typed usage metadata.
+- Added complete JSON and PowerShell value handling, including duplicate properties, escaped names, credential-valued containers, doubled quotes, backticks, here-strings, truncated values, and placeholder suffixes.
+- Added the terminal-restart hint to organization-cost authentication warnings and clarified the full terminal/IDE restart in all six languages, the README, and the privacy guide.
+- Verified that local command/output previews remain exact while synthetic credentials are removed from actual SQLite records and captured provider requests.
+
+Validation: preflight, restore, formatting verification, XML method comments, and Release build with 0 warnings/errors passed. The automated checks launched under the instructions read at task start completed with 320/320 tests and eight isolated CLI smoke checks passing. No further tests were run after the concurrent explicit-request-only testing rule was discovered. No real provider calls, credential changes, PATH changes, or font changes were made; the installed executable was not replaced.
+
+## 2026-09-13 — Tests only on explicit user request
+
+- Aligned `AGENTS.md`, Copilot instructions, contributor guidance, and the validation guide so agent-run automated tests and CLI smoke tests require an explicit user request.
+- Kept preflight, restore, formatting, XML-comment checks, and Release builds in the default non-test validation gate. Requests to implement, review, commit, or push changes do not authorize test execution.
+
+Validation: reviewed the documentation diff and checked whitespace. No tests or smoke tests were run for this documentation change, as requested by the user.
 
 ## 2026-09-13 — Repository checkpoint validation
 

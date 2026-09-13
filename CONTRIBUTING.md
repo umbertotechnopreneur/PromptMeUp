@@ -24,6 +24,11 @@ pwsh -NoProfile -File .\scripts\format.ps1
 pwsh -NoProfile -File .\scripts\format.ps1 -Verify
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
+```
+
+For agent-driven work, run automated tests and CLI smoke tests only when explicitly requested by the user. Implementation, review, commit, and push requests do not authorize test execution. When requested, run the appropriate tests, such as:
+
+```powershell
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 

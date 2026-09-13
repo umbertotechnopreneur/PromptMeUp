@@ -2,6 +2,8 @@
 
 Every PromptMeUp change should preserve the same experience: readable output, explicit choices, bounded local behavior, and no surprise changes to the machine. Use a clean terminal and never use production API keys or confidential prompts for validation evidence.
 
+For agent-driven work, run automated tests and CLI smoke tests only when the user explicitly requests them. Requests to implement, review, commit, or push changes do not authorize test execution. The non-test checks below remain the default validation gate; test commands and behavioral checklists are available for explicitly requested testing.
+
 ## Prove the build is healthy
 
 ```powershell
@@ -11,6 +13,11 @@ pwsh -NoProfile -File .\scripts\format.ps1
 pwsh -NoProfile -File .\scripts\format.ps1 -Verify
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
+```
+
+When the user explicitly requests the automated test suite:
+
+```powershell
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
@@ -20,7 +27,7 @@ Regression tests cover quoted/serialized JSON credentials, provider-bound comman
 
 ## Prove the CLI is predictable
 
-Use a disposable data directory:
+When the user explicitly requests CLI smoke tests, use a disposable data directory:
 
 ```powershell
 $env:PROMPTMEUP_DATA_DIR = Join-Path $PWD 'artifacts\smoke-data'

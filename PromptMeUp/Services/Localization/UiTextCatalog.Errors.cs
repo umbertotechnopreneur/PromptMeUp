@@ -22,12 +22,12 @@ internal static partial class UiTextCatalog
             Spanish: "Este comando requiere un terminal interactivo.",
             Vietnamese: "Lệnh này cần terminal tương tác."));
         entries.Add("Error.KeyRestartRequired", new(
-            English: "If you recently changed the key, restart the terminal prompt or open a new session before trying again.",
-            Italian: "Se hai modificato recentemente la chiave, riavvia il prompt del terminale o apri una nuova sessione prima di riprovare.",
-            French: "Si vous avez récemment modifié la clé, redémarrez l’invite du terminal ou ouvrez une nouvelle session avant de réessayer.",
-            German: "Wenn Sie den Schlüssel kürzlich geändert haben, starten Sie die Terminal-Eingabeaufforderung neu oder öffnen Sie eine neue Sitzung, bevor Sie es erneut versuchen.",
-            Spanish: "Si has cambiado la clave recientemente, reinicia el terminal o abre una sesión nueva antes de volver a intentarlo.",
-            Vietnamese: "Nếu bạn vừa thay đổi khóa, hãy khởi động lại dấu nhắc terminal hoặc mở phiên mới trước khi thử lại."));
+            English: "If you recently changed the key, fully close and reopen the terminal application before trying again (including the IDE for an integrated terminal).",
+            Italian: "Se hai modificato recentemente la chiave, chiudi completamente e riapri l'applicazione del terminale prima di riprovare (anche l'IDE se usi un terminale integrato).",
+            French: "Si vous avez récemment modifié la clé, fermez complètement puis rouvrez l’application du terminal avant de réessayer (y compris l’IDE pour un terminal intégré).",
+            German: "Wenn Sie den Schlüssel kürzlich geändert haben, schließen Sie die Terminalanwendung vollständig und öffnen Sie sie erneut, bevor Sie es noch einmal versuchen (bei einem integrierten Terminal auch die IDE).",
+            Spanish: "Si has cambiado la clave recientemente, cierra por completo y vuelve a abrir la aplicación del terminal antes de volver a intentarlo (también el IDE si usas un terminal integrado).",
+            Vietnamese: "Nếu bạn vừa thay đổi khóa, hãy đóng hoàn toàn rồi mở lại ứng dụng terminal trước khi thử lại (bao gồm cả IDE nếu dùng terminal tích hợp)."));
         entries.Add("Error.PromptMissing", new(
             English: "Prompt resource '{0}' was not found.",
             Italian: "Risorsa prompt '{0}' non trovata.",

@@ -20,12 +20,14 @@ Prompt and audit history remains until the user removes the PromptMeUp database 
 
 - PromptMeUp recognizes only `OPENAI_API_KEY` and `OPENAI_ADMIN_KEY`.
 - Keys are never accepted as CLI values, written to settings, placed in SQLite, or logged.
-- On Windows, setup writes an entered key to current-user and current-process environment scope.
+- On Windows, setup writes an entered key to current-user and current-process environment scope. Before launching `hm` again, fully close and reopen the terminal application, including its IDE host when applicable, so it stops inheriting an older key.
 - On Linux and macOS, setup keeps the entered key only for the current process and provides shell/secret-manager guidance for future sessions.
 - Request authorization headers are built outside the serialized provider payload.
 - Credential-shaped properties, OpenAI key prefixes, bearer tokens, and common credential assignments are redacted from audit strings and normalized request history.
 
-Quoted JSON credentials and serialized JSON strings are inspected before command output or history is persisted or used for an AI follow-up. New preambles containing recognizable credentials are rejected with a localized message. Legacy preambles are scrubbed in the current settings row before use; this does not erase older backups or previously stored history.
+Quoted JSON credentials and serialized JSON strings are inspected before command output or history is persisted or used for an AI follow-up. Credential field recognition covers common names such as `accessToken`, `SecretAccessKey`, and `SessionToken`, including alternate casing and separators, while retaining ordinary token counters and types. JSON credential objects and arrays are redacted as complete values. PowerShell quoted assignments and here-strings are scanned through their closing delimiter; if capture ends inside the value, its remaining text is redacted. Local command and output previews remain complete.
+
+New preambles containing recognizable credentials are rejected with a localized message. Legacy preambles are scrubbed in the current settings row before use; this does not erase older backups or previously stored history.
 
 Persistent diagnostics retain error types, stable failure codes, status codes, and request identifiers rather than raw exception messages or nested exceptions. The local error surface can still show the provider's explanation.
 
