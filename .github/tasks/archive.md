@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-13 — Product documentation refresh
+
+- Reworked the README around everyday terminal tasks, with direct examples for saved notes, context counters, and the shorter AI settings flow.
+- Updated the CLI, memory/cost, privacy, architecture, validation, and prompt guides to match the implemented behavior and limits.
+- Simplified the documentation index and support copy; identified the printable manual as an earlier edition and directed readers to the current web guides.
+- Checked 51 local links and heading targets and reviewed the guides against the implementation.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, and Release build passed with zero warnings or errors on a temporary source snapshot of `a9f0532` plus this documentation update. The shared workspace's formatting and build checks encountered concurrent, unfinished fullscreen/theme edits, which were preserved outside this change. Automated tests and CLI smoke tests were not run because they were not requested.
+
 ## 2026-09-13 — Commit the remaining local work
 
 - Included the remaining credential-redaction fixes, synthetic regression sources, full terminal/IDE restart guidance, repository validation rules, review resolution, and fullscreen design analysis in one user-requested checkpoint.

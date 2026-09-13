@@ -1,6 +1,8 @@
 # PromptMeUp privacy and data flow
 
-PromptMeUp keeps its working history on your machine and sends only the bounded context needed for the AI features you choose to use. This guide makes that boundary inspectable: what stays local, what can reach OpenAI, and where your approval is required. Read it before using confidential prompts or command output.
+Your settings, saved notes, and conversation history live on your machine. When you ask a question, PromptMeUp sends OpenAI the instructions, selected notes, and recent messages that fit the request budget. When you approve a command, its output can also become part of the next question.
+
+This page explains what is stored, what is sent, and what clearing a conversation actually removes.
 
 ## Local by default
 
@@ -10,11 +12,22 @@ Local data includes:
 
 - non-secret settings;
 - the SQLite prompt, response, usage, session, command, and activity ledger;
+- notes you explicitly save with `/remember`, in that same SQLite database;
 - cached OpenAI pricing and optional organization cost buckets;
 - Serilog diagnostic files, rolled daily and retained for up to 14 files;
 - packaged YAML prompt resources beside the executable.
 
-Prompt and audit history remains until the user removes the PromptMeUp database or data directory. Active in-memory chat context ends with the process or `/clear`, but those actions do not delete the persistent ledger.
+Prompt and audit history stays until you remove the PromptMeUp database or data directory. Closing `hm` or using `/clear` removes the recent messages from active chat context. It does not delete saved notes or local history.
+
+## Saved notes
+
+Use `/remember` in chat to save a note for the current project, or `/remember global` to save a preference for use across projects. `/memories` lists the current project's notes and global notes; `/forget <id>` deletes a note from that list. PromptMeUp does not automatically turn conversation history into saved notes.
+
+Project notes belong to the nearest Git root, or the current directory when there is no Git root. The database stores a hash of that location as the project identifier. Note text is stored as text, so a path or other private detail you put in a note remains part of its content.
+
+Saving, listing, deleting, and selecting notes happen locally, without an AI call. For a question, PromptMeUp selects up to five notes: global preferences are eligible across projects, and project notes need matching words in the question. The notes and their surrounding instructions together stay within 800 estimated tokens. Selected notes are sent to OpenAI with the request and may appear in its local audit history.
+
+Notes containing recognizable credentials are rejected. Existing notes are checked again when read, and recognized credentials are scrubbed from their stored text. `/forget` prevents a note from being selected again; it does not erase copies already present in an active conversation, older request history, backups, or provider records.
 
 ## Secrets
 
@@ -45,10 +58,15 @@ An ordinary AI request can contain:
 - for chat and one-off queries, a privacy-filtered runtime snapshot: the current working directory (with a recognized home directory rendered as `~`), operating-system and shell family, CPU summary, physical-memory summary, and GPU label when the portable runtime can expose one;
 - coarse culture and time-zone context only when the location option is enabled;
 - the bounded active user/assistant conversation;
+- selected saved notes, labeled as untrusted context that cannot override the current request or authorize commands;
 - an explicitly authorized command's redacted, bounded stdout/stderr when used for the next turn;
 - model, reasoning, output-detail, cache-routing, and output-budget settings.
 
-The runtime snapshot deliberately excludes user name, host name, network identity, device serial numbers, and secrets. It is used only to make platform-specific console guidance accurate; PromptMeUp does not use the model for image generation or general-purpose prose editing.
+The runtime snapshot excludes user name, host name, network identity, device serial numbers, and secrets. It helps the answer match your terminal and operating system. PromptMeUp uses the model for console help, including diagnosis, plans, and scripts.
+
+The ordinary question and chat budget defaults to 16,000 estimated input tokens, including instructions, runtime details, selected notes, and recent messages. Older turns are removed as needed to fit. `/context` and `/status` show the retained context estimate separately from the last response's token counts and the session's cumulative usage. A smaller active context does not undo requests already sent or charges already incurred.
+
+After initial setup, `hm --ai-settings` changes the model, response preferences, and context limits locally. It does not send a test request or refresh pricing. See the [CLI reference](CLI_REFERENCE.md) for the settings and limits.
 
 Prompt-injection screening is deterministic defense in depth, not a proof that arbitrary text is safe. The preamble is limited to 500 words, cannot contain the provider-facing delimiter, and is rejected when local rules recognize instruction overrides or role forgery in any supported language. The YAML system prompt independently tells the model to treat the delimited preamble only as untrusted style or format preferences.
 

@@ -1,6 +1,6 @@
 # PromptMeUp CLI reference
 
-`hm`, short for **help me**, turns a terminal question into a clear answer and an optional, explicitly approved next step. The same two-letter public command is used on Windows, Linux, and macOS.
+Ask `hm` a terminal question, check its answer, and choose whether to run a suggested command. `hm` means **help me** and works on Windows, Linux, and macOS.
 
 ## Ask or choose a command
 
@@ -12,7 +12,7 @@ hm [command] [options]
 A positional phrase is treated as one question:
 
 ```powershell
-hm "come vedo quali file sono cambiati in git?"
+hm "Which files have changed in Git?"
 hm how do I list running dotnet processes?
 ```
 
@@ -22,17 +22,17 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 
 | Command | Aliases | Behavior |
 | --- | --- | --- |
-| `--query <text>` | `-q` or positional text | Starts one AI session, renders one answer, then offers a safe choice to start chat or inspect a cited command. |
-| `--chat` | — | Opens a bounded interactive conversation for Windows, macOS, or Linux console work. |
-| `--diagnose [text]` | `--file <log>` or stdin | Diagnoses bounded evidence and offers focused checks. |
-| `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a reviewable PowerShell artifact. |
-| `--plan <goal>` | `--plan --resume <id>` | Guides and resumes explicitly approved steps with verified progress. |
-| `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Inspects concrete local file effects before individual command review. |
+| `--query <text>` | `-q` or positional text | Answers one question. In a live terminal, you can continue in chat or review a suggested command. |
+| `--chat` | — | Starts a conversation about terminal work. |
+| `--diagnose [text]` | `--file <log>` or stdin | Explains an error or log excerpt and suggests what to check next. |
+| `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a PowerShell script for you to review and save. |
+| `--plan <goal>` | `--plan --resume <id>` | Breaks a task into steps you can approve, check, and resume. |
+| `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Shows which files a rename, copy, move, or deletion would affect. |
 | `--recipes [action]` | — | Lists, saves, imports, exports, or reuses personal command recipes. |
-| `--setup` | — | Opens the full first-run and AI settings form. |
-| `--ai-settings` | — | Edits only AI parameters and the conversation input budget after initial setup. |
-| `--test-ai` | — | Runs the localized `connection-test.yaml` prompt and verifies the exact expected response. |
-| `--costs` | — | Forces a pricing refresh, optionally refreshes organization costs, and renders the cost dashboard. |
+| `--setup` | — | Opens the full setup form, including language, credentials, and AI settings. |
+| `--ai-settings` | — | Changes the model, response preferences, and conversation limits after initial setup. |
+| `--test-ai` | — | Checks that the configured model can answer a short request in your chosen language. |
+| `--costs` | — | Shows usage and cost estimates, refreshing public prices and any available organization costs. |
 | `--status` | — | Shows local configuration and storage readiness. |
 | `--third-party` | — | Shows direct runtime packages, versions, and licenses. |
 | `--where` | `-where` | Prints the exact running executable and directory, then offers the native file manager or a change-directory command. |
@@ -44,6 +44,45 @@ Quote a question when the current shell would otherwise interpret punctuation, v
 Only one top-level command can be selected per invocation.
 
 `hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
+
+## Change the model or conversation limits
+
+After your first setup, open the shorter settings form:
+
+```powershell
+hm --ai-settings
+```
+
+The form lets you change these ten settings, then review and confirm them before saving:
+
+| Setting | What it controls |
+| --- | --- |
+| AI enabled | Whether AI features are available. |
+| Model | The model used for requests. |
+| Reasoning effort | The model's reasoning setting. |
+| Output detail | Compact, balanced, or detailed responses. |
+| AI command review | Whether the model adds an advisory review to the local command checks. |
+| Prompt caching | Whether requests use supported provider caching. |
+| Conversation input budget | `4,000`–`200,000` estimated tokens; default `16,000`. |
+| Retained user turns | `2`–`50`; default `12`. |
+| Characters per user message | `500`–`100,000`; default `16,000`. |
+| Share of the model context window | `10`–`95%`; default `70%`. |
+
+This form requires completed setup and a live terminal. Use `hm --setup` for
+language, credentials, the optional instruction preamble, and command execution
+limits. Cancelling the final confirmation keeps your saved settings.
+
+To override the saved input budget, set `PROMPTMEUP_CONTEXT_TOKENS` before launch:
+
+```powershell
+$env:PROMPTMEUP_CONTEXT_TOKENS = '24000'
+hm --chat
+```
+
+The override accepts the same `4000`–`200000` range and applies while that
+environment variable is set. It does not change the saved value. The settings
+form shows a notice when an override is present. See
+[context and usage](#read-context-and-usage) for how the limits work together.
 
 ## Reuse personal recipes
 
@@ -205,69 +244,89 @@ PromptMeUp is scoped to terminal tasks. It does not generate images or rewrite, 
 | `/remember [global\|project] <text>` | Saves an explicit persistent note; the default scope is the current project. |
 | `/memories` | Lists saved global and current-project notes with their IDs. |
 | `/forget <id>` | Deletes a saved global or current-project note from future selection. |
-| `/clear` | Clears active conversation messages; persistent notes, session events, and usage counters remain intact. |
+| `/clear` | Starts with fresh conversation context. Saved notes, usage counters, and earlier audit records remain. |
 | `/costs` | Shows the cost dashboard without ending the chat. |
-| `/status` or `/context` | Refreshes the active-context estimate, operational budget, and selected-note count while preserving last-request and cumulative session usage. |
-| `/exit` | Closes the session and marks its ledger complete. |
+| `/status` or `/context` | Shows current context, the input budget, loaded notes, and token usage. |
+| `/exit` | Ends the conversation. |
 | `Esc` | Cancels the current interactive command; from the command center it exits the current flow. |
 | `Ctrl+C` | Cancels the whole application and returns exit code `130`. |
 
 There is no command that silently approves `/run`. The authorization prompt must be answered in a live terminal for every command.
 
-### Save small, explicit memories
+### Remember something for next time
+
+Save a preference or project fact in chat so you do not have to repeat it:
 
 ```text
-/remember Prefer PowerShell examples for this project.
+/remember project Build this project with dotnet build.
 /remember global Keep terminal explanations concise.
 /memories
 /forget <id>
 ```
 
-Each note accepts at most 1,000 characters, and each scope holds at most 100 notes.
-Project notes belong to the nearest ancestor with `.git`, or the current directory
-when no repository is found. Global notes apply across projects sharing the same
-local data directory. Notes are kept in the existing SQLite database with a hashed
-project identifier.
+Omit `project` to use the default project scope. Project notes belong to the
+nearest parent directory containing `.git`, including the current directory. If
+there is no Git repository, they belong to the current directory. Global notes
+are available across projects that use the same local data directory.
 
-Query and chat select at most five relevant notes, with a combined limit of 800
-estimated tokens including the localized wrapper and JSON data. Selection is
-local and makes no additional AI calls. The notes are shared with the provider
-when selected; they do not authorize commands or override the latest request.
-Recognizable credentials are rejected on save and loaded content is redacted
-before transmission.
+Only notes you explicitly save become memories. Each note can contain up to
+1,000 characters, with room for 100 global notes and 100 notes per project.
+`/memories` lists the notes available here; use an ID from that list with `/forget`.
 
-`/clear` keeps these saved notes. `/forget` removes a note from future selection,
-but does not erase earlier audited requests or usage records.
+For each query or chat request, PromptMeUp considers global notes and project
+notes that share words with the request. It loads at most five notes, within
+800 estimated tokens including their formatting. Selection happens locally,
+without an extra AI call. Saving more notes does not make every request larger.
+
+Selected notes are sent to the provider and can appear in the redacted request
+history. Notes cannot authorize a command or override your latest request.
+Recognizable credentials are rejected when saving and redacted again when notes
+are loaded. The notes live in the local SQLite database; project identifiers are
+stored as hashes of their directory paths.
+
+Use `/clear` to reset the conversation while keeping your notes. Use `/forget`
+to remove a saved note from future selection. Neither command erases earlier
+audit records or recorded usage, and `/forget` does not remove text already in
+the active conversation.
 
 ### Read context and usage
 
-`/status` and `/context` show estimated active input against the model window and
-the operational budget, plus the number and estimated size of selected notes.
-The estimate includes populated instructions, current runtime context, selected
-notes, and retained conversation messages. It is refreshed after pruning and
-cannot include a future question that has not been entered. A `~` marks local
-estimates.
+Use `/status` or `/context` during chat to see how much context is in use. The
+same information appears after a completed answer. `hm --status`, run from your
+shell, shows local configuration and storage readiness instead.
 
-The last assistant request's provider-reported input/output and cumulative
-input/output for the session are shown separately. Session totals cover the
-current conversation's locally recorded calls, including failed requests that
-report usage. AI command reviews have separate audit sessions and appear in
-overall `/costs` totals. Session totals count repeated input on every call and do
-not represent currently occupied context. Refreshing status or using `/clear`
-does not reset those counters.
+| Measure | How to read it |
+| --- | --- |
+| Active context | Estimated input currently retained, compared with the model's context window. |
+| Context budget | That same input compared with your configured input limit. |
+| Loaded memories | The number of selected notes and their share of the 800-token allowance. |
+| Last request | Input and output tokens reported by the provider for the last assistant call. |
+| Session usage | Input and output tokens accumulated across this conversation's recorded calls. |
 
-Ordinary query and chat use a default operational input budget of 16,000 estimated
-tokens. Change the saved budget with `hm --ai-settings`; accepted values range
-from `4000` to `200000`. Set `PROMPTMEUP_CONTEXT_TOKENS` before launch to override
-the saved budget for that invocation using the same range. The effective budget
-is the smallest of the saved or overridden value, the
-configured model-window percentage, and the model window minus reserved output
-tokens. Populated instructions, selected notes, and retained messages all count
-toward it. Older complete turns are removed to fit; an oversized new request is
-rejected visibly. This setting applies only to ordinary query and chat.
+A `~` marks an estimate. Active context includes instructions, machine and
+directory context, selected notes, and retained messages. It is recalculated
+after old turns are removed. Your next question is included only once you enter
+it, so the estimate can change before sending.
 
-See
-[memory, costs, and caching](OPENAI_COSTS_AND_CACHING.md) for the accounting details.
+Session usage keeps growing when the same history is sent again. It measures
+tokens used over time, not how much space the current conversation occupies.
+Refreshing status or using `/clear` keeps the last-request and session counters.
+Calls that fail but report usage count toward session totals. AI command reviews
+are recorded separately and appear in the overall `/costs` totals.
+
+Ordinary query and chat start with a 16,000-token input budget. The actual limit
+is the smallest of your saved or overridden budget, your chosen percentage of
+the model window, and the space left after reserving output tokens. Instructions
+and notes count toward that limit, along with the conversation.
+
+As the conversation grows, PromptMeUp removes the oldest complete turns to fit
+the budget and turn limit. If a new request cannot fit even without older turns,
+it shows an explanation and keeps chat open so you can shorten the request.
+Completed answers are shown in full even when they are too large to keep for
+the next turn. The saved or overridden input-token budget applies to ordinary
+query and chat; scripts, plans, and diagnostics have their own input budgets.
+
+See [memory, costs, and caching](OPENAI_COSTS_AND_CACHING.md) for more detail.
 
 When an AI answer cites command candidates, PromptMeUp presents a menu whose first and default item is **Do not execute commands**. Picking a candidate only opens the normal exact-preview and authorization flow; it never runs a command by itself.
 
@@ -275,12 +334,9 @@ When an AI answer cites command candidates, PromptMeUp presents a menu whose fir
 
 With no explicit command and no completed setup, `hm` opens setup. If input is redirected, PromptMeUp exits with an explanation instead of attempting an interactive form.
 
-After initial setup, use `hm --ai-settings` to change AI availability, model,
-reasoning effort, output detail, AI command review, prompt caching, and conversation
-limits. The command shows an AI-only summary for confirmation, then saves the
-settings. It requires a live terminal and completed setup; it does not open the
-full setup wizard when setup is missing. The conversation input budget is also
-available in the advanced section of full setup.
+After initial setup, use [`hm --ai-settings`](#change-the-model-or-conversation-limits)
+to change the model or conversation limits. The input budget is also available
+in the advanced section of full setup.
 
 Read-only commands such as `--help`, `--version`, `--status`, `--third-party`, and `--path=status` support redirected output. Mutating PATH and font operations require a live prompt or `--yes`; font dry-run is non-mutating and can run unattended.
 
