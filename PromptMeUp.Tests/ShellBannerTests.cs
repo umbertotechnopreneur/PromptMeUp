@@ -18,7 +18,7 @@ public sealed class ShellBannerTests
     {
         var (console, output, text, shell) = CreateConsole(width, noEmoji);
 
-        new HelpView(console, text, shell).Render();
+        new HelpView(console, text, shell, new AboutView(console, text, shell)).Render();
         var help = output.ToString();
         shell.RenderFooter();
 

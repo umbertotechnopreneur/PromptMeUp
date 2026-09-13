@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-14 — About navigation in Help and Settings
+
+- Added an About sidebar entry to Help and the settings workspace, opening the existing project information screen with Enter or Right. The compact settings menu opens the same screen and returns to the previous editable section; scrolling help retains the direct `hm about` command.
+- Preserved the settings draft, language and theme preview, and menu selection when returning from About. Each fullscreen view releases its alternate buffer before opening the next screen, preserving the main terminal and scrollback.
+- Added labels and focus-aware keyboard guidance in all six supported languages, kept help notices within narrow terminal widths, and updated the product guides and existing help-view construction.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered keyboard navigation, empty action pages, dependency injection, compact rendering, draft preservation, and alternate-buffer ownership. Automated tests and CLI smoke checks were not run.
+
 ## 2026-09-14 — Consistent help and settings workspaces
 
 - Unified help and settings through the same responsive workspace and action-button renderers. Help retains its sidebar at every supported width and matches settings navigation spacing, section emphasis, margins, and footer actions.

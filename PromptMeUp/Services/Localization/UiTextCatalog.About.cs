@@ -7,6 +7,48 @@ internal static partial class UiTextCatalog
     /// <summary>Adds the complete six-language project-information screen catalog.</summary>
     private static void AddAboutEntries(Dictionary<string, LocalizedText> entries)
     {
+        entries.Add("About.MenuLabel", new(
+            English: "About",
+            Italian: "About",
+            French: "À propos",
+            German: "Über",
+            Spanish: "Acerca de",
+            Vietnamese: "Giới thiệu"));
+        entries.Add("About.OpenHint", new(
+            English: "Enter: open About. Close it to return here.",
+            Italian: "Invio: apri About. Chiudilo per tornare qui.",
+            French: "Entrée : ouvrir À propos. Fermez pour revenir.",
+            German: "Enter: Infoseite öffnen. Schließen führt zurück.",
+            Spanish: "Intro: abrir Acerca de. Ciérralo para volver.",
+            Vietnamese: "Enter: mở giới thiệu. Đóng để quay lại."));
+        entries.Add("Form.OpenFooter", new(
+            English: "Up/Down: navigate | Tab/F6: switch focus | Enter: choose | Esc: cancel",
+            Italian: "Su/Giù: naviga | Tab/F6: cambia area | Invio: scegli | Esc: annulla",
+            French: "Haut/Bas : naviguer | Tab/F6 : changer de zone | Entrée : choisir | Esc : annuler",
+            German: "Auf/Ab: navigieren | Tab/F6: Bereich wechseln | Enter: wählen | Esc: abbrechen",
+            Spanish: "Arriba/Abajo: navegar | Tab/F6: cambiar área | Intro: elegir | Esc: cancelar",
+            Vietnamese: "Lên/Xuống: di chuyển | Tab/F6: đổi vùng | Enter: chọn | Esc: hủy"));
+        entries.Add("Form.OpenFooterCompact", new(
+            English: "F6: switch focus | Enter: choose | Esc: cancel",
+            Italian: "F6: cambia area | Invio: scegli | Esc: annulla",
+            French: "F6: changer de zone | Entrée: choisir | Esc: annuler",
+            German: "F6: Bereich wechseln | Enter: wählen | Esc: Abbruch",
+            Spanish: "F6: cambiar área | Intro: elegir | Esc: cancelar",
+            Vietnamese: "F6: đổi vùng | Enter: chọn | Esc: hủy"));
+        entries.Add("Help.Browse.OpenKeys", new(
+            English: "Enter/Right: open | F6: switch focus | Esc/Q: close",
+            Italian: "Invio/Destra: apri | F6: cambia area | Esc/Q: chiudi",
+            French: "Entrée/Droite : ouvrir | F6 : changer de zone | Esc/Q : fermer",
+            German: "Enter/Rechts: öffnen | F6: Bereich wechseln | Esc/Q: schließen",
+            Spanish: "Intro/Derecha: abrir | F6: cambiar área | Esc/Q: cerrar",
+            Vietnamese: "Enter/Phải: mở | F6: đổi vùng | Esc/Q: đóng"));
+        entries.Add("Help.Browse.OpenKeysCompact", new(
+            English: "Enter: open | F6: switch focus | Esc/Q: close",
+            Italian: "Invio: apri | F6: cambia area | Esc/Q: chiudi",
+            French: "Entrée: ouvrir | F6: changer de zone | Esc/Q: fermer",
+            German: "Enter: öffnen | F6: Bereich wechseln | Esc/Q: schließen",
+            Spanish: "Intro: abrir | F6: cambiar área | Esc/Q: cerrar",
+            Vietnamese: "Enter: mở | F6: đổi vùng | Esc/Q: đóng"));
         entries.Add("About.Description", new(
             English: "A lightweight, portable terminal assistant. Turn natural-language requests into commands you can review before running.",
             Italian: "Un assistente per il terminale leggero e portatile. Trasforma le richieste in linguaggio naturale in comandi da controllare prima di eseguirli.",

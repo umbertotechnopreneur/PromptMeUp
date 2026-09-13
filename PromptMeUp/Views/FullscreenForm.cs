@@ -23,6 +23,7 @@ internal sealed record FormField(string Key, string LabelKey, Func<string> Read,
 
 internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields)
 {
+    public Action? Open { get; init; }
     public string? HelpKey { get; init; }
     public Func<IRenderable>? Preview { get; init; }
     public int PreviewRows { get; init; }
@@ -47,6 +48,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private int _messageHeight = FullscreenFooter.NoticeRows;
     private int _overviewOffset;
     private int _overviewMaximumOffset;
+    private Action? _pendingOpen;
     private (int Width, int Height, string Theme)? _lastFrame;
 
     /// <summary>Checks terminal capabilities before opting into a fullscreen form.</summary>
@@ -81,19 +83,27 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         var saved = false;
         try
         {
-            console.AlternateScreen(() =>
+            do
             {
-                console.Cursor.Hide();
-                try
+                _pendingOpen = null;
+                _lastFrame = null;
+                console.AlternateScreen(() =>
                 {
-                    saved = RunLoop(titleKey, pages, validate);
-                }
-                finally
-                {
-                    console.WriteAnsi(writer => writer.ResetStyle());
-                    console.Cursor.Show();
-                }
-            });
+                    console.Cursor.Hide();
+                    try
+                    {
+                        saved = RunLoop(titleKey, pages, validate);
+                    }
+                    finally
+                    {
+                        console.WriteAnsi(writer => writer.ResetStyle());
+                        console.Cursor.Show();
+                    }
+                });
+                // Child pages own their alternate buffer after this form restores the main buffer.
+                _pendingOpen?.Invoke();
+            }
+            while (_pendingOpen is not null);
         }
         finally
         {
@@ -108,10 +118,10 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     {
         while (true)
         {
-            var visiblePages = pages.Where(page => page.Fields.Any(IsVisible)).ToArray();
+            var visiblePages = pages.Where(page => page.Open is not null || page.Fields.Any(IsVisible)).ToArray();
             if (visiblePages.Length == 0)
             {
-                throw new InvalidOperationException("The form has no visible fields.");
+                throw new InvalidOperationException("The form has no visible pages.");
             }
             _page = Math.Clamp(_page, 0, visiblePages.Length - 1);
             var fields = visiblePages[_page].Fields.Where(IsVisible).ToArray();
@@ -133,6 +143,12 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 continue;
             }
             _error = null;
+            if (_sectionsFocused && visiblePages[_page].Open is { } open
+                && key.Key is ConsoleKey.Enter or ConsoleKey.RightArrow)
+            {
+                _pendingOpen = open;
+                return false;
+            }
             if (visiblePages[_page].Overview is not null && (key.Modifiers & ConsoleModifiers.Control) != 0
                 && key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow)
             {
@@ -405,7 +421,9 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
 
         var sectionNavigation = _allowSectionNavigation && pages.Count > 1;
         var focused = !_sectionsFocused && _focus < fields.Count ? fields[_focus] : null;
-        var helpKey = pages[_page].HelpKey ?? (sectionNavigation ? "Form.NavigationHelp" : "Form.Help");
+        var helpKey = pages[_page].Open is not null && !_sectionsFocused
+            ? "Form.NavigationHelp"
+            : pages[_page].HelpKey ?? (sectionNavigation ? "Form.NavigationHelp" : "Form.Help");
         var guidance = focused?.Help?.Invoke() ?? text.Text(focused?.HelpKey ?? helpKey);
         if (pages[_page].Overview is not null)
         {
@@ -437,6 +455,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
         var content = Inset(new Rows(Styled(section, "bold " + TerminalTheme.Accent), new Text(" "), fieldBody));
         var footerKey = _editing is not null ? "Form.EditFooter"
+            : pages[_page].Open is not null ? "Form.OpenFooter"
             : _sectionsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";
         if (Segment.CellCount([new Segment(text.Text(footerKey))]) > frame.Width - 5)
         {
@@ -498,6 +517,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             "Settings.Commands" => "⚡",
             "Settings.Personalization" => "📝",
             "Settings.Theme" => "🎨",
+            "About.MenuLabel" => "ℹ️",
             _ => null
         };
         return (icon is null ? string.Empty : TerminalTheme.IconPrefix(_options, icon, "-")) + text.Text(page.TitleKey);

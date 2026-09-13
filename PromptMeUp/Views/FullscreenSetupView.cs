@@ -16,6 +16,7 @@ public sealed class FullscreenSetupView
     private readonly IPromptInjectionProtectionService _protection;
     private readonly ISensitiveDataRedactor _redactor;
     private readonly IThemeCatalogService _themes;
+    private readonly IAboutView _about;
 
     /// <summary>Creates settings forms that collect drafts without persisting preferences or credentials.</summary>
     public FullscreenSetupView(
@@ -24,7 +25,8 @@ public sealed class FullscreenSetupView
         IConsoleShellView shell,
         IPromptInjectionProtectionService protection,
         ISensitiveDataRedactor redactor,
-        IThemeCatalogService themes)
+        IThemeCatalogService themes,
+        IAboutView about)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
@@ -32,6 +34,7 @@ public sealed class FullscreenSetupView
         _protection = protection ?? throw new ArgumentNullException(nameof(protection));
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
         _themes = themes ?? throw new ArgumentNullException(nameof(themes));
+        _about = about ?? throw new ArgumentNullException(nameof(about));
     }
 
     /// <summary>Collects the complete setup draft and restores the current language and palette on every exit.</summary>
@@ -154,7 +157,14 @@ public sealed class FullscreenSetupView
                     Choices = () => _themes.Themes.Select(theme => new FormChoice(theme.Id, ThemeName(theme))).ToArray(),
                     HelpKey = "Theme.Preview"
                 }
-            ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) }
+            ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) },
+            new("About.MenuLabel", [])
+            {
+                Open = _about.Render,
+                HelpKey = "About.OpenHint",
+                Preview = () => new Text(_text.Text("Help.About"), Style.Parse(TerminalTheme.Primary)),
+                PreviewRows = 3
+            }
         ];
     }
 

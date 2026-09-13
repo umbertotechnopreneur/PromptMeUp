@@ -18,7 +18,8 @@ public interface IHelpView
 public sealed class HelpView(
     IAnsiConsole console,
     ILocalizationService text,
-    IConsoleShellView shell) : IHelpView
+    IConsoleShellView shell,
+    IAboutView about) : IHelpView
 {
     /// <summary>Opens section navigation when the terminal supports a disposable fullscreen viewport.</summary>
     public void Render()
@@ -114,7 +115,6 @@ public sealed class HelpView(
         new("📊", text.Text("Help.Group.Insight"), text.Text("Help.Browse.Insight"),
             [
                 new("--version, -v", text.Text("Help.Version")) { Example = "hm --version" },
-                new("--about, about", text.Text("Help.About")) { Example = "hm about" },
                 new("--status", text.Text("Help.Status")),
                 new("--lenna, lenna", text.Text("Help.Lenna")) { Example = "hm lenna" },
                 new("--costs", text.Text("Help.Costs")),
@@ -159,7 +159,12 @@ public sealed class HelpView(
                     Example = "hm --install-font --dry-run",
                     Arguments = [new("--dry-run", text.Text("Help.Argument.DryRun"))]
                 }
-            ])
+            ]),
+        new("ℹ️", text.Text("About.Title"), text.Text("About.MenuLabel"),
+            [new("--about, about", text.Text("Help.About")) { Example = "hm about" }])
+        {
+            Open = about.Render
+        }
     ];
 
     /// <summary>Renders one cohesive command category without turning the help screen into a flat flag dump.</summary>

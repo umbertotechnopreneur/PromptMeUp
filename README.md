@@ -86,6 +86,8 @@ hm --theme
 
 All three commands open the same Settings screen with General, AI, or Theme selected. `--ai-settings` remains an alias for `--ai-setup`. Use the left sidebar to reach General, AI, Credentials, Conversation, Commands, Personalization, and Theme. Move freely between sections, then choose Save to keep the draft or Cancel to discard it. Theme colors update as you preview them.
 
+Choose **About** in the Help or Settings sidebar to open the project information screen. Closing About returns to the menu and keeps any unsaved settings. The compact settings menu includes the same entry; `hm about` opens it directly.
+
 Ordinary questions and chat use a default input budget of **16,000 estimated tokens**. In chat, `/context` or `/status` shows how much is currently retained, the model's capacity, and your chosen budget. The last call's input/output tokens and the session totals appear separately. A `~` marks a local estimate.
 
 Use `/clear` to start a fresh conversation within the session. It keeps saved notes and usage totals. If a question is too large, `hm` leaves the chat open so you can shorten it and try again.

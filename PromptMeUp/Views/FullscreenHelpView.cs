@@ -17,7 +17,10 @@ internal sealed record HelpEntry(string Command, string Description)
 internal sealed record HelpArgument(string Token, string Description);
 
 /// <summary>Groups help entries under full and compact localized section names.</summary>
-internal sealed record HelpSection(string Icon, string Title, string NavigationLabel, IReadOnlyList<HelpEntry> Entries);
+internal sealed record HelpSection(string Icon, string Title, string NavigationLabel, IReadOnlyList<HelpEntry> Entries)
+{
+    public Action? Open { get; init; }
+}
 
 /// <summary>Browses command sections in a temporary open layout without changing the original terminal buffer.</summary>
 internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions? options = null)
@@ -52,19 +55,28 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         _lastFrame = null;
         try
         {
-            console.AlternateScreen(() =>
+            Action? open;
+            do
             {
-                console.Cursor.Hide();
-                try
+                open = null;
+                _lastFrame = null;
+                console.AlternateScreen(() =>
                 {
-                    RunLoop(sections);
-                }
-                finally
-                {
-                    console.WriteAnsi(writer => writer.ResetStyle());
-                    console.Cursor.Show();
-                }
-            });
+                    console.Cursor.Hide();
+                    try
+                    {
+                        open = RunLoop(sections);
+                    }
+                    finally
+                    {
+                        console.WriteAnsi(writer => writer.ResetStyle());
+                        console.Cursor.Show();
+                    }
+                });
+                // Each screen owns its alternate buffer; the help selection survives the round trip.
+                open?.Invoke();
+            }
+            while (open is not null);
         }
         catch (InteractiveFlowCanceledException)
         {
@@ -72,8 +84,8 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         }
     }
 
-    /// <summary>Navigates sections independently of scrolling their descriptions.</summary>
-    private void RunLoop(IReadOnlyList<HelpSection> sections)
+    /// <summary>Navigates descriptions and returns screen actions for opening outside the help buffer.</summary>
+    private Action? RunLoop(IReadOnlyList<HelpSection> sections)
     {
         while (true)
         {
@@ -82,7 +94,7 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             var key = ReadKey(Paint);
             if (key.Key is ConsoleKey.Escape or ConsoleKey.Q)
             {
-                return;
+                return null;
             }
             if (console.Profile.Width < 60 || console.Profile.Height < 20)
             {
@@ -101,7 +113,11 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
                 case ConsoleKey.Enter:
                     if (_focus == HelpFocus.Close)
                     {
-                        return;
+                        return null;
+                    }
+                    if (sections[_section].Open is { } open)
+                    {
+                        return open;
                     }
                     _focus = HelpFocus.Commands;
                     break;
@@ -118,6 +134,10 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
                 case ConsoleKey.RightArrow:
                     if (_focus != HelpFocus.Close)
                     {
+                        if (sections[_section].Open is { } openSection)
+                        {
+                            return openSection;
+                        }
                         _focus = HelpFocus.Commands;
                     }
                     break;
@@ -264,12 +284,17 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         IRenderable message = _lineCount > _visibleRows
             ? new HelpRange(range)
             : HelpCommandLine.CreateDescription(text.Text("Help.Usage"), "hm");
+        if (active.Open is not null && _focus != HelpFocus.Close)
+        {
+            message = Line(text.Text("About.OpenHint"), TerminalTheme.Primary);
+        }
         var closeSelected = _focus == HelpFocus.Close;
         var actions = new Grid().AddColumn();
         actions.AddRow(FullscreenFooter.Button(
             TerminalTheme.IconPrefix(_options, "↩️", "x") + text.Text("Help.Browse.Close"), TerminalTheme.Warning, closeSelected));
         var footerKey = _focus switch
         {
+            _ when active.Open is not null && _focus != HelpFocus.Close => "Help.Browse.OpenKeys",
             HelpFocus.Sections => "Help.Browse.SectionKeys",
             HelpFocus.Commands => "Help.Browse.ScrollKeys",
             _ => "Help.Browse.CloseKeys"

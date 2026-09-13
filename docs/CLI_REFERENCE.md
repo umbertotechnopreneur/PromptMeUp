@@ -56,8 +56,12 @@ Only one top-level command can be selected per invocation.
 
 Settings uses one fullscreen workspace in supported live terminals of at least
 60 columns by 20 rows. Its left sidebar keeps General, AI, Credentials,
-Conversation, Commands, Personalization, and Theme visible. Each settings switch
+Conversation, Commands, Personalization, Theme, and About accessible. Each settings switch
 only selects the initial section; every section remains accessible.
+
+Select About and press Enter or Right to open the existing project information
+screen. Closing it returns to Settings with the current draft intact. The compact
+settings menu also offers About and returns to the previous settings section.
 
 Up/Down selects a section; Enter or Right moves into its fields. F6 switches
 between the sidebar and fields, and Ctrl+Left returns to the sidebar. Tab moves
@@ -89,6 +93,10 @@ The sidebar remains beside the commands at every supported fullscreen width.
 Help and settings share the same responsive workspace and button renderer;
 Tab reaches the emoji Close button in the footer.
 Esc or Q closes the guide and restores your original terminal output.
+
+The About sidebar entry opens the project information screen with Enter or Right.
+Enter or Esc closes About and returns to the guide with its selection preserved.
+In scrolling help, the About section shows the direct `hm about` command.
 
 Each entry starts with its command syntax. Descriptions and concrete examples
 are indented two spaces, and argument notes four spaces; wrapped lines preserve

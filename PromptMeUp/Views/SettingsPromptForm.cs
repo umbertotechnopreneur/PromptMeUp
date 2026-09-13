@@ -46,7 +46,14 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
                     Edit(fields[selected.Index]);
                     break;
                 case "section":
-                    pageIndex = selected.Index;
+                    if (pages[selected.Index].Open is { } open)
+                    {
+                        open();
+                    }
+                    else
+                    {
+                        pageIndex = selected.Index;
+                    }
                     break;
                 case "save":
                     var error = validate();
