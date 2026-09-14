@@ -14,6 +14,8 @@ public sealed record SetupViewState(
     public bool ContextBudgetOverridden { get; init; }
 
     public CostOverview? Costs { get; init; }
+
+    public Action? OpenMemories { get; init; }
 }
 
 public enum SettingsSection

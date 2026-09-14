@@ -2,6 +2,35 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-14 — Prepare memory management and build details for review
+
+- Prepared the local memory manager, chat reminders, compile-time About metadata, regression coverage, and product documentation for a focused pull request. Preserved unrelated local source comments and excluded generated installer artifacts.
+- Reviewed memory scope isolation, transactional updates, credential rejection, deletion confirmation, and draft preservation with no blocking findings.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, and whitespace checks passed. The same implementation previously passed all 424 automated tests and signed-MSIX installation verification; tests were not repeated for this review preparation.
+
+## 2026-09-14 — Show compile-time build details and install the updated MSIX
+
+- Added the build date and time in UTC and the build machine to About in all six languages. A shared MSBuild target embeds the values during compilation; a metadata reader supplies the passive view without reading the runtime machine or clock.
+- Documented repeatable-build overrides and rejected malformed dates, non-UTC offsets, impossible calendar dates, and disabled assembly metadata generation before compilation.
+- Published the current local changes, created and signed MSIX revision `0.1.5.13`, and installed it with the existing identity and trusted certificate. Verified healthy registration, matching hashes for all 274 payload files, the installed assembly metadata, and the updated `hm` execution-alias target.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build and Windows publish with zero warnings or errors, all 424 automated tests, six focused MSBuild metadata checks, manifest and signature verification, installed-file integrity, and whitespace checks passed. Installation verification read the installed files without launching the application.
+
+## 2026-09-14 — Test and build the current local changes
+
+- Ran the full automated test suite at the user's request. All 424 tests passed, including the new memory-management coverage, in about 28 seconds.
+- Completed the final Release build with warnings treated as errors and preserved the existing local changes.
+
+Validation: preflight, restore, formatting verification, XML comment checks, all 424 automated tests, Release build with zero warnings or errors, and whitespace checks passed. CLI smoke checks were not run.
+
+## 2026-09-14 — Pull the latest documentation
+
+- Fast-forwarded `main` to `fa8109c` and restored the existing local memory-management work. Resolved README and task-archive conflicts by keeping the incoming documentation and the local additions.
+- Verified that all 26 local source and test files remained byte-for-byte unchanged, including the six new files, and reviewed the three merged documentation files.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
+
 ## 2026-09-14 — Friendlier documentation
 
 - Rewrote the README and current user guides with shorter sentences, direct explanations, and everyday words. Explained chat memory, token usage, command approval, file previews, and privacy without changing the command examples.
@@ -9,6 +38,30 @@ This archive tracks completed development tasks for reference and review.
 - Added the same plain-English writing rule to both repository instruction files.
 
 Validation: preflight, restore, formatting verification, XML comment checks, and the Release build passed with zero warnings or errors. Static documentation checks found no new broken local links or heading references, unchanged executable and configuration examples, balanced code fences, and no whitespace errors. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Install the memory management update
+
+- Published the current working tree, including the dedicated memory manager and compact chat/query reminders, as a self-contained Windows x64 application with redistribution notices.
+- Created, signed, and installed MSIX revision `0.1.5.12` using the existing package identity and trusted certificate. Included build metadata identifying the base revision and uncommitted source state.
+- Verified healthy package registration, matching SHA-256 hashes for all 274 packaged and installed payload files, and an `hm` execution alias targeting the updated package.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, manifest and signature validation, package checksum, installed-file integrity, execution-alias verification, and whitespace checks passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
+## 2026-09-14 — Discover and manage saved memories
+
+- Added compact six-language reminders for `/remember`, `/memories`, and `/forget` when starting a question or chat, without repeating the reminder when a question continues into chat.
+- Added a dedicated Memories sidebar entry in Help and Settings, plus `hm --memories`, for local browsing, creation, editing, and confirmed deletion of global and current-project notes. Opening the manager preserves the parent menu, settings draft, and main terminal scrollback.
+- Added a responsive alternate-buffer browser with full scrollable note details, bounded compact-menu previews, scope and text editing, cancellation-first deletion, and draft preservation after validation errors. The compact terminal flow exposes the same operations.
+- Added atomic exact-identifier updates with existing credential validation, scope isolation, duplicate rejection, and capacity checks. Authored regression coverage for update boundaries, scope moves, rejected inputs, atomic failure, cancellation, and CLI routing; updated the query rendering assertions and product guidance.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered navigation, dependency injection, local-only operation, draft preservation, keyboard focus, empty states, layout bounds, cancellation, and six-language completeness. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Prepare the latest About navigation installer
+
+- Published commit `ec96ae7` as a self-contained Windows x64 application with redistribution notices and created signed MSIX revision `0.1.5.11` using the existing package identity and signing certificate.
+- Verified the package signature, version, publisher, execution alias, checksum, source revision, and SHA-256 integrity of all 273 packaged payload files. The installer is ready for installation; the installed application was not updated.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, manifest validation, signature verification, payload integrity, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
 
 ## 2026-09-14 — About navigation in Help and Settings
 

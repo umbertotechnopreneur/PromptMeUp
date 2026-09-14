@@ -36,6 +36,10 @@ Only the delivery job has release-write and attestation permissions. Pull-reques
 
 ## What every portable package contains
 
+About shows the build date and time in UTC and the name of the machine that compiled the app. The shared `scripts/BuildInformation.targets` file captures these values during `dotnet build` and `dotnet publish` and embeds them in the application assembly. They stay the same when the app is installed or copied to another computer. Generated values stay under ignored build directories.
+
+For repeatable builds, supply the same `PromptMeUpBuildDateUtc` and `PromptMeUpBuildMachine` MSBuild properties each time. The date must use the round-trip UTC format, such as `2026-01-01T00:00:00.0000000+00:00`. Without these overrides, each build captures a fresh timestamp and regenerates the assembly information.
+
 - The self-contained hm executable, localized prompt resources, and PATH helper scripts.
 - The root MIT license and third-party attribution overview.
 - Full upstream license texts and package-supplied notices under LICENSES.

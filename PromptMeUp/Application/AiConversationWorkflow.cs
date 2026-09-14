@@ -92,6 +92,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             _audit, promptId, settings, new { invocation = promptId }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
         if (renderQuery)
         {
+            _chatView.RenderMemoryHint();
             _chatView.RenderUser(query);
         }
         var action = await SendAndOfferActionsAsync(
@@ -104,7 +105,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             cancellationToken).ConfigureAwait(false);
         if (action.StartChat)
         {
-            _chatView.RenderIntro();
+            _chatView.RenderIntro(includeMemoryHints: !renderQuery);
             session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
         }
         else

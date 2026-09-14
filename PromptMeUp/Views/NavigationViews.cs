@@ -8,7 +8,7 @@ namespace PromptMeUp.Views;
 
 public interface IHelpView
 {
-    void Render();
+    void Render(Action? openMemories = null);
 
     /// <summary>Prints help in the current buffer when an error or redirected output must remain visible.</summary>
     void RenderStatic() => Render();
@@ -22,7 +22,7 @@ public sealed class HelpView(
     IAboutView about) : IHelpView
 {
     /// <summary>Opens section navigation when the terminal supports a disposable fullscreen viewport.</summary>
-    public void Render()
+    public void Render(Action? openMemories = null)
     {
         if (FullscreenHelpView.CanUse(console))
         {
@@ -30,7 +30,7 @@ public sealed class HelpView(
             try
             {
                 shell.Configure(originalOptions with { SuppressFooter = true });
-                new FullscreenHelpView(console, text, shell.Options).Render(CreateSections());
+                new FullscreenHelpView(console, text, shell.Options).Render(CreateSections(openMemories));
             }
             finally
             {
@@ -58,7 +58,7 @@ public sealed class HelpView(
     }
 
     /// <summary>Shares the complete localized command catalog between fullscreen and scrolling help.</summary>
-    private IReadOnlyList<HelpSection> CreateSections() =>
+    private IReadOnlyList<HelpSection> CreateSections(Action? openMemories = null) =>
     [
         new("⚡", text.Text("Help.Examples"), text.Text("Help.Browse.Examples"),
             [
@@ -160,10 +160,17 @@ public sealed class HelpView(
                     Arguments = [new("--dry-run", text.Text("Help.Argument.DryRun"))]
                 }
             ]),
+        new("🧠", text.Text("Settings.Memories"), text.Text("Settings.Memories"),
+            [new("--memories", text.Text("Help.Memories"))])
+        {
+            Open = openMemories,
+            OpenHintKey = "MemoryManager.OpenHint"
+        },
         new("ℹ️", text.Text("About.Title"), text.Text("About.MenuLabel"),
             [new("--about, about", text.Text("Help.About")) { Example = "hm about" }])
         {
-            Open = about.Render
+            Open = about.Render,
+            OpenHintKey = "About.OpenHint"
         }
     ];
 

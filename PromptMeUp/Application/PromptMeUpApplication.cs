@@ -43,6 +43,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IThemeCatalogService? _themes;
     private readonly LennaWorkflow? _lenna;
     private readonly AboutWorkflow? _about;
+    private readonly MemoryManagerWorkflow? _memories;
 
     /// <summary>Creates the application orchestrator while keeping business services independent from Spectre views.</summary>
     public PromptMeUpApplication(
@@ -72,7 +73,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         ArtifactLimits? artifactLimits = null,
         IThemeCatalogService? themes = null,
         LennaWorkflow? lenna = null,
-        AboutWorkflow? about = null)
+        AboutWorkflow? about = null,
+        MemoryManagerWorkflow? memories = null)
     {
         _parser = parser;
         _database = database;
@@ -101,6 +103,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _themes = themes;
         _lenna = lenna;
         _about = about;
+        _memories = memories;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -215,7 +218,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 return 0;
             case AppCommand.Main:
             case AppCommand.Help:
-                _helpView.Render();
+                _helpView.Render(() => (_memories ?? throw new InvalidOperationException("The memory manager is unavailable."))
+                    .RunAsync(cancellationToken).GetAwaiter().GetResult());
                 return 0;
             case AppCommand.Version:
                 RenderVersion();
@@ -236,6 +240,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                     settings,
                     renderQuery: true,
                     cancellationToken).ConfigureAwait(false);
+                return 0;
+            case AppCommand.Memories:
+                EnsureInteractive();
+                await (_memories ?? throw new InvalidOperationException("The memory manager is unavailable."))
+                    .RunAsync(cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.Chat:
                 EnsureInteractive();

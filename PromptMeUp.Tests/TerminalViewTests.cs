@@ -53,6 +53,7 @@ public sealed class TerminalViewTests
         Assert.Contains("/remember [global|project] <testo>", rendered, StringComparison.Ordinal);
         Assert.Contains("/memories", rendered, StringComparison.Ordinal);
         Assert.Contains("/forget <id>", rendered, StringComparison.Ordinal);
+        Assert.Contains("Memorie in chat:", rendered, StringComparison.Ordinal);
         Assert.Contains("/exit", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╭", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╮", rendered, StringComparison.Ordinal);

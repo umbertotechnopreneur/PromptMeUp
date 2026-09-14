@@ -56,6 +56,20 @@ internal static partial class UiTextCatalog
             German: "Ein schlanker, portabler Terminal-Assistent. Formulieren Sie Ihre Anliegen in natürlicher Sprache und prüfen Sie die vorgeschlagenen Befehle vor der Ausführung.",
             Spanish: "Un asistente de terminal ligero y portátil. Convierte tus peticiones en lenguaje natural en comandos que puedes revisar antes de ejecutarlos.",
             Vietnamese: "Trợ lý dòng lệnh gọn nhẹ, có thể mang theo. Biến yêu cầu bằng ngôn ngữ tự nhiên thành các lệnh để bạn xem xét trước khi chạy."));
+        entries.Add("About.BuildDate", new(
+            English: "Build date",
+            Italian: "Data di compilazione",
+            French: "Date de compilation",
+            German: "Erstellungsdatum",
+            Spanish: "Fecha de compilación",
+            Vietnamese: "Thời điểm biên dịch"));
+        entries.Add("About.BuildMachine", new(
+            English: "Build machine",
+            Italian: "Macchina di compilazione",
+            French: "Machine de compilation",
+            German: "Build-Rechner",
+            Spanish: "Equipo de compilación",
+            Vietnamese: "Máy biên dịch"));
         entries.Add("About.Author", new(
             English: "Author",
             Italian: "Autore",
