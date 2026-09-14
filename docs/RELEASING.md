@@ -1,18 +1,18 @@
 # Releasing PromptMeUp
 
-Portable archives are the primary distribution format. A versioned tag prepares a GitHub Release draft after validation; the maintainer chooses when to publish it. No release is created just by merging to main.
+Most people will get PromptMeUp as a portable archive. Pushing a version tag starts the checks and prepares a draft release on GitHub. The maintainer reviews and publishes it. Merging code into `main` alone doesn't create a release.
 
-## Continuous integration
+## Checks that run on GitHub
 
-The quality workflow runs on pull requests, main pushes, manual dispatch, and calls from the release workflow. It verifies repository preflight, formatting, XML comments, resolved redistribution notices, Release builds with warnings as errors, tests, and credential-free CLI smoke checks on Windows, Linux, and macOS.
+The quality workflow runs for pull requests, pushes to `main`, manual runs, and releases. It checks required files and tools, formatting, XML comments, and bundled license notices. It also builds in Release mode with warnings treated as errors, runs tests, and tries basic CLI commands without credentials on Windows, Linux, and macOS.
 
 CodeQL analyzes C# on pull requests, main pushes, and a weekly schedule. Dependency review rejects newly introduced high or critical vulnerabilities on pull requests. Dependabot proposes weekly NuGet and GitHub Actions updates. Actions are pinned to full commit hashes; the .NET SDK comes from global.json.
 
-The required main checks are Lint, Build (windows-latest), Build (ubuntu-latest), Build (macos-latest), Analyze C#, and Review dependencies. They are bound to the GitHub Actions app. The target policy is checked in as [.github/main-protection.json](../.github/main-protection.json); GitHub settings require separate application and verification, not just committing the file.
+The required checks for `main` are Lint, Build (windows-latest), Build (ubuntu-latest), Build (macos-latest), Analyze C#, and Review dependencies. They must come from GitHub Actions. The intended rules are in [.github/main-protection.json](../.github/main-protection.json). Committing that file doesn't change GitHub's settings; apply and check those separately.
 
 ## Rehearse a release
 
-Run Portable release manually from main. It runs the quality gate and builds six packages without creating a release or a tag. Download release-bundle from the completed Actions run.
+To try the release process, run **Portable release** manually from `main`. It checks the code and builds six packages without creating a release or tag. Download `release-bundle` from the finished Actions run.
 
 For a local package, run PowerShell 7 from the repository root:
 
@@ -20,9 +20,9 @@ For a local package, run PowerShell 7 from the repository root:
 pwsh -NoProfile -File ./scripts/build-portable-release.ps1 -Runtime win-x64
 ```
 
-Supported runtime names are win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, and osx-arm64. Windows output is ZIP; Linux and macOS output is tar.gz, preserving executable permissions. Build Unix archives on a Unix host. The script refuses existing output so a previous payload cannot silently contaminate a new package. For another rehearsal, choose a fresh directory such as `-OutputDirectory artifacts/rehearsal-2`; output must remain below artifacts.
+Choose `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, or `osx-arm64`. Windows packages are ZIP files. Linux and macOS use tar.gz to keep executable permissions; build those archives on a Unix machine. The script requires a fresh output folder so old files can't slip into a new package. For another run, use something like `-OutputDirectory artifacts/rehearsal-2`. Output must stay under `artifacts`.
 
-Matching host architectures receive executable smoke checks. Cross-published architectures are packaged but need a matching machine for execution testing before publication. The workflow does not claim six native execution tests.
+The workflow tries basic commands only when the build machine matches the package's operating system and CPU type. Try the other packages on matching machines before publishing; building all six doesn't mean all six have been run.
 
 ## Prepare a version
 
@@ -55,7 +55,7 @@ Get-FileHash ./PromptMeUp-1.2.3-win-x64.zip -Algorithm SHA256
 gh attestation verify ./PromptMeUp-1.2.3-win-x64.zip --repo umbertotechnopreneur/PromptMeUp
 ```
 
-Attestation verification confirms provenance recorded by GitHub Actions; it does not replace code review or execution testing. See [GitHub's attestation documentation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
+The attestation check verifies GitHub Actions' record of where the package came from. You'll still need code review and testing. See [GitHub's attestation documentation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
 
 ## Optional Windows distribution
 

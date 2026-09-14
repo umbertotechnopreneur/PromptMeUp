@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-14 — Friendlier documentation
+
+- Rewrote the README and current user guides with shorter sentences, direct explanations, and everyday words. Explained chat memory, token usage, command approval, file previews, and privacy without changing the command examples.
+- Simplified contributor, support, security, project, release, theme, prompt, and artwork guidance. Kept technical limits, credits, and license information, and corrected two outdated settings checklist entries to match the current Save action and About navigation.
+- Added the same plain-English writing rule to both repository instruction files.
+
+Validation: preflight, restore, formatting verification, XML comment checks, and the Release build passed with zero warnings or errors. Static documentation checks found no new broken local links or heading references, unchanged executable and configuration examples, balanced code fences, and no whitespace errors. Automated tests and CLI smoke checks were not run.
+
 ## 2026-09-14 — About navigation in Help and Settings
 
 - Added an About sidebar entry to Help and the settings workspace, opening the existing project information screen with Enter or Right. The compact settings menu opens the same screen and returns to the previous editable section; scrolling help retains the direct `hm about` command.

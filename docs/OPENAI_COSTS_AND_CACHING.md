@@ -1,7 +1,7 @@
 # Memory, context, and costs
 
-Save a few useful notes between sessions, choose how much conversation to keep,
-and check token usage as you work. These controls are available from the terminal:
+Want `hm` to remember a project detail? Curious about the usage numbers? This
+guide explains saved notes, chat limits, and costs. Start with these commands:
 
 | What you want to do | Command |
 | --- | --- |
@@ -10,37 +10,38 @@ and check token usage as you work. These controls are available from the termina
 | Save a project fact | `/remember project Build this project with dotnet build.` |
 | Save a preference across projects | `/remember global Keep terminal explanations concise.` |
 | See or remove saved notes | `/memories`, then `/forget <id>` |
-| Start with fresh conversation context | `/clear` |
+| Start fresh in chat | `/clear` |
 | Check costs | `/costs` in chat, or `hm --costs` from your shell |
 
-`hm --status` shows local configuration and storage readiness. The chat commands
-`/status` and `/context` show the current conversation.
+`hm --status` checks your setup and local storage. Inside chat, `/status` and
+`/context` show what's being kept in the conversation.
 
 ## Read the context and usage counters
 
-Context tells you what the model can see in a request. Usage tells you how many
-tokens your calls have consumed over time. PromptMeUp shows them separately:
+The model reads text in small pieces called **tokens**. **Context** is the text
+it can see for the current question. **Usage** counts the tokens you've sent and
+received over time. PromptMeUp shows them separately:
 
 | Measure | Meaning |
 | --- | --- |
-| Active context | Estimated input currently retained, compared with the model's context window and your input budget. |
-| Last request | Input and output tokens reported by the provider for the last assistant call, with any reported cache reads and writes. |
-| Session usage | Cumulative input and output tokens from this conversation's recorded calls. |
+| Active context | How much text is being kept, compared with the model's capacity and the limit you've chosen. |
+| Last request | Tokens OpenAI reports for the last answer, including any reused or saved in its cache. |
+| Session usage | Total input and output tokens recorded during this chat. |
 
 For example, sending the same history again adds to session usage even if the
 active context has barely changed. Removing an old turn reduces active context;
 it does not undo the tokens already used to send that turn.
 
-Active context includes the app's instructions, your optional setup preamble,
-the privacy-filtered machine and directory context, selected notes, and retained
-conversation messages. After an answer, the estimate is recalculated from the
-messages that remain. Hidden reasoning and response formatting that was not
-kept as conversation text are excluded. A future question is included only once
-you enter it, so the estimate may change before the next send.
+Context includes the app's instructions, your personal instructions from setup,
+a filtered summary of your machine and folder, selected notes, and recent
+messages. After each answer, `hm` counts what's still being kept. It leaves out
+the model's hidden reasoning and response formatting that wasn't saved as chat
+text. Your next question counts once you type it, so the estimate can change
+before sending.
 
-A `~` marks a local estimate. PromptMeUp uses a lightweight estimate based on the
-text's UTF-8 size; the provider's tokenizer may count differently. Reported
-input and output remain separate from this estimate.
+A `~` means an estimate made by `hm`. It uses the size of the text in UTF-8;
+OpenAI may count tokens differently. The usage figures reported by OpenAI stay
+separate from this estimate.
 
 `/status`, `/context`, and `/clear` preserve the last-request and session counters.
 Session totals include failed calls when the provider reports usage. AI command
@@ -52,26 +53,26 @@ Use `/remember [global|project] <text>` in chat. Without a scope, the note belon
 to the current project. `/memories` lists your global notes and the current
 project's notes, along with the IDs you can use with `/forget`.
 
-Project scope follows the nearest directory containing `.git`, starting with
-the current directory and searching upward. Outside a Git repository, it uses
-the current directory. Global notes are available in projects sharing the same
-local data directory. Notes are stored in SQLite, with a hashed directory path
-as the project identifier.
+Project notes belong to the nearest folder containing `.git`, looking upward
+from your current folder. Outside a Git project, they belong to your current
+folder. Global notes are shared by projects using the same local data folder.
+The notes live in SQLite. A hash (a code calculated from the folder path)
+identifies the project.
 
 Each note can contain up to **1,000 characters**. You can keep **100 global notes
 and 100 notes per project**. Only notes you explicitly save become memories;
 PromptMeUp does not create automatic summaries or infer facts to remember.
 
-On each query or chat request, local selection considers global notes and
-project notes that share words with the request. It ranks matches and loads at
-most **five notes within 800 estimated tokens**, including the surrounding
-instructions and JSON formatting. This allowance is part of your input budget.
-Saving, listing, deleting, and selecting notes make no extra AI calls.
+For each question, `hm` looks at global notes and project notes with matching
+words. It picks the best matches, up to **five notes within 800 estimated tokens**.
+That limit includes the notes' instructions and JSON formatting, and counts
+toward your input budget. Saving, listing, deleting, and picking notes all happen
+on your machine, with no extra AI calls.
 
-Selected notes are shared with the provider and may appear in the redacted
-request audit. They cannot override system rules, the current environment,
-your latest request, or command authorization. Recognizable credentials are
-rejected on save and redacted again when notes are loaded.
+Selected notes go to OpenAI with your question and may appear in the filtered
+request history. They can't override the app's rules, facts about your machine,
+your latest request, or command approval. Notes with recognizable secrets are
+rejected when saved and filtered again when read.
 
 `/clear` removes active conversation messages but keeps saved notes and recorded
 usage. `/forget` deletes a saved note from future selection; text already in the
@@ -114,17 +115,18 @@ from later context. Ordinary responses have a 2 MiB body limit; scripts and plan
 use [configurable artifact limits](CLI_REFERENCE.md#configure-artifact-limits),
 with 16,384 output tokens by default.
 
-In the same Settings screen, Personalization contains the optional instruction
-preamble (up to 500 Unicode words, checked locally for prompt injection). Commands
-contains retained command output (1,000–32,768 characters, default 12,000) and
-command timeout (5–300 seconds, default 30). `hm --setup` opens the workspace with
-General selected.
+In Settings, Personalization holds your optional personal instructions (up to
+500 words, checked for attempts to override the app's rules). Commands lets you
+choose how much command output to keep (1,000–32,768 characters, default 12,000)
+and how long a command can run (5–300 seconds, default 30). `hm --setup` opens
+Settings at General.
 
 ## Read the cost estimate
 
-`/costs` shows the dashboard without ending chat. `hm --costs` also forces a
-pricing refresh. Costs calculated from locally recorded requests are estimates;
-an available organization total is shown separately.
+Type `/costs` to check spending without leaving chat. From your shell,
+`hm --costs` also refreshes prices. Costs worked out from your local request
+history are estimates. If an organization total is available, it appears
+separately.
 
 ### How request costs are calculated
 
@@ -137,21 +139,20 @@ Each successful Responses call can report:
 - reasoning tokens;
 - total tokens.
 
-The database keeps these counters separately. PromptMeUp applies the matching
-public price row and stores the calculated amount as integer microdollars in
-SQLite. Cached input and cache-write rates use the normal input rate only when
-the official row has no separate value. The dashboard labels the result as an
-estimate.
+The database keeps these counts separately. PromptMeUp uses the matching public
+prices to estimate the cost, then saves it in SQLite in millionths of a dollar.
+It uses the normal input price for cached input or cache writes only when no
+separate price is listed. The result is always labeled as an estimate.
 
-Local totals include reported usage from incomplete or invalid responses. Request counts include successful calls and failures with reported tokens. These are local estimates, not account-wide totals; older discarded usage cannot be recovered.
+If an answer fails or arrives incomplete but OpenAI reports token usage, those tokens still count. Request counts include successful calls and failures with reported usage. The totals cover this app's local records, not your whole account. Deleted usage records can't be recovered.
 
-Pricing or session-cleanup failures preserve completed responses and token counts. If pricing is unavailable, the cost estimate remains unknown.
+If a price lookup or session cleanup fails, you still keep completed answers and their token counts. Without a price, the cost stays unknown.
 
 ### Pricing refreshes
 
-The first relevant app invocation after local midnight checks whether pricing was already synchronized that day. If not, PromptMeUp downloads and parses the official Standard pricing table. `hm --costs` forces a refresh. A failed refresh leaves the previous cache available and writes a diagnostic warning.
+The first command that needs prices each day checks whether they're up to date. If needed, `hm` downloads OpenAI's Standard pricing table. `hm --costs` refreshes it on demand. If the download fails, the previous prices remain available and the app logs a warning.
 
-The parser stores model, service tier, context band, currency, input, cached-input, cache-write, output, source URL, and retrieval time as normalized fields. The product table currently displays Standard short-context rows.
+For each price, the database keeps the model, service tier, request-size band, currency, token rates, source link, and download time in separate fields. The app's comparison table shows Standard prices for shorter requests.
 
 Request estimates select the pricing band using actual provider input tokens and the returned model family, including dated snapshots. As verified on September 2, 2026, GPT-5.6 Sol/Terra/Luna, GPT-5.5, and GPT-5.4 use the long band above 272,000 input tokens; GPT-5.4 mini/nano keep their single band. Missing bands and unknown returned models leave the estimate unavailable. See the official [pricing table](https://developers.openai.com/api/docs/pricing), [GPT-5.6 Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra), [GPT-5.5](https://developers.openai.com/api/docs/models/gpt-5.5), and [GPT-5.4](https://developers.openai.com/api/docs/models/gpt-5.4) documentation.
 
@@ -159,13 +160,13 @@ With `OPENAI_ADMIN_KEY`, the same cost flow can refresh current-month organizati
 
 ## Prompt caching
 
-Prompt caching lets the provider reuse an unchanged prefix of a request when it
-is eligible. It is enabled by default; change it in the AI section of Settings,
-opened directly with `hm --ai-setup` or `hm --ai-settings`. Conversation status
-shows the cache reads and writes the provider actually reports. Enabling caching
-does not guarantee a cache hit.
+Prompt caching lets OpenAI reuse the unchanged beginning of a request, such as
+instructions sent with an earlier question. It's on by default. You can change
+it in the AI section of Settings with `hm --ai-setup` or `hm --ai-settings`.
+Chat status shows the cache usage OpenAI reports; turning it on doesn't mean
+every request will reuse cached text.
 
-### Request layout and model policies
+### How the app asks for caching
 
 - Localized YAML instructions, the optional setup preamble, and runtime context are placed before conversation messages.
 - A stable `prompt_cache_key` is derived from product name, model, prompt ID/version, and a short hash of the populated instruction; user text is not embedded in the key.

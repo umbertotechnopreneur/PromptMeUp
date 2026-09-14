@@ -1,10 +1,10 @@
 # PromptMeUp validation guide
 
-Check that people can read the answer, understand the limits, and decide what runs. Use a clean terminal and disposable data. Keep production API keys and confidential prompts out of validation evidence.
+Start with the build checks below. When testing is requested, check that answers are readable, limits are clear, and commands wait for approval. Use a clean terminal and throwaway data. Keep real API keys and private prompts out of anything you save or share.
 
-For agent-driven work, run automated tests and CLI smoke tests only when the user explicitly requests them. Requests to implement, review, commit, or push changes do not authorize test execution. The non-test checks below remain the default validation gate; test commands and behavioral checklists are available for explicitly requested testing.
+Coding assistants must wait for an explicit request before running automated tests or CLI smoke tests (quick checks that launch the app). A request to implement, review, commit, or push isn't permission to run tests. Run the non-test checks below by default. Use the test commands and checklists only when testing is requested.
 
-## Prove the build is healthy
+## Check the build
 
 ```powershell
 pwsh -NoProfile -File .\scripts\preflight.ps1
@@ -20,11 +20,11 @@ When the user explicitly requests the automated test suite:
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-The local gate verifies formatting without editing files. To fix a reported formatting issue, use `scripts/format.ps1` and review its changes. The GitHub Actions quality gate runs on pushes to `main`, pull requests, and manual dispatch. CI applies and verifies formatting, checks XML comments, then builds, tests, and checks portable packages on Windows, Linux, and macOS.
+The local formatting check doesn't edit files. If it finds a problem, use `scripts/format.ps1` and review the changes. GitHub Actions runs on pushes to `main`, pull requests, and manual runs. It applies and checks formatting, checks XML comments, then builds, tests, and checks portable packages on Windows, Linux, and macOS.
 
 Regression tests cover quoted/serialized JSON credentials, provider-bound command output, rejected and legacy preambles, Serilog exception privacy, HTTP body deadlines and limits, inherited process pipes, conservative command risk, long-answer visibility, Unix shell context, model-specific pricing bands, and indexed request summaries. HTTP and credential providers are synthetic; process tests run only inert PowerShell output/sleep commands and clean up their test child. The review-to-test mapping is recorded in [the September 2 review](../.github/tasks/review-2026-09-02.md).
 
-## Prove the CLI is predictable
+## Check basic commands
 
 When the user explicitly requests CLI smoke tests, use a disposable data directory:
 
@@ -41,7 +41,7 @@ dotnet run --project .\PromptMeUp\PromptMeUp.csproj --configuration Release -- -
 
 Every command should exit `0`, preserve readable redirected output, and avoid an interactive prompt.
 
-## Validate the first-run experience
+## Check the first run
 
 - [ ] A clean first launch opens help; `hm --setup` opens the shared settings workspace with clear whitespace, headings, and shortcuts.
 - [ ] All six languages can be selected and the remaining form changes language immediately.
@@ -50,14 +50,14 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] The preamble reports used/maximum/remaining word counts, accepts exactly 500 words, rejects 501, and shows localized validation in all six languages.
 - [ ] The preamble rejects localized instruction overrides and attempts to forge or close its provider-facing delimiter.
 - [ ] Every memory, output, and timeout limit rejects values outside its displayed range.
-- [ ] The summary appears before save.
+- [ ] Save applies the settings directly, without a separate summary or confirmation page.
 - [ ] Cancelling leaves setup incomplete.
 - [ ] `Esc` cancels setup without saving and restores the main terminal buffer.
 - [ ] `Ctrl+C` terminates an active prompt cleanly with exit code `130`.
 - [ ] Saving persists non-secret settings and reports platform-appropriate key guidance.
 - [ ] The optional connection test renders a short user prompt, progress indicator, formatted answer, and token snapshot, then rejects an unexpected response.
 
-## Validate questions, chat, and command control
+## Check questions, chat, and command approval
 
 - [ ] A one-off query creates and closes one session.
 - [ ] A one-off query and every completed chat turn distinguish the estimated retained context, effective input budget, latest provider input/output counts, and cumulative session input/output counts.
@@ -71,10 +71,10 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] A simulated key in command output is visible locally but redacted in SQLite and the next AI prompt.
 - [ ] Timeout and output limits are honored.
 
-## Validate the shared settings screen
+## Check settings
 
 - [ ] `hm --setup`, `hm --ai-setup` (also `--ai-settings`), and `hm --theme` open the same workspace with General, AI, or Theme selected, including with a fresh data directory.
-- [ ] At 60 columns by 20 rows or larger, the left sidebar keeps all seven sections accessible; redirected input/output does not open the interactive form.
+- [ ] At 60 columns by 20 rows or larger, the left sidebar keeps the seven editable sections and About accessible; redirected input/output does not open the interactive form.
 - [ ] Switching sections keeps edits in one draft. Save applies changes directly, without a summary or confirmation page. An invocation-only `--language` choice does not change the saved language unless its field is edited.
 - [ ] Tab reaches Save and Cancel, Left/Right moves between those buttons, and Enter activates the focused action. F6 moves between sidebar and fields.
 - [ ] Theme preview updates live; cancelling restores the previous palette. The compatibility section menu also offers direct Save and Cancel.
@@ -82,7 +82,7 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] An active `PROMPTMEUP_CONTEXT_TOKENS` override is explained and remains effective without being copied into the saved setting.
 - [ ] Cancelling or pressing `Esc` leaves the previous settings intact. Saving does not refresh pricing or send an AI request unless the connection check is enabled; that choice defaults to off after initial setup.
 
-## Validate saved notes and context limits
+## Check saved notes and chat limits
 
 - [ ] `/remember` saves a project note, `/remember global` saves a shared preference, and `/memories` lists their IDs without an AI call.
 - [ ] `/forget <id>` removes a listed note. Malformed IDs, empty notes, notes over 1,000 characters, and recognizable credentials report an error and leave chat open.
@@ -97,7 +97,7 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] Clearing messages or forgetting a note does not erase request history or reset usage already recorded for the session.
 - [ ] Schema-v1 and schema-v2 databases upgrade to v3 with existing settings/history intact and the Cyan theme selected; invalid stored note data is reported instead of silently ignored.
 
-## Validate usage visibility and local history
+## Check usage and local history
 
 - [ ] The first relevant invocation of a local day refreshes public pricing once.
 - [ ] `--costs` forces refresh and renders prices in a localized table.
@@ -107,13 +107,13 @@ Every command should exit `0`, preserve readable redirected output, and avoid an
 - [ ] `ai_sessions` and `ai_session_events` reconstruct each short session in sequence.
 - [ ] `activity_audit.payload_json` remains valid JSON and contains no test secrets.
 
-## Portable publish acceptance
+## Check a portable build
 
 Publish at least one current-machine runtime and launch the resulting `hm` directly. Confirm the `prompt` directory and both PATH helper scripts are beside it. Preview PATH install/status/remove; mutate only a disposable test account or a path you intend to keep.
 
 Nerd Font validation should start with `--dry-run`. The real operation is opt-in and should be tested only when Oh My Posh is already installed.
 
-## Windows release artifact acceptance
+## Check Windows packages
 
 ```powershell
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
@@ -122,7 +122,7 @@ pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
 
 Confirm that both portable ZIPs contain only `hm.exe`, `prompt/*.yaml`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; the current-architecture executable reports the requested package version; `winget validate` succeeds; and every checksum in `SHA256SUMS.txt` matches its package. In Windows Sandbox or another disposable environment, confirm that a non-admin MSI install targets `%LOCALAPPDATA%\Programs\PromptMeUp`, registers only the current-user `PATH`, `hm -where` resolves that installed binary, and uninstall removes the installed files and installer-owned PATH entry. Do not install either distribution format or mutate the host `PATH` during routine validation.
 
-## Post-publication cleanup
+## Clean up after a commit or push
 
 After every successful commit and every successful push, remove Release build and test intermediates and confirm that cleanup did not change tracked files:
 

@@ -1,4 +1,4 @@
-# PromptMeUp CLI reference
+# PromptMeUp command guide
 
 Ask `hm` a terminal question, check its answer, and choose whether to run a suggested command. `hm` means **help me** and works on Windows, Linux, and macOS.
 
@@ -9,22 +9,20 @@ hm [question]
 hm [command] [options]
 ```
 
-A positional phrase is treated as one question:
+Type your question after `hm`:
 
 ```powershell
 hm "Which files have changed in Git?"
 hm how do I list running dotnet processes?
 ```
 
-Quote a question when the current shell would otherwise interpret punctuation, variables, pipes, redirection, or wildcard characters.
+Put the question in quotes if it contains shell characters such as `|`, `>`, `$`, or `*`. This keeps your shell from treating them as part of a command.
 
-If your request is unclear, the assistant asks a focused question before suggesting
-commands. In a live terminal, choose **Clarify the request or continue in chat** to
-answer with more detail in the same conversation, keeping your original request
-and the assistant's answer. Choose **Finish here** to stop when no commands were
-suggested. In an existing chat, simply type the clarification at the next prompt;
-`/exit` ends the conversation. Redirected input or output does not open an
-interactive continuation menu.
+If `hm` needs more detail, it asks before suggesting a command. Choose
+**Clarify the request or continue in chat** to reply in the same conversation.
+If there are no commands and you're done, choose **Finish here**. Already in chat?
+Just type your reply, or `/exit` to leave. When input or output is piped or saved
+to a file, this follow-up menu doesn't open.
 
 ## Commands
 
@@ -42,7 +40,7 @@ interactive continuation menu.
 | `--theme` | — | Opens the same Settings screen with Theme selected and a live palette preview. |
 | `--test-ai` | — | Checks that the configured model can answer a short request in your chosen language. |
 | `--costs` | — | Shows usage and cost estimates, refreshing public prices and any available organization costs. |
-| `--status` | — | Shows local configuration and storage readiness. |
+| `--status` | — | Shows your settings and whether local storage is ready. |
 | `--about` | `about` | Shows the HELP ME banner, project information, author, and license. |
 | `--lenna` | `lenna` | Shows the bundled calibration portrait centered in the terminal, without an AI request. |
 | `--third-party` | — | Shows direct runtime packages, versions, and licenses. |
@@ -52,30 +50,28 @@ interactive continuation menu.
 | `--help` | `-h`, `/?` | Opens a keyboard guide with examples and sections for AI work, insight, setup, and safety. |
 | `--version` | `-v` | Shows application, .NET, and platform versions with links to the GitHub repository and creator site. |
 
-Only one top-level command can be selected per invocation.
+Use one main command at a time.
 
-Settings uses one fullscreen workspace in supported live terminals of at least
-60 columns by 20 rows. Its left sidebar keeps General, AI, Credentials,
-Conversation, Commands, Personalization, Theme, and About accessible. Each settings switch
-only selects the initial section; every section remains accessible.
+Settings fills the terminal window when it supports fullscreen views and is at
+least 60 columns wide and 20 rows tall. Use the sidebar to choose General, AI,
+Credentials, Conversation, Commands, Personalization, Theme, or About.
+`--setup`, `--ai-setup`, and `--theme` simply choose where you start.
 
-Select About and press Enter or Right to open the existing project information
-screen. Closing it returns to Settings with the current draft intact. The compact
-settings menu also offers About and returns to the previous settings section.
+Select About and press Enter or Right to read about the project. When you close
+it, you'll return to your settings with unsaved changes still there. About is
+also available in the smaller settings menu.
 
 Up/Down selects a section; Enter or Right moves into its fields. F6 switches
 between the sidebar and fields, and Ctrl+Left returns to the sidebar. Tab moves
 through fields to Save and Cancel. Left/Right changes a field choice or moves
 between the buttons when an action has focus; Enter activates the focused button.
-Save stores the draft directly. Cancel or Escape discards it and restores the
-original terminal history. There is no separate summary or confirmation step.
-Smaller or less capable terminals use a section menu with the same Save and
-Cancel actions. Language choices include their country flag, native name, and
-code, with plain text alternatives under `--no-emoji`. See
-[terminal themes](TERMINAL_THEMES.md) for the built-in palettes and their editable
-JSON definitions.
+Save keeps your changes right away. Cancel or Escape discards them and returns
+to your terminal history. Smaller or less capable terminals use a section menu
+with the same Save and Cancel actions. Languages show their flag, native name,
+and code; `--no-emoji` uses plain text. See [terminal themes](TERMINAL_THEMES.md)
+to pick colors or edit a theme file.
 
-`hm --where` cannot change the working directory of the shell that launched it because child processes cannot modify their parent process. Its change-directory action therefore prints an exact `Set-Location -LiteralPath '...'` command on Windows (or `cd '...'` on Unix) for the user to run in the current terminal. Opening the native file manager always shows an exact preview and requires confirmation.
+`hm --where` shows where your running copy lives. To switch to that folder, it gives you a `Set-Location -LiteralPath '...'` command on Windows, or `cd '...'` on Unix, to run yourself. An app can't change the folder of the shell that launched it. You can also open the folder in your file manager after reviewing and confirming that action.
 
 ## Browse the command guide
 
@@ -83,35 +79,26 @@ JSON definitions.
 hm --help
 ```
 
-In a supported live terminal of at least 60 columns by 20 rows, help opens a
-fullscreen guide with the same header, section list, and spacing as setup.
-The app version and project link sit at the right of the header. Sections have
-descriptive icons without number prefixes. Up/Down selects a section; Enter,
-Right, or Tab moves into its commands. There, Up/Down scrolls longer sections,
-and Home/End jumps to their beginning or end. F6 or Ctrl+Left returns to the list.
-The sidebar remains beside the commands at every supported fullscreen width.
-Help and settings share the same responsive workspace and button renderer;
-Tab reaches the emoji Close button in the footer.
-Esc or Q closes the guide and restores your original terminal output.
+Help uses the same layout as Settings in supported terminals of at least
+60 columns by 20 rows. Use Up/Down to pick a section, then Enter, Right, or Tab
+to browse its commands. Up/Down scrolls the list; Home/End jumps to the beginning
+or end. F6 or Ctrl+Left takes you back to the sidebar. Tab reaches Close.
+Press Esc or Q to leave and return to your earlier terminal output.
 
 The About sidebar entry opens the project information screen with Enter or Right.
 Enter or Esc closes About and returns to the guide with its selection preserved.
 In scrolling help, the About section shows the direct `hm about` command.
 
-Each entry starts with its command syntax. Descriptions and concrete examples
-are indented two spaces, and argument notes four spaces; wrapped lines preserve
-these insets. The lowercase `hm` stays white in every theme, including in the
-header and scrolling reference; options and arguments use distinct colors so you
-can read the command's parts at a glance. Parameter explanations keep those same
-colors and explain what each argument means and which values you can change.
-Optional groups in square brackets use the theme's yellow/amber warning color,
-including groups with spaces or nested options, so they stand apart from switches.
+Each entry shows the command, an explanation, and examples you can try.
+`hm` stays white; options and values have their own colors. Parts in square
+brackets are optional and appear in yellow or amber. The notes below each
+example explain which values you can change.
 
-Help works without setup or an API key. Small terminals, redirected output, and
-terminals without an alternate buffer receive the full scrolling reference.
-Help shown after an invalid command also stays in the current buffer, so the
-error remains visible. Resizing an open guide redraws it; a window below the
-minimum size shows a short instruction until you enlarge it or close help.
+You don't need setup or an API key to read help. In small terminals, when output
+is redirected, or when fullscreen views aren't supported, you get a scrolling
+command list. Help after an invalid command also stays below the error so you
+can still read it. If you shrink an open fullscreen guide too far, it asks you
+to enlarge the window or close help.
 
 ## About PromptMeUp
 
@@ -120,17 +107,16 @@ hm about
 hm --about
 ```
 
-About presents the HELP ME banner with bright white H and M letters and a cyan,
-violet, and pink gradient, followed by the app version, supported platforms,
-author, project links, and MIT license. In a supported live terminal of at least
+About shows the HELP ME banner, app version, supported platforms, author,
+project links, and MIT license. In a supported live terminal of at least
 60 columns by 20 rows, it opens a fullscreen view. Up/Down and PgUp/PgDn scroll
 the content; Enter or Esc closes it and restores your terminal history.
 Small terminals and redirected output receive a scrolling view. Narrow windows
 and terminals without Unicode support use a compact HELP ME wordmark.
 The command works offline without setup or an API key.
 
-Only the standalone positional word `about` selects this command, regardless of
-casing. Use `hm --query about` to ask an AI question containing that word.
+`hm about` also works with different capitalization, such as `hm About`.
+Use `hm --query about` if you want to ask the AI about that word instead.
 
 ## Check terminal image rendering
 
@@ -145,9 +131,8 @@ The picture fits the current window while preserving its proportions and the
 terminal's scrollback. Use a terminal with ANSI color support; a window that is
 too small produces a short explanation instead of a cropped picture.
 
-Only the standalone positional word `lenna` selects this command, regardless of
-casing. `hm --query lenna` and longer questions that mention Lenna remain AI
-queries. Use one command per invocation, as with the other commands.
+`hm lenna` also works with different capitalization. Use `hm --query lenna` or a
+longer question to ask the AI about Lenna. As elsewhere, use one command at a time.
 
 ## Change the model or conversation limits
 
@@ -157,8 +142,9 @@ Open Settings with the AI section selected:
 hm --ai-setup
 ```
 
-`hm --ai-settings` is an equivalent alias. AI preferences and conversation limits
-live in the same workspace as the other settings:
+`hm --ai-settings` opens the same page. Use the sidebar to reach chat limits and
+the other settings. Limits use tokens, the small pieces of text a model reads.
+Its context window is how much text it can work with at once.
 
 | Setting | What it controls |
 | --- | --- |
@@ -166,18 +152,18 @@ live in the same workspace as the other settings:
 | Model | The model used for requests. |
 | Reasoning effort | The model's reasoning setting. |
 | Output detail | Compact, balanced, or detailed responses. |
-| AI command review | Whether the model adds an advisory review to the local command checks. |
-| Prompt caching | Whether requests use supported provider caching. |
+| AI command review | Adds an AI opinion to the local command checks. You still decide what runs. |
+| Prompt caching | Lets OpenAI reuse unchanged parts of requests when supported. |
 | Conversation input budget | `4,000`–`200,000` estimated tokens; default `16,000`. |
-| Retained user turns | `2`–`50`; default `12`. |
+| Retained user turns | How many question-and-answer exchanges to keep: `2`–`50`; default `12`. |
 | Characters per user message | `500`–`100,000`; default `16,000`. |
 | Share of the model context window | `10`–`95%`; default `70%`. |
 
 Use the sidebar to open Conversation for its four limits, Commands for execution
 limits, or any other section. General contains language; AI contains availability,
 model preferences, advisory command review, and caching. Credentials contains key
-replacement and an optional connection check. Personalization contains the
-instruction preamble and location preference.
+replacement and an optional connection check. Personalization contains your
+personal instructions and location preference.
 Save applies all draft changes directly; Cancel keeps the previous settings.
 After initial setup, the connection check defaults to off. Saving alone makes no
 provider request and does not refresh pricing.
@@ -210,18 +196,19 @@ hm --recipes export project-check --output project-check.json
 hm --recipes import --file inspect-folder.json
 ```
 
-Save a fully completed and confirmed plan as a local recipe, or import a reviewed
-JSON definition. Saves and exports require confirmation and never overwrite an
-existing recipe or file. Names use 1–40 ASCII letters, digits, hyphens, or
-underscores and start with a letter. Local libraries contain at most 200 recipes.
+Recipes are saved routines you can run again. Make one from a plan you've
+completed and confirmed, or import a JSON recipe you've reviewed. Saving and
+exporting ask for confirmation and won't overwrite a recipe or file. Names
+start with a letter and use 1–40 ASCII letters, digits, hyphens, or underscores.
+You can keep up to 200 recipes.
 
-Every run shows prerequisites and asks for parameter values interactively, then
-creates a new resumable plan with fresh per-command approvals. Parameter values
-are bound as literal entries in `$hmParameters`; they are never substituted into
-the source text. Definitions store parameter descriptions, not invocation values.
-The resulting run plan and ordinary audit retain the bound commands locally;
-recognizable credentials are rejected. Each value is limited to 1,024 characters,
-and the complete bound command must fit the plan's 4,096-character limit.
+Each run shows what you'll need and asks for any values, such as a folder name.
+It creates a new plan you can pause and resume, with a fresh approval for every
+command. Values go into `$hmParameters` as literal data, so they aren't pasted
+into the script source. Recipe files keep parameter descriptions, not the values
+you entered. The resulting plan and local history do keep the commands with
+those values. Recognizable secrets are rejected. Each value can use up to
+1,024 characters; the whole command must fit within 4,096 characters.
 
 Recipes saved from completed plans retain the original working directory and
 literal commands. To add parameters, export a definition, choose a new name,
@@ -255,18 +242,20 @@ hm --preview move --file ./logs --pattern '*.log' --output ./archive
 hm --preview delete --file ./logs --pattern '*.tmp'
 ```
 
-This local-only flow displays source, destination or deletion, byte counts, and
-collisions. `--file` accepts one file or the immediate files of a directory;
-copy/move require an existing destination directory. No directory recursion,
-symbolic links, reparse points, or arbitrary shell-command simulation is supported.
-Preview is limited to 1,000 matching files and 10,000 scanned files.
+This preview runs locally, without AI. It shows the files involved, their sizes,
+where they'd go or what would be deleted, and any names already in use.
+`--file` accepts a single file or files directly inside a folder. Copy and move
+need a destination folder that already exists. The preview doesn't search
+subfolders, follow links (including Windows reparse points), or simulate other
+shell commands. It can show up to 1,000 matches from 10,000 scanned files.
 
-Redirected invocations only inspect. In a live terminal, opt into command review,
-then approve every generated command separately. A collision blocks the whole
-batch. Copy/move never overwrite existing destinations, including destinations
-created after preview. Source size/time and link ancestry are checked again after
-approval. This is a snapshot, not a filesystem lock: other processes can still
-change files. A failure or declined command stops remaining operations.
+With redirected input or output, you only get the preview. In a live terminal,
+you can choose command review and approve each command separately. A name
+already in use blocks the whole batch. Copy and move won't overwrite a file,
+even if it appeared after the preview. After approval, `hm` checks file sizes,
+timestamps, and links in their paths again. Other apps can still change files
+while you work; the preview doesn't lock them. A failed or declined command
+stops the remaining operations.
 
 ## Follow a resumable plan
 
@@ -274,17 +263,16 @@ Use `hm --plan "Build, test, and package this project"`. PromptMeUp creates one
 to eight ordered PowerShell steps, saves their pending state locally, and shows
 `hm --plan --resume <id>`. The plan must be resumed from its original directory.
 
-Starting guidance does not authorize any step. Each action and its separate,
-read-only verification command receives the normal risk review, exact preview,
-and individual confirmation. A successful verification is followed by a user
-check against the declared expected result. Failure, timeout, denial, or a result
-that does not match pauses the plan before later actions start.
+Starting a plan doesn't approve its steps. You review and approve each action
+and its separate check command, which is meant only to inspect the result.
+After a check succeeds, `hm` asks you to confirm that the result looks right.
+A failure, timeout, declined command, or unexpected result pauses the plan.
 
-Before starting an action, its state becomes `outcome unknown`. After a crash or
-interruption, resume runs the verification first and never repeats that action
-automatically. One process holds an exclusive lease while guiding a plan. Saved
-plan JSON contains the goal, original directory, commands, verification, and
-progress; credential-bearing plan content is rejected.
+Just before an action starts, `hm` records its result as `outcome unknown`.
+If the app closes unexpectedly, resuming starts with the check; it won't repeat
+the action automatically. Only one copy of `hm` can guide a plan at a time.
+The saved JSON keeps your goal, starting folder, commands, checks, and progress.
+Plan content with recognizable secrets is rejected.
 
 ## Create or revise a script
 
@@ -295,11 +283,11 @@ then offers revision, validation, saving, or cancellation. Existing files are
 never overwritten. Script input/output supports up to 1 MiB of UTF-8 source by
 default. Embedded credentials and redaction placeholders are rejected.
 
-The optional validation action previews a PowerShell parser command for explicit
-approval. It parses the source as literal data and uses PSScriptAnalyzer if already
-installed; it never evaluates the generated script or installs tooling. Syntax
-success does not establish semantic correctness or safety. Saving does not run
-the script. Requests and selected source are shared with the AI provider.
+The optional validation action asks you to approve a PowerShell syntax check.
+It reads the script without running it and also uses PSScriptAnalyzer if that's
+already installed. It doesn't install tools. Passing a syntax check doesn't mean
+the script will do the right thing or be safe to run. Saving doesn't run it
+either. Your request and the source you select are shared with OpenAI.
 
 ### Configure artifact limits
 
@@ -326,47 +314,47 @@ including reasoning tokens. A file fitting locally may be too large for one AI r
 ## Diagnose an error
 
 Use `hm --diagnose "restore failed"`, `hm --diagnose --file build.log`, or
-`Get-Content build.log | hm --diagnose`. With no supplied source in a live terminal,
-`hm --diagnose` asks for evidence. Do not put credentials in command arguments.
-File and pipe input is bounded by the configured message limit, with a 30-second
-read deadline. Empty or oversized evidence is rejected; select a smaller excerpt.
-Recognizable credentials are redacted before AI transmission. The selected text
-is still shared with the provider, so choose the excerpt deliberately.
+`Get-Content build.log | hm --diagnose`. If you don't supply text in a live
+terminal, `hm --diagnose` asks you to paste the error or log. Keep secrets out
+of command arguments. File and piped input must fit your message limit and be
+read within 30 seconds. If the text is empty or too long, pick a smaller excerpt.
+`hm` removes secrets it recognizes before sending the text to OpenAI, but check
+the excerpt for other private details yourself.
 
-The answer separates observations, probable causes, missing evidence, and the
-next verification. In a live terminal, a suggested check uses the existing exact
-preview and per-command approval flow. Piped invocations only render suggestions.
+The answer explains what the log shows, what might have caused it, what's still
+unclear, and what to check next. In a live terminal, you review and approve any
+suggested check before it runs. Piped input only produces suggestions.
 
 ## Global options
 
 | Option | Behavior |
 | --- | --- |
-| `--language <code>` / `-l <code>` | Uses `it`, `en`, `fr`, `de`, `es`, or `vi` for this invocation. |
-| `--no-animation` | Disables Spectre progress and other optional animation. |
-| `--no-emoji` | Uses portable ASCII fallbacks for semantic emoji and markers. |
-| `--yes` / `-y` | Preauthorizes only an already reviewed PATH or font operation; it never authorizes chat commands. |
+| `--language <code>` / `-l <code>` | Uses `it`, `en`, `fr`, `de`, `es`, or `vi` for this run. |
+| `--no-animation` | Turns off progress animations and other optional animation. |
+| `--no-emoji` | Uses plain text symbols in place of emoji. |
+| `--yes` / `-y` | Approves a PATH or font operation you've already reviewed; it never approves chat commands. |
 | `--dry-run` | Previews Nerd Font installation without running Oh My Posh. |
 
 `--dry-run` is accepted only with `--install-font`. Unknown options, unsupported languages, invalid PATH actions, missing values, and conflicting commands return exit code `2` without guessing.
 
-PromptMeUp is scoped to terminal tasks. It does not generate images or rewrite, proofread, translate, or compose ordinary prose. Each AI request receives a privacy-filtered snapshot of the current directory, platform/shell, CPU, memory, and available GPU label so its command guidance matches the machine in use.
+PromptMeUp helps with terminal tasks. It doesn't generate images or write, edit, or translate general prose. AI questions include a filtered summary of your current folder, operating system, shell, CPU, memory, and GPU name when available, so the suggested commands fit your machine.
 
 ## Keep a conversation moving
 
 | Control | Behavior |
 | --- | --- |
-| `/run <command>` | Performs local and optional AI risk review, displays the exact command, asks for authorization, runs it if approved, and offers its bounded result to the next AI turn. |
-| `/remember [global\|project] <text>` | Saves an explicit persistent note; the default scope is the current project. |
+| `/run <command>` | Checks risks locally and, optionally, with AI. Shows the exact command and asks before running it. Captured output can be shared in a follow-up. |
+| `/remember [global\|project] <text>` | Saves a note for next time. Notes belong to the current project unless you choose `global`. |
 | `/memories` | Lists saved global and current-project notes with their IDs. |
 | `/forget <id>` | Deletes a saved global or current-project note from future selection. |
-| `/clear` | Starts with fresh conversation context. Saved notes, usage counters, and earlier audit records remain. |
+| `/clear` | Starts fresh in chat. Saved notes, usage counters, and earlier activity history stay. |
 | `/costs` | Shows the cost dashboard without ending the chat. |
 | `/status` or `/context` | Shows current context, the input budget, loaded notes, and token usage. |
 | `/exit` | Ends the conversation. |
 | `Esc` | Closes help or cancels the current interactive command without saving unfinished settings. |
 | `Ctrl+C` | Cancels the whole application and returns exit code `130`. |
 
-There is no command that silently approves `/run`. The authorization prompt must be answered in a live terminal for every command.
+You must answer the approval prompt in a live terminal for every `/run` command.
 
 ### Remember something for next time
 
@@ -443,7 +431,7 @@ query and chat; scripts, plans, and diagnostics have their own input budgets.
 
 See [memory, costs, and caching](OPENAI_COSTS_AND_CACHING.md) for more detail.
 
-When an AI answer cites command candidates, PromptMeUp presents a menu whose first and default item is **Do not execute commands**. Picking a candidate only opens the normal exact-preview and authorization flow; it never runs a command by itself.
+When an answer suggests commands, the first and default menu choice is **Do not execute commands**. Picking a command opens its preview and approval prompt. It doesn't run it yet.
 
 ## First run and redirected output
 
@@ -453,10 +441,9 @@ Use [`hm --ai-setup`](#change-the-model-or-conversation-limits) to select AI in
 Settings, or `hm --setup` to select General. Conversation limits, including the
 input budget, are in the Conversation section of that same screen.
 
-General also contains the application-status and cached usage/cost overview. Use
-`Ctrl+Up` / `Ctrl+Down` to scroll that overview in a short terminal. The standalone
-`--status` and `--costs` commands remain available. The operating-budget bar occupies
-its own row with its label aligned to the session overview's first label column.
+General also shows your setup, recorded usage, and saved cost estimates. Use
+`Ctrl+Up` / `Ctrl+Down` to scroll when the overview doesn't fit. You can also use
+`--status` and `--costs` on their own.
 
 Read-only commands such as `--help`, `--about`, `--version`, `--status`, `--third-party`, and `--path=status` support redirected output. Mutating PATH and font operations require a live prompt or `--yes`; font dry-run is non-mutating and can run unattended.
 
@@ -487,6 +474,6 @@ The prompt YAML resources remain beside the application because they are version
 | Code | Meaning |
 | ---: | --- |
 | `0` | Command completed or a user safely cancelled an optional operation. |
-| `1` | Runtime, provider, persistence, or validation failure. |
-| `2` | Invalid command line or setup required in a non-interactive invocation. |
+| `1` | The app, AI request, data storage, or a validation check failed. |
+| `2` | Invalid command, or setup is needed but no interactive terminal is available. |
 | `130` | Operation cancelled with Ctrl+C. |

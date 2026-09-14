@@ -1,8 +1,10 @@
 # Terminal themes
 
-PromptMeUp includes thirteen palettes: Cyan, AS/400 Green, Amber, Ocean, Cobalt, Violet, Rose, Coral, Forest, Mint, Midnight, Coffee, and Graphite. Select a theme in Settings to preview its colors and save the choice. The preview explains success, warning, and error colors beside their labels and shows the selected theme's full local file path, author, website link, and description. Use Ctrl+Up and Ctrl+Down to scroll an overview that exceeds the window. The theme identifier is stored with local preferences; JSON files contain the palette and its version, author, website, and description. The source path is resolved at runtime and is never stored in theme JSON or settings.
+This folder holds the thirteen built-in themes. Run `hm --theme` to try their colors and save your favorite. The preview explains each status color and shows the theme's file path, author, website, and description. Ctrl+Up and Ctrl+Down scroll the details.
 
-The application loads the `themes` directory next to `hm`. Portable builds, published archives, and Windows installers include every JSON file in this directory. Windows release staging checks that the required default `cyan.json` is present. Invalid themes and unavailable saved identifiers stop theme loading with an explicit error.
+Want to make your own? The [theme guide](../docs/TERMINAL_THEMES.md#customizing-a-theme-file) has a complete example and explains what each color does. Settings saves only your theme choice. Colors and author details stay in the JSON file; the app finds the file path when it loads the theme.
+
+Keep the `themes` folder next to `hm`; portable builds, release archives, and Windows installers include it. Windows packaging checks that the default `cyan.json` is there. If a theme is invalid or your saved choice is missing, the app reports an error instead of quietly choosing another theme.
 
 To add a palette, copy one of the bundled JSON files and change its filename, `id`, `name`, `author`, `website`, `description`, and colors. The filename must match the identifier: for example, `my-theme.json` uses `"id": "my-theme"`. Identifiers begin with a lowercase letter and contain only lowercase ASCII letters, digits, and hyphens, up to 32 characters. Names contain 1–48 visible characters with no leading or trailing whitespace.
 

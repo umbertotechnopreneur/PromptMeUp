@@ -1,99 +1,101 @@
-# PromptMeUp privacy and data flow
+# Your data in PromptMeUp
 
-Your settings, saved notes, and conversation history live on your machine. When you ask a question, PromptMeUp sends OpenAI the instructions, selected notes, and recent messages that fit the request budget. When you approve a command, its output can also become part of the next question.
+Your settings, saved notes, and chat history are stored on your machine. To answer a question, PromptMeUp sends OpenAI the app's instructions, selected notes, and recent messages that fit the request limit. Output from a command you approve can also be included in a follow-up.
 
 This page explains what is stored, what is sent, and what clearing a conversation actually removes.
 
-## Local by default
+## What stays on your machine
 
-PromptMeUp stores its own state in the platform's local application-data directory. `hm --status` prints the exact paths, and `PROMPTMEUP_DATA_DIR` can redirect them.
+PromptMeUp saves data in your operating system's local app-data folder. Run `hm --status` to see the exact paths. You can choose a different folder with `PROMPTMEUP_DATA_DIR`.
 
 Local data includes:
 
-- non-secret settings;
-- the SQLite prompt, response, usage, session, command, and activity ledger;
-- notes you explicitly save with `/remember`, in that same SQLite database;
-- cached OpenAI pricing and optional organization cost buckets;
-- Serilog diagnostic files, rolled daily and retained for up to 14 files;
-- packaged YAML prompt resources beside the executable.
+- Settings, without API keys.
+- A SQLite database with questions, answers, usage, sessions, commands, and activity history.
+- Notes you save with `/remember`, in the same database.
+- Saved OpenAI prices and, if you use an admin key, organization cost records.
+- Diagnostic logs, started fresh each day, with up to 14 files kept.
+- The app's YAML instruction files, kept beside the executable.
 
-Prompt and audit history stays until you remove the PromptMeUp database or data directory. Closing `hm` or using `/clear` removes the recent messages from active chat context. It does not delete saved notes or local history.
+Questions and activity history stay until you remove the PromptMeUp database or data folder. Closing `hm` or using `/clear` stops recent messages from being included in the next question. It doesn't delete saved notes or local history.
 
 ## Saved notes
 
 Use `/remember` in chat to save a note for the current project, or `/remember global` to save a preference for use across projects. `/memories` lists the current project's notes and global notes; `/forget <id>` deletes a note from that list. PromptMeUp does not automatically turn conversation history into saved notes.
 
-Project notes belong to the nearest Git root, or the current directory when there is no Git root. The database stores a hash of that location as the project identifier. Note text is stored as text, so a path or other private detail you put in a note remains part of its content.
+Project notes belong to the nearest folder containing `.git`, looking upward from your current folder. Outside a Git project, they belong to the current folder. The database identifies the project with a hash — a code calculated from the folder path. The note itself is stored as text, including any paths or private details you put in it.
 
-Saving, listing, deleting, and selecting notes happen locally, without an AI call. For a question, PromptMeUp selects up to five notes: global preferences are eligible across projects, and project notes need matching words in the question. The notes and their surrounding instructions together stay within 800 estimated tokens. Selected notes are sent to OpenAI with the request and may appear in its local audit history.
+Saving, listing, deleting, and picking notes happen on your machine, without an AI call. For each question, PromptMeUp picks up to five notes. Global notes can be used across projects; project notes need words that match the question. Notes and their added instructions share a limit of 800 estimated tokens (small pieces of text). The selected notes go to OpenAI with your question and may also appear in the local request history.
 
-Notes containing recognizable credentials are rejected. Existing notes are checked again when read, and recognized credentials are scrubbed from their stored text. `/forget` prevents a note from being selected again; it does not erase copies already present in an active conversation, older request history, backups, or provider records.
+The app rejects notes that contain secrets it recognizes. It checks saved notes again when reading them and removes recognized secrets from the stored text. `/forget` stops a note from being picked again. It doesn't erase copies already in the current chat, earlier request history, backups, or OpenAI's records.
 
 ## Secrets
 
-- PromptMeUp recognizes only `OPENAI_API_KEY` and `OPENAI_ADMIN_KEY`.
-- Keys are never accepted as CLI values, written to settings, placed in SQLite, or logged.
-- On Windows, setup writes an entered key to current-user and current-process environment scope. Before launching `hm` again, fully close and reopen the terminal application, including its IDE host when applicable, so it stops inheriting an older key.
-- On Linux and macOS, setup keeps the entered key only for the current process and provides shell/secret-manager guidance for future sessions.
-- Request authorization headers are built outside the serialized provider payload.
-- Credential-shaped properties, OpenAI key prefixes, bearer tokens, and common credential assignments are redacted from audit strings and normalized request history.
+- PromptMeUp reads keys from `OPENAI_API_KEY` and `OPENAI_ADMIN_KEY`.
+- It won't accept keys as command arguments or save them in settings, SQLite, or logs.
+- On Windows, setup makes an entered key available to the open app and saves it in your user's environment variables. Before starting `hm` again, fully close and reopen the terminal app, including the IDE if it hosts your terminal.
+- On Linux and macOS, a key entered in setup lasts only for the open app. Setup explains how to use your shell or secret manager for later sessions.
+- Keys used to connect to OpenAI go in the request's authorization header, separately from the text sent to the model.
+- Before saving history, the app removes recognizable secrets such as OpenAI keys, bearer tokens, and values assigned to common credential names.
 
-Quoted JSON credentials and serialized JSON strings are inspected before command output or history is persisted or used for an AI follow-up. Credential field recognition covers common names such as `accessToken`, `SecretAccessKey`, and `SessionToken`, including alternate casing and separators, while retaining ordinary token counters and types. JSON credential objects and arrays are redacted as complete values. PowerShell quoted assignments and here-strings are scanned through their closing delimiter; if capture ends inside the value, its remaining text is redacted. Local command and output previews remain complete.
+The secret filter also checks JSON, including JSON stored inside a quoted string. It recognizes names such as `accessToken`, `SecretAccessKey`, and `SessionToken`, with different casing or separators. It keeps ordinary usage counters but removes whole objects or lists when they hold credentials. In PowerShell, it checks quoted assignments and multiline strings through their closing marker. If captured output ends partway through a secret, the rest of that captured value is removed too.
 
-New preambles containing recognizable credentials are rejected with a localized message. Legacy preambles are scrubbed in the current settings row before use; this does not erase older backups or previously stored history.
+You still see the full command and output in your local preview. Filtering applies to saved history and text sent to the AI.
 
-Persistent diagnostics retain error types, stable failure codes, status codes, and request identifiers rather than raw exception messages or nested exceptions. The local error surface can still show the provider's explanation.
+Personal instructions entered in setup are checked too. The app rejects new instructions containing recognizable secrets and removes them from older saved instructions before use. Older backups and history aren't rewritten.
 
-Redaction is defensive, not infallible. Do not paste secrets into prompts or commands.
+Diagnostic logs keep error types, error and status codes, and request IDs. They leave out raw exception messages and nested errors that might contain private text. The terminal can still show OpenAI's explanation of an error.
 
-Credential-bearing command arguments are rejected. Conversation messages are
-redacted before AI transmission; local command previews retain the exact text.
+The filter can't catch everything. Don't paste secrets into questions or commands.
+
+Command arguments containing recognizable secrets are rejected. Chat messages
+are filtered before being sent to OpenAI.
 
 ## Data sent to OpenAI
 
 An ordinary AI request can contain:
 
-- the localized YAML instruction selected for that operation;
-- the optional setup preamble, after local Unicode normalization and multilingual prompt-injection screening, delimited as untrusted preference data for chat and one-off queries;
-- for chat and one-off queries, a privacy-filtered runtime snapshot: the current working directory (with a recognized home directory rendered as `~`), operating-system and shell family, CPU summary, physical-memory summary, and GPU label when the portable runtime can expose one;
-- coarse culture and time-zone context only when the location option is enabled;
-- the bounded active user/assistant conversation;
-- selected saved notes, labeled as untrusted context that cannot override the current request or authorize commands;
-- an explicitly authorized command's redacted, bounded stdout/stderr when used for the next turn;
-- model, reasoning, output-detail, cache-routing, and output-budget settings.
+- The app's instructions for that task, in your chosen language.
+- Your optional personal instructions for questions and chat, after local checks. They are marked as preferences, not permission to change the app's rules.
+- For questions and chat, your current folder (with a recognized home folder shown as `~`), operating system, shell, CPU and memory summary, and GPU name when available.
+- General language-region and time-zone details, only if you enable the location option.
+- Recent messages that fit the conversation limit.
+- Selected saved notes. These can't override your request or approve commands.
+- Captured output and errors from a command you approved, after filtering, when used in a follow-up.
+- Your model, reasoning, answer length, caching, and output limit settings.
 
-The runtime snapshot excludes user name, host name, network identity, device serial numbers, and secrets. It helps the answer match your terminal and operating system. PromptMeUp uses the model for console help, including diagnosis, plans, and scripts.
+The machine summary doesn't include your username, computer name, network identity, serial numbers, or secrets. It helps `hm` suggest commands that fit your terminal and operating system.
 
-The ordinary question and chat budget defaults to 16,000 estimated input tokens, including instructions, runtime details, selected notes, and recent messages. Older turns are removed as needed to fit. `/context` and `/status` show the retained context estimate separately from the last response's token counts and the session's cumulative usage. A smaller active context does not undo requests already sent or charges already incurred.
+Questions and chat have a default limit of 16,000 estimated input tokens, including instructions, machine details, notes, and recent messages. Older exchanges are left out as needed to fit. Use `/context` or `/status` to see what's being kept, alongside usage for the last answer and the whole chat. Keeping fewer messages doesn't undo earlier requests or charges.
 
-`hm --setup`, `hm --ai-setup` (also `--ai-settings`), and `hm --theme` open one Settings screen with a different section selected. Saving the draft is local and does not refresh pricing. A provider request is sent only if you enable the optional connection check in Credentials; that check defaults to off after initial setup. See the [CLI reference](CLI_REFERENCE.md) for the settings and limits.
+`hm --setup`, `hm --ai-setup` (also `--ai-settings`), and `hm --theme` open Settings at different sections. Saving changes happens locally and doesn't refresh prices. Settings sends an AI request only if you turn on the connection check in Credentials. That check starts off after initial setup. See the [command guide](CLI_REFERENCE.md) for settings and limits.
 
-Prompt-injection screening is deterministic defense in depth, not a proof that arbitrary text is safe. The preamble is limited to 500 words, cannot contain the provider-facing delimiter, and is rejected when local rules recognize instruction overrides or role forgery in any supported language. The YAML system prompt independently tells the model to treat the delimited preamble only as untrusted style or format preferences.
+Personal instructions have a 500-word limit. Local rules reject text that tries to impersonate system instructions, override the app's rules, or close the marker around your preferences. These checks cover all six languages. The app also tells the model to use this text only for compatible style and format preferences. Neither check guarantees that every attempt will be caught.
 
-The optional command review sends a redacted copy of the proposed command. The exact local command is still shown to the user and is used only for local execution after authorization.
+The optional AI command review sends a filtered copy of the proposed command. You still see the exact original command, and it runs locally only after you approve it.
 
 PromptMeUp sets `store=false` on Responses API calls. OpenAI's account, abuse-monitoring, retention, regional, privacy, and billing policies still apply independently; review the current provider terms for your account.
 
 ## Pricing and organization costs
 
-After setup, the first relevant invocation of a local day downloads the official public OpenAI pricing document. `hm --costs` forces that refresh.
+After setup, the first command that needs prices each day downloads OpenAI's public pricing page. `hm --costs` refreshes it on demand.
 
-If a valid `OPENAI_ADMIN_KEY` is available, the cost flow also requests current-month organization cost buckets from the OpenAI administration API. These requests send authorization and time-range parameters, not local prompts or command output. Returned cost buckets are stored in SQLite.
+If you provide a valid `OPENAI_ADMIN_KEY`, `hm` also asks OpenAI for your organization's cost records for the current month. That request sends the key for authorization and the date range, without your questions or command output. The returned costs are saved in SQLite.
 
-Without an admin key, organization cost remains unavailable and PromptMeUp shows local estimates calculated from provider token usage and cached public prices.
+Without an admin key, you'll see local estimates based on recorded token usage and saved prices. The organization total will be unavailable.
 
 ## Command output
 
-The user sees command output locally before any model follow-up. The authorization screen warns that bounded stdout/stderr can be stored locally and sent to OpenAI. PromptMeUp redacts recognizable credentials first, but command output can still contain personal, proprietary, or otherwise sensitive data that no pattern can identify.
+You see command output in the terminal before an AI follow-up. The approval screen explains that captured output and errors can be saved locally and sent to OpenAI. PromptMeUp removes secrets it recognizes first, but private details or company information can still get through.
 
 Cancel the command or leave chat instead of sending output that should remain local.
 
-## Network destinations
+## Where the app connects
 
 By default PromptMeUp contacts only:
 
-- `https://api.openai.com/v1/responses` for configured AI work;
+- `https://api.openai.com/v1/responses` for AI requests;
 - the official OpenAI developer pricing document for daily price refresh;
-- the OpenAI organization Costs API when an admin key is available and cost synchronization is requested.
+- the OpenAI organization Costs API when an admin key is available and costs are being refreshed.
 
-The Responses endpoint is visible in setup for verification, but this version accepts only the official `https://api.openai.com/v1/responses` destination. This prevents an OpenAI key from being redirected to an arbitrary HTTPS host through persisted settings.
+Setup shows the API address so you can check it. This version accepts only `https://api.openai.com/v1/responses`; changing saved settings can't redirect your OpenAI key to another server.

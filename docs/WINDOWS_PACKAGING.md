@@ -1,6 +1,6 @@
 # PromptMeUp Windows release packaging
 
-One release command turns PromptMeUp into a Windows-ready set for users who prefer a portable ZIP, WinGet, or an optional per-user MSI. `scripts/build-release-artifacts.ps1` creates those artifacts without publishing them or installing anything on the workstation.
+Use `scripts/build-release-artifacts.ps1` to make Windows ZIP downloads, WinGet manifests, and an optional MSI installer for the current user. It creates the files locally; you'll review them before publishing or installing. This guide also covers the separate MSIX package.
 
 ## What users receive
 
@@ -21,7 +21,7 @@ release.json
 
 The ZIP archives contain only `hm.exe`, the required `prompt` YAML resources, `LICENSE`, and `THIRD_PARTY_NOTICES.md`. They are self-contained and do not require a separate .NET runtime. The WinGet manifest declares PowerShell 7 as a package dependency because approved command execution uses `pwsh`.
 
-After a successful build, publish, staging, WiX, and smoke-test intermediates are removed automatically. They remain only when a build fails, where they are useful for diagnosis. The completed release directory therefore contains only the packages, WinGet manifests, checksums, and `release.json` needed for testing or publication.
+After a successful build, the script removes temporary build, packaging, and smoke-test files. If the build fails, it keeps them to help you find the problem. A finished release folder holds the packages, WinGet manifests, checksums, and `release.json` you'll need to test or publish.
 
 The x64 MSI uses WiX Toolset 3.14, installs under `%LOCALAPPDATA%\Programs\PromptMeUp`, adds the installation directory to the current user's `PATH`, supports silent Windows Installer switches, and removes its PATH entry on uninstall. It is a per-user package and does not require elevation or modify the machine `PATH`. Native ARM64 remains available through the portable WinGet archive; WiX 3.14 cannot produce an ARM64 MSI.
 
@@ -36,7 +36,7 @@ WiX treats every validation warning as an error. The build suppresses ICE64 for 
 
 The local-server example also uses Python when available; any static HTTP server bound only to loopback is equivalent.
 
-Use `-SkipMsi` when only portable and WinGet artifacts are needed. Use `-SkipWingetValidation` only when WinGet is unavailable; publication candidates must always be validated.
+Use `-SkipMsi` if you only need portable and WinGet packages. Use `-SkipWingetValidation` only if WinGet isn't available, and make sure you validate the manifests before publishing.
 
 ## Create a release candidate
 
@@ -52,7 +52,7 @@ Create the complete local test set:
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
 ```
 
-The default manifest URLs point to `http://127.0.0.1:8765`. This is only for local testing. To generate a publication candidate, pass the immutable HTTPS directory containing the versioned release assets:
+By default, manifest links point to `http://127.0.0.1:8765` for local testing. For files you plan to publish, pass the HTTPS address where that exact version's downloads will live. Keep those files unchanged once published:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 `
@@ -61,7 +61,7 @@ pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 `
 
 The requested version must use three numeric parts because Windows Installer compares only numeric MSI versions. If `-Version` is omitted, the script reads `Version` from `PromptMeUp.csproj`.
 
-## Experience the WinGet path before publishing
+## Try WinGet before publishing
 
 Start a temporary local file server in the package directory and leave it running:
 
@@ -100,7 +100,7 @@ hm --path remove
 & $hmExecutable --path install
 ```
 
-Each changing action shows an exact preview and requires confirmation unless `--yes` is supplied. Open a new terminal after a change. Uninstall the local package from a normal terminal:
+Each change shows a preview and asks for confirmation unless you pass `--yes`. Open a new terminal afterward. To uninstall the local package, use a normal terminal:
 
 ```powershell
 winget uninstall --id UmbertoGiacobbi.PromptMeUp --exact --scope user
@@ -112,7 +112,7 @@ Then disable local manifests from an administrator terminal:
 winget settings --disable LocalManifestFiles
 ```
 
-## Experience the MSI path
+## Try the MSI installer
 
 The standard per-user installer supports normal Windows Installer behavior from a non-administrator terminal:
 
@@ -166,7 +166,9 @@ pwsh -NoProfile -File .\scripts\build-msix.ps1 `
   -Architecture x64 -CertificateThumbprint '<your existing code-signing certificate thumbprint>'
 ```
 
-The thumbprint identifies a public certificate; no key value or exported certificate is passed to the script. Packaging copies the prepared application, runtime DLLs, prompts, themes, and license metadata, derives the tile images from `assets/PromptMeUp.ico`, validates the manifest, signs the MSIX, and verifies its signature. It rejects existing output directories, links, and unexpected files such as local databases, logs, or credential files. It does not install the app, change certificate trust or `PATH`, or run the app or tests.
+The thumbprint identifies your public certificate; you don't pass a private key or exported certificate to the script. The script copies the prepared app, runtime DLLs, prompts, themes, and license files. It makes tile images from `assets/PromptMeUp.ico`, checks the manifest, signs the MSIX, and checks the signature.
+
+Use a fresh output folder. The script rejects links and unexpected files such as databases, logs, or credentials. It only builds the package: it doesn't install or run the app, run tests, or change certificate trust or `PATH`.
 
 The four-part package version defaults to the published executable's file version. Use `-Version 0.1.5.1` when a packaging revision needs a higher version. Use `-SdkBinDirectory` to select the directory containing the SDK tools. An optional `-TimestampServer https://...` adds an RFC 3161 timestamp from your chosen signing service; without one, the signature's validity is limited by the certificate's expiry.
 

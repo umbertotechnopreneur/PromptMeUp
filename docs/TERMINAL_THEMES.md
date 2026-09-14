@@ -1,6 +1,6 @@
 # Terminal themes
 
-Choose the colors that make PromptMeUp comfortable to read. Run `hm --theme` to open the shared Settings screen with Theme selected. Preview a palette and choose Save when ready. General, AI, Credentials, Conversation, Commands, and Personalization remain accessible in the left sidebar; `--setup` and `--ai-setup` open this same screen with General or AI selected.
+Pick colors you like with `hm --theme`. Try a theme, then choose Save to keep it or Cancel to go back. You're in the same Settings screen as `--setup` and `--ai-setup`. Use the sidebar to reach the other settings.
 
 The available built-in themes are:
 
@@ -22,17 +22,17 @@ The available built-in themes are:
 
 The palette preview pairs each colored status label with a short explanation: success means a completed action, warning means attention is needed, and error means an action failed. Labels and theme names are available in all six interface languages.
 
-The Theme section also shows the selected theme's full local file path, author, website link, and description. The file path is resolved from the file loaded by this installation; it is never stored in theme JSON or settings. Metadata comes from the theme file, and older themes show "Not provided" for absent values. Use Ctrl+Up and Ctrl+Down to scroll the overview when it does not fit in the window.
+The preview shows where the theme file lives, who made it, a website link, and a short description. Older themes may show "Not provided" for missing details. Use Ctrl+Up and Ctrl+Down to scroll if the overview doesn't fit. The app finds the file path when loading the theme; it doesn't save that path in the theme file or settings.
 
-The saved theme applies to the shared terminal palette and fullscreen forms. Save stores the selected theme identifier with the rest of the draft. Cancel restores the original palette and discards the draft; there is no need to edit settings or pass color values as command arguments.
+Your saved theme is used throughout the app, including fullscreen forms. Save keeps the theme choice with your other changes. Cancel brings back the original colors and discards your changes.
 
 ## Using fullscreen forms
 
 The Settings screen keeps related preferences together and offers Save and Cancel directly. Chat and short commands retain the scrolling terminal flow.
 
-Labels align to the right and values to the left in two columns, with a blank line between fields. Setup and help share an open layout without cards. The header shows the app version and a GitHub link on the right, with a divider underneath. Another divider separates the content from its action buttons and keyboard shortcuts. Button colors distinguish navigation, saving, and cancellation; the focused button also has a visible `>` marker.
+Field names and values appear side by side, with space between rows. The app version and GitHub link are at the top; buttons and shortcuts are at the bottom. A `>` marks the selected button, so you can find it without relying on color alone.
 
-Settings values use CSS whitesmoke (`#F5F5F5`) in every palette. The active value is bold and underlined, while its label retains the theme accent. Save and Cancel include descriptive icons, with plain text alternatives under `--no-emoji`.
+Values use bright text in every theme. The value you're editing is bold and underlined. Save and Cancel have icons; `--no-emoji` replaces them with plain text.
 
 The sidebar remains visible in fullscreen terminals of at least 60 columns by 20 rows. Use the up/down arrows to go straight to the settings you need, then Enter or the right arrow to edit them. Your changes stay in the draft as you move between sections; choose Save to apply them directly. Section icons describe their purpose, and language choices show a flag, native name, and language code. Use `--no-emoji` for plain text alternatives.
 
@@ -49,11 +49,13 @@ The sidebar remains visible in fullscreen terminals of at least 60 columns by 20
 | Ctrl+U while editing | Empty the current input |
 | Escape | Cancel the current form |
 
-Secret replacement fields never display their contents. Leave a replacement blank to keep the existing configured key. Credentials reports configured or missing status without revealing key values or lengths.
+API key fields keep what you type hidden. Leave a replacement field blank to keep your existing key. Credentials tells you whether a key is set, without showing it or its length.
 
-Fullscreen forms use a temporary alternate terminal buffer. Leaving a form restores the main terminal and its earlier scrollback. The form itself does not add its intermediate screens to that history. The application never clears the main screen or scrollback.
+When you leave a fullscreen form, your earlier terminal output is still there.
+The form uses a separate temporary screen, so moving between settings doesn't
+fill your terminal history or clear it.
 
-Forms require an interactive terminal with ANSI and alternate-buffer support, at least 60 columns and 20 rows. If the terminal becomes smaller, enlarge it or press Escape to cancel. Less capable live terminals use a section menu with an explanatory notice and the same direct Save/Cancel actions. Redirected input/output cannot collect settings and retains the existing error behavior.
+Fullscreen forms need a terminal with ANSI colors, support for a separate temporary screen, and a window at least 60 columns wide and 20 rows tall. If you shrink the window too far, enlarge it or press Escape to cancel. Other live terminals use a smaller section menu with Save and Cancel. Settings can't collect input when input or output is redirected; the app reports an error.
 
 ## Customizing a theme file
 
@@ -87,26 +89,26 @@ This is the complete Cyan definition:
 }
 ```
 
-Use the roles to preserve a clear hierarchy:
+Each color has a job:
 
 | Color | Purpose |
 | --- | --- |
-| `background` | Surface behind the form and themed content |
+| `background` | Background behind text and forms |
 | `primary` | Main text and field labels; settings values always use whitesmoke |
-| `muted` | Secondary explanations and metadata, still easy to read |
+| `muted` | Extra details and explanations, still easy to read |
 | `accent` | Headings and emphasis |
 | `info` | Informational content |
-| `divider` | Open-layout separators |
-| `success`, `warning`, `error` | Outcome and validation messages |
+| `divider` | Lines between sections |
+| `success`, `warning`, `error` | Messages showing what worked, needs attention, or failed |
 | `selectionBackground`, `selectionForeground` | Focused choices and actions |
 
 Every color must use six-digit `#RRGGBB` notation. Named colors, transparency, and terminal markup are not accepted. PromptMeUp validates a minimum contrast ratio of 4.5:1 for text (including the fixed whitesmoke field values) against `background`, 4.5:1 for selection text against its selection background, and 3:1 for dividers against `background`.
 
 ## File requirements
 
-Schema version 3 requires exactly the properties shown above. `version` identifies the JSON schema. All 13 bundled files include author, website, and description metadata; the original Cyan, AS/400 Green, and Amber palettes retain their colors. Unknown, duplicate, and missing properties are errors.
+Version 3 theme files need exactly the fields shown above. The `version` field tells the app which file format you're using. All 13 built-in themes include an author, website, and description. Extra, repeated, or missing fields cause an error.
 
-Existing version 1 custom themes remain readable with their original four properties (`version`, `id`, `name`, `colors`). Version 2 themes retain their six properties (`version`, `id`, `name`, `author`, `description`, `colors`). Missing metadata is shown as "Not provided", without inventing attribution or rewriting local files. To upgrade a custom file, change `version` to `3` and include your own `author`, `website`, and `description`.
+Older custom themes still work. Version 1 uses `version`, `id`, `name`, and `colors`; version 2 also has `author` and `description`. Missing details appear as "Not provided", and the app doesn't rewrite your files. To update a theme, set `version` to `3` and add your own `author`, `website`, and `description`.
 
 - Identifiers contain 1–32 characters, start with a lowercase ASCII letter, and use only lowercase ASCII letters, digits, and hyphens. The filename must match the identifier exactly, followed by `.json`.
 - Names contain 1–48 visible characters, without control characters or surrounding whitespace.

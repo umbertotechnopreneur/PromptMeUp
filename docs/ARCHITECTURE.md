@@ -1,32 +1,32 @@
 # PromptMeUp architecture
 
-PromptMeUp helps you understand and use your terminal. It answers questions, remembers notes you choose to save, and asks before running commands. The .NET 10 console host separates those choices from storage, provider calls, rendering, and process execution. It runs only when invoked through `hm`.
+If you're looking through the code, start here. PromptMeUp is a .NET 10 console app that answers terminal questions, keeps notes you choose to save, and asks before running commands. It runs when you start `hm` and closes when you leave.
 
 ```mermaid
 flowchart LR
-    U["User · hm"] --> A["Application orchestrator"]
+    U["User · hm"] --> A["Application flow"]
     A --> V["Spectre views"]
     A --> S["Services"]
     S --> O["OpenAI Responses API"]
     S --> P["Official pricing and Costs API"]
-    S --> D["SQLite ledger"]
+    S --> D["SQLite history and settings"]
     S --> L["Serilog files"]
-    S --> C["Authorized pwsh child process"]
+    S --> C["Approved PowerShell command"]
     Y["Localized YAML prompts"] --> S
 ```
 
-## Product boundaries in code
+## Where things live
 
-- `Models/` contains immutable settings, AI usage, pricing, command authorization, memory, status, and audit contracts.
+- `Models/` holds the data types for settings, AI usage, prices, command approval, notes, status, and history. These types are immutable: code creates new values rather than changing them in place.
 - `Services/` owns SQLite, OpenAI, pricing, prompt loading, localization, recent conversation memory, saved notes, command risk, command execution, secrets, PATH, font support, redaction, and cost calculation.
 - `Views/` owns Spectre.Console rendering and user input. Views do not call OpenAI, SQLite, or PowerShell.
-- `Application/` coordinates one invocation through focused conversation and authorized-command workflows and is the only place that combines services with views.
+- `Application/` brings services and views together to guide a conversation or an approved command. Other layers keep those jobs separate.
 - `Infrastructure/` resolves local application paths.
 - `/prompt` contains versioned runtime instructions and metadata. `/prompts` contains contributor-facing development prompts and is not sent by the application.
 
-Dependencies are wired through `Microsoft.Extensions.DependencyInjection`. Application code consumes `ILogger<T>`; Serilog is configured only at the composition root.
+`Program.cs` connects these parts using `Microsoft.Extensions.DependencyInjection`. Application code logs through `ILogger<T>`. Serilog is set up only in `Program.cs`, where the app is assembled.
 
-The invocation orchestrator delegates settings and credential forms to `SetupWorkflow` and reviewed PATH, executable-location, and font operations to `InstallationWorkflow`. `ApplicationActivityRecorder` shares best-effort non-session audit recording. `AuditSessionScope` opens and closes workflow sessions with explicit typed outcomes, including cleanup after cancellation.
+`SetupWorkflow` handles settings and API key forms. `InstallationWorkflow` handles reviewed PATH, app-location, and font actions. `ApplicationActivityRecorder` tries to record activity outside a session without blocking completed work if recording fails. `AuditSessionScope` opens and closes sessions, records their outcome, and cleans up after cancellation.
 
 `LennaWorkflow` is a small local display path. The composition root selects it before resolving the main application's settings, theme files, or AI configuration. Its service reads a bounded embedded RGB resource, and its passive view centers a Spectre canvas. It opens no database, calls no provider, and does not clear terminal history.
 
@@ -78,7 +78,7 @@ One HTTP deadline covers sending and reading the bounded response body, and reco
 
 The system prompts constrain the assistant to Windows, macOS, and Linux console help. They explicitly exclude image generation and ordinary prose editing. An optional setup preamble is Unicode-normalized, capped at 500 words, screened for multilingual instruction overrides and role forgery, and enclosed in a dedicated untrusted-data block. The localized YAML prompt tells the model to apply only compatible style or format preferences from that block. The Responses API uses a strict JSON schema for the rendered Markdown answer and any cited command candidates. The model has no tool or process-execution capability.
 
-## From suggestion to authorized action
+## What happens when you approve a command
 
 1. `/run` captures the exact proposed PowerShell text.
 2. A conservative local rule produces a risk score and description.
@@ -90,7 +90,7 @@ The system prompts constrain the assistant to Windows, macOS, and Linux console 
 
 No AI response can create authorization and `--yes` never applies to `/run`. A model candidate first appears in a menu whose default is **Do not execute commands**, then must pass this same authorization flow.
 
-## Persistence
+## How data is saved
 
 SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `3`. Initialization upgrades older supported databases in a transaction, adding the saved context budget, note storage, and theme selection while retaining settings and history. A database from a newer schema is rejected.
 
@@ -106,11 +106,12 @@ SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and sc
 | `ai_session_events` | Ordered flexible JSON prompt, response, command, output, pruning, and error events. |
 | `activity_audit` | Flexible JSON records for setup, authorization, PATH, font, status, and other user activity. |
 
-JSON payloads are validated before insertion. Credential-shaped properties and string values are redacted. SQLite errors are logged; provider results are not replaced by secondary telemetry failures.
+JSON is checked before saving, and recognizable secrets are removed from fields and strings. SQLite errors are logged. A failure to record activity doesn't replace an answer already received from OpenAI.
 
-## Artifact and helper boundaries
+## Scripts, plans, recipes, and helpers
 
-Artifacts use matching read/write limits and a separate generation budget; see
+Scripts, plans, and recipes use the same size limit for reading and writing,
+with a separate AI output limit; see
 [configuration](CLI_REFERENCE.md#configure-artifact-limits).
 
 Plans, recipes, and scripts share `AtomicFileWriter` for temporary-file publication and cleanup. Callers retain validation and localized errors and explicitly select overwrite behavior: plans replace progress files, while recipes and scripts require a new destination.
@@ -147,7 +148,7 @@ Before adding a question, `AiConversationWorkflow` reserves the populated instru
 
 The latest response's provider input/output counters are kept separately in `ConversationState`. Cumulative input/output counts come from the session's recorded `ai_requests`. These counters describe usage already incurred; neither pruning nor `/clear` resets them. Diagnostic connection tests show their own latest-call usage without a retained chat-context estimate.
 
-## Cross-platform boundaries
+## Differences between operating systems
 
 - The managed application, SQLite, OpenAI client, rendering, and memory are platform-neutral.
 - Authorized commands require PowerShell 7 on every platform.
