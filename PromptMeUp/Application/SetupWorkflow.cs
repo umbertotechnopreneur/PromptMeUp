@@ -16,7 +16,8 @@ public sealed class SetupWorkflow(
     IConsoleShellView shell,
     ILocalizationService text,
     IThemeCatalogService? themes = null,
-    IPricingService? pricing = null)
+    IPricingService? pricing = null,
+    MemoryManagerWorkflow? memories = null)
 {
     /// <summary>Opens the shared settings screen with appearance selected.</summary>
     public Task<int> RunThemeAsync(AppSettings current, CancellationToken cancellationToken) =>
@@ -44,6 +45,7 @@ public sealed class SetupWorkflow(
         {
             InitialSection = initialSection,
             Costs = pricing is null ? null : await pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false),
+            OpenMemories = () => OpenMemories(cancellationToken),
             ContextBudgetOverridden = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS"))
         });
         if (submission is null)
@@ -102,5 +104,12 @@ public sealed class SetupWorkflow(
             await conversationWorkflow.RunConnectionTestAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
         }
         return 0;
+    }
+
+    /// <summary>Handles the memory navigation event while the passive settings draft remains open.</summary>
+    private void OpenMemories(CancellationToken cancellationToken)
+    {
+        var workflow = memories ?? throw new InvalidOperationException("The memory manager is unavailable.");
+        workflow.RunAsync(cancellationToken).GetAwaiter().GetResult();
     }
 }

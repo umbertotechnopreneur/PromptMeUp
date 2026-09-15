@@ -126,6 +126,13 @@ internal static partial class UiTextCatalog
             German: "Befehle: /run <Befehl>, /exit, /clear, /costs, /status",
             Spanish: "Comandos: /run <comando>, /exit, /clear, /costs, /status",
             Vietnamese: "Lệnh: /run <lệnh>, /exit, /clear, /costs, /status"));
+        entries.Add("Chat.MemoryHint", new(
+            English: "Memories in chat: {0} save · {1} list · {2} delete",
+            Italian: "Memorie in chat: {0} salva · {1} elenco · {2} elimina",
+            French: "Mémoires en chat : {0} enregistrer · {1} lister · {2} supprimer",
+            German: "Erinnerungen im Chat: {0} speichern · {1} auflisten · {2} löschen",
+            Spanish: "Memorias en chat: {0} guardar · {1} listar · {2} eliminar",
+            Vietnamese: "Ghi nhớ trong chat: {0} lưu · {1} liệt kê · {2} xóa"));
         entries.Add("Chat.InputCount", new(
             English: "{0:N0} / {1:N0} characters · {2:N0} remaining",
             Italian: "{0:N0} / {1:N0} caratteri · {2:N0} disponibili",

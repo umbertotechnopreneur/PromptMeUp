@@ -20,6 +20,7 @@ internal sealed record HelpArgument(string Token, string Description);
 internal sealed record HelpSection(string Icon, string Title, string NavigationLabel, IReadOnlyList<HelpEntry> Entries)
 {
     public Action? Open { get; init; }
+    public string? OpenHintKey { get; init; }
 }
 
 /// <summary>Browses command sections in a temporary open layout without changing the original terminal buffer.</summary>
@@ -286,7 +287,8 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             : HelpCommandLine.CreateDescription(text.Text("Help.Usage"), "hm");
         if (active.Open is not null && _focus != HelpFocus.Close)
         {
-            message = Line(text.Text("About.OpenHint"), TerminalTheme.Primary);
+            message = Line(text.Text(active.OpenHintKey
+                ?? throw new InvalidOperationException("An actionable help section needs opening guidance.")), TerminalTheme.Primary);
         }
         var closeSelected = _focus == HelpFocus.Close;
         var actions = new Grid().AddColumn();

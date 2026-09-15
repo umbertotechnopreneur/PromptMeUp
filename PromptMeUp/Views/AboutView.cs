@@ -1,5 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Globalization;
+using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -15,12 +17,11 @@ public interface IAboutView
 public sealed class AboutView(
     IAnsiConsole console,
     ILocalizationService text,
-    IConsoleShellView shell) : IAboutView
+    IConsoleShellView shell,
+    BuildInformation buildInformation) : IAboutView
 {
     private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
     private const string AuthorUrl = "https://umbertogiacobbi.biz";
-    private static readonly string Version = typeof(AboutView).Assembly.GetName().Version?.ToString(3)
-        ?? throw new InvalidOperationException("The application version is missing.");
     private int _offset;
     private int _lineCount;
     private int _visibleRows;
@@ -69,7 +70,10 @@ public sealed class AboutView(
         details.AddColumn(new GridColumn().RightAligned());
         details.AddColumn(new GridColumn().LeftAligned());
         var narrowDetails = new List<IRenderable>();
-        AddDetail(details, narrowDetails, "Footer.Version", Version);
+        AddDetail(details, narrowDetails, "Footer.Version", buildInformation.Version);
+        AddDetail(details, narrowDetails, "About.BuildDate",
+            buildInformation.BuiltAtUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture));
+        AddDetail(details, narrowDetails, "About.BuildMachine", buildInformation.MachineName);
         AddDetail(details, narrowDetails, "About.Author", "Umberto Giacobbi");
         AddDetail(details, narrowDetails, "About.License", "MIT");
         AddDetail(details, narrowDetails, "About.Platforms", "Windows / Linux / macOS");

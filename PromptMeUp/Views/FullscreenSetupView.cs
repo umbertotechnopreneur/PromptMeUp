@@ -158,6 +158,13 @@ public sealed class FullscreenSetupView
                     HelpKey = "Theme.Preview"
                 }
             ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) },
+            new("Settings.Memories", [])
+            {
+                Open = () => (state.OpenMemories ?? throw new InvalidOperationException("Memory navigation must be configured."))(),
+                HelpKey = "MemoryManager.OpenHint",
+                Preview = () => new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
+                PreviewRows = 3
+            },
             new("About.MenuLabel", [])
             {
                 Open = _about.Render,

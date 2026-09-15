@@ -518,6 +518,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             "Settings.Personalization" => "📝",
             "Settings.Theme" => "🎨",
             "About.MenuLabel" => "ℹ️",
+            "Settings.Memories" => "🧠",
             _ => null
         };
         return (icon is null ? string.Empty : TerminalTheme.IconPrefix(_options, icon, "-")) + text.Text(page.TitleKey);

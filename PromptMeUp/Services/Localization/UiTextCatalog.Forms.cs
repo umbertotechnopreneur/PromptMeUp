@@ -162,12 +162,12 @@ internal static partial class UiTextCatalog
             Spanish: "Tab/flechas: campos | PgUp/PgDn: secciones | Izquierda/Derecha: botones | Intro: elegir | Esc: cancelar",
             Vietnamese: "Tab/mũi tên: trường | PgUp/PgDn: mục | Trái/Phải: nút | Enter: chọn | Esc: hủy"));
         entries.Add("Form.EditFooter", new(
-            English: "Enter: accept | Ctrl+U: clear | Esc: cancel setup",
-            Italian: "Invio: conferma | Ctrl+U: svuota | Esc: annulla configurazione",
-            French: "Entrée : accepter | Ctrl+U : vider | Esc : annuler la configuration",
-            German: "Enter: übernehmen | Strg+U: leeren | Esc: Einrichtung abbrechen",
-            Spanish: "Intro: aceptar | Ctrl+U: vaciar | Esc: cancelar configuración",
-            Vietnamese: "Enter: chấp nhận | Ctrl+U: xóa | Esc: hủy thiết lập"));
+            English: "Enter: accept | Ctrl+U: clear | Esc: cancel",
+            Italian: "Invio: conferma | Ctrl+U: svuota | Esc: annulla",
+            French: "Entrée : accepter | Ctrl+U : vider | Esc : annuler",
+            German: "Enter: übernehmen | Strg+U: leeren | Esc: abbrechen",
+            Spanish: "Intro: aceptar | Ctrl+U: vaciar | Esc: cancelar",
+            Vietnamese: "Enter: chấp nhận | Ctrl+U: xóa | Esc: hủy"));
         entries.Add("Form.FooterCompact", new(
             English: "Tab: next | Enter: choose | Esc: cancel",
             Italian: "Tab: avanti | Invio: scegli | Esc: annulla",

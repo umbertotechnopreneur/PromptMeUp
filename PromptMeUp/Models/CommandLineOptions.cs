@@ -18,6 +18,7 @@ public enum AppCommand
     Preview,
     Recipes,
     Chat,
+    Memories,
     TestAi,
     Costs,
     ThirdParty,

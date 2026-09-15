@@ -13,8 +13,10 @@ namespace PromptMeUp.Tests;
 public sealed class AiConversationWorkflowTests
 {
     /// <summary>Verifies an answer above the configured user-input limit is rendered completely and closes the query successfully.</summary>
-    [Fact]
-    public async Task RunQueryAsync_LongAnswer_RendersAndCompletesSession()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RunQueryAsync_LongAnswer_RendersAndCompletesSession(bool renderQuery)
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -24,14 +26,19 @@ public sealed class AiConversationWorkflowTests
             Content = new StringContent(RegressionFixture.ResponseJson(answer))
         }));
         var rendered = new List<string>();
+        var viewCalls = new List<string>();
         var workflow = new AiConversationWorkflow(new ConversationMemoryService(), fixture.CreateOpenAi(http),
             TestProxy.Create<IPromptCatalogService>((method, _) => throw new NotSupportedException(method.Name)),
             TestProxy.Create<IPricingService>((method, _) => throw new NotSupportedException(method.Name)), fixture.Audit,
             TestProxy.Create<IAuthorizedCommandWorkflow>((method, _) => throw new NotSupportedException(method.Name)),
             TestProxy.Create<IChatView>((method, args) =>
             {
-                Assert.Equal("RenderAssistant", method.Name);
-                rendered.Add((string)args[0]!);
+                viewCalls.Add(method.Name);
+                Assert.Contains(method.Name, new[] { "RenderMemoryHint", "RenderUser", "RenderAssistant" });
+                if (method.Name == "RenderAssistant")
+                {
+                    rendered.Add((string)args[0]!);
+                }
                 return null;
             }),
             TestProxy.Create<ICommandSuggestionView>((_, _) => new CommandSuggestionDecision(CommandSuggestionAction.DoNotExecute, null)),
@@ -46,9 +53,11 @@ public sealed class AiConversationWorkflowTests
             TestProxy.Create<IMemoryView>((method, _) => throw new NotSupportedException(method.Name)),
             fixture.Database);
 
-        await workflow.RunQueryAsync("Hello", AppSettings.Default with { MaxMessageCharacters = 500 }, false, default);
+        await workflow.RunQueryAsync("Hello", AppSettings.Default with { MaxMessageCharacters = 500 }, renderQuery, default);
 
         Assert.Equal(answer, Assert.Single(rendered));
+        string[] expectedCalls = renderQuery ? ["RenderMemoryHint", "RenderUser", "RenderAssistant"] : ["RenderAssistant"];
+        Assert.Equal(expectedCalls, viewCalls);
         Assert.Equal("completed", await fixture.ScalarAsync("SELECT status FROM ai_sessions;"));
         Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
     }

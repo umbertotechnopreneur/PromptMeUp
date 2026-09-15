@@ -74,6 +74,8 @@ Save a preference or a useful project fact from inside chat:
 
 Notes without `global` belong to the current project. They remain available the next time you open `hm`. Use `/memories` to see what is saved and `/forget <id>` to remove a note.
 
+Choose **Memories** in the Help or Settings sidebar, or run `hm --memories`, to read, create, edit, and delete saved notes locally. Saving applies immediately; deletion asks for confirmation. Chat and the first question show a compact reminder of the memory commands.
+
 `hm` picks up to five notes to include with a question, looking for shared words in project notes. Global notes can be used in any project. Saving a note makes no extra AI call. See [how memories work](docs/OPENAI_COSTS_AND_CACHING.md) for the limits and how notes are picked.
 
 ## Keep your settings in one place
@@ -122,6 +124,7 @@ You can give `hm` a build log, ask for a script, or work through a task step by 
 | --- | --- |
 | Ask one question | `hm "your question"` |
 | Keep the conversation going | `hm --chat` |
+| Manage saved memories | `hm --memories` |
 | Diagnose an error or log | `hm --diagnose --file build.log` |
 | Draft or revise a PowerShell script | `hm --script "your request"` |
 | Work through a plan and resume it later | `hm --plan "your goal"` |

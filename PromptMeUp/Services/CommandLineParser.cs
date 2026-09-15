@@ -186,6 +186,12 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(chatError);
                     }
                     break;
+                case "--memories":
+                    if (!TrySelect(AppCommand.Memories, ref command, ref commandWasSelected, out var memoriesError))
+                    {
+                        return FailureMessage(memoriesError);
+                    }
+                    break;
                 case "--test-ai":
                     if (!TrySelect(AppCommand.TestAi, ref command, ref commandWasSelected, out var testError))
                     {

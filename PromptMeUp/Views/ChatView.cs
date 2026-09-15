@@ -8,7 +8,9 @@ namespace PromptMeUp.Views;
 
 public interface IChatView
 {
-    void RenderIntro();
+    void RenderIntro(bool includeMemoryHints = true);
+
+    void RenderMemoryHint();
 
     string ReadMessage(int maximumCharacters);
 
@@ -40,7 +42,7 @@ public sealed class ChatView : IChatView
     }
 
     /// <summary>Draws the chat heading and its small slash-command vocabulary without clearing prior output.</summary>
-    public void RenderIntro()
+    public void RenderIntro(bool includeMemoryHints = true)
     {
         var icon = TerminalTheme.IconPrefix(_shell.Options, "💬", ">");
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("Chat.Title")}", TerminalTheme.Accent);
@@ -51,10 +53,21 @@ public sealed class ChatView : IChatView
         RenderCommandHint("/costs", "Chat.Command.Costs");
         RenderCommandHint("/status", "Chat.Command.Status");
         RenderCommandHint("/context", "Chat.Command.Context");
-        RenderCommandHint(_text.Text("Chat.Command.RememberSyntax"), "Chat.Command.Remember");
-        RenderCommandHint("/memories", "Chat.Command.Memories");
-        RenderCommandHint("/forget <id>", "Chat.Command.Forget");
         RenderCommandHint("/exit", "Chat.Command.Exit");
+        _console.WriteLine();
+        if (includeMemoryHints)
+        {
+            RenderMemoryHint();
+        }
+    }
+
+    /// <summary>Shows a compact reminder of saved-memory commands available inside chat.</summary>
+    public void RenderMemoryHint()
+    {
+        var remember = $"[bold {TerminalTheme.Info}]{Markup.Escape(_text.Text("Chat.Command.RememberSyntax"))}[/]";
+        var memories = $"[bold {TerminalTheme.Info}]/memories[/]";
+        var forget = $"[bold {TerminalTheme.Info}]/forget <id>[/]";
+        _console.MarkupLine($"  [{TerminalTheme.Muted}]{_text.Text("Chat.MemoryHint", remember, memories, forget)}[/]");
         _console.WriteLine();
     }
 

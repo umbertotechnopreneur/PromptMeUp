@@ -43,4 +43,6 @@
     <None Include="..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <Import Project="..\scripts\BuildInformation.targets" />
+
 </Project>

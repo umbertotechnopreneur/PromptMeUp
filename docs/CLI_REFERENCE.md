@@ -30,6 +30,7 @@ to a file, this follow-up menu doesn't open.
 | --- | --- | --- |
 | `--query <text>` | `-q` or positional text | Answers one question. In a live terminal, you can continue in chat or review a suggested command. |
 | `--chat` | — | Starts a conversation about terminal work. |
+| `--memories` | — | Opens the local memory manager to view, create, edit, or delete saved notes. |
 | `--diagnose [text]` | `--file <log>` or stdin | Explains an error or log excerpt and suggests what to check next. |
 | `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a PowerShell script for you to review and save. |
 | `--plan <goal>` | `--plan --resume <id>` | Breaks a task into steps you can approve, check, and resume. |
@@ -107,8 +108,8 @@ hm about
 hm --about
 ```
 
-About shows the HELP ME banner, app version, supported platforms, author,
-project links, and MIT license. In a supported live terminal of at least
+About shows the HELP ME banner, app version, build date and time in UTC, build
+machine, supported platforms, author, project links, and MIT license. In a supported live terminal of at least
 60 columns by 20 rows, it opens a fullscreen view. Up/Down and PgUp/PgDn scroll
 the content; Enter or Esc closes it and restores your terminal history.
 Small terminals and redirected output receive a scrolling view. Narrow windows
@@ -341,6 +342,9 @@ PromptMeUp helps with terminal tasks. It doesn't generate images or write, edit,
 
 ## Keep a conversation moving
 
+Opening chat or starting a question shows a compact reminder of the saved-memory
+commands. The reminder appears once, including when a question continues into chat.
+
 | Control | Behavior |
 | --- | --- |
 | `/run <command>` | Checks risks locally and, optionally, with AI. Shows the exact command and asks before running it. Captured output can be shared in a follow-up. |
@@ -357,6 +361,13 @@ PromptMeUp helps with terminal tasks. It doesn't generate images or write, edit,
 You must answer the approval prompt in a live terminal for every `/run` command.
 
 ### Remember something for next time
+
+Open **Memories** in the left sidebar of Help (`hm`) or Settings (`hm --setup`), or run
+`hm --memories`, to manage saved notes without an AI connection. Select a note to
+read its full text, edit its text or scope, or delete it after confirmation. Choose
+**Create** to add a project or global note. Saving a note applies immediately;
+canceling its editor leaves the stored note unchanged. Returning to Settings keeps
+any unfinished settings draft.
 
 Save a preference or project fact in chat so you do not have to repeat it:
 

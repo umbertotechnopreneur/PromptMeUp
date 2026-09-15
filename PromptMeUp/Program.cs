@@ -100,6 +100,7 @@ internal static class Program
         CancellationToken shutdownToken)
     {
         services.AddSingleton(paths);
+        services.AddSingleton(_ => BuildInformationReader.Read());
         services.AddSingleton<IAnsiConsole>(new EscapeAwareAnsiConsole(AnsiConsole.Console, shutdownToken));
         services.AddLogging(builder =>
         {
@@ -153,6 +154,7 @@ internal static class Program
         services.AddSingleton<ICostsView, CostsView>();
         services.AddSingleton<IChatView, ChatView>();
         services.AddSingleton<IMemoryView, MemoryView>();
+        services.AddSingleton<IMemoryManagerView, MemoryManagerView>();
         services.AddSingleton<ICommandSuggestionView, CommandSuggestionView>();
         services.AddSingleton<IHelpView, HelpView>();
         services.AddSingleton<IAboutView, AboutView>();
@@ -182,6 +184,7 @@ internal static class Program
         services.AddSingleton<RecipeWorkflow>();
         services.AddSingleton<ApplicationActivityRecorder>();
         services.AddSingleton<SetupWorkflow>();
+        services.AddSingleton<MemoryManagerWorkflow>();
         services.AddSingleton<InstallationWorkflow>();
         services.AddSingleton<LennaWorkflow>();
         services.AddSingleton<HelpWorkflow>();
