@@ -51,7 +51,7 @@ public sealed class AiConversationWorkflowTests
             }), new LocalizationService(),
             CreatePersistentMemory(fixture),
             TestProxy.Create<IMemoryView>((method, _) => throw new NotSupportedException(method.Name)),
-            fixture.Database);
+            fixture.Database, CreateAppGuide(fixture));
 
         await workflow.RunQueryAsync("Hello", AppSettings.Default with { MaxMessageCharacters = 500 }, renderQuery, default);
 
@@ -280,6 +280,11 @@ public sealed class AiConversationWorkflowTests
     private static PersistentMemoryService CreatePersistentMemory(RegressionFixture fixture) => new(
         fixture.Paths, new SensitiveDataRedactor(), new LocalizationService(), NullLogger<PersistentMemoryService>.Instance);
 
+    /// <summary>Creates a local guide reader from the packaged six-language prompt resources.</summary>
+    private static AppGuideService CreateAppGuide(RegressionFixture fixture) => new(
+        new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance),
+        NullLogger<AppGuideService>.Instance);
+
     /// <summary>Builds a scripted chat workflow that captures status and note displays without terminal input or command execution.</summary>
     private static AiConversationWorkflow CreateScriptedWorkflow(
         RegressionFixture fixture,
@@ -329,7 +334,7 @@ public sealed class AiConversationWorkflowTests
             displayMemories?.Invoke((IReadOnlyList<PersistentMemory>)args[0]!);
             return null;
         }),
-        fixture.Database);
+        fixture.Database, CreateAppGuide(fixture));
 
     private sealed class RecordingConversationHandler : HttpMessageHandler
     {

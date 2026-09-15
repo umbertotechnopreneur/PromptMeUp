@@ -88,9 +88,11 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void RenderRuntimeStatus(ShellRuntimeStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
-        var turnCost = status.PromptCostUsd.HasValue || status.ResponseCostUsd.HasValue
-            ? FormatCost((status.PromptCostUsd ?? 0m) + (status.ResponseCostUsd ?? 0m))
-            : _text.Text("Costs.Unavailable");
+        var turnCost = status.HasTurnCost
+            ? status.TurnCostUsd.HasValue ? FormatCost(status.TurnCostUsd.Value) : _text.Text("Costs.Unavailable")
+            : status.PromptCostUsd.HasValue || status.ResponseCostUsd.HasValue
+                ? FormatCost((status.PromptCostUsd ?? 0m) + (status.ResponseCostUsd ?? 0m))
+                : _text.Text("Costs.Unavailable");
         var cache = status.CachedInputTokens > 0 || status.CacheWriteTokens > 0
             ? $"{FormatTokens(status.CachedInputTokens)} / {FormatTokens(status.CacheWriteTokens)}"
             : _text.Text("Costs.Unavailable");
@@ -105,7 +107,7 @@ public sealed class ConsoleShellView : IConsoleShellView
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↘", "in")}{_text.Text("Shell.LastInput")}", FormatTokens(status.InputTokens), TerminalTheme.Info),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "↗", "out")}{_text.Text("Shell.LastOutput")}", FormatTokens(status.OutputTokens), TerminalTheme.Info),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◈", "$")}{_text.Text("Shell.TurnCost")}", turnCost, TerminalTheme.Info),
-            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "✓", "+")}{_text.Text("Shell.SessionCost")}", FormatCost(status.RunningCostUsd), TerminalTheme.Success),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "✓", "+")}{_text.Text("Shell.SessionCost")}", status.SessionCostKnown ? FormatCost(status.RunningCostUsd) : _text.Text("Costs.Unavailable"), TerminalTheme.Success),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "▣", "#")}{_text.Text("Shell.Cache")}", cache)
         };
         if (status.HasSessionUsage)
@@ -125,6 +127,10 @@ public sealed class ConsoleShellView : IConsoleShellView
             firstLabelWidth: labelWidth);
         _console.WriteLine();
         RenderContextBudget(status, labelWidth);
+        if (status.HasContextBreakdown)
+        {
+            RenderContextLegend(status);
+        }
         _console.WriteLine();
     }
 
@@ -349,9 +355,23 @@ public sealed class ConsoleShellView : IConsoleShellView
         _console.Write(new Rows(label, detail));
     }
 
-    /// <summary>Renders a static Spectre progress bar without animation, timers, or division by an unavailable budget.</summary>
+    /// <summary>Renders categorized context against the full capacity, preserving an unavailable-data fallback.</summary>
     private IRenderable BudgetBar(ShellRuntimeStatus status, int width)
     {
+        if (status.HasContextBreakdown && status.ContextBudgetTokens > 0)
+        {
+            var cells = AllocateContextBarCells(status, width);
+            var useSymbols = UseContextBarSymbols();
+            char[] glyphs = useSymbols ? ['S', 'U', 'A', '.'] : ['━', '━', '━', '─'];
+            var colors = new[] { TerminalTheme.Warning, TerminalTheme.Info, TerminalTheme.Success, TerminalTheme.Muted };
+            var bar = new Paragraph();
+            for (var index = 0; index < cells.Length; index++)
+            {
+                bar.Append(new string(glyphs[index], cells[index]), Style.Parse(colors[index]));
+            }
+            return bar;
+        }
+
         var percentage = status.ActiveContextTokens.HasValue && status.ContextBudgetTokens > 0
             ? Math.Clamp(status.ActiveContextTokens.Value * 100d / status.ContextBudgetTokens, 0d, 100d)
             : 0d;
@@ -369,6 +389,64 @@ public sealed class ConsoleShellView : IConsoleShellView
         var options = new RenderOptions(_console.Profile.Capabilities, new Size(width, 1));
         return column.Render(options, task, TimeSpan.Zero);
     }
+
+    /// <summary>Allocates terminal cells by share, including free space, with at most one cell of rounding per category.</summary>
+    internal static int[] AllocateContextBarCells(ShellRuntimeStatus status, int width)
+    {
+        ArgumentNullException.ThrowIfNull(status);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(status.ContextBudgetTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(status.SystemInstructionTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(status.UserMessageTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(status.AssistantMessageTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(status.GuideTokens);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(status.GuideTokens, status.SystemInstructionTokens);
+        var used = (decimal)status.SystemInstructionTokens + status.UserMessageTokens + status.AssistantMessageTokens;
+        var capacity = Math.Max(status.ContextBudgetTokens, used);
+        decimal[] tokens = [status.SystemInstructionTokens, status.UserMessageTokens, status.AssistantMessageTokens, capacity - used];
+        var exact = tokens.Select(value => value * width / capacity).ToArray();
+        var cells = exact.Select(value => (int)decimal.Floor(value)).ToArray();
+
+        // Give leftover cells to the largest fractional shares; never enlarge every tiny segment independently.
+        var remainderOrder = Enumerable.Range(0, cells.Length)
+            .OrderByDescending(index => exact[index] - cells[index])
+            .ThenBy(index => index)
+            .Take(width - cells.Sum());
+        foreach (var index in remainderOrder)
+        {
+            cells[index]++;
+        }
+        return cells;
+    }
+
+    /// <summary>Explains every bar category numerically and identifies the guide as already included in system tokens.</summary>
+    private void RenderContextLegend(ShellRuntimeStatus status)
+    {
+        var useSymbols = UseContextBarSymbols();
+        var free = status.ContextBudgetTokens > 0 && status.ActiveContextTokens.HasValue
+            ? FormatContextTokens(Math.Max(0, status.ContextBudgetTokens - status.ActiveContextTokens.Value))
+            : _text.Text("Costs.Unavailable");
+        _console.Write(TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextSystem", "S", useSymbols), FormatContextTokens(status.SystemInstructionTokens), TerminalTheme.Warning),
+            TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextUser", "U", useSymbols), FormatContextTokens(status.UserMessageTokens), TerminalTheme.Info),
+            TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextAssistant", "A", useSymbols), FormatContextTokens(status.AssistantMessageTokens), TerminalTheme.Success),
+            TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextFree", ".", useSymbols), free, TerminalTheme.Muted),
+            TerminalTheme.CompactMetric(_text.Text("Shell.ContextGuideIncluded"), FormatContextTokens(status.GuideTokens), TerminalTheme.Warning)
+        ], preferredPairs: 2, width: _console.Profile.Width));
+    }
+
+    /// <summary>Uses explicit role letters when the terminal cannot distinguish colored Unicode segments.</summary>
+    private bool UseContextBarSymbols() =>
+        !_console.Profile.Capabilities.Ansi || !_console.Profile.Supports(ColorSystem.Legacy) || !_console.Profile.Capabilities.Unicode;
+
+    /// <summary>Connects a translated category to its colorless bar symbol when needed.</summary>
+    private string ContextLegendLabel(string key, string symbol, bool useSymbols) =>
+        useSymbols ? $"[{symbol}] {_text.Text(key)}" : _text.Text(key);
+
+    /// <summary>Formats full estimated context counts in the interface language without compact-value rounding.</summary>
+    private string FormatContextTokens(long value) =>
+        _text.Text("Shell.ContextTokenEstimate", value.ToString("N0", _text.Culture));
 
     /// <summary>Aligns budget components on an open row with two spaces between columns.</summary>
     private static Grid BudgetColumns(params IRenderable[] components)
