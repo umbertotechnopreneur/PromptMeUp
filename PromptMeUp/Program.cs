@@ -123,6 +123,7 @@ internal static class Program
         services.AddSingleton<IPromptInjectionProtectionService, PromptInjectionProtectionService>();
         services.AddSingleton<IRuntimeContextService, RuntimeContextService>();
         services.AddSingleton<IPromptCatalogService, YamlPromptCatalogService>();
+        services.AddSingleton<IAppGuideService, AppGuideService>();
         services.AddSingleton<IAiCostCalculator, AiCostCalculator>();
         services.AddSingleton<IActivityAuditService, ActivityAuditService>();
         services.AddSingleton<IConversationMemoryService, ConversationMemoryService>();

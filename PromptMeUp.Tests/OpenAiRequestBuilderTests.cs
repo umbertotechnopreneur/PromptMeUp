@@ -2,6 +2,7 @@
 
 using System.Text.Json;
 using PromptMeUp.Models;
+using PromptMeUp.Services;
 using PromptMeUp.Services.OpenAi;
 
 namespace PromptMeUp.Tests;
@@ -189,12 +190,81 @@ public sealed class OpenAiRequestBuilderTests
         var result = OpenAiRequestBuilder.EstimateContext("12345678", messages, "gpt-5.5");
 
         Assert.Equal(28L, result.InputTokens);
-        Assert.Equal(2L, result.SystemInstructionTokens);
+        Assert.Equal(22L, result.SystemInstructionTokens);
         Assert.Equal(18L, result.ConversationTokens);
         Assert.Equal(3L, result.LatestUserPromptTokens);
+        Assert.Equal(4L, result.UserMessageTokens);
+        Assert.Equal(2L, result.AssistantMessageTokens);
+        Assert.Equal(result.InputTokens, result.SystemInstructionTokens + result.UserMessageTokens + result.AssistantMessageTokens);
         Assert.Equal(AiModelCatalog.Resolve("gpt-5.5").ContextWindowTokens, result.ContextWindowTokens);
         Assert.True(result.IsInputEstimate);
     }
+
+    /// <summary>Verifies that only a declared v2 prompt exposes bounded local guide retrieval in its strict schema.</summary>
+    [Fact]
+    public void BuildBody_GuideAwarePrompt_RequiresKnownGuideTopics()
+    {
+        using var body = BuildJson(CreateGuidePrompt(), AppSettings.Default,
+            [new ChatMessage("user", "How do memories work?")], "instruction");
+
+        var format = body.RootElement.GetProperty("text").GetProperty("format");
+        var schema = format.GetProperty("schema");
+        var topics = schema.GetProperty("properties").GetProperty("guide_topics");
+
+        Assert.Equal("promptmeup_chat_response_v2", format.GetProperty("name").GetString());
+        Assert.False(schema.GetProperty("additionalProperties").GetBoolean());
+        Assert.Equal(["answer_markdown", "commands", "guide_topics"],
+            schema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(AppGuideService.Topics, topics.GetProperty("items").GetProperty("enum").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(AppGuideService.MaxTopics, topics.GetProperty("maxItems").GetInt32());
+    }
+
+    /// <summary>Verifies that trusted guide content contributes once to system context while recalled user notes remain user text.</summary>
+    [Fact]
+    public void EstimateContext_GuideAndMixedRoles_AccountsForAllInputExactlyOnce()
+    {
+        const string guideText = "<app-guide>Product documentation.</app-guide>";
+        var guide = new AppGuideContext(["overview"], guideText, ContextTokenEstimator.Text(guideText));
+        var instructions = OpenAiRequestBuilder.BuildInstructions(CreateGuidePrompt(), AppSettings.Default, "en", guide: guide);
+        ChatMessage[] messages =
+        [
+            new("developer", "Trusted context"),
+            new("user", "<recalled-user-notes>Prefer concise answers.</recalled-user-notes>"),
+            new("assistant", "Earlier answer"),
+            new("user", "How does PromptMeUp work?")
+        ];
+
+        var estimate = OpenAiRequestBuilder.EstimateContext(instructions, messages, AppSettings.Default.Model, guide);
+
+        Assert.EndsWith(guideText, instructions, StringComparison.Ordinal);
+        Assert.Equal(guide.Tokens, estimate.GuideTokens);
+        Assert.True(estimate.SystemInstructionTokens > estimate.GuideTokens);
+        Assert.Equal(ContextTokenEstimator.Text(messages[1].Content) + ContextTokenEstimator.Text(messages[3].Content), estimate.UserMessageTokens);
+        Assert.Equal(ContextTokenEstimator.Text(messages[2].Content), estimate.AssistantMessageTokens);
+        Assert.Equal(estimate.InputTokens, estimate.SystemInstructionTokens + estimate.UserMessageTokens + estimate.AssistantMessageTokens);
+        Assert.Equal(ContextTokenEstimator.Text(instructions) + ContextTokenEstimator.Messages(messages) + 8, estimate.InputTokens);
+    }
+
+    /// <summary>Verifies that a guide cannot bypass its size accounting or appear in a prompt without the v2 contract.</summary>
+    [Fact]
+    public void BuildInstructions_InvalidOrUnsupportedGuide_RejectsContext()
+    {
+        var guide = new AppGuideContext(["overview"], "Guide", 2);
+        Assert.Throws<InvalidOperationException>(() => OpenAiRequestBuilder.BuildInstructions(CreatePrompt(), AppSettings.Default, "en", guide: guide));
+        Assert.Throws<InvalidOperationException>(() => OpenAiRequestBuilder.BuildInstructions(CreateGuidePrompt(), AppSettings.Default, "en", guide: guide with { Tokens = 0 }));
+        Assert.Throws<InvalidOperationException>(() => OpenAiRequestBuilder.BuildInstructions(CreateGuidePrompt(), AppSettings.Default, "en", guide: guide with { Topics = ["unknown"] }));
+        Assert.Throws<InvalidOperationException>(() => OpenAiRequestBuilder.BuildInstructions(CreateGuidePrompt(), AppSettings.Default, "en",
+            guide: new AppGuideContext(["overview"], new string('x', 12_004), 3_001)));
+    }
+
+    /// <summary>Creates an explicit guide-aware response contract without changing legacy fixtures.</summary>
+    private static PromptDefinition CreateGuidePrompt() => CreatePrompt() with
+    {
+        Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["response-format"] = "promptmeup-console-response-v2"
+        }
+    };
 
     /// <summary>Serializes one generated payload so tests assert the provider-visible JSON contract.</summary>
     private static JsonDocument BuildJson(

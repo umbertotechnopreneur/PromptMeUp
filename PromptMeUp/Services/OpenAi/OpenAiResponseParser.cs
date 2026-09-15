@@ -18,7 +18,8 @@ internal static partial class OpenAiResponseParser
         int statusCode,
         long elapsedMilliseconds,
         string? providerRequestId,
-        bool parseStructuredChatResponse = false)
+        bool parseStructuredChatResponse = false,
+        bool parseGuideResponse = false)
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
@@ -34,11 +35,13 @@ internal static partial class OpenAiResponseParser
 
         var responseText = text.Trim();
         var suggestedCommands = Array.Empty<SuggestedCommand>();
-        if (parseStructuredChatResponse)
+        var guideTopics = Array.Empty<string>();
+        if (parseStructuredChatResponse || parseGuideResponse)
         {
-            var chat = ParseChatResponse(responseText, statusCode);
+            var chat = ParseChatResponse(responseText, statusCode, parseGuideResponse);
             responseText = chat.Markdown;
             suggestedCommands = chat.SuggestedCommands.ToArray();
+            guideTopics = chat.GuideTopics.ToArray();
         }
 
         var usage = root.TryGetProperty("usage", out var usageElement)
@@ -56,7 +59,8 @@ internal static partial class OpenAiResponseParser
             elapsedMilliseconds,
             providerRequestId)
         {
-            SuggestedCommands = suggestedCommands
+            SuggestedCommands = suggestedCommands,
+            GuideTopics = guideTopics
         };
     }
 
@@ -70,7 +74,7 @@ internal static partial class OpenAiResponseParser
     }
 
     /// <summary>Parses command suggestions only from the structured chat envelope and fails closed on invalid data.</summary>
-    internal static ChatResponseContent ParseChatResponse(string text, int statusCode)
+    internal static ChatResponseContent ParseChatResponse(string text, int statusCode, bool parseGuideResponse = false)
     {
         try
         {
@@ -81,7 +85,9 @@ internal static partial class OpenAiResponseParser
                 throw new JsonException("Chat response must be an object.");
             }
 
-            var markdown = ReadRequiredString(root, "answer_markdown");
+            var markdown = parseGuideResponse
+                ? ReadOptionalString(root, "answer_markdown")?.Trim() ?? throw new JsonException("Chat answer is missing.")
+                : ReadRequiredString(root, "answer_markdown");
             if (!root.TryGetProperty("commands", out var commands) || commands.ValueKind != JsonValueKind.Array)
             {
                 throw new JsonException("Chat command collection is missing.");
@@ -91,6 +97,18 @@ internal static partial class OpenAiResponseParser
                 throw new JsonException("Chat command collection exceeds its limit.");
             }
 
+            var guideTopics = parseGuideResponse ? ParseGuideTopics(root) : [];
+            if (parseGuideResponse)
+            {
+                var expected = new HashSet<string>(["answer_markdown", "commands", "guide_topics"], StringComparer.Ordinal);
+                if (root.EnumerateObject().Any(property => !expected.Remove(property.Name)) || expected.Count != 0
+                    || (guideTopics.Count > 0 && (markdown.Length > 0 || commands.GetArrayLength() > 0))
+                    || (guideTopics.Count == 0 && markdown.Length == 0))
+                {
+                    throw new JsonException("A guide request must be separate from a final chat answer.");
+                }
+            }
+
             var parsed = new List<SuggestedCommand>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var item in commands.EnumerateArray())
@@ -98,6 +116,14 @@ internal static partial class OpenAiResponseParser
                 if (item.ValueKind != JsonValueKind.Object)
                 {
                     throw new JsonException("Chat command must be an object.");
+                }
+                if (parseGuideResponse)
+                {
+                    var expected = new HashSet<string>(["label", "command"], StringComparer.Ordinal);
+                    if (item.EnumerateObject().Any(property => !expected.Remove(property.Name)) || expected.Count != 0)
+                    {
+                        throw new JsonException("Chat command properties do not match the response contract.");
+                    }
                 }
 
                 var label = ReadRequiredString(item, "label");
@@ -120,7 +146,7 @@ internal static partial class OpenAiResponseParser
                 parsed.Add(new SuggestedCommand(label, command));
             }
 
-            return new ChatResponseContent(markdown, parsed);
+            return new ChatResponseContent(markdown, parsed) { GuideTopics = guideTopics };
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException)
         {
@@ -130,6 +156,28 @@ internal static partial class OpenAiResponseParser
                 statusCode,
                 exception);
         }
+    }
+
+    /// <summary>Accepts only a bounded, distinct set of built-in guide chapter identifiers.</summary>
+    private static IReadOnlyList<string> ParseGuideTopics(JsonElement root)
+    {
+        if (!root.TryGetProperty("guide_topics", out var topics) || topics.ValueKind != JsonValueKind.Array
+            || topics.GetArrayLength() > AppGuideService.MaxTopics)
+        {
+            throw new JsonException("The guide chapter collection is missing or exceeds its limit.");
+        }
+        var parsed = new List<string>();
+        foreach (var topic in topics.EnumerateArray())
+        {
+            if (topic.ValueKind != JsonValueKind.String || topic.GetString() is not { } id
+                || !AppGuideService.Topics.Contains(id, StringComparer.Ordinal)
+                || parsed.Contains(id, StringComparer.Ordinal))
+            {
+                throw new JsonException("The guide chapter identifier is unknown or repeated.");
+            }
+            parsed.Add(id);
+        }
+        return parsed;
     }
 
     /// <summary>Parses the deliberately small JSON contract returned by the risk-review prompt.</summary>
@@ -328,4 +376,7 @@ internal static partial class OpenAiResponseParser
     internal static AiUsageMetrics EmptyUsage { get; } = new(0, 0, 0, 0, 0, 0);
 }
 
-internal sealed record ChatResponseContent(string Markdown, IReadOnlyList<SuggestedCommand> SuggestedCommands);
+internal sealed record ChatResponseContent(string Markdown, IReadOnlyList<SuggestedCommand> SuggestedCommands)
+{
+    public IReadOnlyList<string> GuideTopics { get; init; } = [];
+}

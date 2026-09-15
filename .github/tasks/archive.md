@@ -2,6 +2,45 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-15 — Record pull-request ownership and labels
+
+- Aligned `AGENTS.md` and `.github/copilot-instructions.md`: every newly created pull request must be assigned to `umbertotechnopreneur` and carry existing repository labels appropriate to its final scope.
+- Prepared the app-guide, context-bar, accounting, and documentation changes for a dedicated pull request after confirming that the open dependency-update pull requests are unrelated. Kept the two pre-existing local code comments outside the commit scope.
+
+Validation: repository preflight, restore, formatting verification, XML method comments, Release build with warnings as errors, whitespace checks, and an independent scope review passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-15 — Load the app guide through conversation and show context by role
+
+- Added eight versioned guide chapters in all six languages. Chat version 8 and query version 7 can request up to two relevant chapters through a strict response contract when a natural-language question needs app details. Each turn permits one additional AI call, with local topic validation and budget checks before sending the guide.
+- Retained loaded chapters as system context for follow-up questions, replacing them when needed and clearing them with `/clear`. Detailed settings procedures remain in the guide. Each provider call records its own usage and cost; turn totals include both calls, and incomplete pricing makes aggregate costs unavailable.
+- Split estimated active context into system, user messages, and retained AI answers. Added a colored budget bar, numerical legend, free capacity, and an explicit guide count already included in system tokens, with readable symbols for terminals without color.
+- Added focused regression sources for guide loading, response contracts, request payloads, workflow reuse and clearing, call accounting, session costs, and bar rendering. Preserved the unrelated local comments.
+
+Validation: preflight, restore, formatting verification, XML method comment checks, and Release build passed with zero warnings or errors. Static YAML inspection confirmed 48 localized guide sections and matching built copies. Automated tests, CLI smoke checks, and live AI calls were not run. The installed MSIX remains unchanged.
+
+## 2026-09-15 — Keep base application context focused on capabilities
+
+- Replaced detailed context-budget settings procedures in all six chat and query translations with an overview of diagnostics, scripts, plans, previews, recipes, saved notes, usage, and customization.
+- Preserved the host-app identity and existing safety rules, and clarified that the model only receives supplied material and cannot independently inspect local files, settings, or full history. Increased the chat prompt to version 7 and the query prompt to version 6, with matching existing version assertions and documentation.
+- Assessed a local, versioned guide split by topic for future on-demand assistance. Guide retrieval remains a design proposal and was not implemented.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, YAML parsing and six-language checks, independent content review, and whitespace checks passed. Automated tests and CLI smoke checks were not run. The installed MSIX remains unchanged.
+
+## 2026-09-15 — Give chat and query prompts application context
+
+- Added two aligned paragraphs in all six languages identifying PromptMeUp as the host application and explaining its settings, operating context budget, environment override, and chat usage controls. References to "this app" now have product context unless the conversation identifies another program.
+- Kept interactive settings navigation in the answer with no commands offered for chat execution. Preserved the existing console scope, clarification, safety, preference, and JSON instructions, and avoided treating default settings as current user values.
+- Increased the chat prompt to version 6 and the query prompt to version 5, updated existing version assertions, and documented the added context. Preserved unrelated local comments and the earlier installation record.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, YAML parsing and six-language checks, independent content review, and whitespace checks passed. Automated tests and CLI smoke checks were not run. The installed MSIX remains unchanged.
+
+## 2026-09-15 — Build and install the current main revision
+
+- Published `main` revision `a3a3ce7` with the existing uncommitted source comments as a self-contained Windows x64 application, including redistribution notices and source-build metadata.
+- Created, signed, and installed MSIX revision `0.1.5.14` with the existing package identity and trusted certificate. Verified healthy registration, matching hashes for all 274 packaged and installed payload files, and the `hm` execution alias targeting the updated installation.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build and Windows publish with zero warnings or errors, package manifest and signature verification, checksum and installed-file integrity, and whitespace checks passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
 ## 2026-09-14 — Prepare memory management and build details for review
 
 - Prepared the local memory manager, chat reminders, compile-time About metadata, regression coverage, and product documentation for a focused pull request. Preserved unrelated local source comments and excluded generated installer artifacts.

@@ -18,7 +18,8 @@ public interface IOpenAiService
         IReadOnlyList<ChatMessage> messages,
         AppSettings settings,
         string language,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        AppGuideContext? guide = null);
 
     Task<ConnectionTestResult> TestConnectionAsync(
         AppSettings settings,
@@ -30,7 +31,8 @@ public interface IOpenAiService
         IReadOnlyList<ChatMessage> messages,
         AppSettings settings,
         string language,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        AppGuideContext? guide = null);
 
     Task<CommandRiskAssessment> AssessCommandAsync(
         string command,
@@ -91,7 +93,8 @@ public sealed class OpenAiService : IOpenAiService
         IReadOnlyList<ChatMessage> messages,
         AppSettings settings,
         string language,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AppGuideContext? guide = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
         ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
@@ -108,7 +111,7 @@ public sealed class OpenAiService : IOpenAiService
             prompt,
             settings,
             language,
-            _runtimeContext.GetCurrent(), _limits);
+            _runtimeContext.GetCurrent(), _limits, guide);
         return await SendCoreAsync(
             prompt,
             conversationId,
@@ -116,7 +119,8 @@ public sealed class OpenAiService : IOpenAiService
             instructions,
             settings,
             OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail, _limits),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            guide).ConfigureAwait(false);
     }
 
     /// <summary>Runs the localized YAML connection probe and returns its expected short phrase.</summary>
@@ -165,7 +169,8 @@ public sealed class OpenAiService : IOpenAiService
         IReadOnlyList<ChatMessage> messages,
         AppSettings settings,
         string language,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AppGuideContext? guide = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
         ArgumentNullException.ThrowIfNull(messages);
@@ -178,9 +183,10 @@ public sealed class OpenAiService : IOpenAiService
                 prompt,
                 settings,
                 language,
-                _runtimeContext.GetCurrent(), _limits),
-            messages,
-            settings.Model) with
+                _runtimeContext.GetCurrent(), _limits, guide),
+            messages.Select(message => message with { Content = _redactor.Redact(message.Content) }).ToArray(),
+            settings.Model,
+            guide) with
         {
             InputBudgetTokens = OpenAiRequestBuilder.ResolveInputBudget(prompt, settings, maxOutputTokens, _contextLimits),
             ReservedOutputTokens = maxOutputTokens
@@ -226,7 +232,8 @@ public sealed class OpenAiService : IOpenAiService
         string instructions,
         AppSettings settings,
         int maxOutputTokens,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AppGuideContext? guide = null)
     {
         messages = messages.Select(message => message with { Content = _redactor.Redact(message.Content) }).ToArray();
         var key = _secrets.Load(settings.ApiKeyVariable);
@@ -243,7 +250,11 @@ public sealed class OpenAiService : IOpenAiService
         var stopwatch = Stopwatch.StartNew();
         var endpoint = new Uri(settings.Endpoint, UriKind.Absolute);
         var latestUserText = messages.Last(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)).Content;
-        var estimatedContext = OpenAiRequestBuilder.EstimateContext(instructions, messages, settings.Model);
+        var estimatedContext = OpenAiRequestBuilder.EstimateContext(instructions, messages, settings.Model, guide) with
+        {
+            InputBudgetTokens = OpenAiRequestBuilder.ResolveInputBudget(prompt, settings, maxOutputTokens, _contextLimits),
+            ReservedOutputTokens = maxOutputTokens
+        };
         var inputLimit = OpenAiRequestBuilder.ResolveInputBudget(prompt, settings, maxOutputTokens, _contextLimits);
         if (estimatedContext.InputTokens > inputLimit)
         {
@@ -325,7 +336,8 @@ public sealed class OpenAiService : IOpenAiService
                 (int)response.StatusCode,
                 stopwatch.ElapsedMilliseconds,
                 providerRequestId,
-                IsStructuredAssistantPrompt(prompt));
+                IsStructuredAssistantPrompt(prompt),
+                OpenAiRequestBuilder.SupportsAppGuide(prompt));
             var final = parsed with
             {
                 ContextUsage = estimatedContext with
@@ -360,7 +372,7 @@ public sealed class OpenAiService : IOpenAiService
                 cancellationToken).ConfigureAwait(false);
             await TryAppendSessionEventAsync(
                 conversationId,
-                "response",
+                final.GuideTopics.Count > 0 ? "guide-request" : "response",
                 new
                 {
                     role = "assistant",
@@ -370,6 +382,7 @@ public sealed class OpenAiService : IOpenAiService
                     usage = final.Usage,
                     context = final.ContextUsage,
                     cost = final.CostBreakdown,
+                    guideTopics = final.GuideTopics,
                     suggestedCommands = final.SuggestedCommands.Select(command => new
                     {
                         label = _redactor.Redact(command.Label),
@@ -522,7 +535,8 @@ public sealed class OpenAiService : IOpenAiService
     private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
         string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
         || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase)
-        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1";
+        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1"
+        || OpenAiRequestBuilder.SupportsAppGuide(prompt);
 
 }
 

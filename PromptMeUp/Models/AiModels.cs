@@ -38,6 +38,12 @@ public sealed record AiContextUsage(
     public long InputBudgetTokens { get; init; }
 
     public int ReservedOutputTokens { get; init; }
+
+    public long UserMessageTokens { get; init; }
+
+    public long AssistantMessageTokens { get; init; }
+
+    public long GuideTokens { get; init; }
 }
 
 public sealed record SuggestedCommand(string Label, string Command);
@@ -55,6 +61,12 @@ public sealed record AiResponse(
     string? ProviderRequestId)
 {
     public IReadOnlyList<SuggestedCommand> SuggestedCommands { get; init; } = [];
+
+    public IReadOnlyList<string> GuideTopics { get; init; } = [];
+
+    public decimal? TurnCostUsd { get; init; }
+
+    public int RequestCount { get; init; } = 1;
 }
 
 public sealed record AiRequestLog(

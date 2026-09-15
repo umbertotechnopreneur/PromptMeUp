@@ -121,6 +121,31 @@ choose how much command output to keep (1,000–32,768 characters, default 12,00
 and how long a command can run (5–300 seconds, default 30). `hm --setup` opens
 Settings at General.
 
+## Ask the app guide
+
+Ordinary questions about PromptMeUp can load one or two relevant chapters from
+the packaged guide in the interface language. The model requests chapter IDs
+through a bounded structured response; the app reads only known local resources
+and sends a second request with those chapters in its system instructions.
+No command is executed by guide retrieval. A turn permits one guide-loading
+round, and each provider request is recorded separately with its usage and cost.
+
+Loaded chapters remain in active context for follow-up questions until replaced
+or cleared with `/clear`. Their estimated tokens are included in System and
+identified separately as an included guide share. User and assistant text have
+their own colored segments. Selected saved notes remain user data; loading the
+guide does not change their trust level.
+
+The active-context bar describes retained input, not cumulative API usage. This
+turn includes the cost of both calls; last-call counters describe the final
+response, and session counters include every recorded call. If a required price
+is unavailable, the complete turn or session cost is shown as unavailable.
+
+The response contract uses a strict JSON schema following the
+[Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs).
+All requested topics are validated locally, and a guide request cannot also
+contain an answer or executable command suggestions.
+
 ## Read the cost estimate
 
 Type `/costs` to check spending without leaving chat. From your shell,
