@@ -1,15 +1,23 @@
-name: Portable release
+name: Release
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Create a release draft, or only build a rehearsal bundle
+        type: choice
+        default: draft
+        options:
+          - draft
+          - rehearsal
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -19,6 +27,9 @@ jobs:
     timeout-minutes: 5
     outputs:
       version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      source_sha: ${{ steps.version.outputs.source_sha }}
+      create_draft: ${{ steps.version.outputs.create_draft }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,6 +42,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          RELEASE_MODE: ${{ inputs.mode || 'draft' }}
         run: |
           git merge-base --is-ancestor HEAD origin/main
           if ($LASTEXITCODE -ne 0) { throw 'Releases must come from a commit on main.' }
@@ -40,10 +52,27 @@ jobs:
           if ($env:EVENT_NAME -eq 'push' -and ($env:REF_TYPE -ne 'tag' -or $env:REF_NAME -cne "v$version")) {
             throw 'The tag must exactly match the project version, such as v1.2.3.'
           }
-          if ($env:EVENT_NAME -eq 'workflow_dispatch' -and $env:REF_NAME -ne 'main') {
-            throw 'Run the manual packaging rehearsal from main.'
+          if ($env:EVENT_NAME -eq 'workflow_dispatch') {
+            if ($env:REF_TYPE -ne 'branch' -or $env:REF_NAME -cne 'main') {
+              throw 'Run the manual release workflow from the main branch.'
+            }
+            if ($env:RELEASE_MODE -cnotin @('draft', 'rehearsal')) { throw 'Unsupported release mode.' }
+            if ($env:RELEASE_MODE -eq 'draft') {
+              git show-ref --verify --quiet "refs/tags/v$version"
+              if ($LASTEXITCODE -eq 0) { throw 'This version already has a tag. Use a new project version for a manual draft.' }
+              if ($LASTEXITCODE -ne 1) { throw 'Cannot check existing release tags.' }
+            }
           }
+          elseif ($env:EVENT_NAME -ne 'push') {
+            throw 'Unsupported release event.'
+          }
+          $sourceSha = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $sourceSha -notmatch '^[0-9a-f]{40}$') { throw 'Cannot identify the release source commit.' }
+          $createDraft = $env:EVENT_NAME -eq 'push' -or $env:RELEASE_MODE -eq 'draft'
           "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+          "source_sha=$sourceSha" >> $env:GITHUB_OUTPUT
+          "create_draft=$($createDraft.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
   quality:
     name: Release quality
@@ -68,8 +97,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.verify.outputs.source_sha }}
           persist-credentials: false
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        id: dotnet
         with:
           global-json-file: global.json
       - name: Publish, preserve notices, and smoke test
@@ -77,15 +108,49 @@ jobs:
         env:
           TARGET_RUNTIME: ${{ matrix.runtime }}
         run: pwsh -NoProfile -File ./scripts/build-portable-release.ps1 -Runtime $env:TARGET_RUNTIME
+      - name: Build the unsigned Windows installer
+        if: startsWith(matrix.runtime, 'win-')
+        shell: pwsh
+        env:
+          TARGET_RUNTIME: ${{ matrix.runtime }}
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          $architecture = $env:TARGET_RUNTIME.Substring(4)
+          $payload = "artifacts/portable/$env:RELEASE_VERSION/$env:TARGET_RUNTIME/payload"
+          pwsh -NoProfile -File ./scripts/build-windows-installer.ps1 -Architecture $architecture -PublishDirectory $payload -OutputDirectory artifacts/windows-installer
+          if ($LASTEXITCODE -ne 0) { throw 'Windows installer creation failed.' }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: portable-${{ matrix.runtime }}
           path: artifacts/portable/packages/*
           if-no-files-found: error
           retention-days: 14
+      - name: Keep the Windows installer
+        if: startsWith(matrix.runtime, 'win-')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer-${{ matrix.runtime }}
+          path: artifacts/windows-installer/*.exe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Clean build output
+        if: always() && steps.dotnet.outcome == 'success'
+        shell: pwsh
+        env:
+          TARGET_RUNTIME: ${{ matrix.runtime }}
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          $payload = [System.IO.Path]::GetFullPath("artifacts/portable/$env:RELEASE_VERSION/$env:TARGET_RUNTIME/payload")
+          dotnet clean ./PromptMeUp/PromptMeUp.csproj --configuration Release --runtime $env:TARGET_RUNTIME "-p:PublishDir=$payload"
+          $runtimeCleanExitCode = $LASTEXITCODE
+          dotnet clean ./PromptMeUp.slnx --configuration Release
+          $solutionCleanExitCode = $LASTEXITCODE
+          git status --short
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot verify the working tree after cleanup.' }
+          if ($runtimeCleanExitCode -ne 0 -or $solutionCleanExitCode -ne 0) { throw 'Release build cleanup failed.' }
 
   deliver:
-    name: Prepare release draft
+    name: Prepare release bundle and optional draft
     needs: [verify, package]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -99,23 +164,28 @@ jobs:
           pattern: portable-*
           merge-multiple: true
           path: release
-      - name: Check the archive set and write SHA-256 checksums
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: release
+      - name: Check the release files and write SHA-256 checksums
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          $expected = @('win-x64.zip', 'win-arm64.zip', 'linux-x64.tar.gz', 'linux-arm64.tar.gz', 'osx-x64.tar.gz', 'osx-arm64.tar.gz')
+          $expected = @('win-x64.zip', 'win-arm64.zip', 'linux-x64.tar.gz', 'linux-arm64.tar.gz', 'osx-x64.tar.gz', 'osx-arm64.tar.gz', 'win-x64-setup.exe', 'win-arm64-setup.exe')
           $files = @(Get-ChildItem release -File)
-          if ($files.Count -ne $expected.Count) { throw 'Expected exactly six portable archives.' }
+          if ($files.Count -ne $expected.Count) { throw 'Expected exactly six portable archives and two Windows installers.' }
           foreach ($suffix in $expected) {
-            if (-not (Test-Path -LiteralPath "release/PromptMeUp-$env:RELEASE_VERSION-$suffix")) { throw "Missing archive: $suffix" }
+            if (-not (Test-Path -LiteralPath "release/PromptMeUp-$env:RELEASE_VERSION-$suffix" -PathType Leaf)) { throw "Missing release file: $suffix" }
           }
           $files | Sort-Object Name | ForEach-Object {
             $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $($_.Name)"
           } | Set-Content release/SHA256SUMS.txt -Encoding utf8NoBOM
-      - name: Attest release archives
-        if: github.event_name == 'push'
+      - name: Attest release files
+        if: needs.verify.outputs.create_draft == 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/*
@@ -127,13 +197,35 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Create a draft for the maintainer to publish
-        if: github.event_name == 'push'
+        if: needs.verify.outputs.create_draft == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
         run: |
+          $releaseTags = @(gh api "repos/$env:GH_REPO/releases" --paginate --jq '.[].tag_name')
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot check existing releases. No release will be created.' }
+          if ($releaseTags -ccontains $env:RELEASE_TAG) { throw 'A release or draft already exists for this version. Existing releases are never overwritten.' }
+          $createArguments = @('--draft', '--title', "PromptMeUp $env:RELEASE_TAG", '--generate-notes', '--notes-file', 'release-notes.md')
+          if ($env:EVENT_NAME -eq 'workflow_dispatch') {
+            $tagRefs = @(gh api "repos/$env:GH_REPO/git/matching-refs/tags/$env:RELEASE_TAG" --paginate --jq '.[].ref')
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot check existing tags. No release will be created.' }
+            if ($tagRefs -ccontains "refs/tags/$env:RELEASE_TAG") { throw 'The tag already exists. Use a new project version for a manual draft.' }
+            $createArguments += @('--target', $env:SOURCE_SHA)
+          }
+          else {
+            $tagSha = gh api "repos/$env:GH_REPO/commits/refs%2Ftags%2F$env:RELEASE_TAG" --jq '.sha'
+            if ($LASTEXITCODE -ne 0 -or $tagSha -cne $env:SOURCE_SHA) { throw 'The release tag no longer points to the verified source commit.' }
+            $createArguments += '--verify-tag'
+          }
+          @'
+          Choose the Windows installer that matches your computer: x64 or ARM64. Portable archives are also available for Windows, Linux, and macOS.
+
+          The Windows installers are unsigned. Windows may show an unknown-publisher or SmartScreen warning. You do not need to import a certificate. PromptMeUp requires PowerShell 7, which you install separately.
+          '@ | Set-Content release-notes.md -Encoding utf8NoBOM
           $files = @(Get-ChildItem release -File | ForEach-Object FullName)
-          gh release create $env:RELEASE_TAG @files --verify-tag --draft --title "PromptMeUp $env:RELEASE_TAG" --generate-notes
+          gh release create $env:RELEASE_TAG @files @createArguments
           if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed. Existing releases are never overwritten.' }

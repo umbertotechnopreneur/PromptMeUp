@@ -2,6 +2,23 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-16 — Prepare manual release drafts with x64 and ARM64 installers
+
+- Added a manual `draft` mode to the release workflow and retained `rehearsal` for artifact-only runs. The draft uses the verified main commit and product version; tag-triggered drafts remain supported. Existing tags and releases are never overwritten, and public publication stays a separate maintainer action.
+- Added unsigned, per-user Windows EXE installers for x64 and ARM64 using Inno Setup 6. The builder validates native architecture, product version, notices, and allowed payload files. The installer protects existing unmanaged folders and newer versions, adds only a user PATH entry, and removes only its owned entry on uninstall.
+- Included both installers with the six portable archives, complete checksums, and build attestations. Added matching runtime cleanup to packaging jobs and documented the exact GitHub CLI command, browser trigger, unsigned status, and final publishing step.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with zero warnings or errors, standard .NET cleanup, actionlint, PowerShell syntax parsing, whitespace checks, and independent static review passed. No automated tests, CLI smoke checks, workflow runs, or installer executions were performed. Automatic approval review rejected the command to prepare the portable Inno compiler with "blocked by policy", so EXE compilation remains unverified locally. Prepared on an authorized branch; pull-request review and merge remain pending.
+
+## 2026-09-16 — Pull main and install version 0.1.7
+
+- Fast-forwarded `main` to `ac43fae`, restored the existing repository-rule changes, and resolved the task-archive conflict by retaining both incoming and local entries.
+- Increased the product version from `0.1.5` to `0.1.7`, above the locally installed `0.1.6`. Built, signed, and installed Windows x64 MSIX `0.1.7.0` with the existing package identity and trusted local certificate.
+- Verified healthy package registration, the executable version, SHA-256 equality for all 283 installed payload files, and the execution alias targeting the new package.
+- Confirmed that the GitHub release workflow currently builds portable archives only. The separate MSIX builder supports x64 and ARM64; the MSI builder supports x64 only. Public MSIX distribution still needs a signing identity trusted by recipients and release assets to be published.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build and Windows publish with zero warnings or errors, package signature and installation integrity, standard .NET cleanup, and whitespace checks passed. Runtime cleanup was scoped to the application project because the test project has no runtime-specific restore target. Automated tests, CLI smoke checks, and live AI calls were not run; installation verification did not launch the application. Kept the installer and verification evidence under ignored artifacts. Automatic approval review blocked recursive removal of the remaining temporary directories, which are still present. No changes were committed or published.
+
 ## 2026-09-16 — Preserve multiline paste, number command choices, and install the update
 
 - Added a bounded multiline editor for chat and interactive diagnostics. Bracketed paste keeps normalized line breaks, blank lines, and trailing whitespace as editable text until a separate Enter submits it. Oversized insertions preserve the existing draft, and cursor movement and deletion respect Unicode text elements.
