@@ -127,11 +127,6 @@ if ([string]::IsNullOrWhiteSpace($IsccPath)) {
 if ([string]::IsNullOrWhiteSpace($IsccPath) -or -not (Test-Path -LiteralPath $IsccPath -PathType Leaf)) {
     throw 'Inno Setup 6 was not found. Install Inno Setup 6.7.1 or pass -IsccPath to its ISCC.exe.'
 }
-$compilerInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($IsccPath)
-if ($compilerInfo.FileMajorPart -ne 6 -or $compilerInfo.FileMinorPart -lt 3) {
-    throw 'Use Inno Setup 6.3 or later in the 6.x series; the GitHub Windows runner supplies 6.7.1.'
-}
-
 $template = Join-Path $repositoryRoot 'packaging/windows/PromptMeUp.iss'
 $outputName = "PromptMeUp-$version-win-$Architecture-setup"
 New-Item -ItemType Directory -Path $outputRoot | Out-Null
