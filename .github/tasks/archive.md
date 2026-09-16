@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-16 — Run the first tagged release and correct the installer compiler check
+
+- Merged PR #34 after all required checks passed, verified the resulting main checks, and pushed annotated tag `v0.1.7` at `d73fc50`.
+- Release run `35081567930` passed the quality checks and built the four Linux and macOS archives. Both Windows jobs rejected `ISCC.exe` metadata version `0.0.0.0` before installer compilation, so no release draft was created.
+- Moved the supported Inno Setup version check into the installer preprocessor, where `Ver` identifies the loaded compiler. Added native Windows installer compilation to the quality workflow and cleanup after its builds.
+- Increased the product version to `0.1.8` for the corrected release while preserving the published `v0.1.7` tag.
+
+Validation: the first release's quality checks and native CLI smoke checks passed on GitHub. The correction passed local preflight, restore, formatting verification, XML comments, a Release build with zero warnings or errors, cleanup, PowerShell syntax parsing, actionlint, and whitespace checks. The corrected installer compilation and new release remain pending their workflow runs. No local automated tests, CLI smoke checks, or installer executions were run.
+
 ## 2026-09-16 — Prepare manual release drafts with x64 and ARM64 installers
 
 - Added a manual `draft` mode to the release workflow and retained `rehearsal` for artifact-only runs. The draft uses the verified main commit and product version; tag-triggered drafts remain supported. Existing tags and releases are never overwritten, and public publication stays a separate maintainer action.

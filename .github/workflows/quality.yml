@@ -81,6 +81,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up .NET 10
+        id: dotnet
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
@@ -112,3 +113,31 @@ jobs:
           $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
           pwsh -NoProfile -File ./scripts/build-portable-release.ps1 -Runtime "$platform-$architecture"
           if ($LASTEXITCODE -ne 0) { throw 'Portable package validation failed.' }
+
+      - name: Validate Windows installer compilation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content PromptMeUp/PromptMeUp.csproj -Raw
+          $version = [string]$project.Project.PropertyGroup.Version
+          $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+          $payload = "artifacts/portable/$version/win-$architecture/payload"
+          pwsh -NoProfile -File ./scripts/build-windows-installer.ps1 -Architecture $architecture -PublishDirectory $payload -OutputDirectory artifacts/windows-installer
+          if ($LASTEXITCODE -ne 0) { throw 'Windows installer compilation failed.' }
+
+      - name: Clean build output
+        if: always() && steps.dotnet.outcome == 'success'
+        shell: pwsh
+        run: |
+          $platform = if ($IsWindows) { 'win' } elseif ($IsMacOS) { 'osx' } else { 'linux' }
+          $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+          [xml]$project = Get-Content PromptMeUp/PromptMeUp.csproj -Raw
+          $version = [string]$project.Project.PropertyGroup.Version
+          $payload = [System.IO.Path]::GetFullPath("artifacts/portable/$version/$platform-$architecture/payload")
+          dotnet clean ./PromptMeUp/PromptMeUp.csproj --configuration Release --runtime "$platform-$architecture" "-p:PublishDir=$payload"
+          $runtimeCleanExitCode = $LASTEXITCODE
+          dotnet clean ./PromptMeUp.slnx --configuration Release
+          $solutionCleanExitCode = $LASTEXITCODE
+          git status --short
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot verify the working tree after cleanup.' }
+          if ($runtimeCleanExitCode -ne 0 -or $solutionCleanExitCode -ne 0) { throw 'Quality build cleanup failed.' }

@@ -1,5 +1,5 @@
 ## Task
 
-- [ ] Merge the prepared release automation through an authorized branch and pull request, then verify both EXE artifacts in the first Windows workflow run. Local installer compilation was not available because automatic approval review blocked preparation of the Inno compiler.
+- [ ] Publish GitHub prerelease `v0.1.8` through the Release workflow after correcting Inno Setup version detection. PR #34 is merged and `v0.1.7` remains on its original commit; its first release run failed before creating the Windows installers or a draft. Verify all six portable archives and both Windows EXE installers before publishing the new draft as a prerelease.
 
 - [ ] Remove ignored local package, IDE, and smoke-test directories. Standard .NET cleanup completed; recursive directory deletion was blocked by the execution policy.

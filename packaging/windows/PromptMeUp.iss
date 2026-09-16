@@ -1,5 +1,9 @@
 ; SPDX-License-Identifier: MIT
 ; Build only through scripts/build-windows-installer.ps1, which validates the payload.
+; ISCC.exe has its own file version; Ver identifies the loaded Inno Setup compiler.
+#if Ver < EncodeVer(6, 3, 0, 0) || Ver >= EncodeVer(7, 0, 0, 0)
+  #error Use Inno Setup 6.3 or later in the 6.x series.
+#endif
 #ifndef AppVersion
   #error AppVersion is required.
 #endif
