@@ -403,6 +403,24 @@ to remove a saved note from future selection. Neither command erases earlier
 audit records or recorded usage, and `/forget` does not remove text already in
 the active conversation.
 
+### Ask about PromptMeUp
+
+Ask in your own words, for example, "How do I change this app's conversation
+budget?" or "How do saved memories work?" The assistant can request relevant
+chapters from the guide included with your installed version. No special chat
+command is needed.
+
+PromptMeUp supplies up to two chapters in your selected language, then makes
+one additional AI call for the answer. The guide stays available for follow-up
+questions. New topics can replace earlier chapters; `/clear` removes the loaded
+guide from the active context. Reading a chapter only reads packaged help. It
+does not run commands or open your files or settings.
+
+Both AI calls count toward token usage and estimated costs. If the guide and
+your question cannot fit the configured input limit, the app explains the limit
+instead of sending an oversized request. There is at most one guide-loading
+round per question.
+
 ### Read context and usage
 
 Use `/status` or `/context` during chat to see how much context is in use. The
@@ -413,12 +431,22 @@ shell, shows local configuration and storage readiness instead.
 | --- | --- |
 | Active context | Estimated input currently retained, compared with the model's context window. |
 | Context budget | That same input compared with your configured input limit. |
+| System | Estimated instruction tokens, including supplied runtime details, message overhead, and any loaded guide. |
+| Guide, included in system | The guide's share of system tokens; it is already included in the total. |
+| User | Retained user text and selected saved-note data. |
+| AI replies | Retained assistant text, including the latest answer when it fits. |
 | Loaded memories | The number of selected notes and their share of the 800-token allowance. |
 | Last request | Input and output tokens reported by the provider for the last assistant call. |
 | Session usage | Input and output tokens accumulated across this conversation's recorded calls. |
 
-A `~` marks an estimate. Active context includes instructions, machine and
-directory context, selected notes, and retained messages. It is recalculated
+A `~` marks an estimate. The budget bar uses separate colors for system, user,
+and assistant content, with the remaining space left available. A numeric legend
+keeps the categories clear without color. Guide tokens belong to System and
+are not added twice. Reported output usage can exceed retained reply text because
+the provider also counts tokens that are not kept as visible conversation text.
+
+Active context includes instructions, machine and directory context, loaded
+guide chapters, selected notes, and retained messages. It is recalculated
 after old turns are removed. Your next question is included only once you enter
 it, so the estimate can change before sending.
 
@@ -427,6 +455,11 @@ tokens used over time, not how much space the current conversation occupies.
 Refreshing status or using `/clear` keeps the last-request and session counters.
 Calls that fail but report usage count toward session totals. AI command reviews
 are recorded separately and appear in the overall `/costs` totals.
+
+For a guide-assisted answer, This turn includes both the guide-selection and
+answer calls. Last request still shows only the final call, while Session usage
+includes both. A turn or session cost is unavailable if a recorded billable call
+has no known price, so a partial amount is not presented as a complete total.
 
 Ordinary query and chat start with a 16,000-token input budget. The actual limit
 is the smallest of your saved or overridden budget, your chosen percentage of

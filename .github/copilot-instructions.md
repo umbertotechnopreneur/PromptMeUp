@@ -25,6 +25,7 @@ alwaysApply: true
 - Use Spectre.Console layout primitives purposefully (for example grids, rules, and selection prompts) to convey hierarchy; do not reduce command, help, or status surfaces to undifferentiated text walls.
 - Arrange form fields in two columns with right-aligned label text and left-aligned value text, followed by one blank row. Keep action bars and shortcut hints unboxed, with a single separator before the actions; use semantic button colors and a visible focus marker.
 - Preserve unrelated work, obtain explicit user authorization before creating any Git branch or worktree, avoid broad formatting churn, use `pwsh -NoProfile` for PowerShell automation, and fail fast on invalid or unsupported state.
+- When creating a pull request, assign it to `umbertotechnopreneur` and add the existing repository labels that match its final scope.
 - Run automated tests and CLI smoke tests only when the user explicitly requests them. Implementation, review, commit, and push requests do not authorize test execution.
 - After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; complete the non-test validation gate before committing.
 - Keep `AGENTS.md` and this file aligned when repository-wide rules change.

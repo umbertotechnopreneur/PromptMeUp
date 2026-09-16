@@ -56,6 +56,22 @@ public sealed record ShellRuntimeStatus(
 
     public long ContextBudgetTokens { get; init; }
 
+    public long SystemInstructionTokens { get; init; }
+
+    public long GuideTokens { get; init; }
+
+    public long UserMessageTokens { get; init; }
+
+    public long AssistantMessageTokens { get; init; }
+
+    public bool HasContextBreakdown { get; init; }
+
+    public decimal? TurnCostUsd { get; init; }
+
+    public bool HasTurnCost { get; init; }
+
+    public bool SessionCostKnown { get; init; } = true;
+
     public long MemoryTokens { get; init; }
 
     public int MemoryCount { get; init; }

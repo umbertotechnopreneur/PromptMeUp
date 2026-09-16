@@ -4,6 +4,26 @@ namespace PromptMeUp.Services.OpenAi;
 
 internal static class FeatureResponseFormats
 {
+    /// <summary>Limits display classification to two session preferences and whether the message also needs a chat answer.</summary>
+    internal static object ChatDisplayIntent() => new
+    {
+        type = "json_schema",
+        name = "promptmeup_chat_display_intent_v1",
+        strict = true,
+        schema = new
+        {
+            type = "object",
+            properties = new
+            {
+                session_summary = new { type = "string", @enum = new[] { "unchanged", "show", "hide" } },
+                command_suggestions = new { type = "string", @enum = new[] { "unchanged", "show", "hide" } },
+                continue_chat = new { type = "boolean" }
+            },
+            required = new[] { "session_summary", "command_suggestions", "continue_chat" },
+            additionalProperties = false
+        }
+    };
+
     /// <summary>Defines explicit steps and separate verification commands for a guided plan.</summary>
     internal static object Plan() => new
     {

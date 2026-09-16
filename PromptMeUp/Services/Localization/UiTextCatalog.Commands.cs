@@ -224,6 +224,13 @@ internal static partial class UiTextCatalog
             German: "Gespräch fortsetzen",
             Spanish: "Continuar la conversación",
             Vietnamese: "Tiếp tục cuộc trò chuyện"));
+        entries.Add("CommandMenu.DigitHint", new(
+            English: "Press a number from 0 to {0}; no Enter needed.",
+            Italian: "Premi un numero da 0 a {0}; non serve Invio.",
+            French: "Appuyez sur un chiffre de 0 à {0} ; inutile d'appuyer sur Entrée.",
+            German: "Drücken Sie eine Ziffer von 0 bis {0}; die Eingabetaste ist nicht nötig.",
+            Spanish: "Pulsa un número del 0 al {0}; no hace falta pulsar Intro.",
+            Vietnamese: "Nhấn một số từ 0 đến {0}; không cần nhấn Enter."));
         entries.Add("CommandMenu.Finish", new(
             English: "Finish here",
             Italian: "Termina qui",
@@ -238,6 +245,13 @@ internal static partial class UiTextCatalog
             German: "Vorschläge werden nie automatisch ausgeführt. Wählen Sie einen Befehl nur zur Prüfung der exakten Vorschau und des Risikos.",
             Spanish: "Las sugerencias nunca se ejecutan automáticamente. Elige un comando solo para inspeccionar su vista previa exacta y riesgo.",
             Vietnamese: "Gợi ý không bao giờ tự chạy. Chỉ chọn lệnh để xem trước chính xác và kiểm tra rủi ro."));
+        entries.Add("CommandMenu.InvalidNumber", new(
+            English: "Choose a number from 0 to {0}.",
+            Italian: "Scegli un numero da 0 a {0}.",
+            French: "Choisissez un nombre de 0 à {0}.",
+            German: "Wählen Sie eine Zahl von 0 bis {0}.",
+            Spanish: "Elige un número del 0 al {0}.",
+            Vietnamese: "Chọn một số từ 0 đến {0}."));
         entries.Add("CommandMenu.None", new(
             English: "Do not execute commands",
             Italian: "Non eseguire comandi",
@@ -245,6 +259,13 @@ internal static partial class UiTextCatalog
             German: "Keine Befehle ausführen",
             Spanish: "No ejecutar comandos",
             Vietnamese: "Không chạy lệnh nào"));
+        entries.Add("CommandMenu.NumberHint", new(
+            English: "Type a number from 0 to {0}, then press Enter.",
+            Italian: "Digita un numero da 0 a {0}, poi premi Invio.",
+            French: "Saisissez un nombre de 0 à {0}, puis appuyez sur Entrée.",
+            German: "Geben Sie eine Zahl von 0 bis {0} ein und drücken Sie die Eingabetaste.",
+            Spanish: "Escribe un número del 0 al {0} y pulsa Intro.",
+            Vietnamese: "Nhập một số từ 0 đến {0}, rồi nhấn Enter."));
         entries.Add("CommandMenu.StartChat", new(
             English: "Clarify the request or continue in chat",
             Italian: "Chiarisci la richiesta o continua in chat",
