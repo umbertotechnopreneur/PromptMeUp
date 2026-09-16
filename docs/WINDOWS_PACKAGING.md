@@ -1,6 +1,29 @@
 # PromptMeUp Windows release packaging
 
-Use `scripts/build-release-artifacts.ps1` to make Windows ZIP downloads, WinGet manifests, and an optional MSI installer for the current user. It creates the files locally; you'll review them before publishing or installing. This guide also covers the separate MSIX package.
+GitHub releases include unsigned EXE installers for Windows x64 and ARM64, plus portable archives. The [release guide](RELEASING.md#create-a-release-draft) explains how to generate a draft with one command. This guide covers the EXE builder and the separate local MSI, WinGet, and signed MSIX options.
+
+## Unsigned EXE installers for x64 and ARM64
+
+The release workflow uses `scripts/build-windows-installer.ps1` with Inno Setup 6 to package each Windows portable payload. The result is `PromptMeUp-<version>-win-x64-setup.exe` or `PromptMeUp-<version>-win-arm64-setup.exe`. A signing certificate is not required. Windows may display an unknown-publisher or SmartScreen warning because these installers are unsigned.
+
+Each installer accepts its matching Windows CPU type and installs for the current user under `%LOCALAPPDATA%\Programs\PromptMeUp`. It adds that directory to the user's `PATH`; open a new terminal before using `hm`. PowerShell 7 must be installed separately for command execution. The installer does not start PromptMeUp, install a background service, or change the machine `PATH`.
+
+Later versions update the same EXE installation. The installer rejects downgrades and refuses to overwrite a folder managed by another installation method. Uninstall removes the files recorded by the installer and its own PATH entry, while leaving ordinary PromptMeUp data separate. If you already use MSI or MSIX, continue with that package type or remove the old installation before switching. An existing MSIX execution alias can take precedence over the EXE copy.
+
+To package an existing clean Windows portable payload locally, use Inno Setup 6.3 or later in the 6.x series. The Windows runner currently includes 6.7.1. This example assumes the portable payload for version `0.1.7` has already been built:
+
+```powershell
+pwsh -NoProfile -File .\scripts\build-windows-installer.ps1 `
+  -PublishDirectory .\artifacts\portable\0.1.7\win-x64\payload `
+  -OutputDirectory .\artifacts\windows-installer-x64 `
+  -Architecture x64
+```
+
+Use the `win-arm64` payload and `-Architecture arm64` for ARM64. Pass `-IsccPath` if `ISCC.exe` is outside the standard Inno Setup 6 installation folders. Output must be a fresh directory under `artifacts`. The builder checks the executable's CPU type and version, bundled resources and notices, and allowed payload files. It compiles the installer without installing it, running the app, or changing PATH. Run installation checks separately on matching machines before publishing.
+
+## Local MSI and WinGet packages
+
+Use `scripts/build-release-artifacts.ps1` to make Windows ZIP downloads, WinGet manifests, and an optional x64 MSI installer for the current user. It creates the files locally; review them before publishing or installing.
 
 ## What users receive
 
@@ -19,7 +42,7 @@ winget/UmbertoGiacobbi.PromptMeUp/0.1.5/
 release.json
 ```
 
-The ZIP archives contain only `hm.exe`, the required `prompt` YAML resources, `LICENSE`, and `THIRD_PARTY_NOTICES.md`. They are self-contained and do not require a separate .NET runtime. The WinGet manifest declares PowerShell 7 as a package dependency because approved command execution uses `pwsh`.
+The ZIP archives contain `hm.exe`, prompt and theme resources, PATH helpers, and the complete redistribution notice payload. They are self-contained and do not require a separate .NET runtime. The WinGet manifest declares PowerShell 7 as a package dependency because approved command execution uses `pwsh`.
 
 After a successful build, the script removes temporary build, packaging, and smoke-test files. If the build fails, it keeps them to help you find the problem. A finished release folder holds the packages, WinGet manifests, checksums, and `release.json` you'll need to test or publish.
 
