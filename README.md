@@ -29,6 +29,9 @@ Forgot a command? Stuck on an error? Ask `hm` in your own words. It uses your Op
 > [!NOTE]
 > PromptMeUp is still an early version. There are no ready-to-download releases yet, but you can [build it yourself](#get-started).
 
+> [!NOTE]
+> **MSIX installers are temporarily unavailable.** We're working on the code-signing certificate needed to distribute them. Portable downloads remain the supported option.
+
 ## Meet `hm`
 
 `hm` means **help me**. Start with a question:
