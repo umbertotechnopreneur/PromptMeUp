@@ -70,11 +70,17 @@ internal sealed class EscapeAwareConsoleInput : IAnsiConsoleInput
     /// <summary>Reads one key and maps Escape to cancellation of the current interactive flow.</summary>
     public async Task<ConsoleKeyInfo?> ReadKeyAsync(bool intercept, CancellationToken cancellationToken)
     {
+        var key = await ReadRawKeyAsync(intercept, cancellationToken).ConfigureAwait(false);
+        return EnsureNotEscape(key);
+    }
+
+    /// <summary>Reads one key with shutdown cancellation before a paste-aware reader interprets Escape sequences.</summary>
+    internal async Task<ConsoleKeyInfo?> ReadRawKeyAsync(bool intercept, CancellationToken cancellationToken)
+    {
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             _shutdownToken);
-        var key = await _inner.ReadKeyAsync(intercept, linkedCancellation.Token).ConfigureAwait(false);
-        return EnsureNotEscape(key);
+        return await _inner.ReadKeyAsync(intercept, linkedCancellation.Token).ConfigureAwait(false);
     }
 
     /// <summary>Returns ordinary keys and raises the dedicated flow-cancellation signal for Escape.</summary>

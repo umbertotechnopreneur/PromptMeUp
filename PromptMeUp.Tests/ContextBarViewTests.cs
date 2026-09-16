@@ -201,6 +201,8 @@ public sealed class ContextBarViewTests
         {
             Ansi = AnsiSupport.No,
             ColorSystem = ColorSystemSupport.NoColors,
+            // CI enrichers would otherwise re-enable ANSI after applying the explicit test settings.
+            Enrichment = new ProfileEnrichment { UseDefaultEnrichers = false },
             Out = new AnsiConsoleOutput(output)
         });
         console.Profile.Width = width;

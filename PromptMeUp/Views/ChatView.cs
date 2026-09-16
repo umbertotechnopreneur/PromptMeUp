@@ -55,6 +55,8 @@ public sealed class ChatView : IChatView
         RenderCommandHint("/context", "Chat.Command.Context");
         RenderCommandHint("/exit", "Chat.Command.Exit");
         _console.WriteLine();
+        _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.DisplayHint"))}[/]");
+        _console.WriteLine();
         if (includeMemoryHints)
         {
             RenderMemoryHint();
@@ -76,13 +78,7 @@ public sealed class ChatView : IChatView
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
         var label = $"{TerminalTheme.IconPrefix(_shell.Options, "👤", ">")}{_text.Text("Chat.You")} ›";
-        var input = _console.Prompt(
-            new TextPrompt<string>($"[bold {TerminalTheme.Accent}]{Markup.Escape(label)}[/] ")
-                .AllowEmpty()
-                .ValidationErrorMessage($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Chat.InputTooLong", maximumCharacters))}[/]")
-                .Validate(value => value.Length <= maximumCharacters
-                    ? ValidationResult.Success()
-                    : ValidationResult.Error()));
+        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters);
         var remaining = maximumCharacters - input.Length;
         _console.MarkupLine(
             $"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.InputCount", input.Length, maximumCharacters, remaining))}[/]");

@@ -28,6 +28,62 @@ internal static partial class UiTextCatalog
             German: "Gespräch gelöscht.",
             Spanish: "Conversación borrada.",
             Vietnamese: "Đã xóa hội thoại."));
+        entries.Add("Chat.DisplayHint", new(
+            English: "Ask naturally to hide or show the session summary and command previews.",
+            Italian: "Puoi chiedere di nascondere o mostrare lo specchietto sessione e le anteprime dei comandi.",
+            French: "Demandez simplement de masquer ou d'afficher le résumé de session et les aperçus des commandes.",
+            German: "Bitte einfach darum, die Sitzungsübersicht und Befehlsvorschauen auszublenden oder anzuzeigen.",
+            Spanish: "Pide con tus palabras ocultar o mostrar el resumen de sesión y las vistas previas de comandos.",
+            Vietnamese: "Bạn có thể yêu cầu ẩn hoặc hiện bảng tóm tắt phiên và phần xem trước lệnh bằng lời nói tự nhiên."));
+        entries.Add("Chat.MultilineHint", new(
+            English: "Paste keeps line breaks. Enter: send · Arrows: edit · Esc: cancel.",
+            Italian: "L'incolla conserva gli a capo. Invio: invia · Frecce: modifica · Esc: annulla.",
+            French: "Le collage conserve les sauts de ligne. Entrée : envoyer · Flèches : modifier · Échap : annuler.",
+            German: "Einfügen behält Zeilenumbrüche. Eingabe: senden · Pfeile: bearbeiten · Esc: abbrechen.",
+            Spanish: "Pegar conserva los saltos de línea. Intro: enviar · Flechas: editar · Esc: cancelar.",
+            Vietnamese: "Dán giữ nguyên xuống dòng. Enter: gửi · Phím mũi tên: sửa · Esc: hủy."));
+        entries.Add("Chat.InputLine", new(
+            English: "Line {0} of {1} · Enter to send",
+            Italian: "Riga {0} di {1} · Invio per inviare",
+            French: "Ligne {0} sur {1} · Entrée pour envoyer",
+            German: "Zeile {0} von {1} · Eingabe zum Senden",
+            Spanish: "Línea {0} de {1} · Intro para enviar",
+            Vietnamese: "Dòng {0} trên {1} · Enter để gửi"));
+        entries.Add("Chat.PasteUnavailable", new(
+            English: "Interactive text input needs an ANSI terminal with bracketed paste support. For diagnostics, you can also use --input-file.",
+            Italian: "L'input interattivo richiede un terminale ANSI con supporto all'incolla delimitato. Per la diagnostica puoi anche usare --input-file.",
+            French: "La saisie interactive nécessite un terminal ANSI prenant en charge le collage encadré. Pour le diagnostic, vous pouvez aussi utiliser --input-file.",
+            German: "Die interaktive Eingabe benötigt ein ANSI-Terminal mit Unterstützung für geklammertes Einfügen. Zur Diagnose ist auch --input-file möglich.",
+            Spanish: "La entrada interactiva necesita un terminal ANSI con soporte de pegado delimitado. Para diagnóstico también puedes usar --input-file.",
+            Vietnamese: "Nhập tương tác cần terminal ANSI hỗ trợ dán có dấu phân định. Khi chẩn đoán, bạn cũng có thể dùng --input-file."));
+        entries.Add("Chat.SessionSummaryShown", new(
+            English: "Automatic session summary shown for this chat.",
+            Italian: "Specchietto sessione automatico visibile per questa chat.",
+            French: "Résumé automatique de session affiché pour ce chat.",
+            German: "Automatische Sitzungsübersicht für diesen Chat eingeblendet.",
+            Spanish: "Resumen automático de sesión visible en este chat.",
+            Vietnamese: "Đã hiện bảng tóm tắt phiên tự động cho cuộc trò chuyện này."));
+        entries.Add("Chat.SessionSummaryHidden", new(
+            English: "Automatic session summary hidden for this chat. /status still shows it.",
+            Italian: "Specchietto sessione automatico nascosto per questa chat. /status lo mostra comunque.",
+            French: "Résumé automatique de session masqué pour ce chat. /status permet toujours de l'afficher.",
+            German: "Automatische Sitzungsübersicht für diesen Chat ausgeblendet. /status zeigt sie weiterhin an.",
+            Spanish: "Resumen automático de sesión oculto en este chat. /status sigue mostrándolo.",
+            Vietnamese: "Đã ẩn bảng tóm tắt phiên tự động cho cuộc trò chuyện này. /status vẫn hiển thị bảng này."));
+        entries.Add("Chat.CommandSuggestionsShown", new(
+            English: "Suggested-command menu and previews shown for this chat.",
+            Italian: "Menu e anteprime dei comandi suggeriti visibili per questa chat.",
+            French: "Menu et aperçus des commandes suggérées affichés pour ce chat.",
+            German: "Menü und Vorschauen vorgeschlagener Befehle für diesen Chat eingeblendet.",
+            Spanish: "Menú y vistas previas de comandos sugeridos visibles en este chat.",
+            Vietnamese: "Đã hiện menu và phần xem trước lệnh được đề xuất cho cuộc trò chuyện này."));
+        entries.Add("Chat.CommandSuggestionsHidden", new(
+            English: "Suggested-command menu and previews hidden for this chat. /run still requires an exact preview and approval.",
+            Italian: "Menu e anteprime dei comandi suggeriti nascosti per questa chat. /run richiede sempre anteprima esatta e approvazione.",
+            French: "Menu et aperçus des commandes suggérées masqués pour ce chat. /run exige toujours un aperçu exact et une approbation.",
+            German: "Menü und Vorschauen vorgeschlagener Befehle für diesen Chat ausgeblendet. /run erfordert weiterhin eine genaue Vorschau und Freigabe.",
+            Spanish: "Menú y vistas previas de comandos sugeridos ocultos en este chat. /run sigue exigiendo una vista previa exacta y aprobación.",
+            Vietnamese: "Đã ẩn menu và phần xem trước lệnh được đề xuất cho cuộc trò chuyện này. /run vẫn yêu cầu xem trước chính xác và phê duyệt."));
         entries.Add("Chat.Command.Clear", new(
             English: "Clear the active conversation context.",
             Italian: "Azzera il contesto attivo della conversazione.",

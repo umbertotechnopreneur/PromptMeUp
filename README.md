@@ -39,7 +39,11 @@ hm "How do I undo my last local commit without losing my changes?"
 
 Read the answer, ask a follow-up, or take a closer look at a suggested command. Nothing runs automatically. You can say no to a command and keep chatting.
 
+Each menu choice has a number starting at **0**: with up to ten choices, press its digit to select it immediately; with more choices, type the number and press Enter. Selecting a command opens its exact preview and risk assessment, where you still decide whether to authorize it. If the AI suggests no commands, a single question offers **Finish here** or **Continue in chat**, while an ongoing chat goes straight back to the message prompt.
+
 Have a few questions? Start with `hm --chat`. Your earlier terminal output stays where it was, and `hm` closes when you're done. Nothing keeps running in the background.
+
+In chat and interactive diagnostics, pasted text keeps its line breaks and waits for you to press Enter before sending. Use the arrow keys to review or edit it first. This requires a terminal that supports bracketed paste, which marks pasted text separately from keyboard input; diagnostic files can also be supplied with `--input-file`.
 
 ## A few moments with `hm`
 
@@ -93,6 +97,10 @@ Choose **About** in Help or Settings to read about the project. When you close i
 In chat, `/context` or `/status` shows how much of the conversation `hm` is keeping for the next question. The default limit is **16,000 estimated tokens** — the small pieces of text an AI model reads. You'll also see usage for the last answer and the whole chat. A `~` means the number is an estimate.
 
 Use `/clear` to start fresh in the same chat. Your saved notes and usage totals stay. If a question is too long, `hm` lets you shorten it and try again.
+
+Want less output? Say **“Hide the session summary and command previews”** in chat. You can hide or show either one separately, for example **“Show the session summary”**. The choice lasts for this chat, survives `/clear`, and resets when you start a new chat. Existing terminal output stays in your scrollback.
+
+`/status` and `/context` still show the summary when you ask. Hiding command previews removes the suggested-command menu; commands may still appear in answers. Use `/run <command>` to review one: its exact preview, risk assessment, and approval remain required. Understanding these chat preferences uses an additional AI call, included in usage and cost totals.
 
 ## Get started
 

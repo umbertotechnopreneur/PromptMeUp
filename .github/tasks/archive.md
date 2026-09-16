@@ -2,6 +2,25 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-16 — Preserve multiline paste, number command choices, and install the update
+
+- Added a bounded multiline editor for chat and interactive diagnostics. Bracketed paste keeps normalized line breaks, blank lines, and trailing whitespace as editable text until a separate Enter submits it. Oversized insertions preserve the existing draft, and cursor movement and deletion respect Unicode text elements.
+- Enabled and restored Windows virtual-terminal input around the prompt, retained cancellation, and limited redraws to owned input rows without clearing terminal history. Documented the bracketed-paste terminal requirement and the diagnostic file-input alternative.
+- Numbered command-menu choices from zero. Up to ten entries accept a digit immediately; larger menus require Enter. Empty AI suggestions return to an ongoing chat prompt or offer Finish/Continue after a single question. Command selection still opens the existing preview and authorization flow.
+- Added decoder and editing regression sources, and prevented CI environment enrichment from overriding explicit ANSI settings in context-bar test fixtures. Preserved unrelated local source comments.
+- Built, signed, and installed MSIX revision `0.1.5.15`. Verified healthy registration, all 282 installed payload hashes, and the `hm` execution alias. Prepared the changes for the existing pull request.
+
+Validation: preflight, restore, formatting verification, XML method comment checks, Release build and Windows publish, package signature verification, installed-file integrity, independent code review, and whitespace checks passed. The build reported zero warnings and errors. Automated tests, CLI smoke checks, and live AI calls were not run locally; installation verification did not launch the application.
+
+## 2026-09-16 — Control chat visibility through natural language
+
+- Added an isolated, strictly parsed LLM intent call for directly typed chat messages, with six-language instructions and local confirmations for independent session-summary and command-suggestion visibility changes.
+- Kept preferences within the current chat, retained them across `/clear`, and allowed `/status` and `/context` to display the summary once. Hidden suggestions never bypass the exact preview, risk assessment, and authorization required by `/run`.
+- Counted the classification call in session usage and turn costs, including guide-assisted answers. Recalled notes, previous messages, and command output cannot enter the display classifier. Mixed requests apply changes after the answer succeeds.
+- Updated chat guidance and documentation, added parser and workflow regression sources, and adapted existing accounting checks for the extra call. Preserved the two unrelated local code comments.
+
+Validation: repository preflight, restore, formatting verification, XML method comment checks, Release build with zero warnings or errors, and whitespace review passed. Automated tests, CLI smoke checks, and live AI calls were not run.
+
 ## 2026-09-15 — Record pull-request ownership and labels
 
 - Aligned `AGENTS.md` and `.github/copilot-instructions.md`: every newly created pull request must be assigned to `umbertotechnopreneur` and carry existing repository labels appropriate to its final scope.

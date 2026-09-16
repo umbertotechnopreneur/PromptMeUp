@@ -12,11 +12,11 @@ namespace PromptMeUp.Tests;
 
 public sealed class AppGuideWorkflowTests
 {
-    /// <summary>Verifies natural-language guide routing, localized system context, cost accounting, reuse, and clearing.</summary>
+    /// <summary>Verifies display classification, guide routing, localized context, cost accounting, reuse, and clearing.</summary>
     [Theory]
     [InlineData("en", "How do I change this app's conversation budget?")]
     [InlineData("it", "Come cambio il budget della conversazione di questa app?")]
-    public async Task RunChatAsync_GuideRequest_CountsBothCallsAndReusesLocalizedChapters(string language, string question)
+    public async Task RunChatAsync_GuideRequest_CountsAllCallsAndReusesLocalizedChapters(string language, string question)
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -31,15 +31,16 @@ public sealed class AppGuideWorkflowTests
         await workflow.RunChatAsync(AppSettings.Default with { Language = language, PromptCachingEnabled = false }, default);
 
         Assert.Empty(inputs);
-        Assert.Equal(4, handler.RequestBodies.Count);
+        Assert.Equal(7, handler.RequestBodies.Count);
+        Assert.Equal(4, handler.ConversationRequestBodies.Count);
         Assert.Equal(3, answers.Count);
         Assert.All(answers, answer => Assert.False(string.IsNullOrWhiteSpace(answer)));
         var catalog = new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance);
         var chapter = (await catalog.GetAsync("app-guide-conversation", default)).ResolveText(language);
-        using var first = JsonDocument.Parse(handler.RequestBodies[0]);
-        using var guided = JsonDocument.Parse(handler.RequestBodies[1]);
-        using var followUp = JsonDocument.Parse(handler.RequestBodies[2]);
-        using var cleared = JsonDocument.Parse(handler.RequestBodies[3]);
+        using var first = JsonDocument.Parse(handler.ConversationRequestBodies[0]);
+        using var guided = JsonDocument.Parse(handler.ConversationRequestBodies[1]);
+        using var followUp = JsonDocument.Parse(handler.ConversationRequestBodies[2]);
+        using var cleared = JsonDocument.Parse(handler.ConversationRequestBodies[3]);
         Assert.DoesNotContain("<chapter id=", first.RootElement.GetProperty("instructions").GetString());
         Assert.Contains(chapter, guided.RootElement.GetProperty("instructions").GetString());
         Assert.Contains(chapter, followUp.RootElement.GetProperty("instructions").GetString());
@@ -50,26 +51,27 @@ public sealed class AppGuideWorkflowTests
             Assert.DoesNotContain("<app-guide>", message.GetProperty("content").GetString()));
         Assert.InRange(snapshots[0].GuideTokens, 1, snapshots[0].SystemInstructionTokens);
         Assert.Equal(40, snapshots[0].InputTokens);
-        Assert.Equal(60, snapshots[0].SessionInputTokens);
-        Assert.Equal(2, snapshots[0].SessionOutputTokens);
-        Assert.Equal(0.000060m, snapshots[0].TurnCostUsd);
-        Assert.Equal(0.000060m, snapshots[0].RunningCostUsd);
+        Assert.Equal(70, snapshots[0].SessionInputTokens);
+        Assert.Equal(3, snapshots[0].SessionOutputTokens);
+        Assert.Equal(0.000070m, snapshots[0].TurnCostUsd);
+        Assert.Equal(0.000070m, snapshots[0].RunningCostUsd);
         Assert.Equal(0, snapshots[2].GuideTokens);
         Assert.Equal(0, snapshots[3].GuideTokens);
-        Assert.Equal(0.000200m, snapshots[^1].RunningCostUsd);
+        Assert.Equal(0.000230m, snapshots[^1].RunningCostUsd);
         Assert.All(snapshots, snapshot =>
         {
             Assert.True(snapshot.HasContextBreakdown);
             Assert.Equal(snapshot.ActiveContextTokens,
                 snapshot.SystemInstructionTokens + snapshot.UserMessageTokens + snapshot.AssistantMessageTokens);
         });
-        Assert.Equal(4L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+        Assert.Equal(7L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+        Assert.Equal(3L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE prompt_id = 'chat-display-intent';"));
         Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_session_events WHERE event_type = 'app_guide_loaded';"));
     }
 
     /// <summary>Verifies a model cannot turn guide retrieval into an unbounded sequence of paid calls.</summary>
     [Fact]
-    public async Task RunChatAsync_RepeatedGuideRequest_StopsAfterTwoAccountedCalls()
+    public async Task RunChatAsync_RepeatedGuideRequest_StopsAfterClassifierAndTwoGuideCalls()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -82,10 +84,10 @@ public sealed class AppGuideWorkflowTests
             workflow.RunChatAsync(AppSettings.Default with { PromptCachingEnabled = false }, default));
 
         Assert.Equal("app_guide_round_limit", error.ErrorCode);
-        Assert.Equal(2, handler.RequestBodies.Count);
+        Assert.Equal(3, handler.RequestBodies.Count);
         Assert.Empty(answers);
-        Assert.Equal(2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
-        Assert.Equal(60L, await fixture.ScalarAsync("SELECT SUM(input_tokens) FROM ai_requests;"));
+        Assert.Equal(3L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+        Assert.Equal(70L, await fixture.ScalarAsync("SELECT SUM(input_tokens) FROM ai_requests;"));
     }
 
     /// <summary>Verifies a completed guide-selection call remains recorded when the following provider request fails.</summary>
@@ -103,11 +105,11 @@ public sealed class AppGuideWorkflowTests
         await Assert.ThrowsAsync<OpenAiRequestException>(() =>
             workflow.RunChatAsync(AppSettings.Default with { PromptCachingEnabled = false }, default));
 
-        Assert.Equal(2, handler.RequestBodies.Count);
+        Assert.Equal(3, handler.RequestBodies.Count);
         Assert.Empty(answers);
-        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+        Assert.Equal(2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
         Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 0;"));
-        Assert.Equal(20L, await fixture.ScalarAsync("SELECT SUM(input_tokens) FROM ai_requests;"));
+        Assert.Equal(30L, await fixture.ScalarAsync("SELECT SUM(input_tokens) FROM ai_requests;"));
     }
 
     /// <summary>Builds real guide and provider services around isolated storage and scripted passive views.</summary>
@@ -180,12 +182,22 @@ public sealed class AppGuideWorkflowTests
     private sealed class GuideHttpHandler(Func<int, string> response, Func<int, HttpStatusCode>? status = null) : HttpMessageHandler
     {
         public List<string> RequestBodies { get; } = [];
+        public List<string> ConversationRequestBodies { get; } = [];
 
         /// <summary>Captures request payloads and supplies only local synthetic replies without making network calls.</summary>
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            RequestBodies.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
-            var index = RequestBodies.Count;
+            var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+            RequestBodies.Add(body);
+            if (RegressionFixture.IsDisplayIntentRequest(body))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(RegressionFixture.DisplayIntentResponseJson())
+                };
+            }
+            ConversationRequestBodies.Add(body);
+            var index = ConversationRequestBodies.Count;
             return new HttpResponseMessage(status?.Invoke(index) ?? HttpStatusCode.OK)
             {
                 Content = new StringContent(response(index))

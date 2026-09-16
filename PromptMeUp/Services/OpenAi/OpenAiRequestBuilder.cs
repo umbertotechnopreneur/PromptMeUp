@@ -34,6 +34,10 @@ internal static class OpenAiRequestBuilder
         {
             text["format"] = FeatureResponseFormats.Plan();
         }
+        else if (prompt.Id == "chat-display-intent")
+        {
+            text["format"] = FeatureResponseFormats.ChatDisplayIntent();
+        }
 
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
         {
