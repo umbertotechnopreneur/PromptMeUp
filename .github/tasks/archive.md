@@ -106,6 +106,21 @@ Validation: preflight, restore, formatting verification, XML comment checks, all
 
 Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
 
+## 2026-09-15 — Clean artifacts after every build
+
+- Updated both repository instruction files to require cleanup after every build attempt, including failed builds, with options matching the build configuration, runtime, and output path.
+- Added cleanup to the default validation sequence. When requested tests, packaging, or installation need the output, cleanup follows those steps; requested deliverables are preserved.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build with zero warnings/errors, post-build cleanup, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-15 — Install the memory manager MSIX from PR #29
+
+- Fetched PR #29 and packaged its exact source commit `5780a6d973df1c60334aa3891e5620cedfe94142` from an ignored source snapshot, leaving the main checkout in place.
+- Published product version `0.1.6` and signed Windows x64 MSIX version `0.1.6.0` with the existing trusted certificate and package identity. Installed the update and verified healthy registration, matching SHA-256 hashes for all 273 payload files, and an execution alias targeting the new package.
+- Removed the single legacy PromptMeUp directory entry from the user PATH so `hm` resolves to the MSIX alias in refreshed terminal environments. Saved the prior PATH under ignored artifacts and preserved the older executable and application data.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, package identity and signature verification, installed-file integrity, and command resolution passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
 ## 2026-09-14 — Friendlier documentation
 
 - Rewrote the README and current user guides with shorter sentences, direct explanations, and everyday words. Explained chat memory, token usage, command approval, file previews, and privacy without changing the command examples.
