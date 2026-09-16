@@ -2,6 +2,13 @@
 
 These instructions apply to every change in this repository.
 
+## Shared delivery workflow
+
+- Keep `main` protected. Make changes on a focused branch, open a pull request, and use squash merge only after required checks and conversations are resolved.
+- Do not bypass branch protections, required checks, or review requirements. Delete the branch after a successful merge.
+- Create portable release artifacts only through GitHub Actions. Create an annotated `v<version>` tag only after the matching source version is on `main`; never build, sign, upload, or publish release artifacts locally.
+- Preserve unrelated working-tree changes. Never commit credentials, tokens, local data, logs, generated artifacts, or private machine paths.
+
 ## Product boundaries
 
 - PromptMeUp is a lightweight .NET 10 console assistant whose public command is `hm`.
