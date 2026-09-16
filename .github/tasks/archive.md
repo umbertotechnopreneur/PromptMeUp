@@ -2,6 +2,32 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-16 — Run the first tagged release and correct the installer compiler check
+
+- Merged PR #34 after all required checks passed, verified the resulting main checks, and pushed annotated tag `v0.1.7` at `d73fc50`.
+- Release run `35081567930` passed the quality checks and built the four Linux and macOS archives. Both Windows jobs rejected `ISCC.exe` metadata version `0.0.0.0` before installer compilation, so no release draft was created.
+- Moved the supported Inno Setup version check into the installer preprocessor, where `Ver` identifies the loaded compiler. Added native Windows installer compilation to the quality workflow and cleanup after its builds.
+- Increased the product version to `0.1.8` for the corrected release while preserving the published `v0.1.7` tag.
+
+Validation: the first release's quality checks and native CLI smoke checks passed on GitHub. The correction passed local preflight, restore, formatting verification, XML comments, a Release build with zero warnings or errors, cleanup, PowerShell syntax parsing, actionlint, and whitespace checks. The corrected installer compilation and new release remain pending their workflow runs. No local automated tests, CLI smoke checks, or installer executions were run.
+
+## 2026-09-16 — Prepare manual release drafts with x64 and ARM64 installers
+
+- Added a manual `draft` mode to the release workflow and retained `rehearsal` for artifact-only runs. The draft uses the verified main commit and product version; tag-triggered drafts remain supported. Existing tags and releases are never overwritten, and public publication stays a separate maintainer action.
+- Added unsigned, per-user Windows EXE installers for x64 and ARM64 using Inno Setup 6. The builder validates native architecture, product version, notices, and allowed payload files. The installer protects existing unmanaged folders and newer versions, adds only a user PATH entry, and removes only its owned entry on uninstall.
+- Included both installers with the six portable archives, complete checksums, and build attestations. Added matching runtime cleanup to packaging jobs and documented the exact GitHub CLI command, browser trigger, unsigned status, and final publishing step.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with zero warnings or errors, standard .NET cleanup, actionlint, PowerShell syntax parsing, whitespace checks, and independent static review passed. No automated tests, CLI smoke checks, workflow runs, or installer executions were performed. Automatic approval review rejected the command to prepare the portable Inno compiler with "blocked by policy", so EXE compilation remains unverified locally. Prepared on an authorized branch; pull-request review and merge remain pending.
+
+## 2026-09-16 — Pull main and install version 0.1.7
+
+- Fast-forwarded `main` to `ac43fae`, restored the existing repository-rule changes, and resolved the task-archive conflict by retaining both incoming and local entries.
+- Increased the product version from `0.1.5` to `0.1.7`, above the locally installed `0.1.6`. Built, signed, and installed Windows x64 MSIX `0.1.7.0` with the existing package identity and trusted local certificate.
+- Verified healthy package registration, the executable version, SHA-256 equality for all 283 installed payload files, and the execution alias targeting the new package.
+- Confirmed that the GitHub release workflow currently builds portable archives only. The separate MSIX builder supports x64 and ARM64; the MSI builder supports x64 only. Public MSIX distribution still needs a signing identity trusted by recipients and release assets to be published.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build and Windows publish with zero warnings or errors, package signature and installation integrity, standard .NET cleanup, and whitespace checks passed. Runtime cleanup was scoped to the application project because the test project has no runtime-specific restore target. Automated tests, CLI smoke checks, and live AI calls were not run; installation verification did not launch the application. Kept the installer and verification evidence under ignored artifacts. Automatic approval review blocked recursive removal of the remaining temporary directories, which are still present. No changes were committed or published.
+
 ## 2026-09-16 — Preserve multiline paste, number command choices, and install the update
 
 - Added a bounded multiline editor for chat and interactive diagnostics. Bracketed paste keeps normalized line breaks, blank lines, and trailing whitespace as editable text until a separate Enter submits it. Oversized insertions preserve the existing draft, and cursor movement and deletion respect Unicode text elements.
@@ -88,6 +114,21 @@ Validation: preflight, restore, formatting verification, XML comment checks, all
 - Verified that all 26 local source and test files remained byte-for-byte unchanged, including the six new files, and reviewed the three merged documentation files.
 
 Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-15 — Clean artifacts after every build
+
+- Updated both repository instruction files to require cleanup after every build attempt, including failed builds, with options matching the build configuration, runtime, and output path.
+- Added cleanup to the default validation sequence. When requested tests, packaging, or installation need the output, cleanup follows those steps; requested deliverables are preserved.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build with zero warnings/errors, post-build cleanup, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-15 — Install the memory manager MSIX from PR #29
+
+- Fetched PR #29 and packaged its exact source commit `5780a6d973df1c60334aa3891e5620cedfe94142` from an ignored source snapshot, leaving the main checkout in place.
+- Published product version `0.1.6` and signed Windows x64 MSIX version `0.1.6.0` with the existing trusted certificate and package identity. Installed the update and verified healthy registration, matching SHA-256 hashes for all 273 payload files, and an execution alias targeting the new package.
+- Removed the single legacy PromptMeUp directory entry from the user PATH so `hm` resolves to the MSIX alias in refreshed terminal environments. Saved the prior PATH under ignored artifacts and preserved the older executable and application data.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, package identity and signature verification, installed-file integrity, and command resolution passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
 
 ## 2026-09-14 — Friendlier documentation
 

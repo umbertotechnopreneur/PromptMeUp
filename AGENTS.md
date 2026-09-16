@@ -46,6 +46,7 @@ These instructions apply to every change in this repository.
 - Use `apply_patch` for deliberate tracked-file edits and avoid broad formatting churn.
 - Fail fast on invalid input and unsupported state; do not conceal failures with silent fallbacks.
 - Run automated tests and CLI smoke tests only when the user explicitly requests them. Implementation, review, commit, and push requests do not authorize test execution.
+- After every build attempt, including failed builds, clean generated build artifacts to avoid accumulating disk usage. Run `dotnet clean .\PromptMeUp.slnx --configuration Release` with the configuration, runtime, and output-path options adjusted to match the build, then verify `git status --short`. If explicitly requested tests, packaging, or installation need the output, clean immediately after those steps finish and before handoff. Preserve deliverables requested by the user.
 - After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; complete the non-test validation gate before committing.
 - Record active work in `.github/tasks/todo.md` and move completed work to `.github/tasks/archive.md`.
 
@@ -59,6 +60,8 @@ dotnet restore .\PromptMeUp.slnx
 dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
 pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
+dotnet clean .\PromptMeUp.slnx --configuration Release
+git status --short
 ```
 
-Only when explicitly requested by the user, run the appropriate automated tests, such as `dotnet test .\PromptMeUp.slnx --configuration Release --no-build`, or proportionate CLI smoke tests with a disposable `PROMPTMEUP_DATA_DIR`. Do not use real secrets or mutate PATH/fonts during validation.
+Only when explicitly requested by the user, run the appropriate automated tests, such as `dotnet test .\PromptMeUp.slnx --configuration Release --no-build`, or proportionate CLI smoke tests with a disposable `PROMPTMEUP_DATA_DIR`. Run these checks before cleanup when they need the build output. Do not use real secrets or mutate PATH/fonts during validation.
