@@ -54,8 +54,8 @@ public sealed class PromptCatalogServiceTests
         var chat = await catalog.GetAsync("chat-system", CancellationToken.None);
         var query = await catalog.GetAsync("query-system", CancellationToken.None);
 
-        Assert.Equal(9, chat.Version);
-        Assert.Equal(7, query.Version);
+        Assert.Equal(10, chat.Version);
+        Assert.Equal(8, query.Version);
         Assert.Equal("promptmeup-console-response-v2", chat.Metadata["response-format"]);
         Assert.Equal("promptmeup-console-response-v2", query.Metadata["response-format"]);
         Assert.Equal(SupportedLanguages.Codes.OrderBy(language => language), chat.Texts.Keys.OrderBy(language => language));

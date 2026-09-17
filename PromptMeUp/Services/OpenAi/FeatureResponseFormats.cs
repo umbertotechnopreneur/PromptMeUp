@@ -4,6 +4,24 @@ namespace PromptMeUp.Services.OpenAi;
 
 internal static class FeatureResponseFormats
 {
+    /// <summary>Restricts memory lookup to identifiers supplied in one bounded batch.</summary>
+    internal static object MemoryForget() => new
+    {
+        type = "json_schema",
+        name = "promptmeup_memory_forget_v1",
+        strict = true,
+        schema = new
+        {
+            type = "object",
+            properties = new
+            {
+                matched_ids = new { type = "array", items = new { type = "string" }, maxItems = 8 }
+            },
+            required = new[] { "matched_ids" },
+            additionalProperties = false
+        }
+    };
+
     /// <summary>Limits display classification to two session preferences and whether the message also needs a chat answer.</summary>
     internal static object ChatDisplayIntent() => new
     {

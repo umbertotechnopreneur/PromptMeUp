@@ -2,6 +2,22 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-17 — Install the memory commands in a local MSIX update
+
+- Built the user-requested local x64 MSIX `0.1.5.17` from memory-command commit `1de3d17`, including the command-menu number style from `8df509a` in an isolated source snapshot. Kept the existing package identity and trusted current-user signing certificate.
+- Installed the update and verified Windows package status, the `hm` execution alias, and matching hashes for the application assembly and updated memory/chat prompts. Preserved the signed MSIX and installation evidence under ignored artifacts.
+
+Validation: preflight, restore, formatting, XML comments, Release build, self-contained Windows publish, exported dependency notices, package signature, and installed-file integrity passed. Standard runtime and solution cleanup succeeded. Automated tests, CLI smoke checks, and live AI calls were not run. Automatic approval review blocked removal of the temporary package-preparation directories; their cleanup remains in the task list.
+
+## 2026-09-17 — Add direct memory commands and confirmed numbered deletion
+
+- Added `hm --remember [global|project] <text>` for local persistence and `hm --forget <id or description>` for deleting an accessible saved note. Direct `/remember` and `/forget` invocations route to these workflows instead of AI chat.
+- Resolve IDs and exact note text locally. For descriptions, use the existing audited AI service and a six-language structured prompt to search batches of up to eight global and current-project notes; validate every returned identifier before offering matches.
+- Show normal-weight warm ochre `1>` choices with immediate digit selection, paging, cancellation, and a separate deletion confirmation. Require an interactive terminal and reject deletion when the reviewed note changed during lookup or confirmation.
+- Updated help and versioned prompts in all six languages, documented provider sharing and costs, and added regression cases for parsing, persistence, batch matching, invalid responses, cancellation, concurrent changes, and numbered selection.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build with warnings as errors passed. Build output was cleaned. Regression tests were added and compiled but not executed; no CLI smoke checks or live AI calls were run.
+
 ## 2026-09-16 — Publish prerelease 0.1.8 with portable archives and Windows installers
 
 - Merged PR #35 after all required checks, including Windows installer compilation, passed. Verified the resulting main checks and pushed annotated tag `v0.1.8` at `142b519`.
