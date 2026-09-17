@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Reduce agent context and redundant verification
+
+- Consolidated repository rules in `AGENTS.md` and replaced duplicate Copilot instructions with a reference, preserving unique safety and product requirements.
+- Added scoped context reading, bounded output, concise reporting, and explicit-only delegation rules.
+- Made non-test checks proportional to the changed files and cleanup conditional on builds performed during the task. Documentation-only changes do not trigger build or runtime verification.
+
+Validation: no builds, automated tests, formatters, or smoke checks were run for these instruction-only changes.
+
 ## 2026-09-17 — Restyle command-menu numbers
 
 - Render command-menu numbers in the shared warm ochre warning color, without bold, followed immediately by `>`.
