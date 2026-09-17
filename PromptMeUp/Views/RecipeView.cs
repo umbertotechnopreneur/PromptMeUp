@@ -21,7 +21,7 @@ public sealed class RecipeView(IAnsiConsole console, ILocalizationService text) 
     public void RenderList(IReadOnlyList<CommandRecipe> recipes)
     {
         TerminalTheme.WriteRule(console, text.Text("Recipe.Help"), TerminalTheme.Accent);
-        var table = new Table().Border(TableBorder.Rounded).AddColumn(text.Text("Recipe.Name")).AddColumn(text.Text("Recipe.Description"));
+        var table = new Table().Border(TableBorder.Simple).AddColumn(text.Text("Recipe.Name")).AddColumn(text.Text("Recipe.Description"));
         foreach (var recipe in recipes)
         {
             table.AddRow(new Text(recipe.Name), new Text(recipe.Description));
@@ -38,16 +38,22 @@ public sealed class RecipeView(IAnsiConsole console, ILocalizationService text) 
     public void Render(CommandRecipe recipe)
     {
         TerminalTheme.WriteRule(console, recipe.Name, TerminalTheme.Accent);
-        console.Write(new Panel(new Text(recipe.Description + "\n" + (recipe.Directory ?? text.Text("Recipe.CurrentDirectory")))).BorderColor(Color.Cyan1));
+        console.Write(new Rows(
+            new Text(recipe.Description, Style.Parse(TerminalTheme.Primary)),
+            new Text(recipe.Directory ?? text.Text("Recipe.CurrentDirectory"), Style.Parse(TerminalTheme.Muted))));
+        console.WriteLine();
         foreach (var prerequisite in recipe.Prerequisites)
         {
-            console.Write(new Text("• " + prerequisite));
+            console.Write(new Text("• " + prerequisite, Style.Parse(TerminalTheme.Primary)));
             console.WriteLine();
         }
         foreach (var step in recipe.Steps)
         {
-            console.Write(new Panel(new Text(step.Command + "\n\n" + step.Verification + "\n\n" + step.Expected))
-                .Header(Markup.Escape(step.Label)).BorderColor(Color.Cyan1));
+            TerminalTheme.WriteSection(
+                console,
+                step.Label,
+                step.Command + "\n\n" + step.Verification + "\n\n" + step.Expected,
+                TerminalTheme.Info);
         }
     }
 

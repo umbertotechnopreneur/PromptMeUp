@@ -1,25 +1,27 @@
-# PromptMeUp governance
+# How PromptMeUp is run
 
 PromptMeUp is a personal open-source project maintained by [Umberto Giacobbi](https://github.com/umbertotechnopreneur). It began as a weekend experiment and found a practical place in the UmbertoGiacobbiDotBiz team's daily work.
 
-The maintainer makes release and scope decisions. Contributions are welcome when they improve the terminal experience while preserving explicit command approval, privacy, portability, and a small runtime footprint. Discuss substantial changes before implementation.
+Umberto decides what goes into the project and when to release it. Contributions are welcome: help make terminal work easier while keeping the app small, portable, and careful with commands and private data. For a big change, start a discussion before writing the code.
 
 ## How changes land
 
-Changes reach main through a pull request, with up-to-date required checks, resolved review conversations, and linear history. Force pushes and branch deletion are blocked. The intended protection also applies to administrators; its reproducible configuration is in [.github/main-protection.json](.github/main-protection.json).
+Changes go to `main` through a pull request. Required checks must pass on the latest changes, review comments must be resolved, and history must stay linear (no merge commits). Force pushes and deletion of `main` are blocked. The rules are recorded in [.github/main-protection.json](.github/main-protection.json) and are intended to apply to administrators too.
 
-The repository currently has one maintainer with write access. Pull requests and automated checks are required, but the approving-review count is zero: GitHub does not allow authors to approve their own pull requests. CODEOWNERS routes contributions to that maintainer. When a second maintainer is appointed, require one approving review, code-owner review, and approval after the last push. This is a documented single-maintainer tradeoff, not independent human review.
+There's currently one maintainer with write access. Pull requests and automated checks are required, but a second person's approval isn't: GitHub doesn't let authors approve their own pull requests. CODEOWNERS sends review requests to the maintainer. This means the maintainer's own changes don't get an independent human review.
+
+When a second maintainer joins, require one approval, code-owner review, and approval after the last push.
 
 Use English for repository writing. Runtime UI and prompt translations retain all six supported languages. The same contributor rules are maintained in [AGENTS.md](AGENTS.md) and [.github/copilot-instructions.md](.github/copilot-instructions.md).
 
 ## Releases and security
 
-The [release process](docs/RELEASING.md) validates the source, builds portable packages, includes redistribution notices, and prepares a draft for the maintainer to inspect and publish. Optional Windows MSI and WinGet packaging remain documented separately.
+The [release process](docs/RELEASING.md) checks the code, builds portable packages with their license notices, and prepares a draft. The maintainer reviews it before publishing. Optional Windows MSI and WinGet packages have a [separate guide](docs/WINDOWS_PACKAGING.md).
 
-Report vulnerabilities through [private security reporting](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new). Use [Discussions](https://github.com/umbertotechnopreneur/PromptMeUp/discussions) for support and [issue forms](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose) for reproducible bugs or focused improvements. This pet project does not promise a support or response-time SLA.
+Please [report security problems privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new). Use [Discussions](https://github.com/umbertotechnopreneur/PromptMeUp/discussions) for help and [issues](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose) for bugs or improvements. This is a small personal project, so replies may take a while; we can't promise a response time.
 
 ## Contribution and attribution
 
-Contributors retain copyright in their contributions and submit them under the project's [MIT License](LICENSE). Include the provenance and license of any third-party material you add. AI-assisted work receives the same review as any other contribution; the submitter remains responsible for accuracy, permissions, and attribution.
+You keep the copyright to your contributions and share them under the project's [MIT License](LICENSE). If you add someone else's work, include its source and license. Work made with AI tools gets the same review as everything else. You remain responsible for its accuracy, permissions, and credits.
 
-Names and links to other projects identify their creators and destinations; they do not imply third-party endorsement. Community participation follows the [code of conduct](CODE_OF_CONDUCT.md).
+Linking to another project doesn't mean its creators endorse PromptMeUp. Everyone taking part should follow the [code of conduct](CODE_OF_CONDUCT.md).

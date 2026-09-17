@@ -1,0 +1,23 @@
+id: app-guide-overview
+version: 1
+description: Product identity, scope, entry points, and project home.
+tags:
+  - app-guide
+  - overview
+metadata:
+  owner: PromptMeUp
+  role: system
+  source: packaged-local-guide
+texts:
+  en: |-
+    PromptMeUp is a portable terminal assistant launched with `hm` on Windows, Linux, and macOS. It uses the user's OpenAI API account and has no background agent. Run `hm` or `hm --help` for local help, `hm --chat` for a conversation, or `hm "your question"` for one question. It explains terminal tools and errors, suggests commands, and supports diagnostics, scripts, plans, file previews, recipes, and saved notes. It does not generate images or write general prose. The project is MIT-licensed and lives at https://github.com/umbertotechnopreneur/PromptMeUp. `hm about` opens project information. This guide describes capabilities, not the user's current configuration.
+  it: |-
+    PromptMeUp è un assistente portatile da terminale avviato con `hm` su Windows, Linux e macOS. Usa l'account API OpenAI dell'utente e non ha un agente in background. Esegui `hm` o `hm --help` per la guida locale, `hm --chat` per una conversazione oppure `hm "la tua domanda"` per una domanda singola. Spiega strumenti ed errori del terminale, suggerisce comandi e offre diagnosi, script, piani, anteprime dei file, ricette e note salvate. Non genera immagini né scrive testi generici. Il progetto ha licenza MIT e si trova su https://github.com/umbertotechnopreneur/PromptMeUp. `hm about` apre le informazioni sul progetto. Questa guida descrive le funzionalità, non la configurazione attuale dell'utente.
+  fr: |-
+    PromptMeUp est un assistant de terminal portable lancé avec `hm` sous Windows, Linux et macOS. Il utilise le compte API OpenAI de l'utilisateur et n'a pas d'agent en arrière-plan. Lancez `hm` ou `hm --help` pour l'aide locale, `hm --chat` pour une conversation ou `hm "votre question"` pour une question unique. Il explique les outils et erreurs du terminal, propose des commandes et offre diagnostics, scripts, plans, aperçus de fichiers, recettes et notes enregistrées. Il ne génère pas d'images et ne rédige pas de prose générale. Le projet est sous licence MIT : https://github.com/umbertotechnopreneur/PromptMeUp. `hm about` ouvre les informations du projet. Ce guide décrit les fonctions, pas la configuration actuelle de l'utilisateur.
+  de: |-
+    PromptMeUp ist ein portabler Terminalassistent, der unter Windows, Linux und macOS mit `hm` startet. Er nutzt das OpenAI-API-Konto des Benutzers und hat keinen Hintergrundagenten. `hm` oder `hm --help` öffnet die lokale Hilfe, `hm --chat` eine Unterhaltung und `hm "deine Frage"` eine einzelne Anfrage. Die App erklärt Terminalwerkzeuge und Fehler, schlägt Befehle vor und bietet Diagnosen, Skripte, Pläne, Dateivorschauen, Rezepte und gespeicherte Notizen. Sie erzeugt keine Bilder und verfasst keine allgemeinen Texte. Das Projekt steht unter der MIT-Lizenz: https://github.com/umbertotechnopreneur/PromptMeUp. `hm about` öffnet Projektinformationen. Diese Anleitung beschreibt Funktionen, nicht die aktuellen Einstellungen des Benutzers.
+  es: |-
+    PromptMeUp es un asistente de terminal portátil que se inicia con `hm` en Windows, Linux y macOS. Usa la cuenta API de OpenAI del usuario y no tiene agente en segundo plano. Ejecuta `hm` o `hm --help` para la ayuda local, `hm --chat` para conversar o `hm "tu pregunta"` para una pregunta individual. Explica herramientas y errores del terminal, propone comandos y ofrece diagnósticos, scripts, planes, vistas previas de archivos, recetas y notas guardadas. No genera imágenes ni redacta textos generales. El proyecto usa la licencia MIT: https://github.com/umbertotechnopreneur/PromptMeUp. `hm about` abre información del proyecto. Esta guía describe funciones, no la configuración actual del usuario.
+  vi: |-
+    PromptMeUp là trợ lý terminal có thể chạy độc lập, khởi động bằng `hm` trên Windows, Linux và macOS. Ứng dụng dùng tài khoản API OpenAI của người dùng và không có tác nhân chạy nền. Chạy `hm` hoặc `hm --help` để xem trợ giúp cục bộ, `hm --chat` để trò chuyện, hoặc `hm "câu hỏi của bạn"` để hỏi một câu. Ứng dụng giải thích công cụ và lỗi terminal, đề xuất lệnh, hỗ trợ chẩn đoán, script, kế hoạch, xem trước tệp, bộ lệnh lưu sẵn và ghi chú. Ứng dụng không tạo ảnh hay viết văn bản thông thường. Dự án dùng giấy phép MIT: https://github.com/umbertotechnopreneur/PromptMeUp. `hm about` mở thông tin dự án. Hướng dẫn này mô tả chức năng, không mô tả cài đặt hiện tại của người dùng.

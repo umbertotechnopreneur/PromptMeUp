@@ -9,6 +9,32 @@ public sealed class CommandLineParserTests
 {
     private readonly CommandLineParser _parser = new(new LocalizationService());
 
+    /// <summary>Verifies the local memory screen accepts interface preferences without a note command-line value.</summary>
+    [Fact]
+    public void Parse_Memories_SelectsLocalManager()
+    {
+        var result = _parser.Parse(["--memories", "--language", "it", "--no-emoji"]);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(AppCommand.Memories, result.Options!.Command);
+        Assert.Equal("it", result.Options.Language);
+        Assert.True(result.Options.NoEmoji);
+        Assert.Null(result.Options.Query);
+    }
+
+    /// <summary>Rejects ambiguous commands and accidental note text passed to the memory screen switch.</summary>
+    [Theory]
+    [InlineData("--chat")]
+    [InlineData("--setup")]
+    [InlineData("a note")]
+    public void Parse_MemoriesWithAnotherAction_RejectsInput(string argument)
+    {
+        var result = _parser.Parse(["--memories", argument]);
+
+        Assert.False(result.Succeeded);
+        Assert.NotNull(result.Error);
+    }
+
     /// <summary>Verifies the focused AI settings switch accepts rendering and language preferences.</summary>
     [Fact]
     public void Parse_AiSettings_SelectsFocusedConfiguration()

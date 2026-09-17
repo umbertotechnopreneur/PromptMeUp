@@ -141,7 +141,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             }
             else if (match.Groups["code"].Success)
             {
-                _console.Markup($"[black on grey85] {Markup.Escape(match.Groups["code"].Value)} [/]");
+                _console.Markup($"[{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}] {Markup.Escape(match.Groups["code"].Value)} [/]");
             }
             else if (Uri.TryCreate(match.Groups["url"].Value, UriKind.Absolute, out var uri)
                      && uri.Scheme is "http" or "https")
@@ -249,7 +249,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             }
             else if (match.Groups["code"].Success)
             {
-                builder.Append("[black on grey85] ")
+                builder.Append($"[{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}] ")
                     .Append(Markup.Escape(match.Groups["code"].Value))
                     .Append(" [/]");
             }

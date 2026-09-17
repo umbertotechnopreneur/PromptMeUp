@@ -112,6 +112,72 @@ public sealed class OpenAiResponseParserTests
         Assert.Equal(200, exception.StatusCode);
     }
 
+    /// <summary>Verifies a guide-only v2 response remains a successful provider call with usage and no user-facing answer.</summary>
+    [Fact]
+    public void ParseResponse_GuideRequest_RetainsUsageAndKnownTopics()
+    {
+        const string structured = """{"answer_markdown":"","commands":[],"guide_topics":["memories","privacy"]}""";
+        var json = JsonSerializer.Serialize(new
+        {
+            id = "guide-request",
+            model = "gpt-5.6-terra",
+            output = new[] { new { content = new[] { new { type = "output_text", text = structured } } } },
+            usage = new { input_tokens = 100, output_tokens = 12, total_tokens = 112 }
+        });
+
+        var result = OpenAiResponseParser.ParseResponse(json, 200, 1, null, true, true);
+
+        Assert.Empty(result.Text);
+        Assert.Empty(result.SuggestedCommands);
+        Assert.Equal(["memories", "privacy"], result.GuideTopics);
+        Assert.Equal(112, result.Usage.TotalTokens);
+    }
+
+    /// <summary>Verifies a guide-aware final answer carries no retrieval request and retains cited command safety.</summary>
+    [Fact]
+    public void ParseResponse_GuideAwareAnswer_RetainsCitedCommand()
+    {
+        const string structured = """{"answer_markdown":"Run `hm --help`.","commands":[{"label":"Show help","command":"hm --help"}],"guide_topics":[]}""";
+
+        var result = OpenAiResponseParser.ParseResponse(CreateTextResponse(structured), 200, 1, null, true, true);
+
+        Assert.Equal("Run `hm --help`.", result.Text);
+        Assert.Empty(result.GuideTopics);
+        Assert.Equal([new SuggestedCommand("Show help", "hm --help")], result.SuggestedCommands);
+    }
+
+    /// <summary>Verifies malformed, unbounded, unknown, duplicate, or mixed guide requests fail before command filtering.</summary>
+    [Theory]
+    [InlineData("""{"answer_markdown":"Answer","commands":[]}""")]
+    [InlineData("""{"answer_markdown":"","commands":[],"guide_topics":[]}""")]
+    [InlineData("""{"answer_markdown":"","commands":[],"guide_topics":"memories"}""")]
+    [InlineData("""{"answer_markdown":"","commands":[],"guide_topics":[null]}""")]
+    [InlineData("""{"answer_markdown":"","commands":[],"guide_topics":["unknown"]}""")]
+    [InlineData("""{"answer_markdown":"","commands":[],"guide_topics":["memories","memories"]}""")]
+    [InlineData("""{"answer_markdown":"","commands":[],"guide_topics":["overview","memories","privacy"]}""")]
+    [InlineData("""{"answer_markdown":"Answer","commands":[],"guide_topics":["memories"]}""")]
+    [InlineData("""{"answer_markdown":"","commands":[{"label":"Uncited","command":"Get-Date"}],"guide_topics":["memories"]}""")]
+    [InlineData("""{"answer_markdown":"Answer","commands":[],"guide_topics":[],"unexpected":true}""")]
+    [InlineData("""{"answer_markdown":"Answer","commands":[],"guide_topics":[],"guide_topics":[]}""")]
+    [InlineData("""{"answer_markdown":"Run Get-Date","commands":[{"label":"Date","command":"Get-Date","extra":true}],"guide_topics":[]}""")]
+    public void ParseResponse_InvalidGuideEnvelope_RejectsResponse(string structured)
+    {
+        var exception = Assert.Throws<OpenAiRequestException>(() =>
+            OpenAiResponseParser.ParseResponse(CreateTextResponse(structured), 200, 1, null, true, true));
+
+        Assert.Equal("invalid_chat_response", exception.ErrorCode);
+    }
+
+    /// <summary>Verifies the legacy response contract cannot silently accept a guide-only intermediate answer.</summary>
+    [Fact]
+    public void ParseResponse_LegacyContract_RejectsGuideOnlyAnswer()
+    {
+        const string structured = """{"answer_markdown":"","commands":[],"guide_topics":["memories"]}""";
+
+        Assert.Throws<OpenAiRequestException>(() =>
+            OpenAiResponseParser.ParseResponse(CreateTextResponse(structured), 200, 1, null, parseStructuredChatResponse: true));
+    }
+
     /// <summary>Verifies that a suggested command absent from the Markdown answer is not exposed for selection.</summary>
     [Fact]
     public void ParseResponse_UncitedStructuredCommand_DoesNotSurfaceSuggestion()

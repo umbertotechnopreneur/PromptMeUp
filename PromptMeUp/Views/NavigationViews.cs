@@ -8,163 +8,184 @@ namespace PromptMeUp.Views;
 
 public interface IHelpView
 {
-    void Render();
+    void Render(Action? openMemories = null);
+
+    /// <summary>Prints help in the current buffer when an error or redirected output must remain visible.</summary>
+    void RenderStatic() => Render();
 }
 
+/// <summary>Presents the command reference as a keyboard browser or ordinary scrolling output.</summary>
 public sealed class HelpView(
     IAnsiConsole console,
     ILocalizationService text,
-    IConsoleShellView shell) : IHelpView
+    IConsoleShellView shell,
+    IAboutView about) : IHelpView
 {
-    /// <summary>Renders the public CLI contract as grouped, scannable Spectre surfaces.</summary>
-    public void Render()
+    /// <summary>Opens section navigation when the terminal supports a disposable fullscreen viewport.</summary>
+    public void Render(Action? openMemories = null)
+    {
+        if (FullscreenHelpView.CanUse(console))
+        {
+            var originalOptions = shell.Options;
+            try
+            {
+                shell.Configure(originalOptions with { SuppressFooter = true });
+                new FullscreenHelpView(console, text, shell.Options).Render(CreateSections(openMemories));
+            }
+            finally
+            {
+                shell.Configure(originalOptions);
+            }
+            return;
+        }
+        RenderStatic();
+    }
+
+    /// <summary>Prints every section without hiding errors, entering an alternate buffer, or waiting for input.</summary>
+    public void RenderStatic()
     {
         TerminalTheme.WriteRule(
             console,
             TerminalTheme.IconPrefix(shell.Options, "⌨", ">") + text.Text("Help.Title"),
             TerminalTheme.Accent);
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Help.Usage"))}[/]");
-        var exampleIcon = TerminalTheme.IconPrefix(shell.Options, "⚡", ">");
-        TerminalTheme.WriteRule(console, $"{exampleIcon}{text.Text("Help.Examples")}", TerminalTheme.Accent);
-        var examples = new Grid();
-        examples.AddColumn(new GridColumn().RightAligned().NoWrap());
-        examples.AddColumn(new GridColumn().LeftAligned());
-        examples.AddRow(
-            new Markup($"[bold {TerminalTheme.Primary}]hm[/]"),
-            new Markup($"[{TerminalTheme.Muted}]\"{Markup.Escape(text.Text("Help.ExamplePrompt"))}\"[/]"));
-        examples.AddRow(
-            new Markup($"[bold {TerminalTheme.Primary}]hm --chat[/]"),
-            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Help.Chat"))}[/]"));
-        console.Write(examples);
+        console.Write(HelpCommandLine.CreateDescription(text.Text("Help.Usage"), "hm"));
         console.WriteLine();
-
-        RenderGroup(
-            "💬",
-            "Help.Group.Ai",
-            [
-                (text.Text("Help.QuerySyntax"), text.Text("Help.Query")),
-                ("--diagnose [--file <path>]", text.Text("Diagnose.Help")),
-                ("--script <request> [--file <path>] [--output <path>]", text.Text("Script.Help")),
-                ("--plan <goal> | --plan --resume <id>", text.Text("Plan.Help")),
-                ("--preview <copy|move|rename|delete> --file <path>", text.Text("Preview.Help")),
-                ("--recipes [list|show|save|import|export|run]", text.Text("Recipe.Help")),
-                ("--chat", text.Text("Help.Chat")),
-                ("--test-ai", text.Text("Help.Test"))
-            ]);
-        RenderGroup(
-            "📊",
-            "Help.Group.Insight",
-            [
-                ("--version, -v", text.Text("Help.Version")),
-                ("--status", text.Text("Help.Status")),
-                ("--costs", text.Text("Help.Costs")),
-                ("--where, -where", text.Text("Help.Where")),
-                ("--third-party", text.Text("Help.ThirdParty"))
-            ]);
-        RenderGroup(
-            "⚙",
-            "Help.Group.Setup",
-            [
-                ("--setup", text.Text("Help.Setup")),
-                ("--ai-settings", text.Text("AiSettings.Help")),
-                ("--path [install|remove|status]", text.Text("Help.Path")),
-                ("--install-font [--dry-run]", text.Text("Help.Font")),
-                (text.Text("Help.LanguageSyntax"), text.Text("Help.Language"))
-            ]);
-        RenderGroup(
-            "🛡",
-            "Help.Group.Safety",
-            [
-                ("--no-animation | --no-emoji", text.Text("Help.Rendering")),
-                ("--yes, -y", text.Text("Help.Yes")),
-                ("--dry-run", text.Text("Help.DryRun"))
-            ]);
+        foreach (var section in CreateSections())
+        {
+            RenderGroup(section);
+        }
         shell.RenderProjectBanner();
     }
 
-    /// <summary>Renders one cohesive command category without turning the help screen into a flat flag dump.</summary>
-    private void RenderGroup(
-        string icon,
-        string titleKey,
-        IReadOnlyList<(string Command, string Description)> entries)
-    {
-        ArgumentNullException.ThrowIfNull(entries);
-        var table = new Table().Border(TableBorder.None).HideHeaders();
-        table.AddColumn(new TableColumn("command").RightAligned().NoWrap());
-        table.AddColumn(new TableColumn("description"));
-        foreach (var (command, description) in entries)
+    /// <summary>Shares the complete localized command catalog between fullscreen and scrolling help.</summary>
+    private IReadOnlyList<HelpSection> CreateSections(Action? openMemories = null) =>
+    [
+        new("⚡", text.Text("Help.Examples"), text.Text("Help.Browse.Examples"),
+            [
+                new($"hm \"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Query"))
+                {
+                    Arguments = [new($"\"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Argument.Question"))]
+                },
+                new("hm --chat", text.Text("Help.Chat")),
+                new("hm --help", text.Text("Help.Usage"))
+            ]),
+        new("💬", text.Text("Help.Group.Ai"), text.Text("Help.Browse.Ai"),
+            [
+                new(text.Text("Help.QuerySyntax"), text.Text("Help.Query"))
+                {
+                    Example = $"hm --query \"{text.Text("Help.ExamplePrompt")}\"",
+                    Arguments = [new($"\"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Argument.Question"))]
+                },
+                new("--diagnose [--file <path>]", text.Text("Diagnose.Help"))
+                {
+                    Example = $"hm --diagnose \"{text.Text("Help.Browse.DiagnoseExample")}\"",
+                    Arguments = [new($"\"{text.Text("Help.Browse.DiagnoseExample")}\"", text.Text("Help.Argument.Error"))]
+                },
+                new("--script <request> [--file <path>] [--output <path>]", text.Text("Script.Help"))
+                {
+                    Example = $"hm --script \"{text.Text("Help.Browse.ScriptExample")}\"",
+                    Arguments = [new($"\"{text.Text("Help.Browse.ScriptExample")}\"", text.Text("Help.Argument.Script"))]
+                },
+                new("--plan <goal> | --plan --resume <id>", text.Text("Plan.Help"))
+                {
+                    Example = $"hm --plan \"{text.Text("Help.Browse.PlanExample")}\"",
+                    Arguments = [new($"\"{text.Text("Help.Browse.PlanExample")}\"", text.Text("Help.Argument.Goal"))]
+                },
+                new("--preview <copy|move|rename|delete> --file <path>", text.Text("Preview.Help"))
+                {
+                    Example = "hm --preview rename --file . --pattern '*.txt' --prefix reviewed-",
+                    Arguments =
+                    [
+                        new("rename", text.Text("Help.Argument.Rename")),
+                        new("--file", text.Text("Help.Argument.File")),
+                        new(".", text.Text("Help.Argument.CurrentFolder")),
+                        new("--pattern", text.Text("Help.Argument.Pattern")),
+                        new("'*.txt'", text.Text("Help.Argument.TextFiles")),
+                        new("reviewed-", text.Text("Help.Argument.Prefix"))
+                    ]
+                },
+                new("--recipes [list|show|save|import|export|run]", text.Text("Recipe.Help"))
+                {
+                    Example = "hm --recipes list",
+                    Arguments = [new("list", text.Text("Help.Argument.List"))]
+                },
+                new("--chat", text.Text("Help.Chat")),
+                new("--test-ai", text.Text("Help.Test"))
+            ]),
+        new("📊", text.Text("Help.Group.Insight"), text.Text("Help.Browse.Insight"),
+            [
+                new("--version, -v", text.Text("Help.Version")) { Example = "hm --version" },
+                new("--status", text.Text("Help.Status")),
+                new("--lenna, lenna", text.Text("Help.Lenna")) { Example = "hm lenna" },
+                new("--costs", text.Text("Help.Costs")),
+                new("--where, -where", text.Text("Help.Where")) { Example = "hm --where" },
+                new("--third-party", text.Text("Help.ThirdParty"))
+            ]),
+        new("⚙", text.Text("Help.Group.Setup"), text.Text("Help.Browse.Setup"),
+            [
+                new("--setup", text.Text("Help.Setup")),
+                new("--ai-setup, --ai-settings", text.Text("AiSettings.Help")) { Example = "hm --ai-setup" },
+                new("--theme", text.Text("Theme.Help")),
+                new("--path [install|remove|status]", text.Text("Help.Path"))
+                {
+                    Example = "hm --path status",
+                    Arguments = [new("status", text.Text("Help.Argument.PathStatus"))]
+                },
+                new("--install-font [--dry-run]", text.Text("Help.Font")) { Example = "hm --install-font" },
+                new(text.Text("Help.LanguageSyntax"), text.Text("Help.Language"))
+                {
+                    Example = $"hm --status --language {text.Language}",
+                    Arguments = [new(text.Language, text.Text("Help.Argument.Language"))]
+                }
+            ]),
+        new("🛡", text.Text("Help.Group.Safety"), text.Text("Help.Browse.Safety"),
+            [
+                new("--no-animation | --no-emoji", text.Text("Help.Rendering"))
+                {
+                    Example = "hm --status --no-animation --no-emoji",
+                    Arguments =
+                    [
+                        new("--no-animation", text.Text("Help.Argument.NoAnimation")),
+                        new("--no-emoji", text.Text("Help.Argument.NoEmoji"))
+                    ]
+                },
+                new("--yes, -y", text.Text("Help.Yes"))
+                {
+                    Example = "hm --install-font --yes",
+                    Arguments = [new("--yes", text.Text("Help.Argument.Yes"))]
+                },
+                new("--dry-run", text.Text("Help.DryRun"))
+                {
+                    Example = "hm --install-font --dry-run",
+                    Arguments = [new("--dry-run", text.Text("Help.Argument.DryRun"))]
+                }
+            ]),
+        new("🧠", text.Text("Settings.Memories"), text.Text("Settings.Memories"),
+            [new("--memories", text.Text("Help.Memories"))])
         {
-            table.AddRow(
-                new Markup($"[bold {TerminalTheme.Accent}]{Markup.Escape(command)}[/]"),
-                new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(description)}[/]"));
+            Open = openMemories,
+            OpenHintKey = "MemoryManager.OpenHint"
+        },
+        new("ℹ️", text.Text("About.Title"), text.Text("About.MenuLabel"),
+            [new("--about, about", text.Text("Help.About")) { Example = "hm about" }])
+        {
+            Open = about.Render,
+            OpenHintKey = "About.OpenHint"
         }
+    ];
 
+    /// <summary>Renders one cohesive command category without turning the help screen into a flat flag dump.</summary>
+    private void RenderGroup(HelpSection section)
+    {
         TerminalTheme.WriteRule(
             console,
-            $"{TerminalTheme.IconPrefix(shell.Options, icon, ">")}{text.Text(titleKey)}",
+            $"{TerminalTheme.IconPrefix(shell.Options, section.Icon, ">")}{section.Title}",
             TerminalTheme.Accent);
-        console.Write(table);
+        console.Write(new Rows(section.Entries.Select(FullscreenHelpView.RenderEntry)));
         console.WriteLine();
     }
 }
 
-public interface IMainMenuView
-{
-    MainMenuAction Select();
-}
-
-public sealed class MainMenuView(
-    IAnsiConsole console,
-    ILocalizationService text,
-    IConsoleShellView shell) : IMainMenuView
-{
-    /// <summary>Returns one action from the branded interactive command center.</summary>
-    public MainMenuAction Select()
-    {
-        TerminalTheme.WriteRule(
-            console,
-            $"{TerminalTheme.IconPrefix(shell.Options, "🎛", ">")}{text.Text("Main.Title")}",
-            TerminalTheme.Accent);
-        return console.Prompt(
-            new SelectionPrompt<MainMenuAction>()
-            .Title($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Main.Choose"))}[/]")
-            .PageSize(12)
-            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-            .UseConverter(Label)
-            .AddChoices(
-                MainMenuAction.Query,
-                MainMenuAction.Chat,
-                MainMenuAction.Costs,
-                MainMenuAction.Status,
-                MainMenuAction.Setup,
-                MainMenuAction.TestAi,
-                MainMenuAction.Where,
-                MainMenuAction.Path,
-                MainMenuAction.InstallFont,
-                MainMenuAction.ThirdParty,
-                MainMenuAction.Exit));
-    }
-
-    /// <summary>Maps menu actions to localized labels with portable icon fallbacks.</summary>
-    private string Label(MainMenuAction action) => action switch
-    {
-        MainMenuAction.Query => MenuLabel("✦", ">", text.Text("Main.Query")),
-        MainMenuAction.Chat => MenuLabel("💬", ">", text.Text("Main.Chat")),
-        MainMenuAction.Costs => MenuLabel("📊", "=", text.Text("Main.Costs")),
-        MainMenuAction.Status => MenuLabel("🪞", "=", text.Text("Main.Status")),
-        MainMenuAction.Setup => MenuLabel("⚙", "~", text.Text("Main.Setup")),
-        MainMenuAction.TestAi => MenuLabel("↻", "~", text.Text("Main.Test")),
-        MainMenuAction.Where => MenuLabel("⌖", "@", text.Text("Main.Where")),
-        MainMenuAction.Path => MenuLabel("↔", "<>", text.Text("Path.Title")),
-        MainMenuAction.InstallFont => MenuLabel("✎", "#", text.Text("Main.Font")),
-        MainMenuAction.ThirdParty => MenuLabel("⚖", "=", text.Text("ThirdParty.Title")),
-        _ => MenuLabel("↩", "x", text.Text("Main.Exit"))
-    };
-
-    /// <summary>Formats one menu label with a high-contrast leading visual cue.</summary>
-    private string MenuLabel(string icon, string fallback, string label) =>
-        $"[{TerminalTheme.Info}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, icon, fallback))}[/][bold {TerminalTheme.Primary}]{Markup.Escape(label)}[/]";
-}
 
 public interface IExecutableLocationView
 {
@@ -237,7 +258,7 @@ public sealed class ExecutableLocationView(
 
         if (action == ExecutableLocationAction.OpenContainingFolder)
         {
-            console.MarkupLine($"[green]{Markup.Escape(text.Text("Where.Opened"))}[/]");
+            console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(text.Text("Where.Opened"))}[/]");
             return;
         }
 
@@ -267,15 +288,15 @@ public sealed class ThirdPartyView(
 {
     private static readonly (string Package, string Version, string License)[] Packages =
     [
-        ("Microsoft.Data.Sqlite", "10.0.11", "MIT"),
-        ("Microsoft.Extensions.DependencyInjection", "10.0.11", "MIT"),
-        ("Microsoft.Extensions.Http", "10.0.11", "MIT"),
-        ("Microsoft.Extensions.Logging", "10.0.11", "MIT"),
+        ("Microsoft.Data.Sqlite", "10.0.12", "MIT"),
+        ("Microsoft.Extensions.DependencyInjection", "10.0.12", "MIT"),
+        ("Microsoft.Extensions.Http", "10.0.12", "MIT"),
+        ("Microsoft.Extensions.Logging", "10.0.12", "MIT"),
         ("Serilog", "4.4.0", "Apache-2.0"),
         ("Serilog.Extensions.Logging", "10.0.0", "Apache-2.0"),
         ("Serilog.Sinks.File", "7.0.0", "Apache-2.0"),
         ("Spectre.Console", "0.57.2", "MIT"),
-        ("SQLitePCLRaw.bundle_e_sqlite3", "2.1.12", "Apache-2.0 / Public Domain"),
+        ("SQLitePCLRaw.bundle_e_sqlite3", "3.0.5", "Apache-2.0 / Public Domain"),
         ("YamlDotNet", "18.1.0", "MIT")
     ];
 
@@ -287,7 +308,7 @@ public sealed class ThirdPartyView(
             TerminalTheme.IconPrefix(shell.Options, "⚖", "=") + text.Text("ThirdParty.Title"),
             TerminalTheme.Accent);
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("ThirdParty.Subtitle"))}[/]");
-        var table = new Table().Border(TableBorder.Rounded).BorderStyle(Style.Parse(TerminalTheme.Divider));
+        var table = new Table().Border(TableBorder.None);
         table.AddColumn(text.Text("ThirdParty.Package"));
         table.AddColumn(text.Text("ThirdParty.Version"));
         table.AddColumn(text.Text("ThirdParty.License"));
@@ -367,8 +388,8 @@ public sealed class PortablePathView(
         TerminalTheme.WriteRule(
             console,
             TerminalTheme.IconPrefix(shell.Options, result.IsPresent ? "✅" : "⚠", result.IsPresent ? "+" : "!") + text.Text("Path.Title"),
-            result.IsPresent ? TerminalTheme.Success : "yellow");
-        console.MarkupLine($"[{(result.IsPresent ? "green" : "yellow")}]{Markup.Escape(message)}[/]");
+            result.IsPresent ? TerminalTheme.Success : TerminalTheme.Warning);
+        console.MarkupLine($"[{(result.IsPresent ? TerminalTheme.Success : TerminalTheme.Warning)}]{Markup.Escape(message)}[/]");
         console.Write(TerminalTheme.PairGrid(
         [
             TerminalTheme.CompactMetric(text.Text("Path.Target"), DisplayTarget(result.PersistenceTarget)),

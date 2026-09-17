@@ -157,6 +157,16 @@ function Copy-PackagePayload {
     if ($promptFiles.Count -lt 1) {
         throw 'The staged package must contain at least one YAML prompt resource.'
     }
+
+    $themeSource = Join-Path $PublishDirectory 'themes'
+    if (-not (Test-Path -LiteralPath $themeSource -PathType Container)) {
+        throw "Published payload is missing '$themeSource'."
+    }
+
+    Copy-Item -LiteralPath $themeSource -Destination (Join-Path $StageDirectory 'themes') -Recurse
+    if (-not (Test-Path -LiteralPath (Join-Path $StageDirectory 'themes/cyan.json') -PathType Leaf)) {
+        throw 'The staged package must contain the default cyan theme resource.'
+    }
 }
 
 function New-DeterministicZip {

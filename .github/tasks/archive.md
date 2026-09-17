@@ -2,6 +2,317 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-16 — Publish prerelease 0.1.8 with portable archives and Windows installers
+
+- Merged PR #35 after all required checks, including Windows installer compilation, passed. Verified the resulting main checks and pushed annotated tag `v0.1.8` at `142b519`.
+- Release workflow run `35083274379` completed successfully. The published prerelease includes Windows ZIPs and Linux/macOS tar.gz archives for x64 and ARM64, unsigned Windows EXE installers for x64 and ARM64, and `SHA256SUMS.txt`.
+- Verified all eight package checksums against GitHub asset digests, verified the downloaded checksum manifest digest, and confirmed successful provenance attestation. Published the generated draft as a prerelease, without marking it as the latest stable release.
+- Confirmed the public release at https://github.com/umbertotechnopreneur/PromptMeUp/releases/tag/v0.1.8 with all nine assets uploaded, `draft=false`, and `prerelease=true`. The original `v0.1.7` tag remains unchanged and has no published release.
+
+Validation: required local non-test checks passed; GitHub quality checks, native CLI smoke checks, all six packaging jobs, installer compilation, checksum generation, and attestations passed. Cross-published packages were not executed on unmatched runners, and neither EXE installer was installed or run. Standard local cleanup completed after commits and pushes. Updated this task record locally after publication.
+
+## 2026-09-16 — Run the first tagged release and correct the installer compiler check
+
+- Merged PR #34 after all required checks passed, verified the resulting main checks, and pushed annotated tag `v0.1.7` at `d73fc50`.
+- Release run `35081567930` passed the quality checks and built the four Linux and macOS archives. Both Windows jobs rejected `ISCC.exe` metadata version `0.0.0.0` before installer compilation, so no release draft was created.
+- Moved the supported Inno Setup version check into the installer preprocessor, where `Ver` identifies the loaded compiler. Added native Windows installer compilation to the quality workflow and cleanup after its builds.
+- Increased the product version to `0.1.8` for the corrected release while preserving the published `v0.1.7` tag.
+
+Validation: the first release's quality checks and native CLI smoke checks passed on GitHub. The correction passed local preflight, restore, formatting verification, XML comments, a Release build with zero warnings or errors, cleanup, PowerShell syntax parsing, actionlint, and whitespace checks. The corrected installer compilation and new release remain pending their workflow runs. No local automated tests, CLI smoke checks, or installer executions were run.
+
+## 2026-09-16 — Prepare manual release drafts with x64 and ARM64 installers
+
+- Added a manual `draft` mode to the release workflow and retained `rehearsal` for artifact-only runs. The draft uses the verified main commit and product version; tag-triggered drafts remain supported. Existing tags and releases are never overwritten, and public publication stays a separate maintainer action.
+- Added unsigned, per-user Windows EXE installers for x64 and ARM64 using Inno Setup 6. The builder validates native architecture, product version, notices, and allowed payload files. The installer protects existing unmanaged folders and newer versions, adds only a user PATH entry, and removes only its owned entry on uninstall.
+- Included both installers with the six portable archives, complete checksums, and build attestations. Added matching runtime cleanup to packaging jobs and documented the exact GitHub CLI command, browser trigger, unsigned status, and final publishing step.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build with zero warnings or errors, standard .NET cleanup, actionlint, PowerShell syntax parsing, whitespace checks, and independent static review passed. No automated tests, CLI smoke checks, workflow runs, or installer executions were performed. Automatic approval review rejected the command to prepare the portable Inno compiler with "blocked by policy", so EXE compilation remains unverified locally. Prepared on an authorized branch; pull-request review and merge remain pending.
+
+## 2026-09-16 — Pull main and install version 0.1.7
+
+- Fast-forwarded `main` to `ac43fae`, restored the existing repository-rule changes, and resolved the task-archive conflict by retaining both incoming and local entries.
+- Increased the product version from `0.1.5` to `0.1.7`, above the locally installed `0.1.6`. Built, signed, and installed Windows x64 MSIX `0.1.7.0` with the existing package identity and trusted local certificate.
+- Verified healthy package registration, the executable version, SHA-256 equality for all 283 installed payload files, and the execution alias targeting the new package.
+- Confirmed that the GitHub release workflow currently builds portable archives only. The separate MSIX builder supports x64 and ARM64; the MSI builder supports x64 only. Public MSIX distribution still needs a signing identity trusted by recipients and release assets to be published.
+
+Validation: preflight, restore, formatting verification, XML method comments, Release build and Windows publish with zero warnings or errors, package signature and installation integrity, standard .NET cleanup, and whitespace checks passed. Runtime cleanup was scoped to the application project because the test project has no runtime-specific restore target. Automated tests, CLI smoke checks, and live AI calls were not run; installation verification did not launch the application. Kept the installer and verification evidence under ignored artifacts. Automatic approval review blocked recursive removal of the remaining temporary directories, which are still present. No changes were committed or published.
+
+## 2026-09-16 — Preserve multiline paste, number command choices, and install the update
+
+- Added a bounded multiline editor for chat and interactive diagnostics. Bracketed paste keeps normalized line breaks, blank lines, and trailing whitespace as editable text until a separate Enter submits it. Oversized insertions preserve the existing draft, and cursor movement and deletion respect Unicode text elements.
+- Enabled and restored Windows virtual-terminal input around the prompt, retained cancellation, and limited redraws to owned input rows without clearing terminal history. Documented the bracketed-paste terminal requirement and the diagnostic file-input alternative.
+- Numbered command-menu choices from zero. Up to ten entries accept a digit immediately; larger menus require Enter. Empty AI suggestions return to an ongoing chat prompt or offer Finish/Continue after a single question. Command selection still opens the existing preview and authorization flow.
+- Added decoder and editing regression sources, and prevented CI environment enrichment from overriding explicit ANSI settings in context-bar test fixtures. Preserved unrelated local source comments.
+- Built, signed, and installed MSIX revision `0.1.5.15`. Verified healthy registration, all 282 installed payload hashes, and the `hm` execution alias. Prepared the changes for the existing pull request.
+
+Validation: preflight, restore, formatting verification, XML method comment checks, Release build and Windows publish, package signature verification, installed-file integrity, independent code review, and whitespace checks passed. The build reported zero warnings and errors. Automated tests, CLI smoke checks, and live AI calls were not run locally; installation verification did not launch the application.
+
+## 2026-09-16 — Control chat visibility through natural language
+
+- Added an isolated, strictly parsed LLM intent call for directly typed chat messages, with six-language instructions and local confirmations for independent session-summary and command-suggestion visibility changes.
+- Kept preferences within the current chat, retained them across `/clear`, and allowed `/status` and `/context` to display the summary once. Hidden suggestions never bypass the exact preview, risk assessment, and authorization required by `/run`.
+- Counted the classification call in session usage and turn costs, including guide-assisted answers. Recalled notes, previous messages, and command output cannot enter the display classifier. Mixed requests apply changes after the answer succeeds.
+- Updated chat guidance and documentation, added parser and workflow regression sources, and adapted existing accounting checks for the extra call. Preserved the two unrelated local code comments.
+
+Validation: repository preflight, restore, formatting verification, XML method comment checks, Release build with zero warnings or errors, and whitespace review passed. Automated tests, CLI smoke checks, and live AI calls were not run.
+
+## 2026-09-15 — Record pull-request ownership and labels
+
+- Aligned `AGENTS.md` and `.github/copilot-instructions.md`: every newly created pull request must be assigned to `umbertotechnopreneur` and carry existing repository labels appropriate to its final scope.
+- Prepared the app-guide, context-bar, accounting, and documentation changes for a dedicated pull request after confirming that the open dependency-update pull requests are unrelated. Kept the two pre-existing local code comments outside the commit scope.
+
+Validation: repository preflight, restore, formatting verification, XML method comments, Release build with warnings as errors, whitespace checks, and an independent scope review passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-15 — Load the app guide through conversation and show context by role
+
+- Added eight versioned guide chapters in all six languages. Chat version 8 and query version 7 can request up to two relevant chapters through a strict response contract when a natural-language question needs app details. Each turn permits one additional AI call, with local topic validation and budget checks before sending the guide.
+- Retained loaded chapters as system context for follow-up questions, replacing them when needed and clearing them with `/clear`. Detailed settings procedures remain in the guide. Each provider call records its own usage and cost; turn totals include both calls, and incomplete pricing makes aggregate costs unavailable.
+- Split estimated active context into system, user messages, and retained AI answers. Added a colored budget bar, numerical legend, free capacity, and an explicit guide count already included in system tokens, with readable symbols for terminals without color.
+- Added focused regression sources for guide loading, response contracts, request payloads, workflow reuse and clearing, call accounting, session costs, and bar rendering. Preserved the unrelated local comments.
+
+Validation: preflight, restore, formatting verification, XML method comment checks, and Release build passed with zero warnings or errors. Static YAML inspection confirmed 48 localized guide sections and matching built copies. Automated tests, CLI smoke checks, and live AI calls were not run. The installed MSIX remains unchanged.
+
+## 2026-09-15 — Keep base application context focused on capabilities
+
+- Replaced detailed context-budget settings procedures in all six chat and query translations with an overview of diagnostics, scripts, plans, previews, recipes, saved notes, usage, and customization.
+- Preserved the host-app identity and existing safety rules, and clarified that the model only receives supplied material and cannot independently inspect local files, settings, or full history. Increased the chat prompt to version 7 and the query prompt to version 6, with matching existing version assertions and documentation.
+- Assessed a local, versioned guide split by topic for future on-demand assistance. Guide retrieval remains a design proposal and was not implemented.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, YAML parsing and six-language checks, independent content review, and whitespace checks passed. Automated tests and CLI smoke checks were not run. The installed MSIX remains unchanged.
+
+## 2026-09-15 — Give chat and query prompts application context
+
+- Added two aligned paragraphs in all six languages identifying PromptMeUp as the host application and explaining its settings, operating context budget, environment override, and chat usage controls. References to "this app" now have product context unless the conversation identifies another program.
+- Kept interactive settings navigation in the answer with no commands offered for chat execution. Preserved the existing console scope, clarification, safety, preference, and JSON instructions, and avoided treating default settings as current user values.
+- Increased the chat prompt to version 6 and the query prompt to version 5, updated existing version assertions, and documented the added context. Preserved unrelated local comments and the earlier installation record.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, YAML parsing and six-language checks, independent content review, and whitespace checks passed. Automated tests and CLI smoke checks were not run. The installed MSIX remains unchanged.
+
+## 2026-09-15 — Build and install the current main revision
+
+- Published `main` revision `a3a3ce7` with the existing uncommitted source comments as a self-contained Windows x64 application, including redistribution notices and source-build metadata.
+- Created, signed, and installed MSIX revision `0.1.5.14` with the existing package identity and trusted certificate. Verified healthy registration, matching hashes for all 274 packaged and installed payload files, and the `hm` execution alias targeting the updated installation.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build and Windows publish with zero warnings or errors, package manifest and signature verification, checksum and installed-file integrity, and whitespace checks passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
+## 2026-09-14 — Prepare memory management and build details for review
+
+- Prepared the local memory manager, chat reminders, compile-time About metadata, regression coverage, and product documentation for a focused pull request. Preserved unrelated local source comments and excluded generated installer artifacts.
+- Reviewed memory scope isolation, transactional updates, credential rejection, deletion confirmation, and draft preservation with no blocking findings.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, and whitespace checks passed. The same implementation previously passed all 424 automated tests and signed-MSIX installation verification; tests were not repeated for this review preparation.
+
+## 2026-09-14 — Show compile-time build details and install the updated MSIX
+
+- Added the build date and time in UTC and the build machine to About in all six languages. A shared MSBuild target embeds the values during compilation; a metadata reader supplies the passive view without reading the runtime machine or clock.
+- Documented repeatable-build overrides and rejected malformed dates, non-UTC offsets, impossible calendar dates, and disabled assembly metadata generation before compilation.
+- Published the current local changes, created and signed MSIX revision `0.1.5.13`, and installed it with the existing identity and trusted certificate. Verified healthy registration, matching hashes for all 274 payload files, the installed assembly metadata, and the updated `hm` execution-alias target.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build and Windows publish with zero warnings or errors, all 424 automated tests, six focused MSBuild metadata checks, manifest and signature verification, installed-file integrity, and whitespace checks passed. Installation verification read the installed files without launching the application.
+
+## 2026-09-14 — Test and build the current local changes
+
+- Ran the full automated test suite at the user's request. All 424 tests passed, including the new memory-management coverage, in about 28 seconds.
+- Completed the final Release build with warnings treated as errors and preserved the existing local changes.
+
+Validation: preflight, restore, formatting verification, XML comment checks, all 424 automated tests, Release build with zero warnings or errors, and whitespace checks passed. CLI smoke checks were not run.
+
+## 2026-09-14 — Pull the latest documentation
+
+- Fast-forwarded `main` to `fa8109c` and restored the existing local memory-management work. Resolved README and task-archive conflicts by keeping the incoming documentation and the local additions.
+- Verified that all 26 local source and test files remained byte-for-byte unchanged, including the six new files, and reviewed the three merged documentation files.
+
+Validation: preflight, restore, formatting verification, XML comment checks, Release build with zero warnings or errors, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-15 — Clean artifacts after every build
+
+- Updated both repository instruction files to require cleanup after every build attempt, including failed builds, with options matching the build configuration, runtime, and output path.
+- Added cleanup to the default validation sequence. When requested tests, packaging, or installation need the output, cleanup follows those steps; requested deliverables are preserved.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build with zero warnings/errors, post-build cleanup, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-15 — Install the memory manager MSIX from PR #29
+
+- Fetched PR #29 and packaged its exact source commit `5780a6d973df1c60334aa3891e5620cedfe94142` from an ignored source snapshot, leaving the main checkout in place.
+- Published product version `0.1.6` and signed Windows x64 MSIX version `0.1.6.0` with the existing trusted certificate and package identity. Installed the update and verified healthy registration, matching SHA-256 hashes for all 273 payload files, and an execution alias targeting the new package.
+- Removed the single legacy PromptMeUp directory entry from the user PATH so `hm` resolves to the MSIX alias in refreshed terminal environments. Saved the prior PATH under ignored artifacts and preserved the older executable and application data.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, package identity and signature verification, installed-file integrity, and command resolution passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
+## 2026-09-14 — Friendlier documentation
+
+- Rewrote the README and current user guides with shorter sentences, direct explanations, and everyday words. Explained chat memory, token usage, command approval, file previews, and privacy without changing the command examples.
+- Simplified contributor, support, security, project, release, theme, prompt, and artwork guidance. Kept technical limits, credits, and license information, and corrected two outdated settings checklist entries to match the current Save action and About navigation.
+- Added the same plain-English writing rule to both repository instruction files.
+
+Validation: preflight, restore, formatting verification, XML comment checks, and the Release build passed with zero warnings or errors. Static documentation checks found no new broken local links or heading references, unchanged executable and configuration examples, balanced code fences, and no whitespace errors. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Install the memory management update
+
+- Published the current working tree, including the dedicated memory manager and compact chat/query reminders, as a self-contained Windows x64 application with redistribution notices.
+- Created, signed, and installed MSIX revision `0.1.5.12` using the existing package identity and trusted certificate. Included build metadata identifying the base revision and uncommitted source state.
+- Verified healthy package registration, matching SHA-256 hashes for all 274 packaged and installed payload files, and an `hm` execution alias targeting the updated package.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, manifest and signature validation, package checksum, installed-file integrity, execution-alias verification, and whitespace checks passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
+## 2026-09-14 — Discover and manage saved memories
+
+- Added compact six-language reminders for `/remember`, `/memories`, and `/forget` when starting a question or chat, without repeating the reminder when a question continues into chat.
+- Added a dedicated Memories sidebar entry in Help and Settings, plus `hm --memories`, for local browsing, creation, editing, and confirmed deletion of global and current-project notes. Opening the manager preserves the parent menu, settings draft, and main terminal scrollback.
+- Added a responsive alternate-buffer browser with full scrollable note details, bounded compact-menu previews, scope and text editing, cancellation-first deletion, and draft preservation after validation errors. The compact terminal flow exposes the same operations.
+- Added atomic exact-identifier updates with existing credential validation, scope isolation, duplicate rejection, and capacity checks. Authored regression coverage for update boundaries, scope moves, rejected inputs, atomic failure, cancellation, and CLI routing; updated the query rendering assertions and product guidance.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered navigation, dependency injection, local-only operation, draft preservation, keyboard focus, empty states, layout bounds, cancellation, and six-language completeness. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Prepare the latest About navigation installer
+
+- Published commit `ec96ae7` as a self-contained Windows x64 application with redistribution notices and created signed MSIX revision `0.1.5.11` using the existing package identity and signing certificate.
+- Verified the package signature, version, publisher, execution alias, checksum, source revision, and SHA-256 integrity of all 273 packaged payload files. The installer is ready for installation; the installed application was not updated.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, manifest validation, signature verification, payload integrity, and whitespace checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — About navigation in Help and Settings
+
+- Added an About sidebar entry to Help and the settings workspace, opening the existing project information screen with Enter or Right. The compact settings menu opens the same screen and returns to the previous editable section; scrolling help retains the direct `hm about` command.
+- Preserved the settings draft, language and theme preview, and menu selection when returning from About. Each fullscreen view releases its alternate buffer before opening the next screen, preserving the main terminal and scrollback.
+- Added labels and focus-aware keyboard guidance in all six supported languages, kept help notices within narrow terminal widths, and updated the product guides and existing help-view construction.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered keyboard navigation, empty action pages, dependency injection, compact rendering, draft preservation, and alternate-buffer ownership. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Consistent help and settings workspaces
+
+- Unified help and settings through the same responsive workspace and action-button renderers. Help retains its sidebar at every supported width and matches settings navigation spacing, section emphasis, margins, and footer actions.
+- Kept `hm` explicitly white in commands, descriptions, usage hints, and the shared header. Descriptions and examples use two-space insets, with four-space argument notes and preserved wrapped-line indentation. Static help uses the same entry renderer.
+- Distinguished optional square-bracket groups with the theme's yellow/amber color, preserving spaces, nested groups, and quoted values.
+- Built, signed, and installed MSIX revision `0.1.5.9`; verified healthy registration, all 273 installed payload hashes, and the WindowsApps alias targeting that revision.
+- Included the subsequent optional-parameter coloring in MSIX revision `0.1.5.10`, repeated the non-test validation gate, and verified its signature, healthy registration, all 273 payload hashes, and updated alias target before preparing the complete source changes for main.
+
+Validation: preflight, restore, solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, whitespace checks, signature validation, and installation integrity checks passed. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — About artwork and richer settings overviews
+
+- Added `hm about` and `hm --about`, with a six-language fullscreen information page, the original HELP ME gradient artwork and white H/M initials, project links, version, and attribution. The standalone command opens before settings or AI services are resolved; compact and redirected terminals receive scrolling output, and fullscreen exit restores the main buffer.
+- Added the selected theme's complete source path, author, website hyperlink, and description to Theme settings. Metadata follows the live draft and uses the existing scrollable overview. Schema version 3 adds a validated website to all 13 bundled palettes; versions 1 and 2 remain readable, and the computed local source path is excluded from serialization.
+- Shared the existing model-price comparison between Costs and AI settings, highlighting the selected model and retaining supported models with unavailable rates. The comparison uses cached standard short-context prices and adapts its columns to the available width. Short settings viewports reserve space for both focused fields and scrollable details.
+- Updated six-language UI labels, theme and CLI guidance, and existing theme assertions while preserving unrelated work in the shared checkout.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered routing, alternate-buffer restoration, compact layout, metadata privacy, backward compatibility, and price semantics. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — General overview, help entry point, and expanded themes
+
+- Replaced the command center with help for plain `hm`, including first launch and redirected output. General settings now combines draft application status with cached usage and costs; short terminals can scroll the overview with Ctrl+Up/Down, and the scrolling compatibility view shows it too.
+- Aligned the operating-budget label with the session overview's first label column while retaining the separate Spectre progress bar and localized values.
+- Added semantic explanations beside palette samples, whitesmoke settings values, and clear Save/Cancel action emojis. Added ten bundled themes, backfilled version-two author/description metadata for the original three, and retained explicit support for legacy version-one theme files.
+- Built, signed, and installed MSIX revision `0.1.5.8`. Verified healthy registration, all 273 installed payload hashes, and the WindowsApps `hm` alias target.
+
+Validation: preflight, restore, solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, whitespace checks, package identity/signature verification, and installed payload integrity checks passed. Automated tests and CLI smoke checks were not run. Concurrent work in the shared checkout was preserved.
+
+## 2026-09-14 — Fix the budget bar and align leading emoji
+
+- Removed redundant leading padding from the shared icon-prefix helper while retaining trailing separation, intentional layout margins, and spacing after fullscreen navigation markers. Aligned both contributor instruction files and updated the existing spacing assertions.
+- Fixed the operating-budget crash by providing Spectre's progress task with the localized budget label instead of an empty description. Extremely narrow terminals retain the budget text without constructing a bar below its minimum width.
+- Published, signed, and installed MSIX revision `0.1.5.7` with the latest fixes. Confirmed healthy registration, matching SHA-256 hashes for all 263 installed payload files, and a WindowsApps execution alias targeting that version.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build and Windows publish with zero warnings/errors, manifest and signature verification, and installed-file integrity checks passed. Independent source review confirmed emoji call-site spacing and the exact Spectre package's progress contracts. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Install the unified settings MSIX
+
+- Published the current working tree as a self-contained Windows x64 application, exported redistribution notices, and signed MSIX revision `0.1.5.5` with the existing trusted certificate.
+- Installed the update and verified healthy registration, matching SHA-256 hashes for all 263 payload files, and an AppExecLink targeting the new version through the WindowsApps `hm.exe` alias.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build, Windows publish, manifest validation, and package signature verification passed. Automated tests and CLI smoke checks were not run; installation verification did not launch the application.
+
+## 2026-09-14 — Unified settings workspace and clearer terminal feedback
+
+- Consolidated General, AI, Credentials, Conversation, Commands, Personalization, and Theme into one settings draft with an emoji sidebar. Setup, AI setup (including the existing AI settings alias), and theme switches only choose the opening section; the main menu has one Settings entry.
+- Removed the fullscreen summary and F10 step. Save validates and persists directly; Cancel restores the draft language and palette. Tab reaches Save/Cancel and Left/Right moves between their buttons. Shortcuts distinguish muted key labels from brighter actions.
+- Preserved section navigation in compact terminals and added a shared section-menu compatibility view. Exposed complete focused labels, hid credential replacements, previewed theme colors, and kept connection checks opt-in after initial setup.
+- Moved the operating budget onto its own row with a Spectre progress bar and the existing localized estimate, capacity, and percentage. Added a blank line immediately after the closing thank-you message.
+- Updated all six UI languages and the product guides while preserving concurrent command-clarification work separately.
+
+Validation: preflight, restore, full-solution formatting verification, XML method summaries, Release build with zero warnings/errors, and whitespace checks passed. Independent source reviews covered routing, keyboard focus, compact geometry, cancellation, and privacy. Automated tests and CLI smoke checks were not run.
+
+## 2026-09-14 — Clarify ambiguous requests without closing the session
+
+- Fixed the suggestion menu page size for answers with no suggested commands and chat answers with only one suggestion.
+- Added an explicit clarification/chat continuation choice and neutral finish guidance when no commands are suggested, using the existing conversation and authorization workflow. Updated all six UI languages and the CLI reference.
+- Versioned the query and chat prompts to ask a focused clarification question and withhold commands until necessary details are available, with guidance in all six languages and matching existing version assertions.
+
+Validation: preflight, restore, XML method summaries, Release build with zero warnings/errors, scoped formatting verification, and `git diff --check` passed. Full-solution formatting verification reported line-ending and encoding issues in unrelated concurrent settings/UI changes; those files were preserved. Independent source review covered small menus, defaults, conversation continuity, privacy, authorization, and localization. Automated tests and CLI smoke checks were not run; the installed executable was not replaced.
+
+## 2026-09-14 — Consistent setup and help navigation
+
+- Added a shared fullscreen header with a divider, app version, and project link aligned to the right. Reopened setup starts in the section list; Up/Down selects sections and Enter/Right moves to fields while preserving the draft and review/save step.
+- Removed sidebar numbers, added meaningful section icons, and kept country flags, native names, and language codes consistent in choices and summaries. Emoji-free rendering remains available.
+- Matched help to the setup layout and focus model. Help entries show complete examples with lowercase white `hm`, colored options and values, descriptions using the same colors, and explanations of useful arguments. All new text is available in the six supported languages.
+- Added a blank line after the closing project separator and removed the redundant application-status heading. Updated the product guides to describe the new navigation and examples.
+- Published, signed, and installed MSIX revision `0.1.5.4`, including the coordinated fullscreen footer and conditional range improvements.
+
+Validation: the shared preflight, restore, formatting verification, XML method summaries, and Release build passed with zero warnings or errors. Independent source reviews covered keyboard focus, draft preservation, narrow layouts, and example rendering. Windows publish and package signature verification passed; installed registration reports `Ok`, all 263 payload files match their source hashes, and the WindowsApps execution alias targets the updated package. Automated tests and application smoke tests were not run.
+
+## 2026-09-14 — Conditional help range and consistent fullscreen footers
+
+- Show the localized displayed-line range only when the visible help content overflows. Remove trailing empty spacing rows from the count, retain scroll clamping on resize, and render primary white text with bold numbers on one bounded row.
+- Share the notice, separator, action, and shortcut layout between fullscreen help and forms, preserving two-column margins, variable form notices, semantic action colors, and compact localized hints. Both surfaces use the shared fullscreen header.
+- Updated the displayed-line wording in all six supported languages, including "Righe visualizzate" in Italian, and prepared an illustrative layout preview outside the repository.
+
+Validation: preflight, restore, full formatting verification, XML method summaries, and the Release build passed with zero warnings or errors. Independent source review covered footer geometry, range visibility, clipping, focus, and resize behavior. Automated tests and CLI smoke tests were not run.
+
+## 2026-09-14 — Release checkpoint and main-branch policy
+
+- Prepared the completed fullscreen forms, themes, navigable help, local image display, artwork, and MSIX packaging changes for the requested commit and push on `main`.
+- Reviewed the complete file inventory and confirmed that only intended source, documentation, redistribution notices, themes, and curated artwork are included. Build output, signing material, logs, and local data remain excluded.
+- Verified that GitHub already requires pull requests and the existing quality checks on `main`, with administrator bypass enabled. Force pushes and branch deletion remain disabled; no protection settings needed changing.
+
+Validation: preflight, restore, formatting verification, XML method summaries, and the Release build passed with zero warnings or errors. The remote branch matched the local starting commit. Automated tests and application smoke tests were not run.
+
+## 2026-09-13 — Open terminal layouts, fullscreen help, and Matrix artwork
+
+- Removed cards and enclosing frames from runtime views and recorded the no-card rule in both repository instruction files. Forms align labels to the right and values to the left in two columns, with one blank row between fields, semantic navigation colors, and a single action separator.
+- Kept long values on one terminal row with Unicode-aware clipping and sized the editor from the actual value column. Reviewed focus visibility, review scrolling, narrow layouts, and resize behavior.
+- Added fullscreen help with five navigable sections, scrollable descriptions, keyboard hints in all six languages, and Escape/Q exit. Supported terminals use a disposable alternate buffer; redirected output and CLI errors retain the scrolling reference.
+- Recovered the Lenna ANSI resource from the author's archived YAi! project and preserved its 78-by-78 RGB pixels in a compact embedded image. `hm lenna` and `hm --lenna` render it with Spectre.Console, centered in both directions, without AI configuration, a database connection, or a download. Preserved the legacy attribution and source license in release notices.
+- Gave the 128- and 256-pixel icon frames green phosphor, glow, and scanlines while preserving smaller frames byte-for-byte. Removed the banner's horizontal underscore and retained its separate block cursor.
+- Updated product guides, artwork provenance, and the displayed dependency versions. Produced, signed, and installed MSIX revision `0.1.5.3` after the user closed the earlier running session.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build, and self-contained Windows publish passed with no warnings or errors. Independent source reviews covered both fullscreen layouts and standalone command routing. Checked icon frame invariance, visual artwork, exact RGB dimensions, the published embedded resource, exported notices, package manifest, and signing verification. Installed registration reports `Ok`, all 263 payload files match their source hashes, and `hm` resolves through the WindowsApps execution alias. Automated tests and application smoke tests were not run.
+
+## 2026-09-13 — Install the current build and verify command resolution
+
+- Published the current working tree as a self-contained Windows x64 build and installed signed MSIX revision `0.1.5.2` using the existing package identity and trusted signing certificate.
+- Verified healthy installed registration and SHA-256 equality for all 261 packaged files, including the application assembly, themes, prompts, and manifest.
+- Confirmed both current-process and persisted machine/user PATH resolve `hm` exclusively through the WindowsApps execution alias; inspected its AppExecLink data to verify that it targets the newly installed revision. No persistent PATH change was necessary.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build, self-contained publish, license export, manifest validation, package signing, signature verification, installation integrity, and command-resolution checks passed. No automated tests or application smoke tests were run; verification did not launch the application.
+
+## 2026-09-13 — Signed MSIX installation and project icon
+
+- Added a repeatable MSIX packaging script for prepared self-contained Windows builds, including prompts, themes, redistribution notices, architecture checks, manifest validation, certificate-store signing, and signature verification.
+- Installed local MSIX revision `0.1.5.1` with the `hm.exe` execution alias and normal Win32 application-data behavior, using an already trusted certificate without exporting its private key or changing trust settings.
+- Removed the previous per-user MSI with its standard uninstaller and verified that its executable and user PATH entry were removed while the existing database remained unchanged.
+- Added `assets/PromptMeUp.ico`, a reproducible vector-based generator, and provenance notes. The seven icon resolutions are embedded in the executable and reused for the MSIX tiles.
+- Documented local MSIX packaging, signing, installation, updates, aliases, and removal alongside the existing MSI instructions.
+
+Validation: preflight, restore, formatting verification, XML method-comment checks, Release build, and self-contained publish passed with zero warnings or errors. Validated the ICO frame directory, visually inspected the icon and executable resource, and verified the SDK package signature, healthy installed registration, matching executable/tile hashes, and WindowsApps command resolution. No automated tests or CLI smoke tests were run; application processes were not launched during validation. Existing unrelated source changes were preserved.
+
+## 2026-09-13 — Command notice spacing and STDERR emphasis
+
+- Added a blank line before and after the combined command-risk advisory and output-sharing notice.
+- Confirmed both output warning icons use the shared helper's surrounding spaces; isolated slow blinking to the STDERR label, respecting disabled animations and keeping the icon and output content steady.
+
+Validation: preflight, restore, formatting verification, XML method summaries, and Release build passed with zero warnings or errors. No automated tests or CLI smoke tests were run. Blink appearance depends on terminal support; the installed executable was not replaced.
+
+## 2026-09-13 — Fullscreen setup and JSON terminal themes
+
+- Implemented revisitable fullscreen setup sections, the focused AI settings form, and a standalone `hm --theme` chooser with live palette preview and explicit review/save.
+- Kept draft settings and non-echoing credential inputs local to the views. Added keyboard focus, bounded text editing, Unicode-aware cursor windows, internal scrolling, resize handling, six-language hints, and a sequential compatibility path.
+- Preserved main terminal history through a disposable alternate buffer and aligned both repository instruction files with that behavior.
+- Added validated Cyan, AS/400 Green, and Amber JSON palettes, applied semantic colors throughout shared views, and persisted the selected identifier with a transactional schema-v3 upgrade.
+- Included theme resources in build/publish output and Windows ZIP/MSI staging, documented customization, and added regression sources for validation, migration, and command routing.
+- Reviewed cancellation, secret rendering, startup and menu integration; corrected focused menu saves so a temporary display-language override cannot change the saved language.
+
+Validation: preflight, restore, formatting verification, XML method summaries, Release build with 0 warnings/errors, whitespace review, and inspection of copied theme JSON resources passed. Automated tests and CLI smoke tests were not run; new regression sources compiled only. Interactive terminal behavior still requires an explicitly requested smoke/manual check. The installed executable was not replaced; no branch or commit was created by this task.
+
 ## 2026-09-13 — GitHub Actions failure fixes
 
 - Traced the main quality-gate failures to ANSI styling in semantic output assertions and a second SQLite connection pool left open during Windows fixture cleanup.

@@ -24,7 +24,8 @@ public sealed class CommandSuggestionView(
         bool offerChatContinuation)
     {
         ArgumentNullException.ThrowIfNull(suggestions);
-        if (Console.IsInputRedirected || Console.IsOutputRedirected)
+        var hasSuggestions = suggestions.Count > 0;
+        if (Console.IsInputRedirected || Console.IsOutputRedirected || (!hasSuggestions && !offerChatContinuation))
         {
             return new CommandSuggestionDecision(CommandSuggestionAction.DoNotExecute, null);
         }
@@ -40,24 +41,68 @@ public sealed class CommandSuggestionView(
         entries.AddRange(suggestions.Select(command => new MenuEntry(CommandSuggestionAction.SelectCommand, command)));
 
         var icon = TerminalTheme.IconPrefix(shell.Options, "🧭", ">");
-        TerminalTheme.WriteRule(console, $"{icon}{text.Text("CommandMenu.Title")}", TerminalTheme.Accent);
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("CommandMenu.Hint"))}[/]");
+        var titleKey = hasSuggestions ? "CommandMenu.Title" : "CommandMenu.ContinueTitle";
+        var hintKey = hasSuggestions ? "CommandMenu.Hint" : "CommandMenu.ContinueHint";
+        TerminalTheme.WriteRule(console, $"{icon}{text.Text(titleKey)}", TerminalTheme.Accent);
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text(hintKey))}[/]");
         console.WriteLine();
-        var selected = console.Prompt(
-            new SelectionPrompt<MenuEntry>()
-                .Title($"[bold {TerminalTheme.Primary}]{Markup.Escape(text.Text("CommandMenu.Choose"))}[/]")
-                .PageSize(Math.Min(12, entries.Count))
-                .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-                .UseConverter(Label)
-                .AddChoices(entries));
+        var choices = new Grid()
+            .AddColumn(new GridColumn().RightAligned().NoWrap())
+            .AddColumn(new GridColumn().LeftAligned());
+        for (var index = 0; index < entries.Count; index++)
+        {
+            choices.AddRow(
+                $"[bold {TerminalTheme.Accent}]{index}[/]",
+                Label(entries[index], hasSuggestions));
+        }
+        console.Write(choices);
+        console.WriteLine();
+        var selected = entries[ReadSelection(entries.Count)];
         return new CommandSuggestionDecision(selected.Action, selected.Command);
     }
 
+    /// <summary>Accepts a single digit immediately, or a complete validated number followed by Enter for larger menus.</summary>
+    private int ReadSelection(int entryCount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(entryCount);
+        var maximum = entryCount - 1;
+        var hintKey = entryCount <= 10 ? "CommandMenu.DigitHint" : "CommandMenu.NumberHint";
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text(hintKey, maximum))}[/]");
+        var prompt = $"[bold {TerminalTheme.Accent}]› {Markup.Escape(text.Text("CommandMenu.Choose"))}[/] ";
+        var error = $"[{TerminalTheme.Error}]{Markup.Escape(text.Text("CommandMenu.InvalidNumber", maximum))}[/]";
+        if (entryCount > 10)
+        {
+            return console.Prompt(new TextPrompt<int>(prompt)
+                .ValidationErrorMessage(error)
+                .Validate(value => value >= 0 && value < entryCount
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error()));
+        }
+
+        console.Markup(prompt);
+        while (true)
+        {
+            var key = EscapeAwareConsoleInput.EnsureNotEscape(console.Input.ReadKey(intercept: true))
+                ?? throw new InteractiveFlowCanceledException();
+            if ((key.Modifiers & (ConsoleModifiers.Alt | ConsoleModifiers.Control)) == 0
+                && key.KeyChar is >= '0' and <= '9'
+                && key.KeyChar - '0' < entryCount)
+            {
+                console.MarkupLine($"[bold {TerminalTheme.Primary}]{key.KeyChar}[/]");
+                return key.KeyChar - '0';
+            }
+
+            console.WriteLine();
+            console.MarkupLine(error);
+            console.Markup(prompt);
+        }
+    }
+
     /// <summary>Formats a menu entry with hierarchy while keeping suggested command text visibly exact.</summary>
-    private string Label(MenuEntry entry) => entry.Action switch
+    private string Label(MenuEntry entry, bool hasSuggestions) => entry.Action switch
     {
         CommandSuggestionAction.DoNotExecute =>
-            $"[bold yellow]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "🛑", "x"))}{Markup.Escape(text.Text("CommandMenu.None"))}[/]",
+            $"[bold {TerminalTheme.Warning}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "🛑", "x"))}{Markup.Escape(text.Text(hasSuggestions ? "CommandMenu.None" : "CommandMenu.Finish"))}[/]",
         CommandSuggestionAction.StartChat =>
             $"[bold {TerminalTheme.Accent}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "💬", ">"))}{Markup.Escape(text.Text("CommandMenu.StartChat"))}[/]",
         CommandSuggestionAction.SelectCommand when entry.Command is not null =>

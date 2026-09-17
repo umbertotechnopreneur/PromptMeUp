@@ -7,19 +7,20 @@ To try `hm` for the first time, start with the [README](../README.md#get-started
 | I want to… | Read |
 | --- | --- |
 | Find a command or see an example | [CLI reference](CLI_REFERENCE.md) |
-| Change the model or context limits with `hm --ai-settings` | [AI settings](CLI_REFERENCE.md#change-the-model-or-conversation-limits) |
+| Change the model, chat limits, or other settings | [Settings](CLI_REFERENCE.md#change-the-model-or-conversation-limits) |
+| Pick terminal colors or make my own theme | [Terminal themes](TERMINAL_THEMES.md) |
 | Save useful notes or understand the token counters | [Memory, context, and costs](OPENAI_COSTS_AND_CACHING.md) |
 | Check what is saved locally and what is sent to OpenAI | [Privacy](PRIVACY.md) |
 | Get help or report a problem | [Support](../SUPPORT.md) |
 
-The [printable CLI manual](PromptMeUp-CLI-Manual.pdf) is an earlier edition. Use the web guides above for saved memories, context counters, and `--ai-settings`.
+The [printable manual](PromptMeUp-CLI-Manual.pdf) is an older edition. The guides above include the newer saved notes, usage counters, and Settings screen.
 
 ## Working on PromptMeUp
 
 - [Contributing](../CONTRIBUTING.md) covers the local build and contribution process.
-- [Architecture](ARCHITECTURE.md) explains the application structure, request flow, storage, and command approval.
-- [Validation](VALIDATION.md) lists the development checks and manual review cases.
-- [Releasing](RELEASING.md) covers portable packages, CI, and GitHub release drafts.
-- [Windows packaging](WINDOWS_PACKAGING.md) covers optional MSI and WinGet artifacts.
+- [Architecture](ARCHITECTURE.md) explains where the code lives and how questions, data, and command approvals move through it.
+- [Validation](VALIDATION.md) lists the build checks and things to look for when testing.
+- [Releasing](RELEASING.md) explains how to build portable packages and prepare a GitHub release.
+- [Windows packaging](WINDOWS_PACKAGING.md) covers optional MSI, MSIX, and WinGet packages.
 
 Use [`document.template.md`](../document.template.md) when adding a design note.

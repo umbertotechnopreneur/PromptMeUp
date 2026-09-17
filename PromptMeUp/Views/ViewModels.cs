@@ -7,7 +7,27 @@ namespace PromptMeUp.Views;
 public sealed record SetupViewState(
     AppSettings Settings,
     bool ApiKeyConfigured,
-    bool AdminKeyConfigured);
+    bool AdminKeyConfigured)
+{
+    public SettingsSection InitialSection { get; init; } = SettingsSection.General;
+
+    public bool ContextBudgetOverridden { get; init; }
+
+    public CostOverview? Costs { get; init; }
+
+    public Action? OpenMemories { get; init; }
+}
+
+public enum SettingsSection
+{
+    General,
+    Ai,
+    Credentials,
+    Context,
+    Commands,
+    Personalization,
+    Theme
+}
 
 public sealed record SetupSubmission(
     AppSettings Settings,
@@ -15,7 +35,7 @@ public sealed record SetupSubmission(
     string? AdminKey,
     bool TestConnection);
 
-public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji);
+public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji, bool SuppressFooter = false);
 
 public sealed record ShellRuntimeStatus(
     string Provider,
@@ -35,6 +55,22 @@ public sealed record ShellRuntimeStatus(
     public long? ActiveContextTokens { get; init; }
 
     public long ContextBudgetTokens { get; init; }
+
+    public long SystemInstructionTokens { get; init; }
+
+    public long GuideTokens { get; init; }
+
+    public long UserMessageTokens { get; init; }
+
+    public long AssistantMessageTokens { get; init; }
+
+    public bool HasContextBreakdown { get; init; }
+
+    public decimal? TurnCostUsd { get; init; }
+
+    public bool HasTurnCost { get; init; }
+
+    public bool SessionCostKnown { get; init; } = true;
 
     public long MemoryTokens { get; init; }
 
@@ -73,18 +109,3 @@ public enum CommandSuggestionAction
 public sealed record CommandSuggestionDecision(
     CommandSuggestionAction Action,
     SuggestedCommand? SuggestedCommand);
-
-public enum MainMenuAction
-{
-    Query,
-    Chat,
-    Costs,
-    Status,
-    Setup,
-    TestAi,
-    Where,
-    Path,
-    InstallFont,
-    ThirdParty,
-    Exit
-}

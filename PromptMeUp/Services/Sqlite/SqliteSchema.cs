@@ -6,7 +6,7 @@ namespace PromptMeUp.Services.Sqlite;
 internal static class SqliteSchema
 {
     /// <summary>Identifies the schema version supported by this application build.</summary>
-    internal const int Version = 2;
+    internal const int Version = 3;
 
     /// <summary>Enables the persistent write-ahead logging mode before schema creation starts.</summary>
     internal const string EnableWriteAheadLoggingSql = "PRAGMA journal_mode = WAL;";
@@ -17,6 +17,7 @@ internal static class SqliteSchema
             id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
             setup_completed INTEGER NOT NULL CHECK (setup_completed IN (0, 1)),
             language TEXT NOT NULL,
+            theme TEXT NOT NULL DEFAULT 'cyan' CHECK (length(theme) BETWEEN 1 AND 32),
             ai_enabled INTEGER NOT NULL CHECK (ai_enabled IN (0, 1)),
             model TEXT NOT NULL,
             reasoning_effort TEXT NOT NULL,

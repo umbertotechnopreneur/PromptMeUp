@@ -30,15 +30,13 @@ public sealed class MemoryView : IMemoryView
         TerminalTheme.WriteRule(_console, _text.Text("Memory.Title"), TerminalTheme.Accent);
         if (memories.Count == 0)
         {
-            _console.Write(new Panel(new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Primary)))
-                .Border(BoxBorder.Rounded)
-                .BorderStyle(Style.Parse(TerminalTheme.Accent)));
+            _console.Write(new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Primary)));
             _console.WriteLine();
             return;
         }
 
         var table = new Table()
-            .Border(TableBorder.Rounded)
+            .Border(TableBorder.Simple)
             .BorderStyle(Style.Parse(TerminalTheme.Accent))
             .AddColumn(new TableColumn(new Text("ID", Style.Parse(TerminalTheme.Muted))))
             .AddColumn(new TableColumn(new Text(_text.Text("Memory.Scope"), Style.Parse(TerminalTheme.Muted))))

@@ -10,11 +10,11 @@ namespace PromptMeUp.Tests;
 
 public sealed class TerminalViewTests
 {
-    /// <summary>Verifies that visual emoji receive one visible space on both sides while ASCII fallbacks stay compact.</summary>
+    /// <summary>Verifies that icon labels have no leading space and keep a separator after emoji or ASCII prefixes.</summary>
     [Fact]
-    public void IconPrefix_UsesSymmetricEmojiSpacing()
+    public void IconPrefix_OmitsLeadingSpace()
     {
-        Assert.Equal(" 🇮🇹 ", TerminalTheme.IconPrefix(new ConsoleRenderOptions(false, false), "🇮🇹", "@"));
+        Assert.Equal("🇮🇹 ", TerminalTheme.IconPrefix(new ConsoleRenderOptions(false, false), "🇮🇹", "@"));
         Assert.Equal("@\u00A0", TerminalTheme.IconPrefix(new ConsoleRenderOptions(false, true), "🇮🇹", "@"));
     }
 
@@ -27,7 +27,7 @@ public sealed class TerminalViewTests
         foreach (var language in SupportedLanguages.All)
         {
             var rendered = SetupView.FormatLanguageChoice(language, options);
-            Assert.StartsWith($" {language.Flag} {language.NativeName}", rendered, StringComparison.Ordinal);
+            Assert.StartsWith($"{language.Flag} {language.NativeName}", rendered, StringComparison.Ordinal);
         }
     }
 
@@ -53,6 +53,7 @@ public sealed class TerminalViewTests
         Assert.Contains("/remember [global|project] <testo>", rendered, StringComparison.Ordinal);
         Assert.Contains("/memories", rendered, StringComparison.Ordinal);
         Assert.Contains("/forget <id>", rendered, StringComparison.Ordinal);
+        Assert.Contains("Memorie in chat:", rendered, StringComparison.Ordinal);
         Assert.Contains("/exit", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╭", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╮", rendered, StringComparison.Ordinal);

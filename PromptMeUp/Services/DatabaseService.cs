@@ -34,6 +34,8 @@ public interface IDatabaseService
 
     Task<AiUsageMetrics> GetSessionUsageAsync(string sessionId, CancellationToken cancellationToken);
 
+    Task<decimal?> GetSessionCostAsync(string sessionId, CancellationToken cancellationToken);
+
     Task<decimal?> GetOrganizationCostCurrentMonthAsync(CancellationToken cancellationToken);
 
     Task EnsureAiSessionAsync(AiSessionRecord session, CancellationToken cancellationToken);
@@ -123,7 +125,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                    custom_instruction, include_windows_location, review_commands_with_ai,
                    prompt_caching_enabled, max_conversation_turns, max_message_characters,
                    max_context_percent, max_command_output_characters, command_timeout_seconds,
-                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget
+                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme
             FROM app_settings
             WHERE id = 1;
             """;
@@ -154,7 +156,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
             reader.GetString(17),
             DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(18)))
         {
-            ContextTokenBudget = reader.GetInt32(19)
+            ContextTokenBudget = reader.GetInt32(19),
+            Theme = reader.GetString(20)
         };
         var normalizedPreamble = _promptProtection.Protect(settings.CustomInstruction).SanitizedText;
         var safePreamble = _redactor.Redact(normalizedPreamble);
@@ -186,6 +189,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 UPDATE app_settings
                 SET setup_completed = $setupCompleted,
                     language = $language,
+                    theme = $theme,
                     ai_enabled = $aiEnabled,
                     model = $model,
                     reasoning_effort = $reasoning,
@@ -208,6 +212,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 """;
             command.Parameters.AddWithValue("$setupCompleted", settings.SetupCompleted ? 1 : 0);
             command.Parameters.AddWithValue("$language", settings.Language);
+            command.Parameters.AddWithValue("$theme", settings.Theme);
             command.Parameters.AddWithValue("$aiEnabled", settings.AiEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$model", settings.Model);
             command.Parameters.AddWithValue("$reasoning", settings.ReasoningEffort);
@@ -524,6 +529,24 @@ public sealed class SqliteDatabaseService : IDatabaseService
             reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(5));
     }
 
+    /// <summary>Totals recorded session cost, including failures with usage, without hiding unpriced calls.</summary>
+    public async Task<decimal?> GetSessionCostAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT COALESCE(SUM(estimated_cost_microusd), 0),
+                   COALESCE(SUM(CASE WHEN estimated_cost_microusd IS NULL AND (success = 1 OR total_tokens > 0)
+                       THEN 1 ELSE 0 END), 0)
+            FROM ai_requests WHERE conversation_id = $session;
+            """;
+        command.Parameters.AddWithValue("$session", sessionId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return reader.GetInt64(1) == 0 ? FromMicroUsd(reader.GetInt64(0)) : null;
+    }
+
     /// <summary>Aggregates downloaded organization cost buckets for the current local month.</summary>
     public async Task<decimal?> GetOrganizationCostCurrentMonthAsync(CancellationToken cancellationToken)
     {
@@ -701,6 +724,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
             {
                 await EnsureContextBudgetColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
+            if (currentVersion < 3)
+            {
+                await EnsureThemeColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
             {
@@ -730,6 +757,25 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.CommandText = """
                 ALTER TABLE app_settings ADD COLUMN context_token_budget INTEGER NOT NULL DEFAULT 16000
                     CHECK (context_token_budget BETWEEN 4000 AND 200000);
+                """;
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Adds the saved theme choice to older databases without changing existing preferences.</summary>
+    private static async Task EnsureThemeColumnAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'theme';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            command.CommandText = """
+                ALTER TABLE app_settings ADD COLUMN theme TEXT NOT NULL DEFAULT 'cyan'
+                    CHECK (length(theme) BETWEEN 1 AND 32);
                 """;
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -840,6 +886,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             throw new ArgumentException("The configured AI preamble must not contain credentials.", nameof(settings));
         }
         if (!SupportedLanguages.IsSupported(settings.Language)
+            || !ThemeCatalogService.IsValidId(settings.Theme)
             || string.IsNullOrWhiteSpace(settings.Model)
             || !AiModelCatalog.Models.Any(model => model.Id == settings.Model)
             || !AiModelCatalog.Resolve(settings.Model).ReasoningEfforts.Contains(settings.ReasoningEffort)

@@ -24,7 +24,7 @@ internal static class OpenAiRequestBuilder
         };
         if (IsStructuredAssistantPrompt(prompt))
         {
-            text["format"] = BuildChatResponseFormat();
+            text["format"] = BuildChatResponseFormat(SupportsAppGuide(prompt));
         }
         else if (prompt.Id == "script-system")
         {
@@ -33,6 +33,10 @@ internal static class OpenAiRequestBuilder
         else if (prompt.Id == "plan-system")
         {
             text["format"] = FeatureResponseFormats.Plan();
+        }
+        else if (prompt.Id == "chat-display-intent")
+        {
+            text["format"] = FeatureResponseFormats.ChatDisplayIntent();
         }
 
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
@@ -84,7 +88,8 @@ internal static class OpenAiRequestBuilder
         AppSettings settings,
         string language,
         RuntimeContext? runtimeContext = null,
-        ArtifactLimits? limits = null)
+        ArtifactLimits? limits = null,
+        AppGuideContext? guide = null)
     {
         var artifactLimits = limits ?? ArtifactLimits.Default;
         var builder = new StringBuilder(prompt.ResolveText(language)
@@ -121,6 +126,16 @@ internal static class OpenAiRequestBuilder
             }
         }
 
+        ValidateGuideContext(guide);
+        if (guide is { Topics.Count: > 0 })
+        {
+            if (!SupportsAppGuide(prompt))
+            {
+                throw new InvalidOperationException("This prompt does not support the application guide.");
+            }
+            builder.AppendLine().AppendLine().Append(guide.Text);
+        }
+
         return builder.ToString();
     }
 
@@ -128,21 +143,34 @@ internal static class OpenAiRequestBuilder
     internal static AiContextUsage EstimateContext(
         string instructions,
         IReadOnlyList<ChatMessage> messages,
-        string model)
+        string model,
+        AppGuideContext? guide = null)
     {
+        ValidateGuideContext(guide);
         var instructionTokens = EstimateTokens(instructions);
         var conversationTokens = ContextTokenEstimator.Messages(messages);
+        var userTokens = messages.Where(message => NormalizeRole(message.Role) == "user")
+            .Sum(message => EstimateTokens(message.Content));
+        var assistantTokens = messages.Where(message => NormalizeRole(message.Role) == "assistant")
+            .Sum(message => EstimateTokens(message.Content));
+        // Protocol envelopes and developer messages belong to the system share, leaving message text attributable by role.
+        var systemTokens = instructionTokens + conversationTokens + 8 - userTokens - assistantTokens;
         var latestPromptTokens = messages.LastOrDefault(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)) is { } latest
             ? EstimateTokens(latest.Content)
             : 0;
         return new AiContextUsage(
             instructionTokens + conversationTokens + 8,
             0,
-            instructionTokens,
+            systemTokens,
             conversationTokens,
             latestPromptTokens,
             AiModelCatalog.Resolve(model).ContextWindowTokens,
-            true);
+            true)
+        {
+            UserMessageTokens = userTokens,
+            AssistantMessageTokens = assistantTokens,
+            GuideTokens = guide?.Tokens ?? 0
+        };
     }
 
     /// <summary>Shares the complete input ceiling between pre-send pruning, display, and the final provider guard.</summary>
@@ -221,37 +249,70 @@ internal static class OpenAiRequestBuilder
     }
 
     /// <summary>Builds the strict user-facing chat envelope without granting the model a command-execution capability.</summary>
-    private static object BuildChatResponseFormat() => new
+    private static object BuildChatResponseFormat(bool supportsGuide)
     {
-        type = "json_schema",
-        name = "promptmeup_chat_response_v1",
-        strict = true,
-        schema = new
+        var properties = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            type = "object",
-            properties = new Dictionary<string, object>(StringComparer.Ordinal)
+            ["answer_markdown"] = new { type = "string" },
+            ["commands"] = new
             {
-                ["answer_markdown"] = new { type = "string" },
-                ["commands"] = new
+                type = "array",
+                items = new
                 {
-                    type = "array",
-                    items = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            label = new { type = "string" },
-                            command = new { type = "string" }
-                        },
-                        required = new[] { "label", "command" },
-                        additionalProperties = false
-                    }
+                        label = new { type = "string" },
+                        command = new { type = "string" }
+                    },
+                    required = new[] { "label", "command" },
+                    additionalProperties = false
                 }
-            },
-            required = new[] { "answer_markdown", "commands" },
-            additionalProperties = false
+            }
+        };
+        if (supportsGuide)
+        {
+            properties["guide_topics"] = new
+            {
+                type = "array",
+                items = new { type = "string", @enum = AppGuideService.Topics },
+                maxItems = AppGuideService.MaxTopics
+            };
         }
-    };
+        return new
+        {
+            type = "json_schema",
+            name = supportsGuide ? "promptmeup_chat_response_v2" : "promptmeup_chat_response_v1",
+            strict = true,
+            schema = new
+            {
+                type = "object",
+                properties,
+                required = supportsGuide
+                    ? new[] { "answer_markdown", "commands", "guide_topics" }
+                    : ["answer_markdown", "commands"],
+                additionalProperties = false
+            }
+        };
+    }
+
+    /// <summary>Rejects inconsistent guide content before it becomes trusted provider instructions.</summary>
+    private static void ValidateGuideContext(AppGuideContext? guide)
+    {
+        if (guide is null)
+        {
+            return;
+        }
+        if (guide.Topics.Count > AppGuideService.MaxTopics
+            || guide.Topics.Distinct(StringComparer.Ordinal).Count() != guide.Topics.Count
+            || guide.Topics.Any(topic => !AppGuideService.Topics.Contains(topic, StringComparer.Ordinal))
+            || guide.Tokens != EstimateTokens(guide.Text)
+            || guide.Tokens > AppGuideService.MaximumTokens
+            || (guide.Topics.Count == 0) != string.IsNullOrWhiteSpace(guide.Text))
+        {
+            throw new InvalidOperationException("The application guide context is invalid or exceeds its limit.");
+        }
+    }
 
     /// <summary>Approximates text tokens from UTF-8 payload size until provider usage supplies the exact count.</summary>
     private static long EstimateTokens(string text) => ContextTokenEstimator.Text(text);
@@ -276,7 +337,12 @@ internal static class OpenAiRequestBuilder
     private static bool IsStructuredAssistantPrompt(PromptDefinition prompt) =>
         string.Equals(prompt.Id, "chat-system", StringComparison.OrdinalIgnoreCase)
         || string.Equals(prompt.Id, "query-system", StringComparison.OrdinalIgnoreCase)
-        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1";
+        || prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v1"
+        || SupportsAppGuide(prompt);
+
+    /// <summary>Enables guide retrieval only for prompts declaring the versioned guide-aware response contract.</summary>
+    internal static bool SupportsAppGuide(PromptDefinition prompt) =>
+        prompt.Metadata.GetValueOrDefault("response-format") == "promptmeup-console-response-v2";
 
     /// <summary>Identifies the model family that supports explicit prompt-cache breakpoints.</summary>
     private static bool IsGpt56(string model) => model.StartsWith("gpt-5.6", StringComparison.OrdinalIgnoreCase);

@@ -8,6 +8,7 @@ alwaysApply: true
 
 - PromptMeUp is a lightweight, portable .NET 10 console assistant exposed as `hm`. Portable archives remain canonical; release automation may also produce optional, versioned Windows installer artifacts. Do not add a background agent or platform-specific runtime dependency.
 - Keep GitHub as the project home and write public copy in product language before implementation detail.
+- Use plain, friendly English in documentation: speak directly to the reader, use short sentences and practical examples, and explain technical terms when needed. Keep factual credits and privacy details accurate.
 - Write repository documentation, README copy, contributor guidance, code comments, and project artwork text in English. Keep runtime UI and prompt translations in all six supported languages.
 - Preserve `Models` / `Services` / `Views` / `Application` boundaries. Views never own HTTP, SQLite, secret storage, or process execution.
 - Put runtime AI instructions in `/prompt` as versioned metadata-rich YAML with `it`, `en`, `fr`, `de`, `es`, and `vi` text.
@@ -17,14 +18,18 @@ alwaysApply: true
 - Use `ILogger<T>` in application code and configure Serilog only in the composition root.
 - Add a brief XML `<summary>` to every C# implementation method, including constructors, tests, and private helpers. Add inline comments only as small hints for non-obvious logic.
 - Keep typed usage/cost fields normalized and flexible audit/session payloads valid JSON.
-- Preserve terminal scrollback in every application flow: never call a terminal clear operation. Mark new flows with intentional whitespace and accessible separators instead.
+- Preserve terminal scrollback in every application flow: never clear the main terminal screen or scrollback. Fullscreen views may redraw a disposable alternate buffer and must restore the main buffer on exit. Mark new scrolling flows with intentional whitespace and accessible separators.
 - Treat contrast as a product requirement: do not render user-facing information in dark grey. Use the shared terminal palette, with bright primary text and only high-contrast muted nuances for secondary metadata.
-- Render every user-facing emoji with one visible space before and after it; keep emoji spacing in shared view helpers so icons never touch adjacent text.
-- Use Spectre.Console layout primitives purposefully (for example panels, grids, rules, and selection prompts) to convey hierarchy; do not reduce command, help, or status surfaces to undifferentiated text walls.
+- Render every user-facing emoji with one visible space after it and a separating space when preceded by text. Do not add a leading space when an emoji starts a line or label; preserve intentional layout indentation and keep emoji spacing in shared view helpers.
+- Do not use cards, boxed panels, or decorative enclosing frames unless the user explicitly requests them for that surface. Use open layouts with headings, grids, spacing, and separators instead.
+- Use Spectre.Console layout primitives purposefully (for example grids, rules, and selection prompts) to convey hierarchy; do not reduce command, help, or status surfaces to undifferentiated text walls.
+- Arrange form fields in two columns with right-aligned label text and left-aligned value text, followed by one blank row. Keep action bars and shortcut hints unboxed, with a single separator before the actions; use semantic button colors and a visible focus marker.
 - Preserve unrelated work, obtain explicit user authorization before creating any Git branch or worktree, avoid broad formatting churn, use `pwsh -NoProfile` for PowerShell automation, and fail fast on invalid or unsupported state.
+- When creating a pull request, assign it to `umbertotechnopreneur` and add the existing repository labels that match its final scope.
 - Run automated tests and CLI smoke tests only when the user explicitly requests them. Implementation, review, commit, and push requests do not authorize test execution.
+- After every build attempt, including failed builds, clean generated build artifacts to avoid accumulating disk usage. Run `dotnet clean .\PromptMeUp.slnx --configuration Release` with the configuration, runtime, and output-path options adjusted to match the build, then verify `git status --short`. If explicitly requested tests, packaging, or installation need the output, clean immediately after those steps finish and before handoff. Preserve deliverables requested by the user.
 - After every successful commit and every successful push, run `dotnet clean .\PromptMeUp.slnx --configuration Release` and verify `git status --short`; complete the non-test validation gate before committing.
 - Keep `AGENTS.md` and this file aligned when repository-wide rules change.
 - Exclude credentials, `.env`, SQLite data, logs, private absolute paths, `bin/`, `obj/`, `artifacts/`, and `.vs/` from commits.
 
-Before handoff, run preflight, restore, `dotnet format --verify-no-changes`, `scripts/check-xml-comments.ps1`, and a Release build with warnings as errors. Run automated tests or CLI smoke checks only when explicitly requested by the user; use a disposable `PROMPTMEUP_DATA_DIR` for requested smoke checks.
+Before handoff, run preflight, restore, `dotnet format --verify-no-changes`, `scripts/check-xml-comments.ps1`, and a Release build with warnings as errors, then clean the build artifacts and verify `git status --short`. Run automated tests or CLI smoke checks only when explicitly requested by the user, before cleanup when they need the build output; use a disposable `PROMPTMEUP_DATA_DIR` for requested smoke checks.

@@ -36,11 +36,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IStatusView _statusView;
     private readonly ICostsView _costsView;
     private readonly IHelpView _helpView;
-    private readonly IMainMenuView _mainMenuView;
     private readonly IThirdPartyView _thirdPartyView;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
     private readonly ArtifactLimits _artifactLimits;
+    private readonly IThemeCatalogService? _themes;
+    private readonly LennaWorkflow? _lenna;
+    private readonly AboutWorkflow? _about;
+    private readonly MemoryManagerWorkflow? _memories;
 
     /// <summary>Creates the application orchestrator while keeping business services independent from Spectre views.</summary>
     public PromptMeUpApplication(
@@ -64,11 +67,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IStatusView statusView,
         ICostsView costsView,
         IHelpView helpView,
-        IMainMenuView mainMenuView,
         IThirdPartyView thirdPartyView,
         AppPaths paths,
         ILogger<PromptMeUpApplication> logger,
-        ArtifactLimits? artifactLimits = null)
+        ArtifactLimits? artifactLimits = null,
+        IThemeCatalogService? themes = null,
+        LennaWorkflow? lenna = null,
+        AboutWorkflow? about = null,
+        MemoryManagerWorkflow? memories = null)
     {
         _parser = parser;
         _database = database;
@@ -90,11 +96,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _statusView = statusView;
         _costsView = costsView;
         _helpView = helpView;
-        _mainMenuView = mainMenuView;
         _thirdPartyView = thirdPartyView;
         _paths = paths;
         _logger = logger;
         _artifactLimits = artifactLimits ?? ArtifactLimits.Default;
+        _themes = themes;
+        _lenna = lenna;
+        _about = about;
+        _memories = memories;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -107,17 +116,31 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         {
             _shell.RenderHeader("?", null, false, Environment.CurrentDirectory);
             _shell.RenderError(parse.Error ?? _text.Text("Cli.Invalid"));
-            _helpView.Render();
+            _helpView.RenderStatic();
             return 2;
         }
 
         var options = parse.Options!;
+        if (options.Command == AppCommand.Lenna)
+        {
+            return (_lenna ?? throw new InvalidOperationException(_text.Text("Lenna.LoadError")))
+                .Run(options, cancellationToken);
+        }
+        if (options.Command == AppCommand.About)
+        {
+            return (_about ?? throw new InvalidOperationException(_text.Text("About.Unavailable")))
+                .Run(options, cancellationToken);
+        }
         _shell.Configure(new ConsoleRenderOptions(options.NoAnimation, options.NoEmoji));
         await _database.InitializeAsync(cancellationToken).ConfigureAwait(false);
         var promptCount = (await _prompts.ListAsync(cancellationToken).ConfigureAwait(false)).Count;
         var settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (_themes is not null)
+        {
+            TerminalTheme.Apply(_themes.Resolve(settings.Theme));
+        }
         _text.SetLanguage(options.Language ?? settings.Language);
-        if (options.Command != AppCommand.AiSettings)
+        if (options.Command is not (AppCommand.Setup or AppCommand.AiSettings or AppCommand.Theme))
         {
             settings = settings with { Language = _text.Language };
         }
@@ -127,11 +150,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
         try
         {
-            if (options.Command == AppCommand.Main && !settings.SetupCompleted)
-            {
-                return await RunFirstSetupAsync(settings, cancellationToken).ConfigureAwait(false);
-            }
-
             if (ShouldRefreshPricing(options.Command, settings))
             {
                 await TryRefreshPricingAsync(settings, force: options.Command == AppCommand.Costs, cancellationToken).ConfigureAwait(false);
@@ -198,8 +216,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 EnsureAiReady(settings);
                 await _diagnostics.RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
                 return 0;
+            case AppCommand.Main:
             case AppCommand.Help:
-                _helpView.Render();
+                _helpView.Render(() => (_memories ?? throw new InvalidOperationException("The memory manager is unavailable."))
+                    .RunAsync(cancellationToken).GetAwaiter().GetResult());
                 return 0;
             case AppCommand.Version:
                 RenderVersion();
@@ -207,7 +227,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             case AppCommand.Setup:
                 return await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.AiSettings:
-                return await RunAiSettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+                return await RunSetupAsync(settings, cancellationToken, SettingsSection.Ai).ConfigureAwait(false);
+            case AppCommand.Theme:
+                return await RunSetupAsync(settings, cancellationToken, SettingsSection.Theme).ConfigureAwait(false);
             case AppCommand.Status:
                 await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
                 return 0;
@@ -218,6 +240,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                     settings,
                     renderQuery: true,
                     cancellationToken).ConfigureAwait(false);
+                return 0;
+            case AppCommand.Memories:
+                EnsureInteractive();
+                await (_memories ?? throw new InvalidOperationException("The memory manager is unavailable."))
+                    .RunAsync(cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.Chat:
                 EnsureInteractive();
@@ -243,42 +270,19 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 EnsureInteractiveUnlessPreauthorized(options.Yes || options.PathAction == "status");
                 return await _installation.RunPathAsync(options, cancellationToken).ConfigureAwait(false);
             default:
-                EnsureInteractive();
-                return await RunMainMenuAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
+                throw new ArgumentOutOfRangeException(nameof(options), "Unsupported application command.");
         }
     }
 
-    /// <summary>Runs mandatory first-use setup or explains why redirected input cannot complete it.</summary>
-    private async Task<int> RunFirstSetupAsync(AppSettings settings, CancellationToken cancellationToken)
-    {
-        if (!IsInteractive)
-        {
-            _shell.RenderError(_text.Text("Error.SetupRequired"));
-            return 2;
-        }
 
-        var result = await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
-        return result;
-    }
-
-    /// <summary>Checks initial setup and terminal access before editing focused AI preferences.</summary>
-    private async Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken)
-    {
-        if (!current.SetupCompleted)
-        {
-            _shell.RenderError(_text.Text("Error.SetupRequired"));
-            return 2;
-        }
-
-        EnsureInteractive();
-        return await _setup.RunAiSettingsAsync(current, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>Requires a live terminal before collecting setup settings and credentials.</summary>
-    private async Task<int> RunSetupAsync(AppSettings current, CancellationToken cancellationToken)
+    /// <summary>Requires a live terminal before opening the shared settings screen at the requested section.</summary>
+    private async Task<int> RunSetupAsync(
+        AppSettings current,
+        CancellationToken cancellationToken,
+        SettingsSection initialSection = SettingsSection.General)
     {
         EnsureInteractive();
-        return await _setup.RunAsync(current, cancellationToken).ConfigureAwait(false);
+        return await _setup.RunAsync(current, cancellationToken, initialSection).ConfigureAwait(false);
     }
 
     /// <summary>Builds and renders the current application status from local services.</summary>
@@ -298,84 +302,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         await _activity.TryRecordAsync("status", "completed", null, new { promptCount }).ConfigureAwait(false);
     }
 
-    /// <summary>Runs the interactive command center until the user exits.</summary>
-    private async Task<int> RunMainMenuAsync(AppSettings initialSettings, int promptCount, CancellationToken cancellationToken)
-    {
-        var settings = initialSettings;
-        while (true)
-        {
-            MainMenuAction action;
-            try
-            {
-                action = _mainMenuView.Select();
-            }
-            catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                _shell.RenderNotice(_text.Text("Common.Cancelled"));
-                return 0;
-            }
-
-            try
-            {
-                switch (action)
-                {
-                    case MainMenuAction.Query:
-                        EnsureAiReady(settings);
-                        var query = _shell.ReadText(_text.Text("Query.Prompt"));
-                        await _conversationWorkflow.RunQueryAsync(
-                            query,
-                            settings,
-                            renderQuery: false,
-                            cancellationToken).ConfigureAwait(false);
-                        break;
-                    case MainMenuAction.Chat:
-                        EnsureAiReady(settings);
-                        await _conversationWorkflow.RunChatAsync(settings, cancellationToken).ConfigureAwait(false);
-                        break;
-                    case MainMenuAction.Costs:
-                        await TryRefreshPricingAsync(settings, true, cancellationToken).ConfigureAwait(false);
-                        _costsView.Render(await _pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false));
-                        break;
-                    case MainMenuAction.Status:
-                        await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
-                        break;
-                    case MainMenuAction.Setup:
-                        await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
-                        settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
-                        _text.SetLanguage(settings.Language);
-                        break;
-                    case MainMenuAction.TestAi:
-                        EnsureAiReady(settings);
-                        await _conversationWorkflow.RunConnectionTestAsync(settings, cancellationToken).ConfigureAwait(false);
-                        break;
-                    case MainMenuAction.Where:
-                        await _installation.RunWhereAsync(IsInteractive, cancellationToken).ConfigureAwait(false);
-                        break;
-                    case MainMenuAction.Path:
-                        await _installation.RunPathAsync(new CommandLineOptions(AppCommand.Path, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
-                        break;
-                    case MainMenuAction.InstallFont:
-                        await _installation.RunFontAsync(new CommandLineOptions(AppCommand.InstallFont, null, null, false, false, false, false, null), cancellationToken).ConfigureAwait(false);
-                        break;
-                    case MainMenuAction.ThirdParty:
-                        _thirdPartyView.Render();
-                        break;
-                    default:
-                        return 0;
-                }
-            }
-            catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                _shell.RenderNotice(_text.Text("Common.Cancelled"));
-                await _activity.TryRecordAsync(
-                    action.ToString().ToLowerInvariant(),
-                    "cancelled",
-                    null,
-                    new { reason = "escape" }).ConfigureAwait(false);
-            }
-            _shell.WriteLine();
-        }
-    }
 
     /// <summary>Refreshes official pricing and optional organization costs without blocking unrelated app work on failure.</summary>
     private async Task TryRefreshPricingAsync(AppSettings settings, bool force, CancellationToken cancellationToken)
@@ -471,13 +397,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
     /// <summary>Chooses commands where daily pricing is relevant and network access is expected.</summary>
     private static bool ShouldRefreshPricing(AppCommand command, AppSettings settings) =>
-        settings.SetupCompleted && command is (AppCommand.Main or AppCommand.Status or AppCommand.Query or AppCommand.Chat or AppCommand.TestAi or AppCommand.Costs);
+        settings.SetupCompleted && command is (AppCommand.Status or AppCommand.Query or AppCommand.Chat or AppCommand.TestAi or AppCommand.Costs);
 
     /// <summary>Returns the stable status-bar name for a parsed command.</summary>
     private static string ToCommandName(AppCommand command) => command switch
     {
         AppCommand.TestAi => "test-ai",
         AppCommand.AiSettings => "ai-settings",
+        AppCommand.Theme => "theme",
         AppCommand.InstallFont => "install-font",
         AppCommand.ThirdParty => "third-party",
         _ => command.ToString().ToLowerInvariant()

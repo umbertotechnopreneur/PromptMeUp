@@ -22,15 +22,24 @@ internal static partial class UiTextCatalog
     private static IReadOnlyDictionary<string, LocalizedText> CreateEntries()
     {
         var entries = new Dictionary<string, LocalizedText>(StringComparer.Ordinal);
+        AddAboutEntries(entries);
         AddApplicationEntries(entries);
         AddArtifactsEntries(entries);
         AddCommandsEntries(entries);
         AddConversationEntries(entries);
+        AddContextBreakdownEntries(entries);
         AddCostsEntries(entries);
         AddErrorsEntries(entries);
+        AddFormEntries(entries);
+        AddHelpBrowserEntries(entries);
+        AddLennaEntries(entries);
+        AddMemoryManagerEntries(entries);
+        AddMemoryManagerValidationEntries(entries);
+        AddSettingsEntries(entries);
         AddSetupEntries(entries);
         AddStatusEntries(entries);
         AddSystemIntegrationEntries(entries);
+        AddThemeEntries(entries);
         return entries;
     }
 }

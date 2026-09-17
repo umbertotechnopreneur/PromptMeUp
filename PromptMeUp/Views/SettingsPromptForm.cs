@@ -1,0 +1,136 @@
+﻿// SPDX-License-Identifier: MIT
+
+using PromptMeUp.Services;
+using Spectre.Console;
+
+namespace PromptMeUp.Views;
+
+/// <summary>Keeps every settings section accessible when the terminal cannot host an alternate-buffer form.</summary>
+internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions options)
+{
+    /// <summary>Edits the shared draft from the requested section and saves only through the explicit action.</summary>
+    internal bool Run(IReadOnlyList<FormPage> pages, int initialPage, Func<string?> validate)
+    {
+        var pageIndex = initialPage;
+        while (true)
+        {
+            var page = pages[pageIndex];
+            var fields = page.Fields.Where(field => field.IsVisible?.Invoke() != false).ToArray();
+            TerminalTheme.WriteSection(console,
+                TerminalTheme.IconPrefix(options, "⚙️", "~") + text.Text("Settings.Title"), text.Text(page.TitleKey));
+            RenderFields(fields);
+            if (page.Overview is { } overview)
+            {
+                console.Write(overview());
+                console.WriteLine();
+            }
+            if (page.Preview is { } preview)
+            {
+                console.Write(preview());
+                console.WriteLine();
+            }
+            var actions = fields.Select((field, index) => new PromptAction("field", index, text.Text(field.LabelKey)))
+                .Concat(pages.Select((section, index) => new PromptAction("section", index,
+                    text.Text("Form.Sections") + ": " + text.Text(section.TitleKey))))
+                .Append(new PromptAction("save", 0, TerminalTheme.IconPrefix(options, "💾", "+") + text.Text("Form.Save")))
+                .Append(new PromptAction("cancel", 0, TerminalTheme.IconPrefix(options, "↩️", "x") + text.Text("Form.Cancel")))
+                .ToArray();
+            var selected = console.Prompt(new SelectionPrompt<PromptAction>()
+                .Title(Markup.Escape(text.Text(page.HelpKey ?? "Form.Help")))
+                .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"))
+                .UseConverter(action => Markup.Escape(action.Label))
+                .AddChoices(actions));
+            switch (selected.Kind)
+            {
+                case "field":
+                    Edit(fields[selected.Index]);
+                    break;
+                case "section":
+                    if (pages[selected.Index].Open is { } open)
+                    {
+                        open();
+                    }
+                    else
+                    {
+                        pageIndex = selected.Index;
+                    }
+                    break;
+                case "save":
+                    var error = validate();
+                    if (error is null)
+                    {
+                        return true;
+                    }
+                    console.Write(new Text(error, Style.Parse(TerminalTheme.Error)));
+                    console.WriteLine();
+                    break;
+                case "cancel":
+                    return false;
+                default:
+                    throw new InvalidOperationException("Unsupported settings action.");
+            }
+        }
+    }
+
+    /// <summary>Shows aligned draft values with blank rows while keeping secret contents hidden.</summary>
+    private void RenderFields(IReadOnlyList<FormField> fields)
+    {
+        var grid = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
+        foreach (var field in fields)
+        {
+            var value = field.Secret
+                ? field.Display?.Invoke() ?? text.Text("Form.SecretInput")
+                : field.Choices?.Invoke().FirstOrDefault(choice => choice.Value == field.Read())?.Label ?? field.Read();
+            grid.AddRow(
+                new Text(text.Text(field.LabelKey), Style.Parse(TerminalTheme.Muted)),
+                new Text(SafeText(value), Style.Parse(TerminalTheme.FieldValue)));
+            grid.AddRow(new Text(" "), new Text(" "));
+        }
+        console.Write(grid);
+    }
+
+    /// <summary>Uses the same choice and validation rules as the fullscreen editor without echoing credentials.</summary>
+    private void Edit(FormField field)
+    {
+        string value;
+        if (field.Choices is not null)
+        {
+            var choices = field.Choices();
+            if (choices.Count == 0)
+            {
+                throw new InvalidOperationException("A choice field needs at least one available value.");
+            }
+            value = console.Prompt(new SelectionPrompt<FormChoice>()
+                .Title(Markup.Escape(text.Text(field.LabelKey)))
+                .HighlightStyle(Style.Parse(TerminalTheme.Accent))
+                .UseConverter(choice => Markup.Escape(choice.Label))
+                .AddChoices(choices.OrderBy(choice => choice.Value == field.Read() ? 0 : 1))).Value;
+        }
+        else
+        {
+            var prompt = new TextPrompt<string>(Markup.Escape(text.Text(field.LabelKey))).AllowEmpty();
+            if (field.Secret)
+            {
+                prompt.Secret(mask: null);
+            }
+            else if (!string.IsNullOrEmpty(field.Read()))
+            {
+                prompt.DefaultValue(field.Read());
+            }
+            value = console.Prompt(prompt.Validate(candidate =>
+            {
+                var error = candidate.Length > field.MaxLength
+                    ? text.Text("Form.InputTooLong", field.MaxLength)
+                    : field.Validate?.Invoke(candidate);
+                return error is null ? ValidationResult.Success() : ValidationResult.Error(Markup.Escape(error));
+            }));
+        }
+        field.Write(value);
+    }
+
+    /// <summary>Removes terminal controls while preserving the visible local text of ordinary preferences.</summary>
+    private static string SafeText(string value) =>
+        new(value.ReplaceLineEndings(" ").Select(character => char.IsControl(character) ? ' ' : character).ToArray());
+
+    private sealed record PromptAction(string Kind, int Index, string Label);
+}

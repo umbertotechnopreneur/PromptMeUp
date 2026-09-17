@@ -42,8 +42,8 @@ internal sealed class RegressionFixture : IDisposable
     internal OpenAiService CreateOpenAi(HttpClient http, ILogger<OpenAiService>? logger = null, IDatabaseService? database = null,
         string promptId = "query-system", ArtifactLimits? limits = null) => new(
         http, Secrets,
-        TestProxy.Create<IPromptCatalogService>((_, _) => Task.FromResult(new PromptDefinition(
-            promptId, 1, "Synthetic regression prompt", [],
+        TestProxy.Create<IPromptCatalogService>((_, args) => Task.FromResult(new PromptDefinition(
+            args[0] is "chat-display-intent" ? "chat-display-intent" : promptId, 1, "Synthetic regression prompt", [],
             new Dictionary<string, string> { ["en"] = "Answer the user's question." }, new Dictionary<string, string>()))),
         TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("~", "test", "PowerShell 7", "test", "test", "test")),
         database ?? Database, new AiCostCalculator(), Audit, new SensitiveDataRedactor(), new PromptInjectionProtectionService(),
@@ -80,6 +80,47 @@ internal sealed class RegressionFixture : IDisposable
             model,
             status = "completed",
             output = new[] { new { type = "message", content = new[] { new { type = "output_text", text = JsonSerializer.Serialize(new { answer_markdown = text, commands = Array.Empty<object>() }) } } } },
+            usage = new { input_tokens = inputTokens, output_tokens = 1, total_tokens = inputTokens + 1 }
+        });
+
+    /// <summary>Identifies the display classifier by its structured response properties in an outgoing provider payload.</summary>
+    internal static bool IsDisplayIntentRequest(string body)
+    {
+        using var request = JsonDocument.Parse(body);
+        return request.RootElement.GetProperty("text").TryGetProperty("format", out var format)
+               && format.GetProperty("schema").GetProperty("properties").TryGetProperty("session_summary", out _);
+    }
+
+    /// <summary>Builds a raw display-intent reply with independently observable provider usage.</summary>
+    internal static string DisplayIntentResponseJson(
+        string sessionSummary = "unchanged",
+        string commandSuggestions = "unchanged",
+        bool continueChat = true,
+        long inputTokens = 10) => JsonSerializer.Serialize(new
+        {
+            id = "synthetic-display-response",
+            model = "gpt-5.6-terra",
+            status = "completed",
+            output = new[]
+            {
+                new
+                {
+                    type = "message",
+                    content = new[]
+                    {
+                        new
+                        {
+                            type = "output_text",
+                            text = JsonSerializer.Serialize(new
+                            {
+                                session_summary = sessionSummary,
+                                command_suggestions = commandSuggestions,
+                                continue_chat = continueChat
+                            })
+                        }
+                    }
+                }
+            },
             usage = new { input_tokens = inputTokens, output_tokens = 1, total_tokens = inputTokens + 1 }
         });
 

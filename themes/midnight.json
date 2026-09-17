@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "id": "midnight",
+  "name": "Midnight",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Periwinkle and moonlit blue on a nearly black indigo background.",
+  "colors": {
+    "background": "#0B0C19",
+    "primary": "#F5F5FF",
+    "muted": "#C1C3DE",
+    "accent": "#AAAFFF",
+    "info": "#86D6F5",
+    "divider": "#8185A8",
+    "success": "#A0E3B5",
+    "warning": "#F7D98D",
+    "error": "#FCA4B8",
+    "selectionBackground": "#AAAFFF",
+    "selectionForeground": "#0B0C19"
+  }
+}

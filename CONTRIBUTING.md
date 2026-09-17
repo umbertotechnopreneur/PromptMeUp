@@ -1,10 +1,10 @@
 # Contributing to PromptMeUp
 
-Every contribution should make the next terminal step clearer, safer, or easier to understand.
+Thanks for helping with PromptMeUp. A clearer sentence, a bug fix, or a better example can all make someone's next terminal command easier.
 
-PromptMeUp is deliberately small. Lead with the user outcome, keep the change focused, and bring concrete validation so the improvement is easy to trust and review.
+Keep changes small and explain who they help. Tell us what you checked so we can review the change without guessing.
 
-## Choose the right contribution path
+## Before you start
 
 - Read [README.md](README.md), [Privacy and data flow](docs/PRIVACY.md), and [Security](SECURITY.md).
 - Read `AGENTS.md` and `.github/copilot-instructions.md` before changing the repository.
@@ -26,31 +26,33 @@ pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
 ```
 
-For agent-driven work, run automated tests and CLI smoke tests only when explicitly requested by the user. Implementation, review, commit, and push requests do not authorize test execution. When requested, run the appropriate tests, such as:
+If you're using a coding assistant, it must wait for an explicit request before running automated tests or CLI smoke tests (quick checks that launch the app). A request to implement, review, commit, or push isn't permission to run tests. When tests are requested, use the ones that fit the change, for example:
 
 ```powershell
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-The formatting helper applies the fixes supported by `dotnet format`. The `-Verify` mode is read-only and is the final CI gate for formatting issues that remain after automatic fixes.
+The formatting helper uses `dotnet format` to fix formatting. Run it with `-Verify` to check the result without changing files. CI uses that check too.
 
-## Protect the product promises
+## Keep these rules in mind
 
-- Keep the application split into models, services, views, and the application orchestrator.
-- Keep every command execution behind exact preview and explicit authorization.
-- Treat AI risk scoring as advisory; retain conservative local checks.
+- Keep data in models, app behavior in services, and display code in views. The application layer connects them.
+- Show the exact command and ask for approval before running it.
+- Keep the local risk checks. An AI review adds advice; it can't approve a command.
 - Keep secrets out of command-line arguments, settings, SQLite payloads, logs, tests, and screenshots.
-- Put runtime AI prompts in `/prompt` as validated YAML with metadata and all six localized texts.
+- Put the app's AI prompts in `/prompt`, using the required YAML fields and all six translations.
 - Add a brief XML `<summary>` to every C# implementation method. Add small inline hints only where a non-obvious algorithm needs them.
 - Keep `AGENTS.md` and `.github/copilot-instructions.md` aligned.
-- Preserve cross-platform behavior and keep portable archives canonical; platform installers must remain optional release surfaces.
+- Keep Windows, Linux, and macOS working. Portable archives are the main download format; installers are optional.
 
-## Make the outcome easy to review
+## Send your change for review
 
-Explain the user-visible outcome, the safety/privacy impact, the files or layers changed, and the commands used to validate the result. Keep generated output and unrelated formatting out of the change.
+Explain what changes for the person using `hm`, which files you changed, and what you checked. Mention any effect on command safety or privacy. Leave build output and unrelated formatting out of the pull request.
 
-AI tools may assist, but contributors remain responsible for correctness, security, attribution, and license compatibility.
+You're responsible for the work you submit, including code written with AI tools. Check that it works as intended, handles data safely, and includes the right credits and licenses.
 
-Write repository prose and code comments in English; preserve all six runtime translations. See [governance](GOVERNANCE.md) for the maintainer workflow and [the release process](docs/RELEASING.md) for packaging. When adding or updating dependencies, review direct and transitive licenses and preserve their full upstream notices; package export fails for unknown dependency families.
+Write docs and code comments in plain English, as if you're explaining the project to a friend. Keep all six app translations up to date. See [how the project is run](GOVERNANCE.md) and [how releases are made](docs/RELEASING.md) for more details.
+
+When you add or update a library, check its license and those of the libraries it depends on. Keep their full notices. Packaging stops if it finds a library the license exporter doesn't recognize.
 
 By contributing, you confirm that you can submit the work under the repository's [MIT License](LICENSE).

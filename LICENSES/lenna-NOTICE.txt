@@ -1,0 +1,23 @@
+Lenna terminal portrait
+
+Adapted from the existing YAi! resource src/YAi.Client.CLI/Lenna.ps1.
+Source project: https://github.com/umbertotechnopreneur/YAi
+
+Original resource header:
+Author: Umberto Giacobbi 2026 - All rights reserved.
+Website: https://umbertogiacobbi.biz
+YAi Lenna ASCII art resource.
+
+The source repository distributes its work under PolyForm Noncommercial 1.0.0.
+Those terms are preserved in lenna-legacy-LICENSE.txt:
+https://polyformproject.org/licenses/noncommercial/1.0.0
+
+PromptMeUp extracts the existing ANSI resource's 78-by-78 RGB pixels into a
+compressed embedded resource. The original colors are preserved; the new
+renderer centers and scales the portrait for the terminal without invoking
+the legacy PowerShell script.
+
+The underlying Lenna photograph retains its original third-party rights.
+The legacy source supplies no separate photograph license. This notice does
+not claim that the photograph is MIT-licensed or public domain.
+Background: https://en.wikipedia.org/wiki/Lenna

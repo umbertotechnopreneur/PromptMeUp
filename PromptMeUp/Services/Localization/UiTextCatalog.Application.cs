@@ -239,12 +239,12 @@ internal static partial class UiTextCatalog
             Spanish: "Desactiva animaciones o emoji para terminales limitados.",
             Vietnamese: "Tắt hoạt ảnh hoặc emoji cho terminal hạn chế."));
         entries.Add("Help.Setup", new(
-            English: "Open first-run / AI setup.",
-            Italian: "Apre la configurazione iniziale / AI.",
-            French: "Ouvre la configuration initiale et IA.",
-            German: "Öffnet die Erst- und KI-Einrichtung.",
-            Spanish: "Abre la configuración inicial y de IA.",
-            Vietnamese: "Mở thiết lập ban đầu và AI."));
+            English: "Open Settings with General selected.",
+            Italian: "Apre Impostazioni con Generali selezionato.",
+            French: "Ouvre les réglages sur la section Général.",
+            German: "Öffnet die Einstellungen mit dem Abschnitt Allgemein.",
+            Spanish: "Abre Configuración con General seleccionado.",
+            Vietnamese: "Mở Cài đặt và chọn mục Chung."));
         entries.Add("Help.Status", new(
             English: "Show configuration and local service status.",
             Italian: "Mostra configurazione e servizi locali.",
@@ -259,6 +259,13 @@ internal static partial class UiTextCatalog
             German: "Führt den YAML-Verbindungsprompt mit Fernschreiber-Effekt aus.",
             Spanish: "Ejecuta el prompt YAML de conexión con efecto teletipo.",
             Vietnamese: "Chạy prompt YAML kiểm tra kết nối với hiệu ứng máy đánh chữ."));
+        entries.Add("Help.Lenna", new(
+            English: "Show the bundled Lenna calibration portrait centered in the terminal. Works offline.",
+            Italian: "Mostra al centro del terminale il ritratto di calibrazione Lenna incluso. Funziona offline.",
+            French: "Affiche au centre du terminal le portrait de calibration Lenna fourni. Fonctionne hors ligne.",
+            German: "Zeigt das mitgelieferte Lenna-Kalibrierporträt mittig im Terminal. Funktioniert offline.",
+            Spanish: "Muestra centrado en el terminal el retrato de calibración Lenna incluido. Funciona sin conexión.",
+            Vietnamese: "Hiển thị ảnh chân dung hiệu chuẩn Lenna đi kèm ở giữa terminal. Hoạt động ngoại tuyến."));
         entries.Add("Help.ThirdParty", new(
             English: "Show direct dependencies and third-party licenses.",
             Italian: "Mostra dipendenze dirette e licenze di terze parti.",
@@ -344,12 +351,12 @@ internal static partial class UiTextCatalog
             Spanish: "Prompt único",
             Vietnamese: "Prompt đơn"));
         entries.Add("Main.Setup", new(
-            English: "AI setup",
-            Italian: "Configurazione AI",
-            French: "Configuration IA",
-            German: "KI-Einrichtung",
-            Spanish: "Configuración de IA",
-            Vietnamese: "Thiết lập AI"));
+            English: "Settings",
+            Italian: "Impostazioni",
+            French: "Réglages",
+            German: "Einstellungen",
+            Spanish: "Configuración",
+            Vietnamese: "Cài đặt"));
         entries.Add("Main.Status", new(
             English: "Application status",
             Italian: "Stato applicazione",

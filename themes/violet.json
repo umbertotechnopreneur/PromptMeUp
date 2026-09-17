@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "id": "violet",
+  "name": "Violet",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Soft lavender and lilac accents on a dark plum background.",
+  "colors": {
+    "background": "#1A102C",
+    "primary": "#F9F2FF",
+    "muted": "#D1BFE0",
+    "accent": "#CEABFF",
+    "info": "#8DDDFF",
+    "divider": "#9A83B3",
+    "success": "#A9E7BD",
+    "warning": "#F7D98A",
+    "error": "#FFA5BC",
+    "selectionBackground": "#CEABFF",
+    "selectionForeground": "#1A102C"
+  }
+}

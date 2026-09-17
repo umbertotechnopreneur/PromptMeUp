@@ -22,12 +22,12 @@ internal static partial class UiTextCatalog
             Spanish: "PROMPTMEUP_CONTEXT_TOKENS sustituye el presupuesto de contexto guardado mientras esté definida.",
             Vietnamese: "PROMPTMEUP_CONTEXT_TOKENS ghi đè ngân sách ngữ cảnh đã lưu khi biến này được đặt."));
         entries.Add("AiSettings.Help", new(
-            English: "Configure AI models, behavior, and context limits",
-            Italian: "Configura modelli AI, comportamento e limiti del contesto",
-            French: "Configurer les modèles IA, le comportement et les limites de contexte",
-            German: "KI-Modelle, Verhalten und Kontextgrenzen konfigurieren",
-            Spanish: "Configurar modelos de IA, comportamiento y límites de contexto",
-            Vietnamese: "Cấu hình mô hình AI, hành vi và giới hạn ngữ cảnh"));
+            English: "Open Settings with AI selected (--ai-setup or --ai-settings)",
+            Italian: "Apre Impostazioni con AI selezionato (--ai-setup o --ai-settings)",
+            French: "Ouvre les réglages sur la section IA (--ai-setup ou --ai-settings)",
+            German: "Öffnet die Einstellungen mit dem Abschnitt KI (--ai-setup oder --ai-settings)",
+            Spanish: "Abre Configuración con IA seleccionado (--ai-setup o --ai-settings)",
+            Vietnamese: "Mở Cài đặt và chọn mục AI (--ai-setup hoặc --ai-settings)"));
         entries.Add("AiSettings.Saved", new(
             English: "AI settings saved.",
             Italian: "Impostazioni AI salvate.",

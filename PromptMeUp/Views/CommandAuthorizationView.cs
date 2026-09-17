@@ -45,17 +45,19 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
             command,
             TerminalTheme.Info);
         _console.MarkupLine(
-            $"[bold {color.ToMarkup()}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/]");
+            $"[bold {color}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/]");
         var reviewIcon = TerminalTheme.IconPrefix(_shell.Options, assessment.UsedAi ? "🤖" : "🛡", assessment.UsedAi ? "AI" : "!");
         _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(reviewIcon)}{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
         _console.WriteLine();
         _markdown.Render(assessment.DescriptionMarkdown);
+        _console.WriteLine();
         if (!string.IsNullOrWhiteSpace(assessment.Advisory))
         {
-            _console.MarkupLine($"[yellow]{Markup.Escape(assessment.Advisory)}[/]");
+            _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(assessment.Advisory)}[/]");
         }
 
-        _console.MarkupLine($"[yellow]{Markup.Escape(_text.Text("Command.SendOutput"))}[/]");
+        _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.SendOutput"))}[/]");
+        _console.WriteLine();
         var authorized = _console.Prompt(new ConfirmationPrompt(
             Markup.Escape(_text.Text("Command.Authorize")))
         {
@@ -63,7 +65,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         });
         if (!authorized)
         {
-            _console.MarkupLine($"[yellow]{Markup.Escape(_text.Text("Command.Cancelled"))}[/]");
+            _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.Cancelled"))}[/]");
             return null;
         }
 
@@ -74,8 +76,9 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     public void RenderExecutionResult(CommandExecutionResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        var outputColor = result.ExitCode == 0 && !result.TimedOut ? "green" : "yellow";
-        var resultIcon = TerminalTheme.IconPrefix(_shell.Options, outputColor == "green" ? "✅" : "⚠", outputColor == "green" ? "+" : "!");
+        var succeeded = result.ExitCode == 0 && !result.TimedOut;
+        var outputColor = succeeded ? TerminalTheme.Success : TerminalTheme.Warning;
+        var resultIcon = TerminalTheme.IconPrefix(_shell.Options, succeeded ? "✅" : "⚠", succeeded ? "+" : "!");
         TerminalTheme.WriteRule(_console, $"{resultIcon}{_text.Text("Command.Output")}", outputColor);
         if (!string.IsNullOrWhiteSpace(result.StandardOutput))
         {
@@ -91,7 +94,13 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         if (!string.IsNullOrWhiteSpace(result.StandardError))
         {
             var errorIcon = TerminalTheme.IconPrefix(_shell.Options, "⚠", "!");
-            _console.MarkupLine($"[bold red]{Markup.Escape(errorIcon)}STDERR[/]");
+            var labelDecoration = _shell.Options.NoAnimation
+                ? Decoration.Bold
+                : Decoration.Bold | Decoration.SlowBlink;
+            _console.Markup($"[bold {TerminalTheme.Error}]{Markup.Escape(errorIcon)}[/]");
+            _console.Write(new Text("STDERR", new Style(
+                foreground: Style.Parse(TerminalTheme.Error).Foreground, decoration: labelDecoration)));
+            _console.WriteLine();
             foreach (var line in result.StandardError.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
             {
                 _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
@@ -117,14 +126,14 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         _console.WriteLine();
     }
 
-    /// <summary>Maps risk severity to a stable visual color.</summary>
-    private static Color RiskColor(CommandRiskLevel level) => level switch
+    /// <summary>Maps risk severity to the active theme while retaining separate labels and indicators.</summary>
+    private static string RiskColor(CommandRiskLevel level) => level switch
     {
-        CommandRiskLevel.Low => Color.Green,
-        CommandRiskLevel.Medium => Color.Yellow,
-        CommandRiskLevel.High => Color.Orange1,
-        CommandRiskLevel.Critical => Color.Red,
-        _ => Color.Grey70
+        CommandRiskLevel.Low => TerminalTheme.Success,
+        CommandRiskLevel.Medium => TerminalTheme.Warning,
+        CommandRiskLevel.High => TerminalTheme.Warning,
+        CommandRiskLevel.Critical => TerminalTheme.Error,
+        _ => TerminalTheme.Muted
     };
 
     /// <summary>Maps each risk level to a recognisable, accessible command-review indicator.</summary>

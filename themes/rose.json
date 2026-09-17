@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "id": "rose",
+  "name": "Rose",
+  "author": "PromptMeUp contributors",
+  "website": "https://github.com/umbertotechnopreneur/PromptMeUp",
+  "description": "Rose pink highlights with pale blue information on dark burgundy.",
+  "colors": {
+    "background": "#281320",
+    "primary": "#FFF2F6",
+    "muted": "#DEC1D0",
+    "accent": "#FFA9CF",
+    "info": "#A8D8FF",
+    "divider": "#AF879B",
+    "success": "#AFE6C3",
+    "warning": "#FFE097",
+    "error": "#FFACA4",
+    "selectionBackground": "#FFA9CF",
+    "selectionForeground": "#281320"
+  }
+}

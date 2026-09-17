@@ -25,6 +25,8 @@ public sealed record AppSettings(
 {
     public int ContextTokenBudget { get; init; } = 16_000;
 
+    public string Theme { get; init; } = "cyan";
+
     public const string DefaultEndpoint = "https://api.openai.com/v1/responses";
     public const string DefaultApiKeyVariable = "OPENAI_API_KEY";
     public const string DefaultAdminKeyVariable = "OPENAI_ADMIN_KEY";

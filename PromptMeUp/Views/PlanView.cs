@@ -19,8 +19,11 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text) : 
     public void Render(ExecutionPlan plan)
     {
         TerminalTheme.WriteRule(console, text.Text("Plan.Help"), TerminalTheme.Accent);
-        console.Write(new Panel(new Text(plan.Goal + "\n" + plan.Directory)).BorderColor(Color.Cyan1));
-        var table = new Table().Border(TableBorder.Rounded).AddColumn("#").AddColumn(text.Text("Plan.Step")).AddColumn(text.Text("Plan.Status"));
+        console.Write(new Rows(
+            new Text(plan.Goal, Style.Parse(TerminalTheme.Primary)),
+            new Text(plan.Directory, Style.Parse(TerminalTheme.Muted))));
+        console.WriteLine();
+        var table = new Table().Border(TableBorder.Simple).AddColumn("#").AddColumn(text.Text("Plan.Step")).AddColumn(text.Text("Plan.Status"));
         for (var index = 0; index < plan.Steps.Count; index++)
         {
             var step = plan.Steps[index];

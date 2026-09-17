@@ -14,56 +14,40 @@ public sealed class SetupWorkflow(
     ApplicationActivityRecorder activity,
     ISetupView setupView,
     IConsoleShellView shell,
-    ILocalizationService text)
+    ILocalizationService text,
+    IThemeCatalogService? themes = null,
+    IPricingService? pricing = null,
+    MemoryManagerWorkflow? memories = null)
 {
-    /// <summary>Edits only AI preferences after initial setup without touching secrets or other configuration.</summary>
-    public async Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS")))
-        {
-            shell.RenderNotice(text.Text("AiSettings.ContextOverride"));
-        }
-        var selected = setupView.CollectAiSettings(current);
-        if (selected is null)
-        {
-            shell.RenderNotice(text.Text("Setup.Cancelled"));
-            await activity.TryRecordAsync("ai-settings", "cancelled", null, new { }).ConfigureAwait(false);
-            return 0;
-        }
+    /// <summary>Opens the shared settings screen with appearance selected.</summary>
+    public Task<int> RunThemeAsync(AppSettings current, CancellationToken cancellationToken) =>
+        RunAsync(current, cancellationToken, SettingsSection.Theme);
 
-        var updated = current with
-        {
-            AiEnabled = selected.AiEnabled,
-            Model = selected.Model,
-            ReasoningEffort = selected.ReasoningEffort,
-            OutputDetail = selected.OutputDetail,
-            ReviewCommandsWithAi = selected.ReviewCommandsWithAi,
-            PromptCachingEnabled = selected.PromptCachingEnabled,
-            MaxConversationTurns = selected.MaxConversationTurns,
-            MaxMessageCharacters = selected.MaxMessageCharacters,
-            MaxContextPercent = selected.MaxContextPercent,
-            ContextTokenBudget = selected.ContextTokenBudget,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
-        await settings.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
-        shell.RenderSuccess(text.Text("AiSettings.Saved"));
-        await activity.TryRecordAsync("ai-settings", "completed", null, new
-        {
-            updated.AiEnabled,
-            updated.Model,
-            updated.ReasoningEffort,
-            updated.ContextTokenBudget
-        }).ConfigureAwait(false);
-        return 0;
-    }
+    /// <summary>Opens the shared settings screen with AI preferences selected.</summary>
+    public Task<int> RunAiSettingsAsync(AppSettings current, CancellationToken cancellationToken) =>
+        RunAsync(current, cancellationToken, SettingsSection.Ai);
 
-    /// <summary>Collects setup settings, persists secrets safely, saves preferences, and optionally tests OpenAI.</summary>
-    public async Task<int> RunAsync(AppSettings current, CancellationToken cancellationToken)
+    /// <summary>Collects all settings from the requested section, saves the submitted draft, and optionally tests OpenAI.</summary>
+    public async Task<int> RunAsync(
+        AppSettings current,
+        CancellationToken cancellationToken,
+        SettingsSection initialSection = SettingsSection.General)
     {
+        ArgumentNullException.ThrowIfNull(current);
+        if (!Enum.IsDefined(initialSection))
+        {
+            throw new ArgumentOutOfRangeException(nameof(initialSection));
+        }
         var submission = setupView.Collect(new SetupViewState(
             current,
             secrets.IsConfigured(current.ApiKeyVariable),
-            secrets.IsConfigured(current.AdminKeyVariable)));
+            secrets.IsConfigured(current.AdminKeyVariable))
+        {
+            InitialSection = initialSection,
+            Costs = pricing is null ? null : await pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false),
+            OpenMemories = () => OpenMemories(cancellationToken),
+            ContextBudgetOverridden = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS"))
+        });
         if (submission is null)
         {
             shell.RenderNotice(text.Text("Setup.Cancelled"));
@@ -71,6 +55,7 @@ public sealed class SetupWorkflow(
             return 0;
         }
 
+        var selectedTheme = themes?.Resolve(submission.Settings.Theme);
         var secretGuidance = new List<string>();
         if (submission.ApiKey is not null)
         {
@@ -82,7 +67,14 @@ public sealed class SetupWorkflow(
         }
 
         await settings.SaveAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
-        text.SetLanguage(submission.Settings.Language);
+        if (selectedTheme is not null)
+        {
+            TerminalTheme.Apply(selectedTheme);
+        }
+        if (submission.Settings.Language != current.Language)
+        {
+            text.SetLanguage(submission.Settings.Language);
+        }
         shell.RenderSuccess(text.Text("Setup.Saved"));
         foreach (var guidance in secretGuidance)
         {
@@ -99,6 +91,7 @@ public sealed class SetupWorkflow(
             new
             {
                 submission.Settings.Language,
+                submission.Settings.Theme,
                 submission.Settings.Model,
                 submission.Settings.ReasoningEffort,
                 submission.Settings.OutputDetail,
@@ -111,5 +104,12 @@ public sealed class SetupWorkflow(
             await conversationWorkflow.RunConnectionTestAsync(submission.Settings, cancellationToken).ConfigureAwait(false);
         }
         return 0;
+    }
+
+    /// <summary>Handles the memory navigation event while the passive settings draft remains open.</summary>
+    private void OpenMemories(CancellationToken cancellationToken)
+    {
+        var workflow = memories ?? throw new InvalidOperationException("The memory manager is unavailable.");
+        workflow.RunAsync(cancellationToken).GetAwaiter().GetResult();
     }
 }

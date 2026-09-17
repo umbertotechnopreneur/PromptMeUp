@@ -103,6 +103,84 @@ public sealed partial class PersistentMemoryService
         }
     }
 
+    /// <summary>Updates one accessible note without changing its identifier or replacing a different saved note.</summary>
+    public async Task<PersistentMemory> UpdateAsync(string id, string text, bool global, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParseExact(id, "N", out _))
+        {
+            throw new MemoryValidationException(_text.Text("Memory.InvalidId"));
+        }
+        var note = ValidateInput(text);
+        var projectScope = ResolveProjectScope();
+        var targetScope = global ? GlobalScope : projectScope;
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var transaction = connection.BeginTransaction();
+            await using var existing = connection.CreateCommand();
+            existing.Transaction = transaction;
+            existing.CommandText = """
+                SELECT scope_key FROM persistent_memories
+                WHERE id = $id AND (scope_key = $project OR scope_key = $global);
+                """;
+            existing.Parameters.AddWithValue("$id", id);
+            existing.Parameters.AddWithValue("$project", projectScope);
+            existing.Parameters.AddWithValue("$global", GlobalScope);
+            var originalScope = await existing.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string
+                ?? throw new MemoryValidationException(_text.Text("Memory.NotFound"));
+
+            await using var duplicate = connection.CreateCommand();
+            duplicate.Transaction = transaction;
+            duplicate.CommandText = "SELECT COUNT(*) FROM persistent_memories WHERE scope_key = $scope AND body = $body AND id <> $id;";
+            duplicate.Parameters.AddWithValue("$scope", targetScope);
+            duplicate.Parameters.AddWithValue("$body", note);
+            duplicate.Parameters.AddWithValue("$id", id);
+            if (Convert.ToInt64(await duplicate.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                throw new MemoryValidationException(_text.Text("Memory.Duplicate"));
+            }
+
+            await using var count = connection.CreateCommand();
+            count.Transaction = transaction;
+            count.CommandText = "SELECT COUNT(*) FROM persistent_memories WHERE scope_key = $scope;";
+            count.Parameters.AddWithValue("$scope", targetScope);
+            var storedCount = Convert.ToInt64(await count.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
+            if (storedCount > MaximumMemoriesPerScope)
+            {
+                throw new InvalidDataException(_text.Text("Memory.Invalid"));
+            }
+            if (originalScope != targetScope && storedCount == MaximumMemoriesPerScope)
+            {
+                throw new MemoryValidationException(_text.Text("Memory.Limit", MaximumMemoriesPerScope));
+            }
+
+            var updated = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            await using var save = connection.CreateCommand();
+            save.Transaction = transaction;
+            save.CommandText = """
+                UPDATE persistent_memories SET scope_key = $scope, body = $body, updated_unix = $updated
+                WHERE id = $id AND scope_key = $original;
+                """;
+            save.Parameters.AddWithValue("$scope", targetScope);
+            save.Parameters.AddWithValue("$body", note);
+            save.Parameters.AddWithValue("$updated", updated.ToUnixTimeSeconds());
+            save.Parameters.AddWithValue("$id", id);
+            save.Parameters.AddWithValue("$original", originalScope);
+            if (await save.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) != 1)
+            {
+                throw new MemoryValidationException(_text.Text("Memory.NotFound"));
+            }
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Explicit memory updated. Global={Global}", global);
+            return new PersistentMemory(id, note, global, updated);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     /// <summary>Lists bounded notes in the current project and global scopes, reapplying current credential redaction.</summary>
     public async Task<IReadOnlyList<PersistentMemory>> ListAsync(CancellationToken cancellationToken)
     {

@@ -9,6 +9,7 @@ public enum AppCommand
     Version,
     Setup,
     AiSettings,
+    Theme,
     Status,
     Query,
     Diagnose,
@@ -17,12 +18,15 @@ public enum AppCommand
     Preview,
     Recipes,
     Chat,
+    Memories,
     TestAi,
     Costs,
     ThirdParty,
     Where,
     InstallFont,
-    Path
+    Path,
+    Lenna,
+    About
 }
 
 public sealed record CommandLineOptions(

@@ -24,10 +24,13 @@
   <img src="https://img.shields.io/badge/early%20preview-F59E0B" alt="Early preview" />
 </p>
 
-Use `hm` when you need help with a command, a flag, or an error message. Describe the problem in your own words. PromptMeUp uses your OpenAI API account to explain what to do and suggest PowerShell commands, which you can review before running.
+Forgot a command? Stuck on an error? Ask `hm` in your own words. It uses your OpenAI API account to explain what to try and suggest PowerShell commands. You read them and decide what to run.
 
 > [!NOTE]
-> PromptMeUp is an early source preview. There are no public binary releases yet. To try it, [build it locally](#get-started).
+> PromptMeUp is still an early version. There are no ready-to-download releases yet, but you can [build it yourself](#get-started).
+
+> [!NOTE]
+> **MSIX installers are temporarily unavailable.** We're working on the code-signing certificate needed to distribute them. Portable downloads remain the supported option.
 
 ## Meet `hm`
 
@@ -37,30 +40,34 @@ Use `hm` when you need help with a command, a flag, or an error message. Describ
 hm "How do I undo my last local commit without losing my changes?"
 ```
 
-Read the answer, continue into a conversation, or inspect a suggested command. Nothing in the answer runs automatically. You can decline a command and keep asking questions.
+Read the answer, ask a follow-up, or take a closer look at a suggested command. Nothing runs automatically. You can say no to a command and keep chatting.
 
-For several related questions, start with `hm --chat`. Your earlier terminal output stays visible, and `hm` stops when you exit; there is no background agent.
+Each menu choice has a number starting at **0**: with up to ten choices, press its digit to select it immediately; with more choices, type the number and press Enter. Selecting a command opens its exact preview and risk assessment, where you still decide whether to authorize it. If the AI suggests no commands, a single question offers **Finish here** or **Continue in chat**, while an ongoing chat goes straight back to the message prompt.
+
+Have a few questions? Start with `hm --chat`. Your earlier terminal output stays where it was, and `hm` closes when you're done. Nothing keeps running in the background.
+
+In chat and interactive diagnostics, pasted text keeps its line breaks and waits for you to press Enter before sending. Use the arrow keys to review or edit it first. This requires a terminal that supports bracketed paste, which marks pasted text separately from keyboard input; diagnostic files can also be supplied with `--input-file`.
 
 ## A few moments with `hm`
 
-![Green CRT rendering of a question about finding large files, an explanation, a suggested command, and a menu with execution declined.](docs/assets/screen-ask-green.png)
+![Example of asking hm to find large files, reading its answer, and choosing not to run the command.](docs/assets/screen-ask-green.png)
 
 <table>
 <tr>
 <td width="50%" valign="top">
 <strong>Pause before you run</strong><br /><br />
-<img src="docs/assets/screen-review-amber.png" alt="Amber and cyan CRT rendering of the exact command, local risk review, and explicit approval or cancellation." />
+<img src="docs/assets/screen-review-amber.png" alt="Example of reviewing a command and its risks before choosing to run or cancel it." />
 <br />Review the exact command before approving it.
 </td>
 <td width="50%" valign="top">
 <strong>Your starting point</strong><br /><br />
-<img src="docs/assets/screen-center-violet.png" alt="Violet and cyan CRT rendering of the command center, showing sample settings and navigation." />
-<br />A question, a conversation, or a quick look at your settings.
+Run <code>hm</code> to browse help, or <code>hm --setup</code> to open settings.<br /><br />
+General shows your setup, usage, and estimated costs. Use the sidebar to change the model, API keys, chat limits, or colors.
 </td>
 </tr>
 </table>
 
-*These images illustrate the product with sample content. They are not screenshots or selectable themes; the real layout adapts to your terminal.*
+*These are illustrations with sample content, not screenshots. The colors and layout in your terminal may look different.*
 
 ## Remember the details you keep repeating
 
@@ -74,19 +81,29 @@ Save a preference or a useful project fact from inside chat:
 
 Notes without `global` belong to the current project. They remain available the next time you open `hm`. Use `/memories` to see what is saved and `/forget <id>` to remove a note.
 
-Each request can include up to five selected notes, within 800 estimated tokens. Project notes are matched by shared words in your question; global notes can be included across projects. Saving a note makes no extra AI call. [How memories work](docs/OPENAI_COSTS_AND_CACHING.md).
+Choose **Memories** in the Help or Settings sidebar, or run `hm --memories`, to read, create, edit, and delete saved notes locally. Saving applies immediately; deletion asks for confirmation. Chat and the first question show a compact reminder of the memory commands.
 
-## Change the model without repeating setup
+`hm` picks up to five notes to include with a question, looking for shared words in project notes. Global notes can be used in any project. Saving a note makes no extra AI call. See [how memories work](docs/OPENAI_COSTS_AND_CACHING.md) for the limits and how notes are picked.
+
+## Keep your settings in one place
 
 ```powershell
-hm --ai-settings
+hm --setup
+hm --ai-setup
+hm --theme
 ```
 
-After the first setup, this opens just the AI preferences: model, reasoning level, answer length, command review, caching, and conversation limits. Your language, keys, and other settings stay as they are.
+These commands open the same Settings screen at General, AI, or Theme. `--ai-settings` also works in place of `--ai-setup`. Pick a section in the sidebar, make your changes, then choose Save or Cancel. You can try theme colors before saving.
 
-Ordinary questions and chat use a default input budget of **16,000 estimated tokens**. In chat, `/context` or `/status` shows how much is currently retained, the model's capacity, and your chosen budget. The last call's input/output tokens and the session totals appear separately. A `~` marks a local estimate.
+Choose **About** in Help or Settings to read about the project. When you close it, you'll be back where you left off, with any unsaved settings still there. You can also type `hm about`.
 
-Use `/clear` to start a fresh conversation within the session. It keeps saved notes and usage totals. If a question is too large, `hm` leaves the chat open so you can shorten it and try again.
+In chat, `/context` or `/status` shows how much of the conversation `hm` is keeping for the next question. The default limit is **16,000 estimated tokens** — the small pieces of text an AI model reads. You'll also see usage for the last answer and the whole chat. A `~` means the number is an estimate.
+
+Use `/clear` to start fresh in the same chat. Your saved notes and usage totals stay. If a question is too long, `hm` lets you shorten it and try again.
+
+Want less output? Say **“Hide the session summary and command previews”** in chat. You can hide or show either one separately, for example **“Show the session summary”**. The choice lasts for this chat, survives `/clear`, and resets when you start a new chat. Existing terminal output stays in your scrollback.
+
+`/status` and `/context` still show the summary when you ask. Hiding command previews removes the suggested-command menu; commands may still appear in answers. Use `/run <command>` to review one: its exact preview, risk assessment, and approval remain required. Understanding these chat preferences uses an additional AI call, included in usage and cost totals.
 
 ## Get started
 
@@ -100,51 +117,57 @@ dotnet run --project PromptMeUp/PromptMeUp.csproj -- --setup
 dotnet run --project PromptMeUp/PromptMeUp.csproj -- "How do I list the largest files here?"
 ```
 
-Setup asks for your language, model, answer style, and command-review preferences. The interface supports English, Italian, French, German, Spanish, and Vietnamese. It works without a special font; use `--no-emoji` or `--no-animation` if you prefer simpler output.
+Setup walks you through your language, model, answer style, and command checks. Choose from English, Italian, French, German, Spanish, and Vietnamese. You don't need a special font. Add `--no-emoji` or `--no-animation` if you prefer simpler output.
 
-Enter your API key through setup or your preferred secret manager, never as a command argument. On Windows, setup can save it to your current user's environment. The new key works immediately in the current `hm` process; before the next launch, fully close and reopen the terminal application, including the IDE if it hosts the terminal. On Linux and macOS, an entered key lasts for that process; configure your shell or secret manager for future launches.
+Enter your API key in setup or use your usual secret manager. Don't put it in a command. On Windows, setup can save the key for your user account. It works right away in the open `hm` session. Before starting `hm` again, fully close and reopen your terminal app — and your IDE too, if that's where the terminal runs. On Linux and macOS, a key entered in setup lasts only for that session; use your shell or secret manager to make it available next time.
 
-The examples elsewhere in this README use the `hm` command from a published build. While working from source, use `dotnet run --project PromptMeUp/PromptMeUp.csproj --` followed by the same arguments. Future downloads will appear on [GitHub Releases](https://github.com/umbertotechnopreneur/PromptMeUp/releases).
+The other examples use the shorter `hm` command. When running from source, replace it with `dotnet run --project PromptMeUp/PromptMeUp.csproj --` and keep the same arguments. Ready-to-download builds will appear on [GitHub Releases](https://github.com/umbertotechnopreneur/PromptMeUp/releases).
 
 ### Use a portable build
 
-You can publish a portable build for Windows, Linux, or macOS on x64 or Arm64. Keep its files together and add the folder containing `hm` to your user `PATH`. From a running copy, `hm --path install` previews that change; `hm --path status` and `hm --path remove` let you check or undo it. See [packaging a local build](docs/RELEASING.md#rehearse-a-release) for the commands.
+You can make a portable build for Windows, Linux, or macOS on x64 or Arm64. Keep its files together. To use `hm` from any folder, run `hm --path install` from that copy and review the proposed PATH change. Use `hm --path status` to check it or `hm --path remove` to undo it. The [release guide](docs/RELEASING.md#rehearse-a-release) has the build commands.
+
+### Windows installers
+
+The release workflow also prepares EXE installers for Windows x64 and ARM64. They install for your user account and add `hm` to your PATH. PowerShell 7 is still required to execute commands. These installers are unsigned, so Windows may show an unknown-publisher warning. See the [Windows packaging guide](docs/WINDOWS_PACKAGING.md#unsigned-exe-installers-for-x64-and-arm64) for upgrades and other installation methods.
 
 ## More than a single command
 
-Give `hm` a build log to investigate, ask it for a script draft, or work through a plan one step at a time. Scripts are saved for review; plans and recipes ask for fresh approval before running commands. File previews show the proposed changes and any collisions before you proceed.
+You can give `hm` a build log, ask for a script, or work through a task step by step. Saving a script doesn't run it. Plans and saved routines ask you to approve each command. File previews show what would change and flag files that are already there.
 
 | When you want to… | Use |
 | --- | --- |
 | Ask one question | `hm "your question"` |
 | Keep the conversation going | `hm --chat` |
+| Manage saved memories | `hm --memories` |
 | Diagnose an error or log | `hm --diagnose --file build.log` |
 | Draft or revise a PowerShell script | `hm --script "your request"` |
 | Work through a plan and resume it later | `hm --plan "your goal"` |
-| Inspect file effects before approval | `hm --preview copy --file report.txt --output backup` |
+| See what would happen to your files | `hm --preview copy --file report.txt --output backup` |
 | Save or reuse a personal routine | `hm --recipes` |
-| Change only AI preferences and context limits | `hm --ai-settings` |
-| Change language, keys, or other preferences | `hm --setup` |
-| Check configuration | `hm --status` |
-| Understand usage and estimates | `hm --costs` |
+| Open settings at AI preferences | `hm --ai-setup` or `hm --ai-settings` |
+| Open settings at general preferences | `hm --setup` |
+| Open settings at the theme preview | `hm --theme` |
+| Check your setup | `hm --status` |
+| Check usage and estimated costs | `hm --costs` |
 | See commands and options | `hm --help` |
 | See the libraries behind the app | `hm --third-party` |
 
-See the [CLI reference](docs/CLI_REFERENCE.md) for options and examples. PromptMeUp is for terminal work: commands, tools, errors, files, and scripts. General writing and image generation are outside its scope.
+The [command guide](docs/CLI_REFERENCE.md) has more examples and options. PromptMeUp helps with terminal work: commands, tools, errors, files, and scripts. It doesn't write general prose or generate images.
 
 ## Before you run a command
 
-`hm` checks each command locally and shows its risk assessment with the exact text to be run. The optional AI review adds an opinion; you still make the decision. An approval applies to that command only and expires.
+Before anything runs, `hm` checks the command on your machine and shows you the exact text and possible risks. You can also turn on an extra AI review. You make the final decision, and each approval is for one command and lasts for a limited time.
 
-Approved commands run as your current user through PowerShell, with a time limit and a limit on captured output. They can change real files and system state. PromptMeUp does not sandbox them.
+Approved commands run through PowerShell with your user account's permissions. They have a time limit and a limit on how much output `hm` captures, but they can still change your real files and system settings. They don't run in an isolated test environment.
 
-Settings, saved notes, logs, and request history are stored on your machine. For an AI answer, OpenAI receives your question, recent conversation, selected notes, some information about your terminal environment, and any command output you choose to share for a follow-up. `hm` filters recognizable credentials, but cannot identify every kind of confidential information.
+Your settings, notes, logs, and request history stay on your machine. To answer you, OpenAI receives your question, recent messages, selected notes, some details about your terminal, and any command output you share for a follow-up. `hm` removes secrets it recognizes, but it can't catch every private detail.
 
-Read [Privacy and data flow](docs/PRIVACY.md) for the details. OpenAI service terms and API charges are separate from this MIT-licensed app.
+See [what is saved and shared](docs/PRIVACY.md) for the details. The app is MIT-licensed; OpenAI's terms and API charges still apply.
 
 ## A weekend project that stayed
 
-PromptMeUp started as a pet project built over a weekend. We kept using it for everyday terminal questions in our team at [UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story), so we decided to share it. It is still a small project, and feedback from real use helps us decide what to work on next.
+We built PromptMeUp over a weekend, then kept reaching for it at [UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story). So we decided to share it. It's a small project, and hearing how you use it helps us decide what to improve next.
 
 ## Get involved
 
@@ -154,10 +177,10 @@ Documentation and contributions are in English; the app supports all six interfa
 
 | For users | For contributors |
 | --- | --- |
-| [CLI reference](docs/CLI_REFERENCE.md) | [Architecture](docs/ARCHITECTURE.md) |
-| [Privacy](docs/PRIVACY.md) | [Validation](docs/VALIDATION.md) |
+| [Command guide](docs/CLI_REFERENCE.md) | [How the code is organized](docs/ARCHITECTURE.md) |
+| [Privacy](docs/PRIVACY.md) | [Build and testing guide](docs/VALIDATION.md) |
 | [Costs and conversation memory](docs/OPENAI_COSTS_AND_CACHING.md) | [Release process](docs/RELEASING.md) |
-| [Support](SUPPORT.md) | [Governance](GOVERNANCE.md) |
+| [Support](SUPPORT.md) | [How the project is run](GOVERNANCE.md) |
 
 Security issue? [Report it privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new), following our [security policy](SECURITY.md).
 
@@ -165,7 +188,7 @@ Security issue? [Report it privately](https://github.com/umbertotechnopreneur/Pr
 
 PromptMeUp is released under the **[MIT License](LICENSE)**. Use it, adapt it, and build on it while keeping the copyright and license notice.
 
-Created by **Umberto Giacobbi**, with appreciation for every contributor and the libraries that make it possible. See [third-party attribution](THIRD_PARTY_NOTICES.md), [upstream license texts](LICENSES/README.md), and [artwork provenance](docs/assets/README.md).
+Created by **Umberto Giacobbi**. Thanks to everyone who contributes and to the people behind the libraries we use. See the [library credits](THIRD_PARTY_NOTICES.md), [license texts](LICENSES/README.md), and [artwork credits](docs/assets/README.md).
 
 ---
 
@@ -175,7 +198,7 @@ Created by **Umberto Giacobbi**, with appreciation for every contributor and the
 <tr>
 <td width="33%" valign="top">
 <h3>TrackMeUp</h3>
-Find your workday again. A local-first memory for Windows that helps you recover the context you thought you had lost.<br /><br />
+A Windows app that keeps a record of your work on your computer, so you can find where you left off.<br /><br />
 <a href="https://github.com/umbertotechnopreneur/TrackMeUp"><strong>Explore TrackMeUp →</strong></a>
 </td>
 <td width="33%" valign="top">
@@ -185,7 +208,7 @@ Curious about what else we are building? Make this your next stop.<br /><br />
 </td>
 <td width="33%" valign="top">
 <h3>Umberto Giacobbi</h3>
-The person, the products, and the ideas behind the work. Come say hello.<br /><br />
+More about me and the things I'm building. Come say hello.<br /><br />
 <a href="https://umbertogiacobbi.biz/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_workshop_creator"><strong>Visit my website →</strong></a>
 </td>
 </tr>

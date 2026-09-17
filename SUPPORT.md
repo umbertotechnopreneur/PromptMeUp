@@ -1,13 +1,19 @@
 # PromptMeUp support
 
-For questions about using `hm`, start in [GitHub Discussions](https://github.com/umbertotechnopreneur/PromptMeUp/discussions). Search existing discussions and issues first; someone may already have found an answer.
+Need a hand with `hm`? Ask in [GitHub Discussions](https://github.com/umbertotechnopreneur/PromptMeUp/discussions). Have a quick look through earlier questions first — the answer might already be there.
 
 For help with a setting or a command:
 
-- Use `hm --ai-settings` to change the model and conversation limits after initial setup.
-- In chat, `/context` shows the active context and token budget; `/memories` shows saved global and project notes.
-- See the [CLI reference](docs/CLI_REFERENCE.md) for command examples and the [memory guide](docs/OPENAI_COSTS_AND_CACHING.md) for an explanation of the counters.
+- Use `hm --ai-setup` (or `hm --ai-settings`) to change the model. Choose Conversation in the sidebar to adjust chat limits.
+- In chat, `/context` shows how much conversation `hm` is keeping; `/memories` shows your saved notes.
+- The [command guide](docs/CLI_REFERENCE.md) has examples. The [memory guide](docs/OPENAI_COSTS_AND_CACHING.md) explains the usage numbers.
 
-For a bug, open an [issue](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose) with your operating system, the `hm` version, what you expected, and a short example that reproduces the problem. Replace real filenames and content with sample data. Do not post API keys, saved memories, prompt history, unredacted command output, personal data, or private machine paths.
+Found a bug? Open an [issue](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose) and include:
 
-Report security vulnerabilities privately using [SECURITY.md](SECURITY.md), rather than a public issue or discussion.
+- Your operating system and `hm` version.
+- What you expected and what happened instead.
+- A small example we can use to see the same problem.
+
+Use made-up filenames and sample content. Leave out API keys, saved notes, chat history, private paths, and personal data. Check any command output for private details before posting it.
+
+If it's a security problem, please [report it privately](SECURITY.md).
