@@ -2,6 +2,13 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-17 — Install the memory commands in a local MSIX update
+
+- Built the user-requested local x64 MSIX `0.1.5.17` from memory-command commit `1de3d17`, including the command-menu number style from `8df509a` in an isolated source snapshot. Kept the existing package identity and trusted current-user signing certificate.
+- Installed the update and verified Windows package status, the `hm` execution alias, and matching hashes for the application assembly and updated memory/chat prompts. Preserved the signed MSIX and installation evidence under ignored artifacts.
+
+Validation: preflight, restore, formatting, XML comments, Release build, self-contained Windows publish, exported dependency notices, package signature, and installed-file integrity passed. Standard runtime and solution cleanup succeeded. Automated tests, CLI smoke checks, and live AI calls were not run. Automatic approval review blocked removal of the temporary package-preparation directories; their cleanup remains in the task list.
+
 ## 2026-09-17 — Add direct memory commands and confirmed numbered deletion
 
 - Added `hm --remember [global|project] <text>` for local persistence and `hm --forget <id or description>` for deleting an accessible saved note. Direct `/remember` and `/forget` invocations route to these workflows instead of AI chat.
