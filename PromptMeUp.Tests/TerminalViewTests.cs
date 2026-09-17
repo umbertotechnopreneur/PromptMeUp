@@ -69,7 +69,7 @@ public sealed class TerminalViewTests
         renderer.RenderAnimated("Testo **importante** con `codice`.", CancellationToken.None);
 
         var rendered = StripAnsi(output.ToString());
-        Assert.Contains("Testo importante con  codice .", rendered, StringComparison.Ordinal);
+        Assert.Contains("Testo importante con codice.", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("**", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("`", rendered, StringComparison.Ordinal);
     }

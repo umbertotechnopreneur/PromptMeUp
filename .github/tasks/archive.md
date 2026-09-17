@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Improve terminal chat readability
+
+- Wrapped conversation prose in an indented column capped at 108 cells, using Spectre's styled text rendering for both static and animated output. Kept fenced code literal and preserved terminal scrollback.
+- Removed filled backgrounds from inline commands, tightened speaker spacing, and collapsed repeated blank paragraphs. Local display-setting confirmations now use short emphasized states and a shared success icon.
+- Made the input viewport grow with its content, up to six rows. Show the full editing guide only at the first prompt and the full character counter only from 80% of the limit.
+- Updated all six languages and versioned chat/query prompts to favor concise, outcome-first answers with selective emphasis. Adjusted existing expectations for prompt versions and inline-code spacing.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build with warnings as errors passed. Build artifacts were cleaned. Automated tests, CLI smoke checks, and interactive terminal validation were not run.
+
 ## 2026-09-17 — Install the memory commands in a local MSIX update
 
 - Built the user-requested local x64 MSIX `0.1.5.17` from memory-command commit `1de3d17`, including the command-menu number style from `8df509a` in an isolated source snapshot. Kept the existing package identity and trusted current-user signing certificate.

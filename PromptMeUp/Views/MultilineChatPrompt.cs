@@ -15,7 +15,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
     private (int Width, int Height) _paintedSize;
 
     /// <summary>Collects bounded pasted or typed text, preserving line breaks until a separate Enter key submits it.</summary>
-    internal string Read(string label, int maximumCharacters)
+    internal string Read(string label, int maximumCharacters, bool showHint = true)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
         using var pasteMode = new TerminalPasteScope(console);
@@ -25,7 +25,10 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         }
         var buffer = new ChatInputBuffer(maximumCharacters);
         var reader = new TerminalInputReader(console.Input, maximumCharacters);
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Chat.MultilineHint"))}[/]");
+        if (showHint)
+        {
+            console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Chat.MultilineHint"))}[/]");
+        }
         console.MarkupLine($"[bold {TerminalTheme.Accent}]{Markup.Escape(label)}[/]");
         console.Cursor.Hide();
         try
@@ -33,7 +36,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
             string? error = null;
             while (true)
             {
-                Paint(buffer, error);
+                Paint(buffer, error, maximumCharacters);
                 var input = reader.Read();
                 error = null;
                 if (input.PasteTooLong || input.Paste is { } pasted && !buffer.Insert(pasted))
@@ -45,8 +48,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                     {
                         EraseDraft();
-                        console.Write(new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
-                        console.WriteLine();
+                        ConversationText.Write(console, new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
                         return buffer.Text;
                     }
                     if (!buffer.Edit(key))
@@ -63,21 +65,21 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
     }
 
     /// <summary>Redraws only owned input rows; resizing starts a fresh area without touching earlier scrollback.</summary>
-    private void Paint(ChatInputBuffer buffer, string? error)
+    private void Paint(ChatInputBuffer buffer, string? error, int maximumCharacters)
     {
         var size = (console.Profile.Width, console.Profile.Height);
         if (_paintedRows > 0 && _paintedSize == size)
         {
-            console.WriteAnsi(writer => { writer.CursorUp(_paintedRows); writer.Write("\r"); });
+            EraseDraft();
         }
         else if (_paintedRows > 0)
         {
             console.WriteLine();
         }
         var width = Math.Max(1, size.Width - 1);
-        var rowCount = Math.Clamp(size.Height - 2, 1, 8);
-        var inputRows = Math.Max(1, rowCount - 1);
         var lines = buffer.Text.Split('\n');
+        var inputRows = Math.Min(lines.Length, Math.Clamp(size.Height - 2, 1, 6));
+        var rowCount = inputRows + (size.Height > 1 ? 1 : 0);
         var current = buffer.Text.AsSpan(0, buffer.Cursor).Count('\n');
         var lineStart = buffer.Cursor == 0 ? 0 : buffer.Text.LastIndexOf('\n', buffer.Cursor - 1) + 1;
         var first = Math.Clamp(current - inputRows / 2, 0, Math.Max(0, lines.Length - inputRows));
@@ -92,8 +94,12 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         }
         if (rowCount > 1)
         {
-            var status = error ?? text.Text("Chat.InputLine", current + 1, lines.Length);
-            WriteRow($"[{(error is null ? TerminalTheme.Muted : TerminalTheme.Error)}]{Markup.Escape(Clip(status, width))}[/]");
+            var nearLimit = (long)buffer.Text.Length * 5 >= (long)maximumCharacters * 4;
+            var status = error ?? (nearLimit
+                ? text.Text("Chat.InputCount", buffer.Text.Length, maximumCharacters, maximumCharacters - buffer.Text.Length)
+                : lines.Length > 1 ? text.Text("Chat.InputLine", current + 1, lines.Length) : text.Text("Chat.InputShortHint"));
+            var statusColor = error is not null ? TerminalTheme.Error : nearLimit ? TerminalTheme.Warning : TerminalTheme.Muted;
+            WriteRow($"[{statusColor}]{Markup.Escape(Clip(status, width))}[/]");
         }
         _paintedRows = rowCount;
         _paintedSize = size;

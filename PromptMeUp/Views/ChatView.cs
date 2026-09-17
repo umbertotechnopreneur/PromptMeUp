@@ -27,6 +27,7 @@ public sealed class ChatView : IChatView
     private readonly ILocalizationService _text;
     private readonly IPoorMarkdownRenderer _markdown;
     private readonly IConsoleShellView _shell;
+    private bool _inputHintShown;
 
     /// <summary>Creates the lightweight multi-turn chat control.</summary>
     public ChatView(
@@ -44,6 +45,7 @@ public sealed class ChatView : IChatView
     /// <summary>Draws the chat heading and its small slash-command vocabulary without clearing prior output.</summary>
     public void RenderIntro(bool includeMemoryHints = true)
     {
+        _inputHintShown = false;
         var icon = TerminalTheme.IconPrefix(_shell.Options, "💬", ">");
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("Chat.Title")}", TerminalTheme.Accent);
         _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.Branding"))}[/]");
@@ -73,36 +75,27 @@ public sealed class ChatView : IChatView
         _console.WriteLine();
     }
 
-    /// <summary>Reads one bounded user message and reports its exact character usage beneath the prompt.</summary>
+    /// <summary>Reads one bounded message while showing the full editing guide only on the first prompt.</summary>
     public string ReadMessage(int maximumCharacters)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
         var label = $"{TerminalTheme.IconPrefix(_shell.Options, "👤", ">")}{_text.Text("Chat.You")} ›";
-        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters);
-        var remaining = maximumCharacters - input.Length;
-        _console.MarkupLine(
-            $"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.InputCount", input.Length, maximumCharacters, remaining))}[/]");
         _console.WriteLine();
+        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters, showHint: !_inputHintShown);
+        _inputHintShown = true;
         return input;
     }
 
-    /// <summary>Renders one automatic user message with the same single-line conversational rhythm as typed input.</summary>
+    /// <summary>Renders the user label above an indented text column, matching the typed-input rhythm.</summary>
     public void RenderUser(string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         var icon = TerminalTheme.IconPrefix(_shell.Options, "👤", ">");
-        var lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         _console.WriteLine();
-        _console.Markup(
+        _console.MarkupLine(
             $"[bold {TerminalTheme.Accent}]{Markup.Escape(icon)}{Markup.Escape(_text.Text("Chat.You"))}[/] " +
-            $"[{TerminalTheme.Muted}]›[/] ");
-        _console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(lines[0])}[/]");
-        foreach (var line in lines.Skip(1))
-        {
-            _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
-        }
-
-        _console.WriteLine();
+            $"[{TerminalTheme.Accent}]›[/]");
+        ConversationText.Write(_console, new Text(text, Style.Parse(TerminalTheme.Primary)));
     }
 
     /// <summary>Renders a model response through the Markdown renderer so formatting never degrades into raw source text.</summary>
@@ -125,7 +118,6 @@ public sealed class ChatView : IChatView
 
         if (!string.IsNullOrWhiteSpace(body))
         {
-            _console.WriteLine();
             if (animate && !_shell.Options.NoAnimation && !Console.IsOutputRedirected)
             {
                 _markdown.RenderAnimated(body, cancellationToken);
