@@ -186,6 +186,23 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(chatError);
                     }
                     break;
+                case "--remember" or "/remember" or "--forget" or "/forget":
+                    var memoryCommand = argument.EndsWith("remember", StringComparison.OrdinalIgnoreCase)
+                        ? AppCommand.Remember : AppCommand.Forget;
+                    if (commandWasSelected && command == memoryCommand)
+                    {
+                        return Failure("MemoryCli.Usage");
+                    }
+                    if (!TrySelect(memoryCommand, ref command, ref commandWasSelected, out var memoryError))
+                    {
+                        return FailureMessage(memoryError);
+                    }
+                    if (!TryReadValue(args, ref index, argument, out var memoryText, out var missingMemory))
+                    {
+                        return FailureMessage(missingMemory);
+                    }
+                    queryParts.Add(memoryText!);
+                    break;
                 case "--memories":
                     if (!TrySelect(AppCommand.Memories, ref command, ref commandWasSelected, out var memoriesError))
                     {
@@ -344,12 +361,12 @@ public sealed class CommandLineParser : ICommandLineParser
         string? query = null;
         if (queryParts.Count > 0)
         {
-            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan))
+            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan or AppCommand.Remember or AppCommand.Forget))
             {
                 return Failure("Cli.PositionalConflict");
             }
 
-            command = command is AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan ? command : AppCommand.Query;
+            command = command is AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan or AppCommand.Remember or AppCommand.Forget ? command : AppCommand.Query;
             commandWasSelected = true;
             query = string.Join(' ', queryParts).Trim();
         }

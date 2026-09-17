@@ -30,7 +30,7 @@ Forgot a command? Stuck on an error? Ask `hm` in your own words. It uses your Op
 > PromptMeUp is still an early version. There are no ready-to-download releases yet, but you can [build it yourself](#get-started).
 
 > [!NOTE]
-> **MSIX installers are temporarily unavailable.** We're working on the code-signing certificate needed to distribute them. Portable downloads remain the supported option.
+> **Distributed MSIX installers are temporarily unavailable.** Portable downloads remain the supported option. Maintainers can still create self-signed MSIX packages locally for Windows testing; see the [Windows packaging guide](docs/WINDOWS_PACKAGING.md#install-with-the-hm-execution-alias).
 
 ## Meet `hm`
 
@@ -70,6 +70,16 @@ General shows your setup, usage, and estimated costs. Use the sidebar to change 
 *These are illustrations with sample content, not screenshots. The colors and layout in your terminal may look different.*
 
 ## Remember the details you keep repeating
+
+Save a note directly from the terminal:
+
+```powershell
+hm --remember global "Prefer short explanations."
+hm --remember "This project uses .NET 10."
+hm --forget "the preference about short explanations"
+```
+
+`--remember` saves your exact text locally and confirms the saved ID. `--forget` accepts an ID, exact note text, or a description. IDs and exact text need no AI call. Descriptions send batches of global and current-project notes to AI to find matches, with normal token costs. Choose a matching note by pressing its number, then confirm deletion in a separate menu. Press `0` to cancel; `9` shows the next page when needed. Deletion requires an interactive terminal, even with `--yes`. Missing matches, lookup errors, or notes changed during lookup are never reported as deleted. `hm /remember ...` and `hm /forget ...` also use these flows.
 
 Save a preference or a useful project fact from inside chat:
 
@@ -140,6 +150,8 @@ You can give `hm` a build log, ask for a script, or work through a task step by 
 | Ask one question | `hm "your question"` |
 | Keep the conversation going | `hm --chat` |
 | Manage saved memories | `hm --memories` |
+| Save a note | `hm --remember [global|project] "note"` |
+| Forget a saved note | `hm --forget "id or description"` |
 | Diagnose an error or log | `hm --diagnose --file build.log` |
 | Draft or revise a PowerShell script | `hm --script "your request"` |
 | Work through a plan and resume it later | `hm --plan "your goal"` |

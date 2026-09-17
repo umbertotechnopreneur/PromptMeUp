@@ -44,6 +44,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly LennaWorkflow? _lenna;
     private readonly AboutWorkflow? _about;
     private readonly MemoryManagerWorkflow? _memories;
+    private readonly MemoryCommandWorkflow? _memoryCommands;
 
     /// <summary>Creates the application orchestrator while keeping business services independent from Spectre views.</summary>
     public PromptMeUpApplication(
@@ -74,7 +75,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IThemeCatalogService? themes = null,
         LennaWorkflow? lenna = null,
         AboutWorkflow? about = null,
-        MemoryManagerWorkflow? memories = null)
+        MemoryManagerWorkflow? memories = null,
+        MemoryCommandWorkflow? memoryCommands = null)
     {
         _parser = parser;
         _database = database;
@@ -104,6 +106,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _lenna = lenna;
         _about = about;
         _memories = memories;
+        _memoryCommands = memoryCommands;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -241,6 +244,14 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                     renderQuery: true,
                     cancellationToken).ConfigureAwait(false);
                 return 0;
+            case AppCommand.Remember:
+            case AppCommand.Forget:
+                if (options.Command == AppCommand.Forget)
+                {
+                    EnsureInteractive();
+                }
+                return await (_memoryCommands ?? throw new InvalidOperationException("Memory commands are unavailable."))
+                    .RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Memories:
                 EnsureInteractive();
                 await (_memories ?? throw new InvalidOperationException("The memory manager is unavailable."))

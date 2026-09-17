@@ -474,7 +474,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             memory.ShowCommandSuggestions = showCommands;
             confirmations.Add(_text.Text(showCommands ? "Chat.CommandSuggestionsShown" : "Chat.CommandSuggestionsHidden"));
         }
-        return string.Join("\n", confirmations);
+        var icon = TerminalTheme.IconPrefix(_shell.Options, "✅", "+");
+        return string.Join("\n\n", confirmations.Select(confirmation => icon + confirmation));
     }
 
     /// <summary>Resolves at most one bounded guide request per turn and retains each completed call's cost immediately.</summary>

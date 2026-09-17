@@ -34,6 +34,7 @@ internal static partial class UiTextCatalog
         AddHelpBrowserEntries(entries);
         AddLennaEntries(entries);
         AddMemoryManagerEntries(entries);
+        AddMemoryCliEntries(entries);
         AddMemoryManagerValidationEntries(entries);
         AddSettingsEntries(entries);
         AddSetupEntries(entries);

@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Spectre.Console;
@@ -41,7 +40,8 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
         var animationChunkSize = Math.Max(1, (int)Math.Ceiling(markdown.Length / 450d));
         string? codeLanguage = null;
         var codeLines = new List<string>();
-        foreach (var rawLine in markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        var previousBlank = true;
+        foreach (var rawLine in markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Trim('\n').Split('\n'))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var fence = FencePattern().Match(rawLine);
@@ -50,6 +50,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
                 if (fence.Success)
                 {
                     RenderCodeBlock(codeLanguage, codeLines);
+                    previousBlank = false;
                     codeLanguage = null;
                     codeLines.Clear();
                 }
@@ -69,9 +70,14 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             var line = rawLine.TrimEnd();
             if (line.Length == 0)
             {
-                _console.WriteLine();
+                if (!previousBlank)
+                {
+                    _console.WriteLine();
+                }
+                previousBlank = true;
                 continue;
             }
+            previousBlank = false;
 
             var heading = HeadingPattern().Match(line);
             if (heading.Success)
@@ -87,123 +93,23 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
                     ? $"{ordinal}."
                     : "•";
                 var indent = new string(' ', Math.Min(6, list.Groups["indent"].Value.Length));
-                if (animate)
-                {
-                    RenderAnimatedInline(
-                        list.Groups["content"].Value,
-                        $"{indent}[{TerminalTheme.Accent}]{Markup.Escape(marker)}[/] ",
-                        animationChunkSize,
-                        cancellationToken);
-                }
-                else
-                {
-                    _console.MarkupLine(
-                        $"{indent}[{TerminalTheme.Accent}]{Markup.Escape(marker)}[/] " +
-                        $"[{TerminalTheme.Primary}]{RenderInline(list.Groups["content"].Value)}[/]");
-                }
+                ConversationText.Write(_console, new Markup(
+                    $"{indent}[{TerminalTheme.Accent}]{Markup.Escape(marker)}[/] " +
+                    $"[{TerminalTheme.Primary}]{RenderInline(list.Groups["content"].Value)}[/]"),
+                    animate, animationChunkSize, cancellationToken);
                 continue;
             }
 
             // Markdown table syntax is intentionally not interpreted by this reduced renderer.
-            if (line.TrimStart().StartsWith('|') || !animate)
-            {
-                _console.MarkupLine(line.TrimStart().StartsWith('|')
-                    ? $"[{TerminalTheme.Primary}]{Markup.Escape(line)}[/]"
-                    : $"[{TerminalTheme.Primary}]{RenderInline(line)}[/]");
-            }
-            else
-            {
-                RenderAnimatedInline(line, string.Empty, animationChunkSize, cancellationToken);
-            }
+            ConversationText.Write(_console, new Markup(line.TrimStart().StartsWith('|')
+                ? $"[{TerminalTheme.Primary}]{Markup.Escape(line)}[/]"
+                : $"[{TerminalTheme.Primary}]{RenderInline(line)}[/]"), animate, animationChunkSize, cancellationToken);
         }
 
         if (codeLanguage is not null)
         {
             RenderCodeBlock(codeLanguage, codeLines);
         }
-    }
-
-    /// <summary>Types one inline-formatted line in bounded grapheme chunks while retaining safe semantic styling.</summary>
-    private void RenderAnimatedInline(
-        string source,
-        string prefixMarkup,
-        int chunkSize,
-        CancellationToken cancellationToken)
-    {
-        _console.Markup(prefixMarkup);
-        var cursor = 0;
-        foreach (Match match in InlinePattern().Matches(source))
-        {
-            WriteAnimatedText(source[cursor..match.Index], TerminalTheme.Primary, bold: false, chunkSize, cancellationToken);
-            if (match.Groups["bold"].Success)
-            {
-                WriteAnimatedText(match.Groups["bold"].Value, TerminalTheme.Primary, bold: true, chunkSize, cancellationToken);
-            }
-            else if (match.Groups["code"].Success)
-            {
-                _console.Markup($"[{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}] {Markup.Escape(match.Groups["code"].Value)} [/]");
-            }
-            else if (Uri.TryCreate(match.Groups["url"].Value, UriKind.Absolute, out var uri)
-                     && uri.Scheme is "http" or "https")
-            {
-                _console.Markup(
-                    $"[link={Markup.Escape(uri.AbsoluteUri)}]{Markup.Escape(match.Groups["linkText"].Value)}[/]");
-            }
-            else
-            {
-                WriteAnimatedText(match.Value, TerminalTheme.Primary, bold: false, chunkSize, cancellationToken);
-            }
-
-            cursor = match.Index + match.Length;
-        }
-
-        WriteAnimatedText(source[cursor..], TerminalTheme.Primary, bold: false, chunkSize, cancellationToken);
-        _console.WriteLine();
-    }
-
-    /// <summary>Writes escaped Unicode text progressively with a total-animation budget independent of response length.</summary>
-    private void WriteAnimatedText(
-        string value,
-        string color,
-        bool bold,
-        int chunkSize,
-        CancellationToken cancellationToken)
-    {
-        if (value.Length == 0)
-        {
-            return;
-        }
-
-        var chunk = new StringBuilder();
-        var elements = StringInfo.GetTextElementEnumerator(value);
-        var count = 0;
-        while (elements.MoveNext())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            chunk.Append(elements.GetTextElement());
-            count++;
-            if (count < chunkSize)
-            {
-                continue;
-            }
-
-            WriteAnimatedChunk(chunk, color, bold);
-            count = 0;
-            Thread.Sleep(4);
-        }
-
-        if (chunk.Length > 0)
-        {
-            WriteAnimatedChunk(chunk, color, bold);
-        }
-    }
-
-    /// <summary>Flushes one escaped teletype chunk with its current inline emphasis.</summary>
-    private void WriteAnimatedChunk(StringBuilder chunk, string color, bool bold)
-    {
-        var style = bold ? $"bold {color}" : color;
-        _console.Markup($"[{style}]{Markup.Escape(chunk.ToString())}[/]");
-        chunk.Clear();
     }
 
     /// <summary>Renders one heading level with a stable visual hierarchy for a terminal viewport.</summary>
@@ -213,13 +119,13 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
         switch (level)
         {
             case 1:
-                TerminalTheme.WriteRule(_console, $"✦ {text}", TerminalTheme.Accent);
+                ConversationText.Write(_console, new Markup($"[bold {TerminalTheme.Accent}]✦ {inline}[/]"));
                 break;
             case 2:
-                _console.MarkupLine($"[bold {TerminalTheme.Info}]◆[/] [bold {TerminalTheme.Primary}]{inline}[/]");
+                ConversationText.Write(_console, new Markup($"[{TerminalTheme.Info}]◆[/] [bold {TerminalTheme.Primary}]{inline}[/]"));
                 break;
             default:
-                _console.MarkupLine($"[{TerminalTheme.Accent}]▸[/] [bold {TerminalTheme.Primary}]{inline}[/]");
+                ConversationText.Write(_console, new Markup($"[{TerminalTheme.Accent}]▸[/] [bold {TerminalTheme.Primary}]{inline}[/]"));
                 break;
         }
     }
@@ -249,9 +155,9 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             }
             else if (match.Groups["code"].Success)
             {
-                builder.Append($"[{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}] ")
+                builder.Append($"[bold {TerminalTheme.Info}]")
                     .Append(Markup.Escape(match.Groups["code"].Value))
-                    .Append(" [/]");
+                    .Append("[/]");
             }
             else if (Uri.TryCreate(match.Groups["url"].Value, UriKind.Absolute, out var uri)
                      && uri.Scheme is "http" or "https")

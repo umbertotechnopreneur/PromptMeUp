@@ -9,6 +9,65 @@ This archive tracks completed development tasks for reference and review.
 
 Validation: preflight, restore, formatting verification, XML comments, and a Release build passed with zero warnings or errors. Cleaned build output. No automated tests or CLI smoke checks were run.
 
+## 2026-09-18 — Prepare memory and chat changes for protected merges
+
+- Integrated current main into the memory and chat branches, preserving both task histories and the updated dependencies. Moved the derived-JSON-exception assertion correction into the memory branch so it validates independently.
+- Made wrapping assertions ignore terminal ANSI decoration, matching the existing rendering assertions and the CI environment while retaining content and width checks.
+- Included the requested local README and MSIX script changes: maintainers can create local Windows test packages with an existing trusted certificate; distributed releases still use GitHub Actions.
+
+Validation: repository preflight, restore, formatting verification, XML comments, Release builds with warnings as errors, and PowerShell syntax validation passed. Build output was cleaned. Protected merges remain conditional on all required GitHub checks and resolved conversations.
+
+## 2026-09-18 — Support Shift+Enter in chat
+
+- Preserved Shift+Enter through Windows virtual-terminal input by enabling Windows keyboard records during editing and decoding modifiers, repeats, and key releases before paste handling. Also recognized CSI-u and xterm modified Enter sequences.
+- Kept plain Enter as submission and Shift+Enter as a bounded newline at the current caret. Raw and Windows-encoded paste boundaries remain separate from keyboard actions.
+- Added the shortcut to the full and compact input hints in all six languages. The compact guide stays above subsequent prompts; the footer is reserved for multiline position, limits, or errors.
+- Added regression coverage for modifier preservation, encoded and raw pastes, Escape, repeated keys, and newline insertion at the character limit.
+
+Validation: preflight, restore, formatting verification, XML comments, Release build with warnings as errors, and all 586 automated tests passed. Build artifacts were cleaned. Physical keyboard validation and a new MSIX installation were not performed for this follow-up.
+
+## 2026-09-18 — Test and install the chat readability update
+
+- Ran the complete automated suite and corrected two test assumptions: malformed JSON can throw a derived JSON exception, and the scripted shell must provide rendering options for local success confirmations.
+- Added narrow- and wide-terminal coverage to verify that wrapping preserves words and Unicode graphemes, with identical static and animated text. All 578 tests passed.
+- Built and installed the user-requested local x64 MSIX `0.1.5.18` from UI commit `108dd19`, preserving the installed menu-number style from `8df509a`. Verified the trusted package signature, Windows package status, the `hm` execution alias, and hashes for all 279 published files.
+
+Validation: preflight, restore, formatting verification, XML comments, Release build with warnings as errors, all 578 tests, Windows publish, dependency notice export, signature validation, and installed-file integrity passed. Standard .NET cleanup succeeded. Automatic approval review blocked recursive removal of temporary package-preparation directories; cleanup remains in the task list. The signed MSIX and verification records are preserved under ignored artifacts.
+
+## 2026-09-18 — Improve terminal chat readability
+
+- Wrapped conversation prose in an indented column capped at 108 cells, using Spectre's styled text rendering for both static and animated output. Kept fenced code literal and preserved terminal scrollback.
+- Removed filled backgrounds from inline commands, tightened speaker spacing, and collapsed repeated blank paragraphs. Local display-setting confirmations now use short emphasized states and a shared success icon.
+- Made the input viewport grow with its content, up to six rows. Show the full editing guide only at the first prompt and the full character counter only from 80% of the limit.
+- Updated all six languages and versioned chat/query prompts to favor concise, outcome-first answers with selective emphasis. Adjusted existing expectations for prompt versions and inline-code spacing.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build with warnings as errors passed. Build artifacts were cleaned. Automated tests, CLI smoke checks, and interactive terminal validation were not run.
+
+## 2026-09-17 — Install the memory commands in a local MSIX update
+
+- Built the user-requested local x64 MSIX `0.1.5.17` from memory-command commit `1de3d17`, including the command-menu number style from `8df509a` in an isolated source snapshot. Kept the existing package identity and trusted current-user signing certificate.
+- Installed the update and verified Windows package status, the `hm` execution alias, and matching hashes for the application assembly and updated memory/chat prompts. Preserved the signed MSIX and installation evidence under ignored artifacts.
+
+Validation: preflight, restore, formatting, XML comments, Release build, self-contained Windows publish, exported dependency notices, package signature, and installed-file integrity passed. Standard runtime and solution cleanup succeeded. Automated tests, CLI smoke checks, and live AI calls were not run. Automatic approval review blocked removal of the temporary package-preparation directories; their cleanup remains in the task list.
+
+## 2026-09-17 — Add direct memory commands and confirmed numbered deletion
+
+- Added `hm --remember [global|project] <text>` for local persistence and `hm --forget <id or description>` for deleting an accessible saved note. Direct `/remember` and `/forget` invocations route to these workflows instead of AI chat.
+- Resolve IDs and exact note text locally. For descriptions, use the existing audited AI service and a six-language structured prompt to search batches of up to eight global and current-project notes; validate every returned identifier before offering matches.
+- Show normal-weight warm ochre `1>` choices with immediate digit selection, paging, cancellation, and a separate deletion confirmation. Require an interactive terminal and reject deletion when the reviewed note changed during lookup or confirmation.
+- Updated help and versioned prompts in all six languages, documented provider sharing and costs, and added regression cases for parsing, persistence, batch matching, invalid responses, cancellation, concurrent changes, and numbered selection.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build with warnings as errors passed. Build output was cleaned. Regression tests were added and compiled but not executed; no CLI smoke checks or live AI calls were run.
+
+## 2026-09-16 — Publish prerelease 0.1.8 with portable archives and Windows installers
+
+- Merged PR #35 after all required checks, including Windows installer compilation, passed. Verified the resulting main checks and pushed annotated tag `v0.1.8` at `142b519`.
+- Release workflow run `35083274379` completed successfully. The published prerelease includes Windows ZIPs and Linux/macOS tar.gz archives for x64 and ARM64, unsigned Windows EXE installers for x64 and ARM64, and `SHA256SUMS.txt`.
+- Verified all eight package checksums against GitHub asset digests, verified the downloaded checksum manifest digest, and confirmed successful provenance attestation. Published the generated draft as a prerelease, without marking it as the latest stable release.
+- Confirmed the public release at https://github.com/umbertotechnopreneur/PromptMeUp/releases/tag/v0.1.8 with all nine assets uploaded, `draft=false`, and `prerelease=true`. The original `v0.1.7` tag remains unchanged and has no published release.
+
+Validation: required local non-test checks passed; GitHub quality checks, native CLI smoke checks, all six packaging jobs, installer compilation, checksum generation, and attestations passed. Cross-published packages were not executed on unmatched runners, and neither EXE installer was installed or run. Standard local cleanup completed after commits and pushes. Updated this task record locally after publication.
+
 ## 2026-09-16 — Run the first tagged release and correct the installer compiler check
 
 - Merged PR #34 after all required checks passed, verified the resulting main checks, and pushed annotated tag `v0.1.7` at `d73fc50`.

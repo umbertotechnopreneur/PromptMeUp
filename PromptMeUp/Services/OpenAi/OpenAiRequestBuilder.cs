@@ -34,6 +34,10 @@ internal static class OpenAiRequestBuilder
         {
             text["format"] = FeatureResponseFormats.Plan();
         }
+        else if (prompt.Id == "memory-forget")
+        {
+            text["format"] = FeatureResponseFormats.MemoryForget();
+        }
         else if (prompt.Id == "chat-display-intent")
         {
             text["format"] = FeatureResponseFormats.ChatDisplayIntent();
