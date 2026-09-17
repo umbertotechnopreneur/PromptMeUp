@@ -323,7 +323,7 @@ public sealed class AiConversationWorkflowTests
         var text = new LocalizationService();
         Assert.Contains(text.Text("Chat.SessionSummaryHidden"), answers[0]);
         Assert.Contains(text.Text("Chat.CommandSuggestionsHidden"), answers[0]);
-        Assert.Equal(text.Text("Chat.SessionSummaryShown"), answers[2]);
+        Assert.Equal("✅ " + text.Text("Chat.SessionSummaryShown"), answers[2]);
         var classifierBodies = handler.RequestBodies.Where(RegressionFixture.IsDisplayIntentRequest).ToArray();
         Assert.Equal(3, classifierBodies.Length);
         foreach (var body in classifierBodies)
@@ -393,6 +393,7 @@ public sealed class AiConversationWorkflowTests
             return method.Name switch
             {
                 "RunWithStatusAsync" => ((Delegate)args[1]!).DynamicInvoke(),
+                "get_Options" => new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false),
                 "RenderMuted" or "RenderSuccess" => null,
                 _ => throw new NotSupportedException(method.Name)
             };

@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Test and install the chat readability update
+
+- Ran the complete automated suite and corrected two test assumptions: malformed JSON can throw a derived JSON exception, and the scripted shell must provide rendering options for local success confirmations.
+- Added narrow- and wide-terminal coverage to verify that wrapping preserves words and Unicode graphemes, with identical static and animated text. All 578 tests passed.
+- Built and installed the user-requested local x64 MSIX `0.1.5.18` from UI commit `108dd19`, preserving the installed menu-number style from `8df509a`. Verified the trusted package signature, Windows package status, the `hm` execution alias, and hashes for all 279 published files.
+
+Validation: preflight, restore, formatting verification, XML comments, Release build with warnings as errors, all 578 tests, Windows publish, dependency notice export, signature validation, and installed-file integrity passed. Standard .NET cleanup succeeded. Automatic approval review blocked recursive removal of temporary package-preparation directories; cleanup remains in the task list. The signed MSIX and verification records are preserved under ignored artifacts.
+
 ## 2026-09-18 — Improve terminal chat readability
 
 - Wrapped conversation prose in an indented column capped at 108 cells, using Spectre's styled text rendering for both static and animated output. Kept fenced code literal and preserved terminal scrollback.

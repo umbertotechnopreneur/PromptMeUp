@@ -127,7 +127,7 @@ public sealed class MemoryCommandTests
     [InlineData("{\"matched_ids\":[\"known\",\"known\"]}")]
     [InlineData("{\"matched_ids\":[],\"deleted\":true}")]
     public void ParseMatches_InvalidResponse_Rejects(string json) =>
-        Assert.Throws<JsonException>(() => MemoryCommandWorkflow.ParseMatches(json,
+        Assert.ThrowsAny<JsonException>(() => MemoryCommandWorkflow.ParseMatches(json,
             [new PersistentMemory("known", "A note.", true, DateTimeOffset.UtcNow)]));
 
     /// <summary>Builds parsed options exactly as a terminal invocation supplies them.</summary>

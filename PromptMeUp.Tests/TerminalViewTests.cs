@@ -74,6 +74,29 @@ public sealed class TerminalViewTests
         Assert.DoesNotContain("`", rendered, StringComparison.Ordinal);
     }
 
+    /// <summary>Checks that wrapping retains every word and Unicode grapheme with identical static and animated output.</summary>
+    [Theory]
+    [InlineData(32)]
+    [InlineData(200)]
+    public void MarkdownWrapping_PreservesContentAcrossTerminalWidths(int width)
+    {
+        var (console, output) = CreateConsole();
+        console.Profile.Width = width;
+        var renderer = new PoorMarkdownRenderer(console);
+        var markdown = string.Join(" ", Enumerable.Repeat("Testo **importante** con `codice`.", 8)) + "\n\nCaffè 👩‍💻.";
+        var expected = markdown.Replace("**", string.Empty).Replace("`", string.Empty);
+
+        renderer.Render(markdown);
+        var rendered = output.ToString();
+        Assert.Equal(Regex.Replace(expected, @"\s+", " ").Trim(), Regex.Replace(rendered, @"\s+", " ").Trim());
+        Assert.Contains("👩‍💻", rendered, StringComparison.Ordinal);
+        Assert.All(rendered.Split('\n'), line => Assert.True(line.TrimEnd('\r').Length <= Math.Min(108, width - 1)));
+
+        output.GetStringBuilder().Clear();
+        renderer.RenderAnimated(markdown, CancellationToken.None);
+        Assert.Equal(rendered, output.ToString());
+    }
+
     /// <summary>Verifies that status data uses frameless localized label-value rows.</summary>
     [Fact]
     public void StatusView_RendersFramelessLabelValueGrid()
