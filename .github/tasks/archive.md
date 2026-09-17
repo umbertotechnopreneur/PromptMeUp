@@ -2,6 +2,40 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Prepare memory and chat changes for protected merges
+
+- Integrated current main into the memory and chat branches, preserving both task histories and the updated dependencies. Moved the derived-JSON-exception assertion correction into the memory branch so it validates independently.
+- Made wrapping assertions ignore terminal ANSI decoration, matching the existing rendering assertions and the CI environment while retaining content and width checks.
+- Included the requested local README and MSIX script changes: maintainers can create local Windows test packages with an existing trusted certificate; distributed releases still use GitHub Actions.
+
+Validation: repository preflight, restore, formatting verification, XML comments, Release builds with warnings as errors, and PowerShell syntax validation passed. Build output was cleaned. Protected merges remain conditional on all required GitHub checks and resolved conversations.
+
+## 2026-09-18 — Support Shift+Enter in chat
+
+- Preserved Shift+Enter through Windows virtual-terminal input by enabling Windows keyboard records during editing and decoding modifiers, repeats, and key releases before paste handling. Also recognized CSI-u and xterm modified Enter sequences.
+- Kept plain Enter as submission and Shift+Enter as a bounded newline at the current caret. Raw and Windows-encoded paste boundaries remain separate from keyboard actions.
+- Added the shortcut to the full and compact input hints in all six languages. The compact guide stays above subsequent prompts; the footer is reserved for multiline position, limits, or errors.
+- Added regression coverage for modifier preservation, encoded and raw pastes, Escape, repeated keys, and newline insertion at the character limit.
+
+Validation: preflight, restore, formatting verification, XML comments, Release build with warnings as errors, and all 586 automated tests passed. Build artifacts were cleaned. Physical keyboard validation and a new MSIX installation were not performed for this follow-up.
+
+## 2026-09-18 — Test and install the chat readability update
+
+- Ran the complete automated suite and corrected two test assumptions: malformed JSON can throw a derived JSON exception, and the scripted shell must provide rendering options for local success confirmations.
+- Added narrow- and wide-terminal coverage to verify that wrapping preserves words and Unicode graphemes, with identical static and animated text. All 578 tests passed.
+- Built and installed the user-requested local x64 MSIX `0.1.5.18` from UI commit `108dd19`, preserving the installed menu-number style from `8df509a`. Verified the trusted package signature, Windows package status, the `hm` execution alias, and hashes for all 279 published files.
+
+Validation: preflight, restore, formatting verification, XML comments, Release build with warnings as errors, all 578 tests, Windows publish, dependency notice export, signature validation, and installed-file integrity passed. Standard .NET cleanup succeeded. Automatic approval review blocked recursive removal of temporary package-preparation directories; cleanup remains in the task list. The signed MSIX and verification records are preserved under ignored artifacts.
+
+## 2026-09-18 — Improve terminal chat readability
+
+- Wrapped conversation prose in an indented column capped at 108 cells, using Spectre's styled text rendering for both static and animated output. Kept fenced code literal and preserved terminal scrollback.
+- Removed filled backgrounds from inline commands, tightened speaker spacing, and collapsed repeated blank paragraphs. Local display-setting confirmations now use short emphasized states and a shared success icon.
+- Made the input viewport grow with its content, up to six rows. Show the full editing guide only at the first prompt and the full character counter only from 80% of the limit.
+- Updated all six languages and versioned chat/query prompts to favor concise, outcome-first answers with selective emphasis. Adjusted existing expectations for prompt versions and inline-code spacing.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build with warnings as errors passed. Build artifacts were cleaned. Automated tests, CLI smoke checks, and interactive terminal validation were not run.
+
 ## 2026-09-17 — Install the memory commands in a local MSIX update
 
 - Built the user-requested local x64 MSIX `0.1.5.17` from memory-command commit `1de3d17`, including the command-menu number style from `8df509a` in an isolated source snapshot. Kept the existing package identity and trusted current-user signing certificate.

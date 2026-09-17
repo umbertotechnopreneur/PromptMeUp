@@ -140,6 +140,22 @@ public sealed class ChatInputBufferTests
         Assert.Equal(0, buffer.Cursor);
     }
 
+    /// <summary>Verifies Shift+Enter inserts at the caret and rejects a newline atomically at the size limit.</summary>
+    [Theory]
+    [InlineData(5, true, "ab\ncd", 3)]
+    [InlineData(4, false, "abcd", 2)]
+    public void Edit_ShiftEnter_InsertsBoundedLineBreak(int limit, bool accepted, string expected, int cursor)
+    {
+        var buffer = new ChatInputBuffer(limit);
+        buffer.Insert("abcd");
+        buffer.Edit(Key(ConsoleKey.LeftArrow));
+        buffer.Edit(Key(ConsoleKey.LeftArrow));
+
+        Assert.Equal(accepted, buffer.Edit(new ConsoleKeyInfo('\r', ConsoleKey.Enter, true, false, false)));
+        Assert.Equal(expected, buffer.Text);
+        Assert.Equal(cursor, buffer.Cursor);
+    }
+
     /// <summary>Creates a keyboard action without adding printable characters to the draft.</summary>
     private static ConsoleKeyInfo Key(ConsoleKey key) => new('\0', key, false, false, false);
 }
