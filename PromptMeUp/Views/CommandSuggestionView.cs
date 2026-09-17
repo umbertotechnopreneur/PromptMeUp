@@ -52,7 +52,7 @@ public sealed class CommandSuggestionView(
         for (var index = 0; index < entries.Count; index++)
         {
             choices.AddRow(
-                $"[bold {TerminalTheme.Accent}]{index}[/]",
+                $"[{TerminalTheme.Warning}]{index}>[/]",
                 Label(entries[index], hasSuggestions));
         }
         console.Write(choices);

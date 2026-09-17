@@ -2,6 +2,13 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-17 — Restyle command-menu numbers
+
+- Render command-menu numbers in the shared warm ochre warning color, without bold, followed immediately by `>`.
+- Preserve existing numbering, keyboard shortcuts, and action labels.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build passed with zero warnings or errors. Cleaned build output. No automated tests or CLI smoke checks were run.
+
 ## 2026-09-18 — Prepare memory and chat changes for protected merges
 
 - Integrated current main into the memory and chat branches, preserving both task histories and the updated dependencies. Moved the derived-JSON-exception assertion correction into the memory branch so it validates independently.
