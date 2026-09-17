@@ -2,6 +2,13 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-17 — Restyle command-menu numbers
+
+- Render command-menu numbers in the shared warm ochre warning color, without bold, followed immediately by `>`.
+- Preserve existing numbering, keyboard shortcuts, and action labels.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build passed with zero warnings or errors. Cleaned build output. No automated tests or CLI smoke checks were run.
+
 ## 2026-09-16 — Run the first tagged release and correct the installer compiler check
 
 - Merged PR #34 after all required checks passed, verified the resulting main checks, and pushed annotated tag `v0.1.7` at `d73fc50`.
