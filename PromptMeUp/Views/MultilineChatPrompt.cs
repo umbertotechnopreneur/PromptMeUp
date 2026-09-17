@@ -24,11 +24,8 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
             throw new InvalidOperationException(text.Text("Chat.PasteUnavailable"));
         }
         var buffer = new ChatInputBuffer(maximumCharacters);
-        var reader = new TerminalInputReader(console.Input, maximumCharacters);
-        if (showHint)
-        {
-            console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Chat.MultilineHint"))}[/]");
-        }
+        var reader = new TerminalInputReader(console.Input, maximumCharacters, win32Encoding: OperatingSystem.IsWindows());
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text(showHint ? "Chat.MultilineHint" : "Chat.InputShortHint"))}[/]");
         console.MarkupLine($"[bold {TerminalTheme.Accent}]{Markup.Escape(label)}[/]");
         console.Cursor.Hide();
         try
@@ -79,7 +76,9 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var width = Math.Max(1, size.Width - 1);
         var lines = buffer.Text.Split('\n');
         var inputRows = Math.Min(lines.Length, Math.Clamp(size.Height - 2, 1, 6));
-        var rowCount = inputRows + (size.Height > 1 ? 1 : 0);
+        var nearLimit = (long)buffer.Text.Length * 5 >= (long)maximumCharacters * 4;
+        var showStatus = size.Height > 1 && (lines.Length > 1 || nearLimit || error is not null);
+        var rowCount = inputRows + (showStatus ? 1 : 0);
         var current = buffer.Text.AsSpan(0, buffer.Cursor).Count('\n');
         var lineStart = buffer.Cursor == 0 ? 0 : buffer.Text.LastIndexOf('\n', buffer.Cursor - 1) + 1;
         var first = Math.Clamp(current - inputRows / 2, 0, Math.Max(0, lines.Length - inputRows));
@@ -92,12 +91,11 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                 + FormatLine(line, index == current ? buffer.Cursor - lineStart : null, Math.Max(1, width - 2));
             WriteRow(width >= 3 ? markup : FormatLine(line, null, width));
         }
-        if (rowCount > 1)
+        if (showStatus)
         {
-            var nearLimit = (long)buffer.Text.Length * 5 >= (long)maximumCharacters * 4;
             var status = error ?? (nearLimit
                 ? text.Text("Chat.InputCount", buffer.Text.Length, maximumCharacters, maximumCharacters - buffer.Text.Length)
-                : lines.Length > 1 ? text.Text("Chat.InputLine", current + 1, lines.Length) : text.Text("Chat.InputShortHint"));
+                : text.Text("Chat.InputLine", current + 1, lines.Length));
             var statusColor = error is not null ? TerminalTheme.Error : nearLimit ? TerminalTheme.Warning : TerminalTheme.Muted;
             WriteRow($"[{statusColor}]{Markup.Escape(Clip(status, width))}[/]");
         }

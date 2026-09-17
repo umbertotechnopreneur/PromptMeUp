@@ -36,19 +36,19 @@ internal static partial class UiTextCatalog
             Spanish: "Pide con tus palabras ocultar o mostrar el resumen de sesión y las vistas previas de comandos.",
             Vietnamese: "Bạn có thể yêu cầu ẩn hoặc hiện bảng tóm tắt phiên và phần xem trước lệnh bằng lời nói tự nhiên."));
         entries.Add("Chat.MultilineHint", new(
-            English: "Paste keeps line breaks. Enter: send · Arrows: edit · Esc: cancel.",
-            Italian: "L'incolla conserva gli a capo. Invio: invia · Frecce: modifica · Esc: annulla.",
-            French: "Le collage conserve les sauts de ligne. Entrée : envoyer · Flèches : modifier · Échap : annuler.",
-            German: "Einfügen behält Zeilenumbrüche. Eingabe: senden · Pfeile: bearbeiten · Esc: abbrechen.",
-            Spanish: "Pegar conserva los saltos de línea. Intro: enviar · Flechas: editar · Esc: cancelar.",
-            Vietnamese: "Dán giữ nguyên xuống dòng. Enter: gửi · Phím mũi tên: sửa · Esc: hủy."));
+            English: "Paste keeps line breaks. Enter: send · Shift+Enter: new line · Arrows: edit · Esc: cancel.",
+            Italian: "L'incolla conserva gli a capo. Invio: invia · Shift+Invio: a capo · Frecce: modifica · Esc: annulla.",
+            French: "Le collage conserve les sauts de ligne. Entrée : envoyer · Maj+Entrée : nouvelle ligne · Flèches : modifier · Échap : annuler.",
+            German: "Einfügen behält Zeilenumbrüche. Eingabe: senden · Umschalt+Eingabe: neue Zeile · Pfeile: bearbeiten · Esc: abbrechen.",
+            Spanish: "Pegar conserva los saltos de línea. Intro: enviar · Mayús+Intro: nueva línea · Flechas: editar · Esc: cancelar.",
+            Vietnamese: "Dán giữ nguyên xuống dòng. Enter: gửi · Shift+Enter: xuống dòng · Phím mũi tên: sửa · Esc: hủy."));
         entries.Add("Chat.InputShortHint", new(
-            English: "Enter: send · Esc: cancel",
-            Italian: "Invio: invia · Esc: annulla",
-            French: "Entrée : envoyer · Échap : annuler",
-            German: "Eingabe: senden · Esc: abbrechen",
-            Spanish: "Intro: enviar · Esc: cancelar",
-            Vietnamese: "Enter: gửi · Esc: hủy"));
+            English: "Enter: send · Shift+Enter: new line · Esc: cancel",
+            Italian: "Invio: invia · Shift+Invio: a capo · Esc: annulla",
+            French: "Entrée : envoyer · Maj+Entrée : nouvelle ligne · Échap : annuler",
+            German: "Eingabe: senden · Umschalt+Eingabe: neue Zeile · Esc: abbrechen",
+            Spanish: "Intro: enviar · Mayús+Intro: nueva línea · Esc: cancelar",
+            Vietnamese: "Enter: gửi · Shift+Enter: xuống dòng · Esc: hủy"));
         entries.Add("Chat.InputLine", new(
             English: "Line {0} of {1} · Enter to send",
             Italian: "Riga {0} di {1} · Invio per inviare",

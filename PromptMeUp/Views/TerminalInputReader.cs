@@ -12,13 +12,17 @@ internal sealed class TerminalInputReader
     private const string PasteEnd = "\u001b[201~";
     private readonly IAnsiConsoleInput _input;
     private readonly int _maximumPasteCharacters;
+    private readonly bool _win32Encoding;
+    private readonly Queue<ConsoleKeyInfo> _pendingKeys = new();
+    private bool _literalPaste;
 
     /// <summary>Creates a reader that separates terminal paste blocks from deliberate keyboard actions.</summary>
-    internal TerminalInputReader(IAnsiConsoleInput input, int maximumPasteCharacters)
+    internal TerminalInputReader(IAnsiConsoleInput input, int maximumPasteCharacters, bool win32Encoding = false)
     {
         _input = input ?? throw new ArgumentNullException(nameof(input));
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumPasteCharacters);
         _maximumPasteCharacters = maximumPasteCharacters;
+        _win32Encoding = win32Encoding;
     }
 
     /// <summary>Reads one keyboard action or one complete paste without submitting pasted line endings.</summary>
@@ -82,10 +86,99 @@ internal sealed class TerminalInputReader
     }
 
     /// <summary>Reads without the general Escape cancellation wrapper while retaining application shutdown.</summary>
-    private Task<ConsoleKeyInfo?> ReadRawAsync(CancellationToken cancellationToken) =>
+    private Task<ConsoleKeyInfo?> ReadInputAsync(CancellationToken cancellationToken) =>
         _input is EscapeAwareConsoleInput wrapped
             ? wrapped.ReadRawKeyAsync(intercept: true, cancellationToken)
             : _input.ReadKeyAsync(intercept: true, cancellationToken);
+
+    /// <summary>Unwraps Windows key records before paste parsing so modifiers and encoded paste delimiters survive.</summary>
+    private async Task<ConsoleKeyInfo?> ReadRawAsync(CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            if (_pendingKeys.TryDequeue(out var pending))
+            {
+                return pending;
+            }
+            var first = await ReadInputAsync(cancellationToken).ConfigureAwait(false);
+            if (!_win32Encoding || _literalPaste || first?.KeyChar != '\u001b')
+            {
+                return first;
+            }
+
+            var prefix = new List<ConsoleKeyInfo>();
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromMilliseconds(150));
+            try
+            {
+                while (prefix.Count < 64)
+                {
+                    var next = await ReadInputAsync(timeout.Token).ConfigureAwait(false);
+                    if (next is null)
+                    {
+                        break;
+                    }
+                    prefix.Add(next.Value);
+                    if (prefix.Count == 1 ? next.Value.KeyChar != '[' : next.Value.KeyChar is >= '@' and <= '~')
+                    {
+                        break;
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                // A standalone Escape still belongs to the normal cancellation path.
+            }
+            var sequence = new string(prefix.Select(key => key.KeyChar).ToArray());
+            if (sequence.StartsWith('[') && sequence.EndsWith('_'))
+            {
+                var (key, repeats) = DecodeWin32Key(sequence[1..^1]);
+                if (key is { } decoded)
+                {
+                    for (var repeat = 1; repeat < repeats; repeat++)
+                    {
+                        _pendingKeys.Enqueue(decoded);
+                    }
+                    return decoded;
+                }
+                continue;
+            }
+
+            // Raw bracketed paste remains literal even if it contains text resembling key records.
+            _literalPaste = sequence == "[200~";
+            foreach (var key in prefix)
+            {
+                _pendingKeys.Enqueue(key);
+            }
+            return first;
+        }
+    }
+
+    /// <summary>Decodes a bounded Windows key-down record and ignores key-up and modifier-only events.</summary>
+    private static (ConsoleKeyInfo? Key, int Repeats) DecodeWin32Key(string sequence)
+    {
+        var fields = sequence.Split(';');
+        if (fields.Length != 6)
+        {
+            return (null, 0);
+        }
+        var values = new int[6];
+        values[5] = 1;
+        for (var index = 0; index < fields.Length; index++)
+        {
+            if (fields[index].Length != 0 && (!int.TryParse(fields[index], out values[index]) || values[index] < 0 || values[index] > ushort.MaxValue))
+            {
+                return (null, 0);
+            }
+        }
+        if (values[0] > 255 || values[0] is 16 or 17 or 18 || values[3] != 1 || values[5] == 0)
+        {
+            return (null, 0);
+        }
+        var modifiers = values[4];
+        return (new ConsoleKeyInfo((char)values[2], (ConsoleKey)values[0],
+            (modifiers & 16) != 0, (modifiers & 3) != 0, (modifiers & 12) != 0), values[5]);
+    }
 
     /// <summary>Bounds the wait for a terminal prefix so a standalone Escape still cancels promptly.</summary>
     private async Task<ConsoleKeyInfo?> ReadPrefixKeyAsync()
@@ -139,6 +232,7 @@ internal sealed class TerminalInputReader
 
                 if (candidate.Length == PasteEnd.Length)
                 {
+                    _literalPaste = false;
                     return tooLong
                         ? new TerminalInputEvent(PasteTooLong: true)
                         : new TerminalInputEvent(Paste: text.ToString());
@@ -204,6 +298,16 @@ internal sealed class TerminalInputReader
     {
         var final = sequence[^1];
         var parameters = sequence[..^1].Split(';');
+        if (kind == '[' && (final == 'u' && parameters.Length == 2 && parameters[0] == "13"
+            || final == '~' && parameters.Length == 3 && parameters[0] == "27" && parameters[2] == "13"))
+        {
+            if (parameters.Length is < 2 or > 3 || !int.TryParse(parameters[1], out var enterModifier) || enterModifier is < 1 or > 8)
+            {
+                return null;
+            }
+            var enterFlags = enterModifier - 1;
+            return new ConsoleKeyInfo('\r', ConsoleKey.Enter, (enterFlags & 1) != 0, (enterFlags & 2) != 0, (enterFlags & 4) != 0);
+        }
         var modifier = 1;
         if (parameters.Length > 2 || (parameters.Length == 2
                 && (!int.TryParse(parameters[1], out modifier) || modifier is < 1 or > 8)))

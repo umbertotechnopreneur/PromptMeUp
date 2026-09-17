@@ -175,6 +175,8 @@ public sealed class TerminalInputReaderTests
     [InlineData("\u001b[1;5D", ConsoleKey.LeftArrow, ConsoleModifiers.Control)]
     [InlineData("\u001b[1;6C", ConsoleKey.RightArrow, ConsoleModifiers.Control | ConsoleModifiers.Shift)]
     [InlineData("\u001b[Z", ConsoleKey.Tab, ConsoleModifiers.Shift)]
+    [InlineData("\u001b[13;2u", ConsoleKey.Enter, ConsoleModifiers.Shift)]
+    [InlineData("\u001b[27;2;13~", ConsoleKey.Enter, ConsoleModifiers.Shift)]
     public void Read_NavigationSequence_RestoresKeyAndModifiers(string sequence, ConsoleKey expected, ConsoleModifiers modifiers)
     {
         var reader = CreateReader(sequence);
@@ -183,6 +185,57 @@ public sealed class TerminalInputReaderTests
 
         Assert.Equal(expected, key?.Key);
         Assert.Equal(modifiers, key?.Modifiers);
+    }
+
+    /// <summary>Verifies Windows Shift+Enter remains distinct from the following unmodified submit key.</summary>
+    [Fact]
+    public void Read_Win32ShiftEnter_PreservesModifierAndSkipsKeyRelease()
+    {
+        var reader = new TerminalInputReader(new ScriptedConsoleInput(Keys(
+            "\u001b[16;42;0;1;16;1_\u001b[13;28;13;1;16;1_\u001b[13;28;13;0;16;1_\u001b[13;28;13;1;0;1_")), 100, win32Encoding: true);
+
+        var newline = reader.Read().Key;
+        var submit = reader.Read().Key;
+
+        Assert.Equal(ConsoleKey.Enter, newline?.Key);
+        Assert.Equal(ConsoleModifiers.Shift, newline?.Modifiers);
+        Assert.Equal(ConsoleKey.Enter, submit?.Key);
+        Assert.Equal((ConsoleModifiers)0, submit?.Modifiers);
+    }
+
+    /// <summary>Verifies Windows-encoded paste markers and newlines stay literal until a later keyboard submission.</summary>
+    [Fact]
+    public void Read_Win32EncodedPaste_PreservesBoundaries()
+    {
+        var encoded = string.Concat("\u001b[200~first\r\nsecond\u001b[201~".Select(character => $"\u001b[0;0;{(int)character};1;0;1_"));
+        var reader = new TerminalInputReader(new ScriptedConsoleInput(Keys(encoded + "\u001b[13;28;13;1;0;1_")), 100, win32Encoding: true);
+
+        Assert.Equal("first\nsecond", reader.Read().Paste);
+        Assert.Equal(ConsoleKey.Enter, reader.Read().Key?.Key);
+    }
+
+    /// <summary>Verifies a raw paste cannot turn text resembling Windows key records into keyboard actions.</summary>
+    [Fact]
+    public void Read_Win32ModeRawPaste_PreservesLiteralKeySyntax()
+    {
+        const string content = "\u001b[13;28;13;1;16;1_";
+        var reader = new TerminalInputReader(new ScriptedConsoleInput(Keys(
+            "\u001b[200~" + content + "\u001b[201~\u001b[13;28;13;1;16;1_")), 100, win32Encoding: true);
+
+        Assert.Equal(content, reader.Read().Paste);
+        Assert.Equal(ConsoleModifiers.Shift, reader.Read().Key?.Modifiers);
+    }
+
+    /// <summary>Verifies repeated Windows text keys are retained and encoded Escape still cancels.</summary>
+    [Fact]
+    public void Read_Win32RepeatedKeyAndEscape_PreservesEditingAndCancellation()
+    {
+        var reader = new TerminalInputReader(new ScriptedConsoleInput(Keys(
+            "\u001b[65;30;97;1;0;2_\u001b[27;1;27;1;0;1_")), 100, win32Encoding: true);
+
+        Assert.Equal('a', reader.Read().Key?.KeyChar);
+        Assert.Equal('a', reader.Read().Key?.KeyChar);
+        Assert.Throws<InteractiveFlowCanceledException>(() => reader.Read());
     }
 
     /// <summary>Verifies unknown terminal controls are ignored rather than inserted into the prompt.</summary>

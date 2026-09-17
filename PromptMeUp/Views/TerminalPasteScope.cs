@@ -15,7 +15,7 @@ internal sealed class TerminalPasteScope : IDisposable
     private bool _restoreInputMode;
     private bool _disposed;
 
-    /// <summary>Enables bracketed paste on interactive ANSI terminals and retains the original Windows input mode.</summary>
+    /// <summary>Enables bracketed paste and Windows modifier reporting while retaining the original console input mode.</summary>
     public TerminalPasteScope(IAnsiConsole console)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
@@ -45,6 +45,11 @@ internal sealed class TerminalPasteScope : IDisposable
         try
         {
             _console.WriteAnsi(writer => writer.Write("\u001b[?2004h"));
+            if (OperatingSystem.IsWindows())
+            {
+                // VT input alone flattens Shift+Enter; Windows key records preserve its modifier.
+                _console.WriteAnsi(writer => writer.Write("\u001b[?9001h"));
+            }
             Enabled = true;
         }
         catch
@@ -56,7 +61,7 @@ internal sealed class TerminalPasteScope : IDisposable
 
     public bool Enabled { get; }
 
-    /// <summary>Disables paste markers and restores the original Windows input mode even if terminal output fails.</summary>
+    /// <summary>Disables temporary keyboard and paste modes and restores native input even if terminal output fails.</summary>
     public void Dispose()
     {
         if (_disposed)
@@ -69,6 +74,10 @@ internal sealed class TerminalPasteScope : IDisposable
         {
             if (Enabled)
             {
+                if (OperatingSystem.IsWindows())
+                {
+                    _console.WriteAnsi(writer => writer.Write("\u001b[?9001l"));
+                }
                 _console.WriteAnsi(writer => writer.Write("\u001b[?2004l"));
             }
         }

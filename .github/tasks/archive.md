@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Support Shift+Enter in chat
+
+- Preserved Shift+Enter through Windows virtual-terminal input by enabling Windows keyboard records during editing and decoding modifiers, repeats, and key releases before paste handling. Also recognized CSI-u and xterm modified Enter sequences.
+- Kept plain Enter as submission and Shift+Enter as a bounded newline at the current caret. Raw and Windows-encoded paste boundaries remain separate from keyboard actions.
+- Added the shortcut to the full and compact input hints in all six languages. The compact guide stays above subsequent prompts; the footer is reserved for multiline position, limits, or errors.
+- Added regression coverage for modifier preservation, encoded and raw pastes, Escape, repeated keys, and newline insertion at the character limit.
+
+Validation: preflight, restore, formatting verification, XML comments, Release build with warnings as errors, and all 586 automated tests passed. Build artifacts were cleaned. Physical keyboard validation and a new MSIX installation were not performed for this follow-up.
+
 ## 2026-09-18 — Test and install the chat readability update
 
 - Ran the complete automated suite and corrected two test assumptions: malformed JSON can throw a derived JSON exception, and the scripted shell must provide rendering options for local success confirmations.
