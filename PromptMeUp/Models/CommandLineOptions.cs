@@ -19,6 +19,7 @@ public enum AppCommand
     Recipes,
     Chat,
     Memories,
+    Skills,
     Remember,
     Forget,
     TestAi,

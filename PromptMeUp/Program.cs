@@ -128,6 +128,11 @@ internal static class Program
         services.AddSingleton<IActivityAuditService, ActivityAuditService>();
         services.AddSingleton<IConversationMemoryService, ConversationMemoryService>();
         services.AddSingleton<PersistentMemoryService>();
+        services.AddSingleton<ExperimentalStore>();
+        services.AddSingleton<SkillCatalogService>();
+        services.AddSingleton<SkillActionService>();
+        services.AddSingleton<ExperimentalView>();
+        services.AddSingleton<ExperimentalWorkflow>();
         services.AddSingleton<ICommandRiskAssessmentService, CommandRiskAssessmentService>();
         services.AddSingleton<ICommandExecutionService, CommandExecutionService>();
         services.AddSingleton<IPortablePathService, PortablePathService>();

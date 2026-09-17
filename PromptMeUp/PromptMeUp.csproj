@@ -37,6 +37,7 @@
     <EmbeddedResource Include="..\assets\lenna.rgb.gz" LogicalName="PromptMeUp.Assets.lenna.rgb.gz" />
     <Content Include="..\prompt\*.yaml" Link="prompt\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\themes\*.json" Link="themes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\skills\**\*" Link="skills\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\scripts\hm-path.ps1" Link="hm-path.ps1" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\scripts\hm-path.sh" Link="hm-path.sh" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />

@@ -364,7 +364,7 @@ public sealed partial class PersistentMemoryService
     }
 
     /// <summary>Hashes the nearest Git root or working directory so project isolation never persists local paths.</summary>
-    private static string ResolveProjectScope()
+    internal static string ResolveProjectScope()
     {
         var current = new DirectoryInfo(Directory.GetCurrentDirectory());
         var root = current;

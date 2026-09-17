@@ -44,6 +44,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private readonly IMemoryView _memoryView;
     private readonly IDatabaseService _database;
     private readonly IAppGuideService _appGuide;
+    private readonly SkillCatalogService? _skills;
 
     /// <summary>Creates the focused query, chat, connection-test, and session-lifecycle workflow.</summary>
     public AiConversationWorkflow(
@@ -61,7 +62,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         PersistentMemoryService persistentMemory,
         IMemoryView memoryView,
         IDatabaseService database,
-        IAppGuideService appGuide)
+        IAppGuideService appGuide,
+        SkillCatalogService? skills = null)
     {
         _memoryService = memoryService ?? throw new ArgumentNullException(nameof(memoryService));
         _openAi = openAi ?? throw new ArgumentNullException(nameof(openAi));
@@ -78,6 +80,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         _memoryView = memoryView ?? throw new ArgumentNullException(nameof(memoryView));
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _appGuide = appGuide ?? throw new ArgumentNullException(nameof(appGuide));
+        _skills = skills;
     }
 
     /// <summary>Runs a single-turn session and offers a safe continuation into chat after the model response.</summary>
@@ -383,6 +386,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         }
         var envelope = await PrepareMemoryAsync(
             sessionId, memory, settings, promptId, userText, cancellationToken, pendingMessage: userText).ConfigureAwait(false);
+        if (envelope.SkillNames.Count > 0)
+        {
+            _shell.RenderNotice(_text.Text("Lab.Active", string.Join(", ", envelope.SkillNames)));
+        }
         var update = memory.Memory.Add("user", userText);
         await AuditPruningAsync(sessionId, update.PrunedMessages, cancellationToken).ConfigureAwait(false);
         var response = await _shell.RunWithStatusAsync(
@@ -653,12 +660,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private async Task<MemoryEnvelope> LoadMemoryEnvelopeAsync(string query, CancellationToken cancellationToken)
     {
         var selection = await _persistentMemory.SelectAsync(query, cancellationToken).ConfigureAwait(false);
-        if (selection.Memories.Count == 0)
-        {
-            return new MemoryEnvelope(null, 0, 0);
-        }
         var template = (await _prompts.GetAsync("memory-context", cancellationToken).ConfigureAwait(false)).ResolveText(_text.Language);
         var notes = selection.Memories.ToList();
+        var memoryText = string.Empty;
         while (notes.Count > 0)
         {
             var payload = JsonSerializer.Serialize(notes.Select(note => note.Text), MemoryJsonOptions);
@@ -666,11 +670,39 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             var tokens = ContextTokenEstimator.Messages([message]);
             if (tokens <= 800)
             {
-                return new MemoryEnvelope(message, notes.Count, tokens);
+                memoryText = message.Content;
+                break;
             }
             notes.RemoveAt(notes.Count - 1);
         }
-        return new MemoryEnvelope(null, 0, 0);
+        var selectedSkills = _skills is null ? [] : await _skills.SelectAsync(query, cancellationToken).ConfigureAwait(false);
+        var skillNotes = new List<object>();
+        var skillNames = new List<string>();
+        foreach (var skill in selectedSkills)
+        {
+            var instructions = skill.Origin == "bundled"
+                ? (await _prompts.GetAsync("skill-" + skill.Name, cancellationToken).ConfigureAwait(false)).ResolveText(_text.Language)
+                : skill.Instructions;
+            skillNotes.Add(new { skill.Name, instructions });
+            skillNames.Add(skill.Name);
+        }
+        var combined = memoryText;
+        if (skillNotes.Count > 0)
+        {
+            var skillTemplate = (await _prompts.GetAsync("skill-context", cancellationToken).ConfigureAwait(false)).ResolveText(_text.Language);
+            combined += "\n\n" + skillTemplate.Replace("{skills}", JsonSerializer.Serialize(skillNotes, MemoryJsonOptions), StringComparison.Ordinal);
+        }
+        if (string.IsNullOrWhiteSpace(combined))
+        {
+            return new MemoryEnvelope(null, 0, 0);
+        }
+        var envelopeMessage = new ChatMessage("user", combined.Trim());
+        var envelopeTokens = ContextTokenEstimator.Messages([envelopeMessage]);
+        if (envelopeTokens > 3200)
+        {
+            throw new ConversationLimitException(_text.Text("Chat.ContextLimit"));
+        }
+        return new MemoryEnvelope(envelopeMessage, notes.Count, envelopeTokens) { SkillNames = skillNames };
     }
 
     /// <summary>Reserves actual populated instructions and recalled notes before pruning the recent-turn window.</summary>
@@ -762,7 +794,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         public bool ShowCommandSuggestions { get; set; } = true;
     }
 
-    private sealed record MemoryEnvelope(ChatMessage? Message, int Count, long Tokens);
+    private sealed record MemoryEnvelope(ChatMessage? Message, int Count, long Tokens)
+    {
+        public IReadOnlyList<string> SkillNames { get; init; } = [];
+    }
 
     private sealed record TurnResult(AiResponse Response, decimal Cost);
 

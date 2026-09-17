@@ -49,6 +49,12 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--skills":
+                    if (!TrySelect(AppCommand.Skills, ref command, ref commandWasSelected, out var skillsError))
+                    {
+                        return FailureMessage(skillsError);
+                    }
+                    break;
                 case "--recipes":
                     if (!TrySelect(AppCommand.Recipes, ref command, ref commandWasSelected, out var recipeError))
                     {

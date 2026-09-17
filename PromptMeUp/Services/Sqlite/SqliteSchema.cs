@@ -137,6 +137,36 @@ internal static class SqliteSchema
         );
         CREATE INDEX IF NOT EXISTS ix_organization_costs_bucket ON organization_costs (bucket_start_unix);
 
+        CREATE TABLE IF NOT EXISTS experimental_settings (
+            scope_key TEXT NOT NULL,
+            name TEXT NOT NULL,
+            value TEXT NOT NULL CHECK(length(value) <= 4096),
+            PRIMARY KEY(scope_key, name)
+        );
+        CREATE TABLE IF NOT EXISTS learning_observations (
+            id TEXT NOT NULL PRIMARY KEY,
+            scope_key TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 4000),
+            created_unix INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_learning_scope ON learning_observations(scope_key, created_unix);
+        CREATE TABLE IF NOT EXISTS memory_proposals (
+            id TEXT NOT NULL PRIMARY KEY,
+            scope_key TEXT NOT NULL,
+            payload_json TEXT NOT NULL CHECK(json_valid(payload_json)),
+            status TEXT NOT NULL CHECK(status IN ('pending', 'approved', 'rejected', 'expired')),
+            created_unix INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_proposals_scope ON memory_proposals(scope_key, status, created_unix);
+        CREATE TABLE IF NOT EXISTS memory_provenance (
+            memory_id TEXT NOT NULL PRIMARY KEY,
+            kind TEXT NOT NULL,
+            sources_json TEXT NOT NULL CHECK(json_valid(sources_json)),
+            proposal_id TEXT NOT NULL,
+            FOREIGN KEY(memory_id) REFERENCES persistent_memories(id) ON DELETE CASCADE
+        );
+
         CREATE TABLE IF NOT EXISTS sync_state (
             name TEXT NOT NULL PRIMARY KEY,
             value TEXT NOT NULL
