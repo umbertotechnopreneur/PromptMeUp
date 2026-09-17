@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-17 — Add direct memory commands and confirmed numbered deletion
+
+- Added `hm --remember [global|project] <text>` for local persistence and `hm --forget <id or description>` for deleting an accessible saved note. Direct `/remember` and `/forget` invocations route to these workflows instead of AI chat.
+- Resolve IDs and exact note text locally. For descriptions, use the existing audited AI service and a six-language structured prompt to search batches of up to eight global and current-project notes; validate every returned identifier before offering matches.
+- Show normal-weight warm ochre `1>` choices with immediate digit selection, paging, cancellation, and a separate deletion confirmation. Require an interactive terminal and reject deletion when the reviewed note changed during lookup or confirmation.
+- Updated help and versioned prompts in all six languages, documented provider sharing and costs, and added regression cases for parsing, persistence, batch matching, invalid responses, cancellation, concurrent changes, and numbered selection.
+
+Validation: preflight, restore, formatting verification, XML comments, and a Release build with warnings as errors passed. Build output was cleaned. Regression tests were added and compiled but not executed; no CLI smoke checks or live AI calls were run.
+
 ## 2026-09-16 — Run the first tagged release and correct the installer compiler check
 
 - Merged PR #34 after all required checks passed, verified the resulting main checks, and pushed annotated tag `v0.1.7` at `d73fc50`.

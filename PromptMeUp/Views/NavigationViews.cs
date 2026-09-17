@@ -161,7 +161,9 @@ public sealed class HelpView(
                 }
             ]),
         new("🧠", text.Text("Settings.Memories"), text.Text("Settings.Memories"),
-            [new("--memories", text.Text("Help.Memories"))])
+            [new("--memories", text.Text("Help.Memories")),
+             new("--remember [global|project] <text>", text.Text("MemoryCli.RememberHelp")),
+             new("--forget <id or description>", text.Text("MemoryCli.ForgetHelp"))])
         {
             Open = openMemories,
             OpenHintKey = "MemoryManager.OpenHint"

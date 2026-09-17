@@ -258,8 +258,8 @@ public sealed partial class PersistentMemoryService
         }
     }
 
-    /// <summary>Deletes an exact memory identifier only from the current project or global scope.</summary>
-    public async Task<bool> ForgetAsync(string id, CancellationToken cancellationToken)
+    /// <summary>Deletes an accessible note by ID, optionally requiring its reviewed content, scope, and timestamp to remain unchanged.</summary>
+    public async Task<bool> ForgetAsync(string id, CancellationToken cancellationToken, PersistentMemory? expected = null)
     {
         if (!Guid.TryParseExact(id, "N", out _))
         {
@@ -271,10 +271,17 @@ public sealed partial class PersistentMemoryService
         {
             await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM persistent_memories WHERE id = $id AND (scope_key = $scope OR scope_key = $global);";
+            command.CommandText = """
+                DELETE FROM persistent_memories WHERE id = $id AND (scope_key = $scope OR scope_key = $global)
+                AND ($check = 0 OR (body = $body AND updated_unix = $updated AND scope_key = $expectedScope));
+                """;
             command.Parameters.AddWithValue("$id", id);
             command.Parameters.AddWithValue("$scope", scope);
             command.Parameters.AddWithValue("$global", GlobalScope);
+            command.Parameters.AddWithValue("$check", expected is null ? 0 : 1);
+            command.Parameters.AddWithValue("$body", expected?.Text ?? string.Empty);
+            command.Parameters.AddWithValue("$updated", expected?.UpdatedAt.ToUnixTimeSeconds() ?? 0);
+            command.Parameters.AddWithValue("$expectedScope", expected?.IsGlobal == true ? GlobalScope : scope);
             var removed = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) > 0;
             _logger.LogInformation("Explicit memory deletion completed. Removed={Removed}", removed);
             return removed;

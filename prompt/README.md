@@ -30,6 +30,7 @@ Current resources:
 - `query-system.yaml` — self-contained, single-query console assistance;
 - `app-guide-*.yaml` — eight local product guide chapters loaded on demand as system context;
 - `memory-context.yaml` — selected saved notes, supplied as untrusted context;
+- `memory-forget.yaml` — bounded AI matching for an explicit deletion description; the app validates IDs, shows a numbered choice menu, and requires confirmation before deleting;
 - `diagnose-system.yaml` — console error diagnosis using supplied evidence;
 - `plan-system.yaml` — ordered console steps with separate verification;
 - `script-system.yaml` — creating and revising PowerShell script files;

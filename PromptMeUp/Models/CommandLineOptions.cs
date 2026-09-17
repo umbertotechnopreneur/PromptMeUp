@@ -19,6 +19,8 @@ public enum AppCommand
     Recipes,
     Chat,
     Memories,
+    Remember,
+    Forget,
     TestAi,
     Costs,
     ThirdParty,

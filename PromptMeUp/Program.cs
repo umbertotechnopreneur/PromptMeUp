@@ -156,6 +156,7 @@ internal static class Program
         services.AddSingleton<IChatView, ChatView>();
         services.AddSingleton<IMemoryView, MemoryView>();
         services.AddSingleton<IMemoryManagerView, MemoryManagerView>();
+        services.AddSingleton<IMemoryForgetView, MemoryForgetView>();
         services.AddSingleton<ICommandSuggestionView, CommandSuggestionView>();
         services.AddSingleton<IHelpView, HelpView>();
         services.AddSingleton<IAboutView, AboutView>();
@@ -186,6 +187,7 @@ internal static class Program
         services.AddSingleton<ApplicationActivityRecorder>();
         services.AddSingleton<SetupWorkflow>();
         services.AddSingleton<MemoryManagerWorkflow>();
+        services.AddSingleton<MemoryCommandWorkflow>();
         services.AddSingleton<InstallationWorkflow>();
         services.AddSingleton<LennaWorkflow>();
         services.AddSingleton<HelpWorkflow>();
