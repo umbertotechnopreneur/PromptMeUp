@@ -298,7 +298,7 @@ public sealed class ThirdPartyView(
         ("Serilog.Extensions.Logging", "10.0.0", "Apache-2.0"),
         ("Serilog.Sinks.File", "7.0.0", "Apache-2.0"),
         ("Spectre.Console", "0.57.2", "MIT"),
-        ("SQLitePCLRaw.bundle_e_sqlite3", "2.1.12", "Apache-2.0 / Public Domain"),
+        ("SQLitePCLRaw.bundle_e_sqlite3", "3.0.5", "Apache-2.0 / Public Domain"),
         ("YamlDotNet", "18.1.0", "MIT")
     ];
 

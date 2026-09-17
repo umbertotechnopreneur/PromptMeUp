@@ -12,8 +12,8 @@ These texts were retrieved from the following upstream sources. Review them when
 | [spectre-console-LICENSE.txt](spectre-console-LICENSE.txt) | [Upstream text](https://raw.githubusercontent.com/spectreconsole/spectre.console/bbbb5729dde27b58deee44f447a788eea46ee451/LICENSE.md) |
 | [yamldotnet-LICENSE.txt](yamldotnet-LICENSE.txt) | [Upstream text](https://raw.githubusercontent.com/aaubry/YamlDotNet/748334a8fa7c227740018b284b71ad95cc6b7fc7/LICENSE.txt) |
 | [libyaml-LICENSE.txt](libyaml-LICENSE.txt) | [Upstream text](https://raw.githubusercontent.com/aaubry/YamlDotNet/748334a8fa7c227740018b284b71ad95cc6b7fc7/LICENSE-libyaml) |
-| [sqlitepclraw-LICENSE.txt](sqlitepclraw-LICENSE.txt) | [Upstream text](https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v2.1.12/LICENSE.TXT) |
-| [sqlitepclraw-NOTICE.txt](sqlitepclraw-NOTICE.txt) | [Upstream text](https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v2.1.12/NOTICE.TXT) |
+| [sqlitepclraw-LICENSE.txt](sqlitepclraw-LICENSE.txt) | [Upstream text](https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v3.0.5/LICENSE.TXT) |
+| [sqlitepclraw-NOTICE.txt](sqlitepclraw-NOTICE.txt) | [Upstream text](https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v3.0.5/NOTICE.TXT) |
 | [sqlite-LICENSE.txt](sqlite-LICENSE.txt) | [License supplied with SQLite 3.53.4](https://www.nuget.org/packages/SQLite/3.53.4/License) |
 | [serilog-LICENSE.txt](serilog-LICENSE.txt) | [Upstream text](https://raw.githubusercontent.com/serilog/serilog/497f80fda4f9e8f98b9c13ba34b1f0530f8c4449/LICENSE) |
 | [serilog-extensions-logging-LICENSE.txt](serilog-extensions-logging-LICENSE.txt) | [Upstream text](https://raw.githubusercontent.com/serilog/serilog-extensions-logging/538cf2fd64baf760950e202a00dd426c6b76e18c/LICENSE) |
