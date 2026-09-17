@@ -1,6 +1,6 @@
 # Third-party notices
 
-PromptMeUp's code is MIT-licensed; its dependencies and bundled legacy artwork retain their own terms and copyright notices. This direct-package overview was checked against the project dependencies on 2026-09-13. Full upstream texts are preserved in [LICENSES](LICENSES/README.md).
+PromptMeUp's code is MIT-licensed; its dependencies and bundled legacy artwork retain their own terms and copyright notices. This direct-package overview was checked against the project dependencies on 2026-09-17. Full upstream texts are preserved in [LICENSES](LICENSES/README.md).
 
 Release archives also contain a `THIRD_PARTY_INVENTORY.json` with every resolved application package, including transitive dependencies and the exact self-contained .NET runtime pack. The release exporter copies package-supplied licenses and notices into the archive's `LICENSES` directory, alongside the preserved upstream texts. New package families stop packaging until their attribution is reviewed.
 
@@ -20,16 +20,16 @@ The resolved application also includes Microsoft.Data.Sqlite.Core; Microsoft.Ext
 | [Serilog.Extensions.Logging](https://www.nuget.org/packages/Serilog.Extensions.Logging/10.0.0) | 10.0.0 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |
 | [Serilog.Sinks.File](https://www.nuget.org/packages/Serilog.Sinks.File/7.0.0) | 7.0.0 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |
 | [Spectre.Console](https://www.nuget.org/packages/Spectre.Console/0.57.2) | 0.57.2 | [MIT](https://licenses.nuget.org/MIT) |
-| [SQLitePCLRaw.bundle_e_sqlite3](https://www.nuget.org/packages/SQLitePCLRaw.bundle_e_sqlite3/2.1.12) | 2.1.12 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0); bundled SQLite is public domain |
+| [SQLitePCLRaw.bundle_e_sqlite3](https://www.nuget.org/packages/SQLitePCLRaw.bundle_e_sqlite3/3.0.5) | 3.0.5 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0); bundled SQLite is public domain |
 | [YamlDotNet](https://www.nuget.org/packages/YamlDotNet/18.1.0) | 18.1.0 | [MIT](https://licenses.nuget.org/MIT) |
 
 ## Development and test dependencies
 
 | Package | Version | License |
 | --- | ---: | --- |
-| [Microsoft.NET.Test.Sdk](https://www.nuget.org/packages/Microsoft.NET.Test.Sdk/18.9.0) | 18.9.0 | [MIT](https://licenses.nuget.org/MIT) |
+| [Microsoft.NET.Test.Sdk](https://www.nuget.org/packages/Microsoft.NET.Test.Sdk/18.10.1) | 18.10.1 | [MIT](https://licenses.nuget.org/MIT) |
 | [xunit](https://www.nuget.org/packages/xunit/2.9.3) | 2.9.3 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |
-| [xunit.runner.visualstudio](https://www.nuget.org/packages/xunit.runner.visualstudio/3.1.5) | 3.1.5 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |
+| [xunit.runner.visualstudio](https://www.nuget.org/packages/xunit.runner.visualstudio/4.0.0) | 4.0.0 | [Apache-2.0](https://licenses.nuget.org/Apache-2.0) |
 
 ## Lenna terminal artwork
 

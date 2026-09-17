@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Prepare memory and chat changes for protected merges
+
+- Integrated current main into the memory and chat branches, preserving both task histories and the updated dependencies. Moved the derived-JSON-exception assertion correction into the memory branch so it validates independently.
+- Made wrapping assertions ignore terminal ANSI decoration, matching the existing rendering assertions and the CI environment while retaining content and width checks.
+- Included the requested local README and MSIX script changes: maintainers can create local Windows test packages with an existing trusted certificate; distributed releases still use GitHub Actions.
+
+Validation: repository preflight, restore, formatting verification, XML comments, Release builds with warnings as errors, and PowerShell syntax validation passed. Build output was cleaned. Protected merges remain conditional on all required GitHub checks and resolved conversations.
+
 ## 2026-09-18 — Support Shift+Enter in chat
 
 - Preserved Shift+Enter through Windows virtual-terminal input by enabling Windows keyboard records during editing and decoding modifiers, repeats, and key releases before paste handling. Also recognized CSI-u and xterm modified Enter sequences.
@@ -43,6 +51,15 @@ Validation: preflight, restore, formatting, XML comments, Release build, self-co
 - Updated help and versioned prompts in all six languages, documented provider sharing and costs, and added regression cases for parsing, persistence, batch matching, invalid responses, cancellation, concurrent changes, and numbered selection.
 
 Validation: preflight, restore, formatting verification, XML comments, and a Release build with warnings as errors passed. Build output was cleaned. Regression tests were added and compiled but not executed; no CLI smoke checks or live AI calls were run.
+
+## 2026-09-16 — Publish prerelease 0.1.8 with portable archives and Windows installers
+
+- Merged PR #35 after all required checks, including Windows installer compilation, passed. Verified the resulting main checks and pushed annotated tag `v0.1.8` at `142b519`.
+- Release workflow run `35083274379` completed successfully. The published prerelease includes Windows ZIPs and Linux/macOS tar.gz archives for x64 and ARM64, unsigned Windows EXE installers for x64 and ARM64, and `SHA256SUMS.txt`.
+- Verified all eight package checksums against GitHub asset digests, verified the downloaded checksum manifest digest, and confirmed successful provenance attestation. Published the generated draft as a prerelease, without marking it as the latest stable release.
+- Confirmed the public release at https://github.com/umbertotechnopreneur/PromptMeUp/releases/tag/v0.1.8 with all nine assets uploaded, `draft=false`, and `prerelease=true`. The original `v0.1.7` tag remains unchanged and has no published release.
+
+Validation: required local non-test checks passed; GitHub quality checks, native CLI smoke checks, all six packaging jobs, installer compilation, checksum generation, and attestations passed. Cross-published packages were not executed on unmatched runners, and neither EXE installer was installed or run. Standard local cleanup completed after commits and pushes. Updated this task record locally after publication.
 
 ## 2026-09-16 — Run the first tagged release and correct the installer compiler check
 

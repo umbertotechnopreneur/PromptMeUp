@@ -21,11 +21,10 @@ param(
     [uri]$TimestampServer
 )
 
-throw 'MSIX packaging is temporarily disabled while PromptMeUp prepares a distribution code-signing certificate. Use the portable release workflow instead.'
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'MSIX packaging and certificate-store signing require Windows.' }
+# This creates a local test package only. Distribution remains a GitHub Actions release concern.
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'artifacts'))

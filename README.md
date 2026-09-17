@@ -30,7 +30,7 @@ Forgot a command? Stuck on an error? Ask `hm` in your own words. It uses your Op
 > PromptMeUp is still an early version. There are no ready-to-download releases yet, but you can [build it yourself](#get-started).
 
 > [!NOTE]
-> **MSIX installers are temporarily unavailable.** We're working on the code-signing certificate needed to distribute them. Portable downloads remain the supported option.
+> **Distributed MSIX installers are temporarily unavailable.** Portable downloads remain the supported option. Maintainers can still create self-signed MSIX packages locally for Windows testing; see the [Windows packaging guide](docs/WINDOWS_PACKAGING.md#install-with-the-hm-execution-alias).
 
 ## Meet `hm`
 
