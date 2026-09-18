@@ -2,6 +2,16 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Experimental skills and reviewed memory learning
+
+- Implemented the eight-step roadmap on `codex/experimental-memory-skills`; opened [draft PR #43](https://github.com/umbertotechnopreneur/PromptMeUp/pull/43), assigned to the repository owner with enhancement and documentation labels. Kept `main` unchanged.
+- Added opt-in skill activation/import, contextual selection, and approved Git/filesystem/concat-files actions. Explicitly excluded metals-dev-monitor and kept the existing command safety boundary.
+- Added opt-in observations, provenance, transactional proposal review, Dream reflection across sessions, and manually invoked heartbeat with an optional local reminder. No background agent or automatic memory approval.
+- Preserved OpenAI, PromptMeUp views, all six interface/prompt languages, credential filtering, retention bounds, and revision guards against stale evidence or in-flight resurrection.
+- Recorded checkpoints in commits `1a0ae82`, `50ed970`, and `6a54bf7`; documented consent, permanent evidence purges, existing audit retention, supported import constraints, and the intentionally limited initial catalog.
+
+Validation: preflight, format verification, XML summaries, Release build (zero warnings/errors), YAML syntax/six-language fields, prompt context allowances, and PowerShell syntax passed. Added and compiled regression tests, but did not run automated tests or CLI smoke tests without explicit authorization. No live AI requests or skill scripts ran. Cleaned build output; no local release artifacts were produced.
+
 ## 2026-09-18 — Reduce agent context and redundant verification
 
 - Consolidated repository rules in `AGENTS.md` and replaced duplicate Copilot instructions with a reference, preserving unique safety and product requirements.

@@ -2,6 +2,12 @@
 
 Ask `hm` a terminal question, check its answer, and choose whether to run a suggested command. `hm` means **help me** and works on Windows, Linux, and macOS.
 
+## Experimental skills and learning
+
+This branch includes opt-in `hm --skills`, `hm --learning`, `hm --dream`, `hm --heartbeat`, and `hm --proposals` screens. They require an interactive terminal. The same names are available as slash commands inside chat. `--yes` never approves skill actions or memory changes.
+
+See the [experimental guide](EXPERIMENTAL_MEMORY_SKILLS.md) before enabling capture or importing a package. Dream and heartbeat create proposals; they do not silently change saved notes or schedule background work.
+
 ## Ask or choose a command
 
 ```text

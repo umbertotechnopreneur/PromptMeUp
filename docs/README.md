@@ -10,6 +10,7 @@ To try `hm` for the first time, start with the [README](../README.md#get-started
 | Change the model, chat limits, or other settings | [Settings](CLI_REFERENCE.md#change-the-model-or-conversation-limits) |
 | Pick terminal colors or make my own theme | [Terminal themes](TERMINAL_THEMES.md) |
 | Save useful notes or understand the token counters | [Memory, context, and costs](OPENAI_COSTS_AND_CACHING.md) |
+| Try opt-in skills, Dream, and memory maintenance | [Experimental skills and memory](EXPERIMENTAL_MEMORY_SKILLS.md) |
 | Check what is saved locally and what is sent to OpenAI | [Privacy](PRIVACY.md) |
 | Get help or report a problem | [Support](../SUPPORT.md) |
 

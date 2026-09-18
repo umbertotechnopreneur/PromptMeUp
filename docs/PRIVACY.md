@@ -51,6 +51,16 @@ The filter can't catch everything. Don't paste secrets into questions or command
 Command arguments containing recognizable secrets are rejected. Chat messages
 are filtered before being sent to OpenAI.
 
+## Experimental skills and learning
+
+The experimental branch adds project-scoped settings, skill activation fingerprints, observations, memory proposals, and provenance to local SQLite storage. ZIP imports stay in the application data directory. These features start disabled. Activating a skill can send its instructions with later questions; scripts are never run just by activating them. Review imported packages as carefully as code you would run yourself.
+
+With observation capture enabled, completed, directly entered user messages of up to 4,000 characters are filtered and retained for 30 days, up to the newest 200 per project. Longer messages are not captured. Assistant replies and command-output follow-ups are not observations. Dream shows a bounded batch and asks before sending it to OpenAI. Heartbeat checks exact duplicates locally and can request a separately confirmed AI review. There is no background process or automatic API call from the reminder.
+
+Proposals remain separate from saved memories until you approve a displayed change. Disabling capture or the experiment clears its observations and proposals. Forgetting, merging, or removing a project memory also clears learning evidence and proposals for that project; a global target clears them for all projects. This conservative purge prevents learning evidence from immediately recreating removed text. Other approved memories, older request history, backups, and text already sent to OpenAI are not erased. Confirmed reflection requests and responses use the ordinary redacted AI history; the learning store's 30-day limit does not expire that history. Retention cleanup runs when learning data is accessed, not on a background timer.
+
+See the [experimental guide](EXPERIMENTAL_MEMORY_SKILLS.md) for limits and review controls. Secret filtering is not a guarantee: do not capture or import confidential material you cannot share.
+
 ## Data sent to OpenAI
 
 An ordinary AI request can contain:

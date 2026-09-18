@@ -167,6 +167,10 @@ You can give `hm` a build log, ask for a script, or work through a task step by 
 
 The [command guide](docs/CLI_REFERENCE.md) has more examples and options. PromptMeUp helps with terminal work: commands, tools, errors, files, and scripts. It doesn't write general prose or generate images.
 
+## Experimental skills and learning
+
+On the experimental branch, you can try [skills and reviewed learning](docs/EXPERIMENTAL_MEMORY_SKILLS.md). Start with `hm --skills` or `hm --learning`. Everything starts disabled; Dream and heartbeat suggest memory changes for you to review, and nothing runs in the background.
+
 ## Before you run a command
 
 Before anything runs, `hm` checks the command on your machine and shows you the exact text and possible risks. You can also turn on an extra AI review. You make the final decision, and each approval is for one command and lasts for a limited time.
