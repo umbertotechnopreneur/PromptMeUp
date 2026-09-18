@@ -38,6 +38,8 @@ For `set_reminder`, choose **manage**, then create a note with a time such as `1
 
 Optional contextual selection chooses relevant enabled skills locally. **Import a skill ZIP** accepts one package with `SKILL.md` and optional standalone `scripts/*.ps1` (1 MiB total; 64 KiB per file). Local packages override bundled names. Changed contents need approval again. Imported scripts are not sandboxed; inspect them carefully. `--yes` cannot approve skill actions.
 
+You can import up to 64 local packages. If a skill's instructions exceed the chat allowance, shorten them before enabling or selecting it; the app explains the limit. This allowance includes the instructions' final formatting, not just their character count.
+
 ## Use memories
 
 Save a note directly with `/remember This project uses .NET 10.` in chat. Add `global` after `/remember` for a note shared across projects. Open `hm --memories` to read, edit, or delete saved notes.

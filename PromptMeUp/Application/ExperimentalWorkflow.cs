@@ -130,7 +130,7 @@ public sealed partial class ExperimentalWorkflow(
             }
             if (selected == 2)
             {
-                await store.SetAsync("selected-skill", skill.Name, ct).ConfigureAwait(false);
+                await skills.SelectForQuestionsAsync(skill, ct).ConfigureAwait(false);
                 return;
             }
             var availableActions = actions.Actions(skill);

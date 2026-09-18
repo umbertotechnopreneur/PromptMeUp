@@ -22,7 +22,8 @@ public sealed class BundledSkillTests
         await fixture.Database.InitializeAsync(default);
         var text = new LocalizationService();
         var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
-        var catalog = new SkillCatalogService(fixture.Paths, store, text);
+        var catalog = new SkillCatalogService(fixture.Paths, store, text,
+            new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
 
         var packages = catalog.List();
 
@@ -144,5 +145,6 @@ public sealed class BundledSkillTests
 
     /// <summary>Creates a read-only catalog over packaged files and the fixture's isolated local package directory.</summary>
     private static SkillCatalogService Catalog(RegressionFixture fixture, LocalizationService text) =>
-        new(fixture.Paths, new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text), text);
+        new(fixture.Paths, new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text), text,
+            new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
 }

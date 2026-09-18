@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Fix experimental consent and skill review findings
+
+- Reject stale settings snapshots inside the save transaction. Changing a reminder or automatic selection in an older window cannot restore revoked capture consent or erase newer evidence.
+- Budget the complete serialized, localized skill context. Reject oversized activation and manual selection with a six-language explanation; warn about incompatible older selections without blocking answers.
+- Enforce the 64-package local import limit before moving a reviewed package. Serialize concurrent imports with a persistent file lock and preserve rejected staging content.
+- Added 32 regression cases covering consent conflicts, escaping, localization, query envelopes, preserved selection, capacity, and competing imports. Kept the simple quick start current.
+
+Validation: preflight, formatting verification, XML summaries, a warning-free Release build, and all 760 tests passed. Synthetic provider replies and disposable local data only; no live API calls, desktop actions, or local release packaging. Cleaned Release output. Changes remain on the existing experimental branch and draft PR #43.
+
 ## 2026-09-18 — Explain experimental features through the chat guide
 
 - Added five concise, six-language guide chapters: skills, skill-actions, learning, reflection, and reminders. Documented exact activation steps, examples, privacy limits, and the distinction between manual memories, learning capture, heartbeat hints, and dated reminders.

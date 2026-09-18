@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 
 using System.IO.Compression;
+using Microsoft.Extensions.Logging.Abstractions;
 using PromptMeUp.Services;
 
 namespace PromptMeUp.Tests;
@@ -88,7 +89,8 @@ public sealed class SkillCatalogTests
         {
             var paths = fixture.Paths with { DataDirectory = directory };
             var text = new LocalizationService();
-            var catalog = new SkillCatalogService(paths, new ExperimentalStore(paths, new SensitiveDataRedactor(), text), text);
+            var catalog = new SkillCatalogService(paths, new ExperimentalStore(paths, new SensitiveDataRedactor(), text), text,
+                new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
             var zip = Archive(fixture, [("demo/SKILL.md", Definition("demo"), 0)]);
             var staged = catalog.StageZip(zip);
 
@@ -269,7 +271,8 @@ public sealed class SkillCatalogTests
     }
 
     /// <summary>Creates a catalog with the shared redaction and localization implementations.</summary>
-    private static SkillCatalogService Catalog(RegressionFixture fixture) => new(fixture.Paths, Store(fixture), new LocalizationService());
+    private static SkillCatalogService Catalog(RegressionFixture fixture) => new(fixture.Paths, Store(fixture), new LocalizationService(),
+        new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
 
     /// <summary>Creates preferences in the same isolated database as the fixture.</summary>
     private static ExperimentalStore Store(RegressionFixture fixture) => new(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());

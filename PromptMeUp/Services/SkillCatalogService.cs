@@ -4,6 +4,9 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
 using PromptMeUp.Infrastructure;
 using PromptMeUp.Models;
 using YamlDotNet.Core;
@@ -12,8 +15,10 @@ using YamlDotNet.RepresentationModel;
 namespace PromptMeUp.Services;
 
 /// <summary>Adapts CLI-Intelligence's package model with bounded parsing and content-bound activation.</summary>
-public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store, ILocalizationService text)
+public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store, ILocalizationService text, IPromptCatalogService prompts)
 {
+    internal const int MaximumContextTokens = 1800;
+    private static readonly JsonSerializerOptions ContextJson = new() { Encoder = JavaScriptEncoder.Create(UnicodeRanges.All) };
     private const int MaximumFiles = 128;
     private const int MaximumFileBytes = 65_536;
     private const int MaximumPackageBytes = 1_048_576;
@@ -161,15 +166,32 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     }
 
     /// <summary>Records the exact inspected content as enabled, or removes its activation.</summary>
-    public Task EnableAsync(SkillDefinition skill, bool enabled, CancellationToken ct) =>
-        store.SetAsync("skill:" + skill.Name, enabled ? skill.Fingerprint : string.Empty, ct);
+    public async Task EnableAsync(SkillDefinition skill, bool enabled, CancellationToken ct)
+    {
+        if (enabled)
+        {
+            await EnsureContextFitsAsync(skill, ct).ConfigureAwait(false);
+        }
+        await store.SetAsync("skill:" + skill.Name, enabled ? skill.Fingerprint : string.Empty, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Rejects an unusable manual selection before replacing the user's current choice.</summary>
+    public async Task SelectForQuestionsAsync(SkillDefinition skill, CancellationToken ct)
+    {
+        if (!await IsEnabledAsync(skill, ct).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(text.Text("Lab.Activate"));
+        }
+        await EnsureContextFitsAsync(skill, ct).ConfigureAwait(false);
+        await store.SetAsync("selected-skill", skill.Name, ct).ConfigureAwait(false);
+    }
 
     /// <summary>Requires current availability and an exact match with the user's approved package content.</summary>
     public async Task<bool> IsEnabledAsync(SkillDefinition skill, CancellationToken ct) =>
         skill.UnavailableReason is null && await store.GetAsync("skill:" + skill.Name, ct).ConfigureAwait(false) == skill.Fingerprint;
 
-    /// <summary>Selects enabled explicit or contextually relevant packages within an estimated instruction budget.</summary>
-    public async Task<IReadOnlyList<SkillDefinition>> SelectAsync(string query, CancellationToken ct)
+    /// <summary>Selects enabled packages after resolving localized instructions and budgeting their complete serialized context.</summary>
+    public async Task<IReadOnlyList<SkillDefinition>> SelectAsync(string query, CancellationToken ct, ICollection<string>? warnings = null)
     {
         var settings = await store.SettingsAsync(ct).ConfigureAwait(false);
         if (!settings.Enabled)
@@ -180,20 +202,59 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
         var words = query.Split([' ', '\n', '.', ',', ':', '/', '\\'], StringSplitOptions.RemoveEmptyEntries)
             .Where(word => word.Length >= 3).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var selected = new List<SkillDefinition>();
-        long tokens = 0;
+        var template = (await prompts.GetAsync("skill-context", ct).ConfigureAwait(false)).ResolveText(text.Language);
         foreach (var candidate in List().Select(skill => (Skill: skill, Score: string.Equals(skill.Name, explicitName, StringComparison.OrdinalIgnoreCase) ? int.MaxValue
                      : settings.AutomaticSkills ? words.Count(word => (skill.Name + " " + skill.Description).Contains(word, StringComparison.OrdinalIgnoreCase)) : 0))
                  .Where(item => item.Score > 0).OrderByDescending(item => item.Score).ThenBy(item => item.Skill.Name, StringComparer.Ordinal))
         {
-            var cost = ContextTokenEstimator.Text(candidate.Skill.Instructions) + ContextTokenEstimator.Text(candidate.Skill.Name) + 100;
-            if (tokens + cost <= 1800 && await IsEnabledAsync(candidate.Skill, ct).ConfigureAwait(false))
+            if (!await IsEnabledAsync(candidate.Skill, ct).ConfigureAwait(false))
             {
-                selected.Add(candidate.Skill);
-                tokens += cost;
+                continue;
+            }
+            var resolved = await ResolveInstructionsAsync(candidate.Skill, ct).ConfigureAwait(false);
+            if (ContextTokenEstimator.Messages([new("user", SerializeContext([.. selected, resolved], template))]) <= MaximumContextTokens)
+            {
+                selected.Add(resolved);
+            }
+            else if (candidate.Score == int.MaxValue)
+            {
+                warnings?.Add(text.Text("Lab.SkillTooLarge", candidate.Skill.Name, MaximumContextTokens));
             }
         }
         return selected;
     }
+
+    /// <summary>Builds exactly the localized context used during selection, without rewriting its approved instructions.</summary>
+    internal async Task<string> ContextAsync(IReadOnlyList<SkillDefinition> selected, CancellationToken ct)
+    {
+        if (selected.Count == 0)
+        {
+            return string.Empty;
+        }
+        var template = (await prompts.GetAsync("skill-context", ct).ConfigureAwait(false)).ResolveText(text.Language);
+        return SerializeContext(selected, template);
+    }
+
+    /// <summary>Explains oversized instructions before activation or manual selection can appear to succeed.</summary>
+    private async Task EnsureContextFitsAsync(SkillDefinition skill, CancellationToken ct)
+    {
+        var resolved = await ResolveInstructionsAsync(skill, ct).ConfigureAwait(false);
+        var context = await ContextAsync([resolved], ct).ConfigureAwait(false);
+        if (ContextTokenEstimator.Messages([new("user", context)]) > MaximumContextTokens)
+        {
+            throw new InvalidOperationException(text.Text("Lab.SkillTooLarge", skill.Name, MaximumContextTokens));
+        }
+    }
+
+    /// <summary>Resolves bundled YAML before budgeting while retaining local package instructions unchanged.</summary>
+    private async Task<SkillDefinition> ResolveInstructionsAsync(SkillDefinition skill, CancellationToken ct) =>
+        skill.Origin == "bundled"
+            ? skill with { Instructions = (await prompts.GetAsync("skill-" + skill.Name, ct).ConfigureAwait(false)).ResolveText(text.Language) }
+            : skill;
+
+    /// <summary>Uses the same JSON escaping and wrapper for admission checks and provider-bound context.</summary>
+    private static string SerializeContext(IEnumerable<SkillDefinition> selected, string template) =>
+        template.Replace("{skills}", JsonSerializer.Serialize(selected.Select(skill => new { skill.Name, instructions = skill.Instructions }), ContextJson), StringComparison.Ordinal);
 
     /// <summary>Inspects a bounded ZIP into an isolated staging directory; importing never executes scripts.</summary>
     public string StageZip(string path)
@@ -304,6 +365,14 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
         }
         RejectLinks(LocalRoot);
         Directory.CreateDirectory(LocalRoot);
+        var lockPath = Path.Combine(LocalRoot, ".import.lock");
+        RejectLinks(lockPath);
+        // Keep this file in place so concurrent processes lock the same file across imports.
+        using var importLock = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        if (Directory.EnumerateDirectories(LocalRoot).Take(64).Count() >= 64)
+        {
+            throw Invalid();
+        }
         Directory.Move(reviewed.Directory, Path.Combine(LocalRoot, reviewed.Name));
     }
 

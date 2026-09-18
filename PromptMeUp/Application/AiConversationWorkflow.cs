@@ -423,6 +423,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         {
             _shell.RenderNotice(_text.Text("Lab.Active", string.Join(", ", envelope.SkillNames)));
         }
+        foreach (var warning in envelope.SkillWarnings)
+        {
+            _shell.RenderWarning(warning);
+        }
         var update = memory.Memory.Add("user", userText);
         await AuditPruningAsync(sessionId, update.PrunedMessages, cancellationToken).ConfigureAwait(false);
         var response = await _shell.RunWithStatusAsync(
@@ -755,26 +759,17 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             }
             notes.RemoveAt(notes.Count - 1);
         }
-        var selectedSkills = _skills is null ? [] : await _skills.SelectAsync(query, cancellationToken).ConfigureAwait(false);
-        var skillNotes = new List<object>();
-        var skillNames = new List<string>();
-        foreach (var skill in selectedSkills)
-        {
-            var instructions = skill.Origin == "bundled"
-                ? (await _prompts.GetAsync("skill-" + skill.Name, cancellationToken).ConfigureAwait(false)).ResolveText(_text.Language)
-                : skill.Instructions;
-            skillNotes.Add(new { skill.Name, instructions });
-            skillNames.Add(skill.Name);
-        }
+        var skillWarnings = new List<string>();
+        var selectedSkills = _skills is null ? [] : await _skills.SelectAsync(query, cancellationToken, skillWarnings).ConfigureAwait(false);
+        var skillNames = selectedSkills.Select(skill => skill.Name).ToList();
         var combined = memoryText;
-        if (skillNotes.Count > 0)
+        if (selectedSkills.Count > 0)
         {
-            var skillTemplate = (await _prompts.GetAsync("skill-context", cancellationToken).ConfigureAwait(false)).ResolveText(_text.Language);
-            combined += "\n\n" + skillTemplate.Replace("{skills}", JsonSerializer.Serialize(skillNotes, MemoryJsonOptions), StringComparison.Ordinal);
+            combined += "\n\n" + await _skills!.ContextAsync(selectedSkills, cancellationToken).ConfigureAwait(false);
         }
         if (string.IsNullOrWhiteSpace(combined))
         {
-            return new MemoryEnvelope(null, 0, 0);
+            return new MemoryEnvelope(null, 0, 0) { SkillWarnings = skillWarnings };
         }
         var envelopeMessage = new ChatMessage("user", combined.Trim());
         var envelopeTokens = ContextTokenEstimator.Messages([envelopeMessage]);
@@ -782,7 +777,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         {
             throw new ConversationLimitException(_text.Text("Chat.ContextLimit"));
         }
-        return new MemoryEnvelope(envelopeMessage, notes.Count, envelopeTokens) { SkillNames = skillNames };
+        return new MemoryEnvelope(envelopeMessage, notes.Count, envelopeTokens) { SkillNames = skillNames, SkillWarnings = skillWarnings };
     }
 
     /// <summary>Reserves actual populated instructions and recalled notes before pruning the recent-turn window.</summary>
@@ -877,6 +872,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private sealed record MemoryEnvelope(ChatMessage? Message, int Count, long Tokens)
     {
         public IReadOnlyList<string> SkillNames { get; init; } = [];
+        public IReadOnlyList<string> SkillWarnings { get; init; } = [];
     }
 
     private sealed record TurnResult(AiResponse Response, decimal Cost);

@@ -12,6 +12,69 @@ namespace PromptMeUp.Tests;
 
 public sealed class AppGuideWorkflowTests
 {
+    /// <summary>Keeps localized query envelopes bounded for escaped instructions, including oversized selections retained by older versions.</summary>
+    [Theory]
+    [InlineData("en", false)]
+    [InlineData("it", false)]
+    [InlineData("fr", false)]
+    [InlineData("de", false)]
+    [InlineData("es", false)]
+    [InlineData("vi", false)]
+    [InlineData("en", true)]
+    public async Task RunQueryAsync_EscapedSkillContext_DoesNotBlockAnswers(string language, bool legacyOversized)
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var text = new LocalizationService();
+        text.SetLanguage(language);
+        var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
+        await store.SaveSettingsAsync(new(Enabled: true), await store.SettingsAsync(default), default);
+        var prompts = new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance);
+        var skills = new SkillCatalogService(fixture.Paths, store, text, prompts);
+        var directory = Path.Combine(fixture.Paths.DataDirectory, "skills", "xml-guide");
+        Directory.CreateDirectory(directory);
+        var instructions = string.Concat(Enumerable.Repeat("<tag attr=\"value\">content</tag>", legacyOversized ? 210 : 90));
+        File.WriteAllText(Path.Combine(directory, "SKILL.md"), "---\nname: xml-guide\ndescription: XML example guidance\n---\n" + instructions);
+        var skill = skills.Inspect(directory);
+        if (legacyOversized)
+        {
+            await store.SetAsync("skill:xml-guide", skill.Fingerprint, default);
+            await store.SetAsync("selected-skill", skill.Name, default);
+        }
+        else
+        {
+            await skills.EnableAsync(skill, true, default);
+            await skills.SelectForQuestionsAsync(skill, default);
+        }
+        var memories = new PersistentMemoryService(fixture.Paths, new SensitiveDataRedactor(), text, NullLogger<PersistentMemoryService>.Instance);
+        await memories.RememberAsync("XML example project uses readable tag names.", false, default);
+        using var handler = new GuideHttpHandler(index => Reply(index, []));
+        using var http = new HttpClient(handler);
+        var answers = new List<string>();
+        var warnings = new List<string>();
+        var workflow = CreateWorkflow(fixture, http, new Queue<string>(), [], answers, language, skills, warnings);
+
+        await workflow.RunQueryAsync("Explain this XML example project.", AppSettings.Default with { Language = language }, renderQuery: true, default);
+
+        Assert.Single(answers);
+        using var request = JsonDocument.Parse(Assert.Single(handler.ConversationRequestBodies));
+        var messages = request.RootElement.GetProperty("input").EnumerateArray().ToArray();
+        var envelope = messages.First(message => message.GetProperty("role").GetString() == "user").GetProperty("content").GetString()!;
+        Assert.Contains("readable tag names", envelope);
+        Assert.InRange(ContextTokenEstimator.Messages([new("user", envelope)]), 1, 3200);
+        if (legacyOversized)
+        {
+            Assert.DoesNotContain("xml-guide", envelope);
+            Assert.Equal(text.Text("Lab.SkillTooLarge", skill.Name, SkillCatalogService.MaximumContextTokens), Assert.Single(warnings));
+        }
+        else
+        {
+            Assert.Contains("xml-guide", envelope);
+            Assert.Contains("\\u003Ctag", envelope);
+            Assert.Empty(warnings);
+        }
+    }
+
     /// <summary>Supplies synthetic guide-routing replies and verifies localized two-step query and chat retrieval without enabling features.</summary>
     [Theory]
     [InlineData("en", "skills", "skill-actions", "How do I enable a skill and run one of its actions?")]
@@ -177,7 +240,9 @@ public sealed class AppGuideWorkflowTests
         Queue<string> inputs,
         List<ShellRuntimeStatus> snapshots,
         List<string> answers,
-        string language)
+        string language,
+        SkillCatalogService? skills = null,
+        List<string>? warnings = null)
     {
         var text = new LocalizationService();
         text.SetLanguage(language);
@@ -201,11 +266,12 @@ public sealed class AppGuideWorkflowTests
             {
                 if (method.Name == "RunWithStatusAsync") { return ((Delegate)args[1]!).DynamicInvoke(); }
                 if (method.Name == "RenderRuntimeStatus") { snapshots.Add((ShellRuntimeStatus)args[0]!); }
+                if (method.Name == "RenderWarning") { warnings?.Add((string)args[0]!); }
                 return null;
             }), text,
             new PersistentMemoryService(fixture.Paths, new SensitiveDataRedactor(), text, NullLogger<PersistentMemoryService>.Instance),
             TestProxy.Create<IMemoryView>((method, _) => throw new NotSupportedException(method.Name)), fixture.Database,
-            new AppGuideService(catalog, NullLogger<AppGuideService>.Instance));
+            new AppGuideService(catalog, NullLogger<AppGuideService>.Instance), skills);
     }
 
     /// <summary>Creates a v2 provider reply with separate guide routing and final-answer forms plus observable accounting.</summary>

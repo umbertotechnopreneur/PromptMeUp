@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using Microsoft.Extensions.Logging.Abstractions;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 
@@ -197,7 +198,9 @@ public sealed class ReminderServiceTests
         var text = new LocalizationService();
         var redactor = new SensitiveDataRedactor();
         var store = new ExperimentalStore(fixture.Paths, redactor, text);
-        return new ReminderService(fixture.Paths, redactor, text, new SkillCatalogService(fixture.Paths, store, text), clock);
+        var catalog = new SkillCatalogService(fixture.Paths, store, text,
+            new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
+        return new ReminderService(fixture.Paths, redactor, text, catalog, clock);
     }
 
     /// <summary>Explicitly enables the project and exact bundled package for one test database.</summary>
@@ -205,7 +208,8 @@ public sealed class ReminderServiceTests
     {
         var text = new LocalizationService();
         var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
-        var catalog = new SkillCatalogService(fixture.Paths, store, text);
+        var catalog = new SkillCatalogService(fixture.Paths, store, text,
+            new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
         var skill = Assert.Single(catalog.List(), item => item.Name == "set_reminder" && item.Origin == "bundled");
         await store.SaveSettingsAsync(new(Enabled: true), await store.SettingsAsync(default), default);
         await catalog.EnableAsync(skill, true, default);
