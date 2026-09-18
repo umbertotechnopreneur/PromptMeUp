@@ -2,6 +2,12 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Install the Settings integration as a local Debug MSIX
+
+- Built current experimental commit `b2f654a` locally in Debug for Windows x64 and created the requested self-contained MSIX test package `0.1.5.20`. Kept the installed package identity and existing trusted signing certificate; no release workflow or public distribution was used.
+- Installed the current-user update from `0.1.5.19`. Verified the signature, healthy Windows package status, hashes for all 320 staged files, and the `hm` alias target. Did not change certificate trust, PATH, or user settings/data.
+- Preserved the signed package and verification material under ignored `artifacts/msix/settings-b2f654a-debug`. Cleaned Debug build output with the matching runtime and publish path. No live OpenAI calls or application actions were run; the 842 source tests had passed before packaging.
+
 ## 2026-09-18 — Connect skills and learning to Settings
 
 - Added Skills and Learning navigation beside the existing Memories manager, plus a read-only Privacy section. General and feature pages show refreshed, local project status without activating features or running maintenance.
