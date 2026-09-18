@@ -2,6 +2,12 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Install the inline Settings Debug update
+
+- Published source commit `3d1b2c5` locally in Debug for Windows x64 and packaged the requested test MSIX `0.1.5.21` with the existing trusted certificate. Updated the current-user installation from `0.1.5.20` without uninstalling, changing certificate trust, or modifying app data.
+- Verified the package signature, healthy installed status, hashes of all 320 payload files, and the `hm` execution alias pointing to the new version. No app process needed to be stopped; the app was left closed for the user's test.
+- Preserved the signed MSIX and verification record under ignored `artifacts/msix/settings-3d1b2c5-debug`. Cleaned matching Debug/runtime build output. No source changes or live OpenAI calls; the 875 source tests and 33 final guide checks had already passed before packaging.
+
 ## 2026-09-18 — Make Skills and Memory real Settings tabs
 
 - Replaced the separate preference menus with fields in the existing Settings form. Skills, Memory, and ordinary preferences share Save and Cancel; saved-note editing remains explicitly separate. Reused the existing layout, navigation, action bar, palette, and emoji helper.
