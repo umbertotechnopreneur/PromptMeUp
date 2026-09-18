@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Complete the skill catalog and simplify the user guide
+
+- Added the seven remaining supported CLI-Intelligence skills: clipboard, screenshot, system_info, http_request, web_search, timezone_convert, and set_reminder. The catalog now has ten skills; metals-dev-monitor remains excluded. Kept PromptMeUp's interface and OpenAI integration.
+- Routed snapshot scripts through existing risk scoring and explicit approval. Limited Windows captures to new local PNGs; kept clipboard reads bounded, system summaries privacy-conscious, and HTTPS requests public-only with checked connections and no redirects or proxy. Web search supplies DuckDuckGo instant answers, not a full crawler.
+- Added bounded, project-local reminders with reviewed times and notes, transactional activation checks, delivery at chat prompts, and rollback on display failure. No background process or automatic AI call.
+- Added six-language runtime guidance and a shared exact release-file allowlist. Replaced the long experimental report with a short how-to for skills, memories, Dream, and heartbeat, including optional AI command-review disclosure.
+
+Validation: preflight, formatting, XML summaries, all twelve relevant PowerShell syntax checks, exact seventeen-file payload validation, and a warning-free Release build passed. All 719 tests passed, including offline embedded-C# compilation, public-address guards, time zones, catalog/localization, reminder persistence and failed-display rollback. No real network skill requests, clipboard access, screen captures, or OpenAI calls were made. Cleaned Release output; no local release artifacts were produced. Changes remain on the experimental branch and draft PR #43.
+
 ## 2026-09-18 — Experimental skills and reviewed memory learning
 
 - Implemented the eight-step roadmap on `codex/experimental-memory-skills`; opened [draft PR #43](https://github.com/umbertotechnopreneur/PromptMeUp/pull/43), assigned to the repository owner with enhancement and documentation labels. Kept `main` unchanged.
