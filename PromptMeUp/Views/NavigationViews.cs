@@ -160,14 +160,20 @@ public sealed class HelpView(
                     Arguments = [new("--dry-run", text.Text("Help.Argument.DryRun"))]
                 }
             ]),
-        new("🧠", text.Text("Settings.Memories"), text.Text("Settings.Memories"),
+        new("📚", text.Text("Settings.Memories"), text.Text("Settings.Memories"),
             [new("--memories", text.Text("Help.Memories")),
-             new("--remember [global|project] <text>", text.Text("MemoryCli.RememberHelp")),
+             new("--remember <text>", text.Text("MemoryCli.RememberHelp")),
              new("--forget <id or description>", text.Text("MemoryCli.ForgetHelp"))])
         {
             Open = openMemories,
             OpenHintKey = "MemoryManager.OpenHint"
         },
+        new("🧩", text.Text("Lab.Title"), text.Text("Lab.Title"),
+            [new("--skills", text.Text("Help.Skills")),
+             new("--learning", text.Text("Help.Learning")),
+             new("--proposals", text.Text("Help.Proposals")),
+             new("--dream", text.Text("Help.Dream")),
+             new("--heartbeat", text.Text("Help.Heartbeat"))]),
         new("ℹ️", text.Text("About.Title"), text.Text("About.MenuLabel"),
             [new("--about, about", text.Text("Help.About")) { Example = "hm about" }])
         {

@@ -385,6 +385,34 @@ internal static partial class UiTextCatalog
             German: "Einstellungen",
             Spanish: "Preferencias",
             Vietnamese: "Tùy chọn"));
+        entries.Add("Setup.PreferredName", new(
+            English: "What should I call you? (optional)",
+            Italian: "Come vuoi essere chiamato? (facoltativo)",
+            French: "Comment vous appeler ? (facultatif)",
+            German: "Wie soll ich dich nennen? (optional)",
+            Spanish: "¿Cómo quieres que te llame? (opcional)",
+            Vietnamese: "Bạn muốn được gọi là gì? (không bắt buộc)"));
+        entries.Add("Setup.PreferredNameHelp", new(
+            English: "Optional name, up to 80 characters. Saved locally and sent to OpenAI with chats and questions when set. Leave empty to disable it. Do not enter passwords or secrets.",
+            Italian: "Nome facoltativo, massimo 80 caratteri. Salvato localmente e inviato a OpenAI con chat e domande se impostato. Lascia vuoto per disabilitarlo. Non inserire password o segreti.",
+            French: "Nom facultatif, 80 caractères maximum. Enregistré localement et envoyé à OpenAI avec les discussions et questions si défini. Laissez vide pour le désactiver. Aucun mot de passe ni secret.",
+            German: "Optionaler Name, höchstens 80 Zeichen. Wird lokal gespeichert und, falls gesetzt, mit Chats und Fragen an OpenAI gesendet. Leer lassen zum Deaktivieren. Keine Passwörter oder Geheimnisse eingeben.",
+            Spanish: "Nombre opcional, hasta 80 caracteres. Se guarda localmente y se envía a OpenAI con chats y preguntas si está configurado. Déjalo vacío para desactivarlo. No introduzcas contraseñas ni secretos.",
+            Vietnamese: "Tên tùy chọn, tối đa 80 ký tự. Lưu trên máy và gửi đến OpenAI cùng cuộc trò chuyện và câu hỏi khi được đặt. Để trống để tắt. Không nhập mật khẩu hoặc bí mật."));
+        entries.Add("Setup.PreferredNameInvalid", new(
+            English: "Enter a name of at most 80 characters without control characters, passwords or secrets, or leave it empty.",
+            Italian: "Inserisci un nome di massimo 80 caratteri senza caratteri di controllo, password o segreti, oppure lascia vuoto.",
+            French: "Saisissez un nom de 80 caractères maximum, sans caractères de contrôle, mots de passe ni secrets, ou laissez vide.",
+            German: "Namen mit höchstens 80 Zeichen ohne Steuerzeichen, Passwörter oder Geheimnisse eingeben, oder leer lassen.",
+            Spanish: "Introduce un nombre de hasta 80 caracteres sin caracteres de control, contraseñas ni secretos, o déjalo vacío.",
+            Vietnamese: "Nhập tên tối đa 80 ký tự, không có ký tự điều khiển, mật khẩu hoặc bí mật, hoặc để trống."));
+        entries.Add("Setup.ChangePreferredName", new(
+            English: "Change or clear your preferred name?",
+            Italian: "Cambiare o cancellare il nome preferito?",
+            French: "Modifier ou effacer votre nom préféré ?",
+            German: "Bevorzugten Namen ändern oder löschen?",
+            Spanish: "¿Cambiar o borrar tu nombre preferido?",
+            Vietnamese: "Đổi hoặc xóa tên bạn muốn dùng?"));
         entries.Add("Setup.PromptCaching", new(
             English: "Enable OpenAI prompt caching?",
             Italian: "Abilitare il prompt caching OpenAI?",

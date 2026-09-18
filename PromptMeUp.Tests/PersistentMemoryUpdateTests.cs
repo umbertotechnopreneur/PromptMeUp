@@ -7,11 +7,11 @@ namespace PromptMeUp.Tests;
 
 public sealed class PersistentMemoryUpdateTests
 {
-    /// <summary>Editing and moving a note keeps its exact identifier and persists the reviewed text and destination scope.</summary>
+    /// <summary>Editing a note preserves its identifier and global storage regardless of the legacy scope flag.</summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Update_ChangesTextAndScope_PreservesIdentifier(bool global)
+    public async Task Update_ChangesText_PreservesIdentifierAndGlobalStorage(bool global)
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -24,11 +24,12 @@ public sealed class PersistentMemoryUpdateTests
         Assert.Equal(original.Id, updated.Id);
         Assert.Equal(original.Id, persisted.Id);
         Assert.Equal("Updated saved note.", persisted.Text);
-        Assert.Equal(global, persisted.IsGlobal);
+        Assert.True(persisted.IsGlobal);
+        Assert.Equal("global", await fixture.ScalarAsync("SELECT scope_key FROM persistent_memories;"));
         Assert.Equal(updated, persisted);
     }
 
-    /// <summary>Invalid, missing, and foreign-project identifiers cannot replace any local or foreign saved content.</summary>
+    /// <summary>Invalid and missing identifiers cannot replace saved content.</summary>
     [Fact]
     public async Task Update_InaccessibleIdentifier_LeavesAllNotesUnchanged()
     {
@@ -36,21 +37,13 @@ public sealed class PersistentMemoryUpdateTests
         await fixture.Database.InitializeAsync(default);
         var service = CreateService(fixture);
         var local = await service.RememberAsync("Local saved note.", false, default);
-        var foreignId = Guid.NewGuid().ToString("N");
-        await fixture.ScalarAsync("""
-            INSERT INTO persistent_memories (id, scope_key, body, updated_unix)
-            VALUES ($id, $scope, 'Foreign saved note.', 1);
-            """, ("$id", foreignId), ("$scope", new string('F', 64)));
-
-        foreach (var id in new[] { local.Id[..8], local.Id + "' OR 1=1; --", Guid.NewGuid().ToString("N"), foreignId })
+        foreach (var id in new[] { local.Id[..8], local.Id + "' OR 1=1; --", Guid.NewGuid().ToString("N") })
         {
             await Assert.ThrowsAsync<MemoryValidationException>(() => service.UpdateAsync(id, "Replacement note.", true, default));
         }
 
         Assert.Equal(local, Assert.Single(await service.ListAsync(default)));
-        Assert.Equal("Foreign saved note.", await fixture.ScalarAsync(
-            "SELECT body FROM persistent_memories WHERE id = $id;", ("$id", foreignId)));
-        Assert.Equal(2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories;"));
+        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories;"));
     }
 
     /// <summary>Rejected empty and recognizable credential-bearing edits leave the original note and its scope intact.</summary>
@@ -87,28 +80,26 @@ public sealed class PersistentMemoryUpdateTests
         Assert.Equal(maximumNote, Assert.Single(await service.ListAsync(default)).Text);
     }
 
-    /// <summary>A full destination rejects moving a note atomically while still allowing an edit within that full scope.</summary>
-    [Fact]
-    public async Task Update_FullDestination_RejectsMoveWithoutLosingSource()
+    /// <summary>An overfull legacy collection permits edits and deletion under either legacy scope flag.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Update_OverfullCollection_AllowsEditAndDelete(bool global)
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        await SeedGlobalNotesAsync(fixture, PersistentMemoryService.MaximumMemoriesPerScope);
+        await SeedGlobalNotesAsync(fixture, PersistentMemoryService.MaximumMemoriesPerScope + 1);
         var service = CreateService(fixture);
-        var source = await service.RememberAsync("Project note to move.", false, default);
-        var global = (await service.ListAsync(default)).First(memory => memory.IsGlobal);
-
-        await Assert.ThrowsAsync<MemoryValidationException>(() => service.UpdateAsync(source.Id, "Moved project note.", true, default));
-
-        var afterFailure = await service.ListAsync(default);
-        Assert.Equal(source, Assert.Single(afterFailure, memory => !memory.IsGlobal));
-        Assert.Equal(PersistentMemoryService.MaximumMemoriesPerScope, afterFailure.Count(memory => memory.IsGlobal));
-        var edited = await service.UpdateAsync(global.Id, "Edited within the full scope.", true, default);
-        Assert.Equal(global.Id, edited.Id);
+        var source = (await service.ListAsync(default))[0];
+        var edited = await service.UpdateAsync(source.Id, "Edited within the overfull collection.", global, default);
+        Assert.Equal(source.Id, edited.Id);
+        Assert.True(edited.IsGlobal);
         Assert.Equal(PersistentMemoryService.MaximumMemoriesPerScope + 1, (await service.ListAsync(default)).Count);
+        Assert.True(await service.ForgetAsync(edited.Id, default, edited));
+        Assert.Equal(PersistentMemoryService.MaximumMemoriesPerScope, (await service.ListAsync(default)).Count);
     }
 
-    /// <summary>Colliding text in the same or another destination scope never overwrites or merges either saved identifier.</summary>
+    /// <summary>Colliding text never overwrites or merges either saved identifier, regardless of the legacy scope flag.</summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

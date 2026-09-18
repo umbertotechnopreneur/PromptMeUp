@@ -28,6 +28,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $solutionPath = Join-Path $repositoryRoot 'PromptMeUp.slnx'
@@ -166,6 +167,16 @@ function Copy-PackagePayload {
     Copy-Item -LiteralPath $themeSource -Destination (Join-Path $StageDirectory 'themes') -Recurse
     if (-not (Test-Path -LiteralPath (Join-Path $StageDirectory 'themes/cyan.json') -PathType Leaf)) {
         throw 'The staged package must contain the default cyan theme resource.'
+    }
+
+    foreach ($name in Get-BundledSkillFiles) {
+        $source = Join-Path $PublishDirectory $name
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Published payload is missing '$source'."
+        }
+        $target = Join-Path $StageDirectory $name
+        New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+        Copy-Item -LiteralPath $source -Destination $target
     }
 }
 

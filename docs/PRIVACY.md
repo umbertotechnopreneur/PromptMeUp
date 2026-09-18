@@ -21,11 +21,11 @@ Questions and activity history stay until you remove the PromptMeUp database or 
 
 ## Saved notes
 
-Use `/remember` in chat to save a note for the current project, or `/remember global` to save a preference for use across projects. `/memories` lists the current project's notes and global notes; `/forget <id>` deletes a note from that list. PromptMeUp does not automatically turn conversation history into saved notes.
+Use `/remember <text>` in chat or `hm --remember <text>` in the terminal to save a note. All saved memories share one list across conversations using the same local data directory. `/memories` lists them; `/forget <id>` deletes a note from that list. PromptMeUp does not automatically turn conversation history into saved notes.
 
-Project notes belong to the nearest folder containing `.git`, looking upward from your current folder. Outside a Git project, they belong to the current folder. The database identifies the project with a hash — a code calculated from the folder path. The note itself is stored as text, including any paths or private details you put in it.
+Notes are not tied to a folder. Upgrading preserves existing notes, IDs, dates, and their recorded sources. Each note is stored as text, including any paths or private details you put in it. A note may be used in a later conversation even when you open the app from a different folder.
 
-Saving, listing, deleting, and picking notes happen on your machine, without an AI call. For each question, PromptMeUp picks up to five notes. Global notes can be used across projects; project notes need words that match the question. Notes and their added instructions share a limit of 800 estimated tokens (small pieces of text). The selected notes go to OpenAI with your question and may also appear in the local request history.
+Saving, listing, selecting notes for a question, and deleting by ID happen locally. A deletion request by description can send batches of saved notes to OpenAI to find matches; you still choose a note and confirm deletion. For each question, PromptMeUp picks up to five notes within 800 estimated tokens, including their formatting. Selected notes go to OpenAI and may also appear in local request history.
 
 The app rejects notes that contain secrets it recognizes. It checks saved notes again when reading them and removes recognized secrets from the stored text. `/forget` stops a note from being picked again. It doesn't erase copies already in the current chat, earlier request history, backups, or OpenAI's records.
 
@@ -51,11 +51,28 @@ The filter can't catch everything. Don't paste secrets into questions or command
 Command arguments containing recognizable secrets are rejected. Chat messages
 are filtered before being sent to OpenAI.
 
+## Skills and memory
+
+Skills and memory store project preferences, approved skill versions, collected messages, and memory suggestions locally. ZIP imports stay in the application data directory. These features start disabled. In Settings, Save applies Skills and Memory changes; Cancel discards them. Activating a skill can send its instructions with later questions; it never runs scripts by itself. Review imported packages as carefully as code you would run yourself.
+
+Approved HTTP actions send the displayed request to a public HTTPS site; web search sends the query to DuckDuckGo's Instant Answer service. They do not support credentials, redirects, proxies, or private-network destinations. Skill output is not automatically sent to OpenAI. Windows clipboard actions expose or replace local text; screenshots save a new local PNG without uploading it. Images cannot be redacted: close sensitive windows first. System-info actions omit environment values and network addresses.
+
+Optional AI command review can send the full filtered script and parameters, including a search query, HTTP body, or clipboard write text, to OpenAI before execution approval. Turn off AI command review in Settings to use local risk scoring only.
+
+The separate `set_reminder` skill stores up to 50 credential-free notes per project in SQLite. Due notes appear at the next active chat input prompt and are then deleted; cancellation also deletes them. Turning the skill or the project's Skills and memory switch off pauses delivery without deleting pending notes. No background alarm, operating-system notification, or OpenAI call is involved.
+
+With observation capture enabled, completed, directly entered user messages of up to 4,000 characters are filtered and retained for 30 days, up to the newest 200 per project. Longer messages are not captured. Assistant replies and command-output follow-ups are not observations. Dream shows a bounded batch and asks before sending it to OpenAI. Heartbeat checks exact duplicates locally and can request a separately confirmed AI review. There is no background process or automatic API call from the reminder.
+
+Suggestions stay separate from saved memories until you approve a displayed change. Turning off message collection or Skills and memory clears collected messages and suggestions after your confirmation. Forgetting, merging, or removing any saved memory clears all collected messages and suggestions. This prevents collected messages from immediately recreating removed text. Other saved memories, older request history, backups, and text already sent to OpenAI are not erased. Confirmed reflection requests and responses use the ordinary filtered AI history; the collection's 30-day limit does not expire that history. Expired messages are removed when collected data is accessed, not by a background timer.
+
+See the [skills and memory guide](EXPERIMENTAL_MEMORY_SKILLS.md) for limits and review controls. Secret filtering is not a guarantee: do not capture or import confidential material you cannot share.
+
 ## Data sent to OpenAI
 
 An ordinary AI request can contain:
 
 - The app's instructions for that task, in your chosen language.
+- Your optional name or nickname, only for questions and chat, if you set it in Personalization.
 - Your optional personal instructions for questions and chat, after local checks. They are marked as preferences, not permission to change the app's rules.
 - For questions and chat, your current folder (with a recognized home folder shown as `~`), operating system, shell, CPU and memory summary, and GPU name when available.
 - General language-region and time-zone details, only if you enable the location option.
@@ -65,6 +82,8 @@ An ordinary AI request can contain:
 - Your model, reasoning, answer length, caching, and output limit settings.
 
 The machine summary doesn't include your username, computer name, network identity, serial numbers, or secrets. It helps `hm` suggest commands that fit your terminal and operating system.
+
+Your preferred name is saved locally, never inferred from accounts, the computer, or memories. It is not added to automatic chat-control checks, command-risk reviews, Dream, heartbeat, or connection checks. Clear it in `hm --setup` → Personalization and Save to stop future inclusion. This does not erase earlier conversations, request history, or provider records.
 
 Questions and chat have a default limit of 16,000 estimated input tokens, including instructions, machine details, notes, and recent messages. Older exchanges are left out as needed to fit. Use `/context` or `/status` to see what's being kept, alongside usage for the last answer and the whole chat. Keeping fewer messages doesn't undo earlier requests or charges.
 

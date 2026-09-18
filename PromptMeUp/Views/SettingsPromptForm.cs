@@ -8,16 +8,19 @@ namespace PromptMeUp.Views;
 /// <summary>Keeps every settings section accessible when the terminal cannot host an alternate-buffer form.</summary>
 internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions options)
 {
+    internal int SelectedPageIndex { get; private set; }
+
     /// <summary>Edits the shared draft from the requested section and saves only through the explicit action.</summary>
     internal bool Run(IReadOnlyList<FormPage> pages, int initialPage, Func<string?> validate)
     {
         var pageIndex = initialPage;
         while (true)
         {
+            SelectedPageIndex = pageIndex;
             var page = pages[pageIndex];
             var fields = page.Fields.Where(field => field.IsVisible?.Invoke() != false).ToArray();
             TerminalTheme.WriteSection(console,
-                TerminalTheme.IconPrefix(options, "⚙️", "~") + text.Text("Settings.Title"), text.Text(page.TitleKey));
+                TerminalTheme.IconPrefix(options, "⚙️", "~") + text.Text("Settings.Title"), FullscreenForm.SectionTitle(page, text, options));
             RenderFields(fields);
             if (page.Overview is { } overview)
             {
@@ -29,9 +32,9 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
                 console.Write(preview());
                 console.WriteLine();
             }
-            var actions = fields.Select((field, index) => new PromptAction("field", index, text.Text(field.LabelKey)))
+            var actions = fields.Select((field, index) => new PromptAction("field", index, FullscreenForm.FieldLabel(field, text)))
                 .Concat(pages.Select((section, index) => new PromptAction("section", index,
-                    text.Text("Form.Sections") + ": " + text.Text(section.TitleKey))))
+                    text.Text("Form.Sections") + ": " + FullscreenForm.SectionTitle(section, text, options))))
                 .Append(new PromptAction("save", 0, TerminalTheme.IconPrefix(options, "💾", "+") + text.Text("Form.Save")))
                 .Append(new PromptAction("cancel", 0, TerminalTheme.IconPrefix(options, "↩️", "x") + text.Text("Form.Cancel")))
                 .ToArray();
@@ -82,8 +85,8 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
                 ? field.Display?.Invoke() ?? text.Text("Form.SecretInput")
                 : field.Choices?.Invoke().FirstOrDefault(choice => choice.Value == field.Read())?.Label ?? field.Read();
             grid.AddRow(
-                new Text(text.Text(field.LabelKey), Style.Parse(TerminalTheme.Muted)),
-                new Text(SafeText(value), Style.Parse(TerminalTheme.FieldValue)));
+                new Text(FullscreenForm.FieldLabel(field, text), Style.Parse(TerminalTheme.Muted)),
+                new Text(SafeText(value), Style.Parse(field.ValueColor?.Invoke() ?? TerminalTheme.FieldValue)));
             grid.AddRow(new Text(" "), new Text(" "));
         }
         console.Write(grid);
@@ -92,6 +95,17 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
     /// <summary>Uses the same choice and validation rules as the fullscreen editor without echoing credentials.</summary>
     private void Edit(FormField field)
     {
+        if (field.Overview is { } overview)
+        {
+            console.Write(overview());
+            console.WriteLine();
+        }
+        var help = field.Help?.Invoke() ?? (field.HelpKey is null ? null : text.Text(field.HelpKey));
+        if (!string.IsNullOrWhiteSpace(help))
+        {
+            console.Write(new Text(help, Style.Parse(TerminalTheme.Muted)));
+            console.WriteLine();
+        }
         string value;
         if (field.Choices is not null)
         {
@@ -101,19 +115,19 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
                 throw new InvalidOperationException("A choice field needs at least one available value.");
             }
             value = console.Prompt(new SelectionPrompt<FormChoice>()
-                .Title(Markup.Escape(text.Text(field.LabelKey)))
+                .Title(Markup.Escape(FullscreenForm.FieldLabel(field, text)))
                 .HighlightStyle(Style.Parse(TerminalTheme.Accent))
                 .UseConverter(choice => Markup.Escape(choice.Label))
                 .AddChoices(choices.OrderBy(choice => choice.Value == field.Read() ? 0 : 1))).Value;
         }
         else
         {
-            var prompt = new TextPrompt<string>(Markup.Escape(text.Text(field.LabelKey))).AllowEmpty();
+            var prompt = new TextPrompt<string>(Markup.Escape(FullscreenForm.FieldLabel(field, text))).AllowEmpty();
             if (field.Secret)
             {
                 prompt.Secret(mask: null);
             }
-            else if (!string.IsNullOrEmpty(field.Read()))
+            else if (field.DefaultToCurrentValue && !string.IsNullOrEmpty(field.Read()))
             {
                 prompt.DefaultValue(field.Read());
             }

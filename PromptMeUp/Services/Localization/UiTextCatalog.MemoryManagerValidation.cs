@@ -8,11 +8,11 @@ internal static partial class UiTextCatalog
     private static void AddMemoryManagerValidationEntries(Dictionary<string, LocalizedText> entries)
     {
         entries.Add("Memory.Duplicate", new(
-            English: "Another memory already has this note in the selected scope. Edit that memory or change the note.",
-            Italian: "Un'altra memoria contiene già questa nota nell'ambito scelto. Modifica quella memoria o cambia la nota.",
-            French: "Une autre mémoire contient déjà cette note dans la portée choisie. Modifiez cette mémoire ou changez la note.",
-            German: "Eine andere Erinnerung enthält diese Notiz bereits im gewählten Geltungsbereich. Bearbeiten Sie diese Erinnerung oder ändern Sie die Notiz.",
-            Spanish: "Otra memoria ya contiene esta nota en el ámbito elegido. Edita esa memoria o cambia la nota.",
-            Vietnamese: "Một ghi nhớ khác đã có nội dung này trong phạm vi đã chọn. Hãy sửa ghi nhớ đó hoặc đổi nội dung."));
+            "This note is already saved. Edit the existing memory or change the text.",
+            "Questa nota è già salvata. Modifica il ricordo esistente o cambia il testo.",
+            "Cette note est déjà enregistrée. Modifiez le souvenir existant ou changez le texte.",
+            "Diese Notiz ist bereits gespeichert. Bearbeite die vorhandene Erinnerung oder ändere den Text.",
+            "Esta nota ya está guardada. Edita el recuerdo existente o cambia el texto.",
+            "Ghi chú này đã được lưu. Sửa ghi nhớ hiện có hoặc đổi nội dung."));
     }
 }

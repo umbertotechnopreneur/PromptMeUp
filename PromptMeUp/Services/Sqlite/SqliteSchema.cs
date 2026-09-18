@@ -6,7 +6,7 @@ namespace PromptMeUp.Services.Sqlite;
 internal static class SqliteSchema
 {
     /// <summary>Identifies the schema version supported by this application build.</summary>
-    internal const int Version = 3;
+    internal const int Version = 4;
 
     /// <summary>Enables the persistent write-ahead logging mode before schema creation starts.</summary>
     internal const string EnableWriteAheadLoggingSql = "PRAGMA journal_mode = WAL;";
@@ -18,6 +18,7 @@ internal static class SqliteSchema
             setup_completed INTEGER NOT NULL CHECK (setup_completed IN (0, 1)),
             language TEXT NOT NULL,
             theme TEXT NOT NULL DEFAULT 'cyan' CHECK (length(theme) BETWEEN 1 AND 32),
+            preferred_name TEXT NOT NULL DEFAULT '' CHECK (length(preferred_name) <= 80),
             ai_enabled INTEGER NOT NULL CHECK (ai_enabled IN (0, 1)),
             model TEXT NOT NULL,
             reasoning_effort TEXT NOT NULL,
@@ -136,6 +137,50 @@ internal static class SqliteSchema
             retrieved_unix INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_organization_costs_bucket ON organization_costs (bucket_start_unix);
+
+        CREATE TABLE IF NOT EXISTS experimental_settings (
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 120),
+            value TEXT NOT NULL CHECK(length(value) <= 4096),
+            PRIMARY KEY(scope_key, name)
+        );
+        CREATE TABLE IF NOT EXISTS learning_observations (
+            id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            session_id TEXT NOT NULL CHECK(length(session_id) = 32),
+            body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 4000),
+            created_unix INTEGER NOT NULL CHECK(created_unix >= 0)
+        );
+        CREATE INDEX IF NOT EXISTS ix_learning_scope ON learning_observations(scope_key, created_unix);
+        CREATE TABLE IF NOT EXISTS memory_proposals (
+            id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            payload_json TEXT NOT NULL CHECK(length(payload_json) <= 32768 AND json_valid(payload_json)),
+            status TEXT NOT NULL CHECK(status IN ('pending', 'approved', 'rejected', 'expired')),
+            created_unix INTEGER NOT NULL CHECK(created_unix >= 0)
+        );
+        CREATE INDEX IF NOT EXISTS ix_proposals_scope ON memory_proposals(scope_key, status, created_unix);
+        CREATE TABLE IF NOT EXISTS memory_provenance (
+            memory_id TEXT NOT NULL PRIMARY KEY,
+            kind TEXT NOT NULL CHECK(kind IN ('memory', 'lesson', 'correction', 'preference')),
+            sources_json TEXT NOT NULL CHECK(length(sources_json) <= 1024 AND json_valid(sources_json)),
+            proposal_id TEXT NOT NULL CHECK(length(proposal_id) = 32),
+            FOREIGN KEY(memory_id) REFERENCES persistent_memories(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS learning_revisions (
+            scope_key TEXT NOT NULL PRIMARY KEY CHECK(scope_key = 'global' OR length(scope_key) = 64),
+            revision TEXT NOT NULL CHECK(length(revision) = 32)
+        );
+
+        CREATE TABLE IF NOT EXISTS skill_reminders (
+            id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            message TEXT NOT NULL CHECK(length(message) BETWEEN 1 AND 500),
+            due_unix_ms INTEGER NOT NULL,
+            offset_minutes INTEGER NOT NULL CHECK(offset_minutes BETWEEN -840 AND 840)
+        );
+        CREATE INDEX IF NOT EXISTS ix_skill_reminders_scope_due ON skill_reminders(scope_key, due_unix_ms);
 
         CREATE TABLE IF NOT EXISTS sync_state (
             name TEXT NOT NULL PRIMARY KEY,

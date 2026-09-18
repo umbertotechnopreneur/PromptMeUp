@@ -2,6 +2,131 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Install the chat layout and skill identity Debug update
+
+- Built source commit `68142c7` for Windows x64 in Debug, packaged local MSIX `0.1.5.24` with the existing current-user certificate, and updated the installed app from `0.1.5.23`. Preserved application data, settings, certificate trust, and PATH.
+- Verified Debug assembly metadata and source revision, the package signature, healthy registration, all 321 installed payload file hashes, and the `hm.exe` execution alias pointing to the new version. No running app needed to be closed.
+- Preserved the signed package and installation verification record under ignored `artifacts/msix/chat-68142c7-debug`. Cleaned Debug/runtime output after restoring the test project's missing runtime assets. Recursive deletion of the temporary publish and payload directories was blocked by automatic approval review and remains tracked separately.
+
+Validation: Debug publication and signature verification succeeded; the installed payload matches the signed package. After installation, the user requested automated tests: all 933 tests passed against the same source in Release, with zero failures or skipped tests. The warning-free Release build and subsequent cleanup succeeded; all GitHub checks for source commit `68142c7` also passed. No application launch, live AI calls, public uploads, or release tags were made.
+
+## 2026-09-18 — Refine chat layout and identify active skills
+
+- Removed opening navigation, invocation, and startup snapshot headings. Aligned the current directory and startup settings with the tagline, with one blank line above and below the directory. Replaced the chat introduction with an indented, six-language command heading.
+- Added WhiteSmoke keyboard guidance using key symbols, localized text for `--no-emoji`, and a blank line before input. Kept the sender's icon and name beside the submitted message, and ended assistant responses with a localized white marker separated by blank lines.
+- Removed redundant INFO text. Added individual icons and readable colors to all ten bundled skill packages and their versioned prompt YAML metadata; active skill names use those identities. Older imports keep defaults, invalid display metadata is rejected, and theme contrast is preserved. Package changes still require fresh approval.
+- Extended package validation coverage for malformed display metadata, approval invalidation, and matching bundled prompt metadata. Documented the metadata contract.
+
+Validation: repository preflight, formatting verification, XML summaries, YAML syntax and metadata consistency for all ten skills, and Release compilation passed with zero warnings or errors. Automated tests and CLI smoke tests were not run. Cleaned Release build output; no package was rebuilt or installed.
+
+## 2026-09-18 — Install the Settings and chat UI Debug update
+
+- Clarified the repository workflow: public release artifacts remain GitHub Actions-only, while an explicitly requested signed Debug MSIX may be built and installed locally from ignored `artifacts/msix` without publishing, tagging, or uploading it.
+- Published source commit `fdd6de7` for Windows x64, created the requested signed local Debug MSIX `0.1.5.23`, and updated the current-user package from `0.1.5.22` without uninstalling or changing application data, certificate trust, or `PATH`.
+- Verified the signature, package registration, `hm.exe` app-execution alias, and matching SHA-256 hashes for the packaged and installed application DLL. Preserved the package and metadata under ignored `artifacts/msix/chat-fdd6de7-debug`.
+
+Validation: preflight, formatting verification, XML summaries, and a warning-free Release build passed. Automated tests were not run. The Debug build output was cleaned after installation; no application launch or live OpenAI call was made.
+
+## 2026-09-18 — Remove repeated skill descriptions in Settings
+
+- Omit the metadata summary only when it exactly matches the opening instruction paragraph, allowing an initial heading and blank lines. Keep distinct descriptions, complete literal instructions, scripts, package metadata, and approval fingerprints unchanged.
+- Added regressions for bundled and imported skills, newline variants, longer or differently cased introductions, later examples, and quoted text. Reused the existing Settings layout without editing skill packages or translations.
+
+Validation: preflight, formatting verification, XML summaries, and Release build passed with zero warnings or errors. All 57 targeted Settings view, viewport, and save tests passed. Cleaned Release output. The installed Debug MSIX remains unchanged.
+
+## 2026-09-18 — Install the global-memory Debug update
+
+- Published source commit `ff6f968` in Debug for Windows x64 and packaged local test MSIX `0.1.5.22` with the existing trusted certificate. Updated the current-user installation from `0.1.5.21` without uninstalling or changing app data, settings, certificate trust, PATH, or fonts.
+- Verified Debug assembly metadata, the source revision, the package signature, all 320 installed payload hashes, and the `hm` execution alias pointing to the new version. Staged safely while the app was open, then completed registration after the user closed it; no process was terminated.
+- Preserved the signed MSIX and verification record under ignored `artifacts/msix/memory-ff6f968-debug`. Cleaned matching Debug/runtime build output. No application launch or live OpenAI calls; the 915 source tests had passed before packaging.
+
+## 2026-09-18 — Use one saved-memory collection and explain feature commands
+
+- Made saved memories global across conversations using the same local data folder. SQLite schema 4 preserves every old note, identifier, timestamp, duplicate, and provenance record; collections above the new-note limit remain accessible and editable. Old scope prefixes are accepted only as compatibility aliases.
+- Removed scope controls and labels from saved-note views, command help, and proposal review. New notes and approved suggestions always save globally. Existing project-scoped collection consent, skill approvals, and reminders are unchanged.
+- Replaced generic Skills and memory help labels with short purpose descriptions in all six languages. Updated the built-in guide, runtime memory prompts, README, CLI reference, architecture, and privacy documentation without changing the existing UI style.
+- Added migration, rollback, global command, view, bounded reflection, and duplicate-cleanup regressions. Deleting a saved note still requires the existing confirmation and clears collected evidence and suggestions; stale pre-migration proposals require fresh review.
+
+Validation: preflight, formatting verification, XML summaries, and the final Release build passed with zero warnings or errors. All 915 tests passed against the final source and packaged prompts. Cleaned Release build output. No real user data was migrated during validation, no live OpenAI calls were made, and no MSIX was rebuilt or installed.
+
+## 2026-09-18 — Install the inline Settings Debug update
+
+- Published source commit `3d1b2c5` locally in Debug for Windows x64 and packaged the requested test MSIX `0.1.5.21` with the existing trusted certificate. Updated the current-user installation from `0.1.5.20` without uninstalling, changing certificate trust, or modifying app data.
+- Verified the package signature, healthy installed status, hashes of all 320 payload files, and the `hm` execution alias pointing to the new version. No app process needed to be stopped; the app was left closed for the user's test.
+- Preserved the signed MSIX and verification record under ignored `artifacts/msix/settings-3d1b2c5-debug`. Cleaned matching Debug/runtime build output. No source changes or live OpenAI calls; the 875 source tests and 33 final guide checks had already passed before packaging.
+
+## 2026-09-18 — Make Skills and Memory real Settings tabs
+
+- Replaced the separate preference menus with fields in the existing Settings form. Skills, Memory, and ordinary preferences share Save and Cancel; saved-note editing remains explicitly separate. Reused the existing layout, navigation, action bar, palette, and emoji helper.
+- Renamed Learning to Memory and the note manager to Saved memories in all six languages. Added readable bundled skill names and shorter privacy explanations; removed experiment terminology from user-facing copy and the chat guide.
+- Kept full skill instructions and scripts available in a scrollable preview. Collection and deletion require separate consent. Project preferences and skill approvals save together, reject stale drafts and changed packages, and validate the submitted language before activation. Reactivation cannot skip unreadable or omitted approved packages.
+- Updated the quick start, CLI and privacy documentation, and nine versioned chat-guide chapters. Added draft, consent, activation, and viewport regressions without provider calls or real desktop actions.
+
+Validation: preflight, formatting verification, and XML summaries passed. Release builds completed with zero warnings or errors; all 875 tests passed. After the final guide wording edit, all 33 guide/catalog tests passed again. Reviewed captured 60×20 and 100×32 terminal frames and cleaned Release output. No MSIX was rebuilt or installed for this change; main and release versions remain unchanged.
+
+## 2026-09-18 — Install the Settings integration as a local Debug MSIX
+
+- Built current experimental commit `b2f654a` locally in Debug for Windows x64 and created the requested self-contained MSIX test package `0.1.5.20`. Kept the installed package identity and existing trusted signing certificate; no release workflow or public distribution was used.
+- Installed the current-user update from `0.1.5.19`. Verified the signature, healthy Windows package status, hashes for all 320 staged files, and the `hm` alias target. Did not change certificate trust, PATH, or user settings/data.
+- Preserved the signed package and verification material under ignored `artifacts/msix/settings-b2f654a-debug`. Cleaned Debug build output with the matching runtime and publish path. No live OpenAI calls or application actions were run; the 842 source tests had passed before packaging.
+
+## 2026-09-18 — Connect skills and learning to Settings
+
+- Added Skills and Learning navigation beside the existing Memories manager, plus a read-only Privacy section. General and feature pages show refreshed, local project status without activating features or running maintenance.
+- Reused existing approval menus with saved AI settings and credentials. Child-menu changes are immediate and independent of the parent draft; six-language notices explain this distinction. Returning, cancelling a child menu, or encountering a recoverable action error preserves unsaved settings.
+- Kept Settings accessible when an imported skill is invalid. Unknown counts are marked unavailable, with a visible warning and sanitized diagnostics; actual feature preferences remain visible.
+- Updated the short quick start, CLI reference, and four six-language chat-guide chapters. Added 32 regression cases for passive rendering, refresh, cancellation, invalid catalogs/actions, local-only status reads, and privacy copy.
+
+Validation: preflight, XML summaries, formatting verification, a warning-free Release build, and all 842 tests passed. Navigation used simulated terminal input and disposable local data, without live OpenAI requests or desktop actions. A separate CLI smoke invocation was not run because its combined temporary-directory cleanup command was rejected. Cleaned Release output. Changes remain on the experimental branch and PR #43; main and release versions are unchanged.
+
+## 2026-09-18 — Add an optional preferred name
+
+- Added an optional name or nickname to Personalization and the setup wizard, with six-language help explaining local storage and sharing with OpenAI. Existing preferences remain unchanged; the field can be edited or cleared.
+- Added bounded Unicode normalization, credential/control rejection, and an idempotent SQLite upgrade with an empty default. Names stay out of ordinary logs and session metadata.
+- Included the name as escaped literal data through a versioned, six-language prompt only for questions and chat. Empty names are omitted; command review, classifiers, Dream, heartbeat, and connection tests do not receive the preference. Context estimates and cache keys account for the same generated instructions.
+- Updated the settings and privacy guide chapters and short CLI/privacy documentation. Added 50 regression cases for UI edits and clearing, migration, validation, provider requests, localization, caching, and context budgets.
+
+Validation: preflight, formatting verification, XML summaries, a warning-free Release build, and all 810 tests passed. Tests used simulated terminal input and provider responses; no live OpenAI call, real credential, or desktop action was used. Cleaned Release output. Changes remain on the experimental branch and PR #43.
+
+## 2026-09-18 — Fix experimental consent and skill review findings
+
+- Reject stale settings snapshots inside the save transaction. Changing a reminder or automatic selection in an older window cannot restore revoked capture consent or erase newer evidence.
+- Budget the complete serialized, localized skill context. Reject oversized activation and manual selection with a six-language explanation; warn about incompatible older selections without blocking answers.
+- Enforce the 64-package local import limit before moving a reviewed package. Serialize concurrent imports with a persistent file lock and preserve rejected staging content.
+- Added 32 regression cases covering consent conflicts, escaping, localization, query envelopes, preserved selection, capacity, and competing imports. Kept the simple quick start current.
+
+Validation: preflight, formatting verification, XML summaries, a warning-free Release build, and all 760 tests passed. Synthetic provider replies and disposable local data only; no live API calls, desktop actions, or local release packaging. Cleaned Release output. Changes remain on the existing experimental branch and draft PR #43.
+
+## 2026-09-18 — Explain experimental features through the chat guide
+
+- Added five concise, six-language guide chapters: skills, skill-actions, learning, reflection, and reminders. Documented exact activation steps, examples, privacy limits, and the distinction between manual memories, learning capture, heartbeat hints, and dated reminders.
+- Extended the packaged topic allowlist and the versioned chat/query guidance. Natural-language questions can request the new chapters through the existing schema and reader; the two-chapter, 3,000-token limit remains unchanged.
+- Clarified that activation means enabling features in the app, not publishing online. Guide answers do not change settings, approve memories, run skills, or create reminders.
+- Added short example questions to the CLI reference and quick start. Added synthetic query/chat retrieval coverage for all six languages and checks that guide requests leave experiment settings unchanged.
+
+Validation: preflight, XML summaries, formatting, a warning-free Release build, and all 728 tests passed. The production YAML reader validated the new chapters, and every chapter pair fits the guide allowance in all six languages. Provider responses were simulated; no live OpenAI request or feature action ran. Cleaned Release output before handoff. Changes stay on the existing experimental branch and draft PR #43.
+
+## 2026-09-18 — Complete the skill catalog and simplify the user guide
+
+- Added the seven remaining supported CLI-Intelligence skills: clipboard, screenshot, system_info, http_request, web_search, timezone_convert, and set_reminder. The catalog now has ten skills; metals-dev-monitor remains excluded. Kept PromptMeUp's interface and OpenAI integration.
+- Routed snapshot scripts through existing risk scoring and explicit approval. Limited Windows captures to new local PNGs; kept clipboard reads bounded, system summaries privacy-conscious, and HTTPS requests public-only with checked connections and no redirects or proxy. Web search supplies DuckDuckGo instant answers, not a full crawler.
+- Added bounded, project-local reminders with reviewed times and notes, transactional activation checks, delivery at chat prompts, and rollback on display failure. No background process or automatic AI call.
+- Added six-language runtime guidance and a shared exact release-file allowlist. Replaced the long experimental report with a short how-to for skills, memories, Dream, and heartbeat, including optional AI command-review disclosure.
+
+Validation: preflight, formatting, XML summaries, all twelve relevant PowerShell syntax checks, exact seventeen-file payload validation, and a warning-free Release build passed. All 719 tests passed, including offline embedded-C# compilation, public-address guards, time zones, catalog/localization, reminder persistence and failed-display rollback. No real network skill requests, clipboard access, screen captures, or OpenAI calls were made. Cleaned Release output; no local release artifacts were produced. Changes remain on the experimental branch and draft PR #43.
+
+## 2026-09-18 — Experimental skills and reviewed memory learning
+
+- Implemented the eight-step roadmap on `codex/experimental-memory-skills`; opened [draft PR #43](https://github.com/umbertotechnopreneur/PromptMeUp/pull/43), assigned to the repository owner with enhancement and documentation labels. Kept `main` unchanged.
+- Added opt-in skill activation/import, contextual selection, and approved Git/filesystem/concat-files actions. Explicitly excluded metals-dev-monitor and kept the existing command safety boundary.
+- Added opt-in observations, provenance, transactional proposal review, Dream reflection across sessions, and manually invoked heartbeat with an optional local reminder. No background agent or automatic memory approval.
+- Preserved OpenAI, PromptMeUp views, all six interface/prompt languages, credential filtering, retention bounds, and revision guards against stale evidence or in-flight resurrection.
+- Recorded checkpoints in commits `1a0ae82`, `50ed970`, and `6a54bf7`; documented consent, permanent evidence purges, existing audit retention, supported import constraints, and the intentionally limited initial catalog.
+
+Validation: preflight, format verification, XML summaries, Release build (zero warnings/errors), YAML syntax/six-language fields, prompt context allowances, and PowerShell syntax passed. The initial checkpoints compiled tests without executing them; after the user explicitly authorized testing, all 660 local tests passed. No live AI requests or skill scripts ran. Cleaned build output; no local release artifacts were produced.
+
+CI follow-up: corrected macOS catalog and concat-files handling for only the verified `/var`, `/tmp`, and `/etc` system aliases, retaining arbitrary-link rejection. Added alias and linked-ancestor regression cases. Updated portable, installer, MSIX, and legacy staging scripts to include only the exact four bundled skill files. The first CI run had passed all 657 then-current tests on Windows and Linux; macOS alias handling and Windows installer payload validation identified these follow-up changes. Final packaging remains validated through GitHub Actions, not local release builds.
+
 ## 2026-09-18 — Reduce agent context and redundant verification
 
 - Consolidated repository rules in `AGENTS.md` and replaced duplicate Copilot instructions with a reference, preserving unique safety and product requirements.
@@ -803,3 +928,26 @@ Validation: GitHub's repository API returned the exact new description and the e
 - Kept internal, community, release, and GitHub-native links untagged so campaign attribution remains limited to owned analytics-enabled destinations.
 
 Validation: repository preflight, restore, format verification, XML comment check, Release build with zero warnings/errors, and 182/182 tests passed; `git diff --check` passed for the README change.
+
+## 2026-09-18 — Keep the settings editor open after saving
+
+- Saving settings now persists the validated draft and immediately reopens the editor on its active section, with a visible saved confirmation.
+- Cancelling still exits the editor without persisting an unsaved draft.
+- Added workflow coverage for the save, reopen, and cancel sequence.
+
+Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
+
+## 2026-09-18 — Allow two-digit settings shortcuts
+
+- Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.
+
+Validation: formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
+
+## 2026-09-18 — Improve settings and chat guidance
+
+- Reframed Privacy as a full-width guide with content scrolling and clear section headings.
+- Numbered settings sections and added direct no-Enter navigation for sections 1–12.
+- Rebuilt the opening header, moved navigation and the current directory before the session summary, and corrected the reasoning icon spacing.
+- Updated chat to use the configured preferred name and begin typing directly on the prompt line.
+
+Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.

@@ -12,6 +12,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
 $root = Split-Path -Parent $PSScriptRoot
 if ($IsWindows -and -not $Runtime.StartsWith('win-')) {
     throw 'Build Unix archives on a Unix host to preserve executable permissions.'
@@ -39,6 +40,19 @@ foreach ($file in @('LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.
     if (-not (Test-Path -LiteralPath (Join-Path $payload $file))) { throw "Payload is missing $file." }
 }
 if (@(Get-ChildItem (Join-Path $payload 'prompt') -Filter '*.yaml').Count -lt 4) { throw 'Runtime prompts are missing.' }
+$bundledSkills = @(Get-BundledSkillFiles)
+foreach ($file in $bundledSkills) {
+    if (-not (Test-Path -LiteralPath (Join-Path $payload $file) -PathType Leaf)) { throw "Payload is missing $file." }
+}
+$skillRoot = Get-Item -LiteralPath (Join-Path $payload 'skills') -Force
+if (($skillRoot.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Bundled skills cannot contain links or junctions.' }
+foreach ($item in Get-ChildItem -LiteralPath $skillRoot.FullName -Recurse -Force) {
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Bundled skills cannot contain links or junctions.' }
+    if (-not $item.PSIsContainer) {
+        $relative = [IO.Path]::GetRelativePath($payload, $item.FullName).Replace('\', '/')
+        if ($bundledSkills -cnotcontains $relative) { throw "Unexpected bundled skill file '$relative'." }
+    }
+}
 $revision = & git -C $root rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot record source revision.' }
 @("PromptMeUp $version", "Runtime: $Runtime", "Source commit: $revision") |

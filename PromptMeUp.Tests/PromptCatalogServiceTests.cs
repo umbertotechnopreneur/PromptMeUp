@@ -54,8 +54,8 @@ public sealed class PromptCatalogServiceTests
         var chat = await catalog.GetAsync("chat-system", CancellationToken.None);
         var query = await catalog.GetAsync("query-system", CancellationToken.None);
 
-        Assert.Equal(11, chat.Version);
-        Assert.Equal(9, query.Version);
+        Assert.Equal(13, chat.Version);
+        Assert.Equal(11, query.Version);
         Assert.Equal("promptmeup-console-response-v2", chat.Metadata["response-format"]);
         Assert.Equal("promptmeup-console-response-v2", query.Metadata["response-format"]);
         Assert.Equal(SupportedLanguages.Codes.OrderBy(language => language), chat.Texts.Keys.OrderBy(language => language));
@@ -70,6 +70,11 @@ public sealed class PromptCatalogServiceTests
             Assert.Contains("<app-guide>", query.ResolveText(language), StringComparison.Ordinal);
             Assert.Contains("\"guide_topics\":[]", chat.ResolveText(language), StringComparison.Ordinal);
             Assert.Contains("\"guide_topics\":[]", query.ResolveText(language), StringComparison.Ordinal);
+            foreach (var topic in AppGuideService.Topics)
+            {
+                Assert.Contains(topic + " (", chat.ResolveText(language), StringComparison.Ordinal);
+                Assert.Contains(topic + " (", query.ResolveText(language), StringComparison.Ordinal);
+            }
         }
     }
 }

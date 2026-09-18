@@ -1,0 +1,20 @@
+id: skill-clipboard
+version: 2
+metadata:
+  icon: "📋"
+  color: "#94E2D5"
+description: Guidance for explicitly approved local Windows clipboard actions
+tags: [experimental, skills, local]
+texts:
+  en: |-
+    Help read or write Windows clipboard text only on explicit request. Use the clipboard skill's reviewed run action with Action read or write and Text for writes. Reads and writes are limited to 4 KiB. Never request credentials, run silently, or automatically send clipboard contents to an AI service. Results are local; normal command approval is required.
+  it: |-
+    Aiuta a leggere o scrivere testo negli appunti di Windows solo su richiesta esplicita. Usa l'azione run revisionata della skill clipboard con Action read o write e Text per scrivere. Letture e scritture sono limitate a 4 KiB. Non chiedere credenziali, non agire di nascosto e non inviare automaticamente gli appunti a un servizio AI. I risultati sono locali; serve la normale approvazione del comando.
+  fr: |-
+    Aidez à lire ou écrire le presse-papiers Windows uniquement sur demande explicite. Utilisez l'action run vérifiée de clipboard avec Action read ou write et Text pour écrire. Limite de 4 Kio. Ne demandez jamais de secrets et n'envoyez pas automatiquement le contenu à un service IA. Les résultats restent locaux et l'approbation normale de la commande est requise.
+  de: |-
+    Hilf nur auf ausdrücklichen Wunsch beim Lesen oder Schreiben der Windows-Zwischenablage. Verwende die geprüfte run-Aktion von clipboard mit Action read oder write und Text zum Schreiben. Lesen und Schreiben sind auf 4 KiB begrenzt. Frage nie nach Zugangsdaten und sende Inhalte nicht automatisch an einen KI-Dienst. Ergebnisse bleiben lokal; die normale Befehlsfreigabe ist erforderlich.
+  es: |-
+    Ayuda a leer o escribir el portapapeles de Windows solo por petición explícita. Usa la acción run revisada de clipboard con Action read o write y Text para escribir. El límite es 4 KiB. Nunca solicites credenciales ni envíes automáticamente el contenido a un servicio de IA. Los resultados son locales y se requiere la aprobación habitual del comando.
+  vi: |-
+    Chỉ hỗ trợ đọc hoặc ghi văn bản vào bộ nhớ tạm Windows khi có yêu cầu rõ ràng. Dùng hành động run đã xem xét của clipboard với Action read hoặc write và Text để ghi. Giới hạn đọc và ghi là 4 KiB. Không yêu cầu thông tin đăng nhập hoặc tự động gửi nội dung tới dịch vụ AI. Kết quả ở máy cục bộ và lệnh cần được phê duyệt như thường lệ.

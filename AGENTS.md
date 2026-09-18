@@ -6,7 +6,7 @@ These instructions apply to every change in this repository.
 
 - Keep `main` protected. Make changes on a focused branch, open a pull request, and use squash merge only after required checks and conversations are resolved.
 - Do not bypass branch protections, required checks, or review requirements. Delete the branch after a successful merge.
-- Create portable release artifacts only through GitHub Actions. Create an annotated `v<version>` tag only after the matching source version is on `main`; never build, sign, upload, or publish release artifacts locally.
+- Create portable release artifacts only through GitHub Actions. For explicit local debug testing, a signed MSIX may be built and installed from an ignored `artifacts/msix` subdirectory using the existing current-user certificate; do not upload, publish, tag, or describe it as a release. Create an annotated `v<version>` tag only after the matching source version is on `main`.
 - Preserve unrelated working-tree changes. Never commit credentials, tokens, local data, logs, generated artifacts, or private machine paths.
 
 ## Context and token efficiency

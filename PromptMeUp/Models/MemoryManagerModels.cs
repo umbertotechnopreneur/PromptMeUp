@@ -8,11 +8,12 @@ public enum MemoryManagerAction
     Create,
     Edit,
     Delete,
+    Proposals,
     Close
 }
 
 /// <summary>Contains the chosen action and an exact saved-memory identifier when required.</summary>
 public sealed record MemoryManagerSelection(MemoryManagerAction Action, string? Id = null);
 
-/// <summary>Contains the note and destination scope reviewed in the memory editor.</summary>
-public sealed record MemoryDraft(string Text, bool IsGlobal);
+/// <summary>Contains a saved-note draft; the global flag remains for compatibility with existing callers.</summary>
+public sealed record MemoryDraft(string Text, bool IsGlobal = true);

@@ -1,0 +1,83 @@
+id: app-guide-skill-actions
+version: 2
+description: Practical examples and privacy limits for the ten bundled skills.
+tags:
+  - app-guide
+  - skill-actions
+metadata:
+  owner: PromptMeUp
+  role: system
+  source: packaged-local-guide
+texts:
+  en: |-
+    First use `hm --setup` → Skills to enable skills and memory, inspect the exact package, enable it, and Save; Cancel discards the shared Skills/Memory draft. Then open `/skills` or `hm --skills`, select the package, and Choose an action. Git/filesystem use a path; other scripts use `run` with scalar JSON parameters. Examples are editable, not commands to execute automatically.
+
+    Local files: `git` offers status, log, diff; `filesystem` offers list, read, info. `concat-files` creates text bundles: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternatives env, processes, disk, network. env shows names only, never values; network omits addresses.
+
+    Windows only: `clipboard` reads with {"Action":"read"}, writes with {"Action":"write","Text":"Hello"}; text is bounded to 4 KiB. `screenshot`: {"Mode":"active_window","OutputPath":"./capture.png"}; modes also full_screen and active_monitor. Use a new PNG in an existing local directory, not a linked path. It captures the foreground at execution, possibly the terminal. Hide private windows first: images cannot be redacted. No automatic upload or clipboard copy.
+
+    Internet: `http_request`: {"Url":"https://example.com","Method":"GET"}. Also HEAD, POST, PUT; Body is a string, optional ContentType is application/json or text/plain. POST/PUT may change remote data. Only public HTTPS port 443; no private destinations, authentication, custom headers, cookies, proxies or redirects. Timeout 15 seconds; body preview 4 KiB. `web_search`: {"Query":"PowerShell","MaxResults":3}; 1–10 results. This sends the query to DuckDuckGo for instant answers and related topics, not full web search; empty results are valid.
+
+    Time: `timezone_convert`: {"ToTimeZone":"Asia/Tokyo"} for now, or {"FromTimeZone":"Europe/Rome","ToTimeZone":"UTC","Time":"2030-05-20T14:30"}. List IDs with {"Action":"list","Filter":"Europe"}. Use exact supported IDs; explicit times have no offset; ambiguous/skipped daylight-saving times are rejected. `set_reminder` uses manage, not JSON; see the reminders chapter.
+
+    Review and approve every action; PowerShell 7 is required for scripts. Output is not automatically sent to OpenAI. Optional AI command review sends script parameters before execution approval; disable it in Settings to keep that review local. Never include secrets in parameters or network queries.
+  it: |-
+    Usa prima `hm --setup` → Skills per abilitare skills e memoria, esaminare il pacchetto esatto, abilitarlo e Salvare; Annulla scarta la bozza condivisa con Memoria. Poi apri `/skills` o `hm --skills`, seleziona il pacchetto e Scegli un’azione. Git/filesystem usano un percorso; gli altri script usano `run` con parametri JSON scalari. Gli esempi sono modificabili, non comandi da eseguire automaticamente.
+
+    File locali: `git` offre status, log, diff; `filesystem` list, read, info. `concat-files` crea raccolte di testo: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternative env, processes, disk, network. env mostra solo nomi, mai valori; network omette gli indirizzi.
+
+    Solo Windows: `clipboard` legge con {"Action":"read"}, scrive con {"Action":"write","Text":"Ciao"}; limite 4 KiB. `screenshot`: {"Mode":"active_window","OutputPath":"./capture.png"}; altre modalità full_screen e active_monitor. Usa un nuovo PNG in una cartella locale esistente, senza collegamenti. Cattura la finestra in primo piano all’esecuzione, anche il terminale. Nascondi prima le finestre private: le immagini non sono oscurabili. Nessun caricamento o copia negli appunti automatici.
+
+    Internet: `http_request`: {"Url":"https://example.com","Method":"GET"}. Anche HEAD, POST, PUT; Body è una stringa, ContentType facoltativo è application/json o text/plain. POST/PUT possono modificare dati remoti. Solo HTTPS pubblico porta 443; niente destinazioni private, autenticazione, intestazioni personalizzate, cookie, proxy o reindirizzamenti. Timeout 15 secondi; anteprima corpo 4 KiB. `web_search`: {"Query":"PowerShell","MaxResults":3}; 1–10 risultati. Invia la query a DuckDuckGo per risposte rapide e argomenti correlati, non una ricerca web completa; risultati vuoti sono validi.
+
+    Orari: `timezone_convert`: {"ToTimeZone":"Asia/Tokyo"} per adesso, oppure {"FromTimeZone":"Europe/Rome","ToTimeZone":"UTC","Time":"2030-05-20T14:30"}. Elenca gli ID con {"Action":"list","Filter":"Europe"}. Usa ID esatti supportati; date senza offset; orari ambigui o inesistenti per l’ora legale vengono rifiutati. `set_reminder` usa manage, non JSON; vedi il capitolo promemoria.
+
+    Esamina e approva ogni azione; gli script richiedono PowerShell 7. L’output non va automaticamente a OpenAI. La revisione AI facoltativa invia i parametri prima dell’approvazione dell’esecuzione; disabilitala nelle Impostazioni per tenere locale la verifica. Mai segreti nei parametri o nelle query Internet.
+  fr: |-
+    Ouvrez d'abord `hm --setup` → Compétences pour activer les compétences et la mémoire, examiner le paquet précis, l'activer et enregistrer ; Annuler abandonne le brouillon commun avec Mémoire. Ouvrez ensuite `/skills` ou `hm --skills`, sélectionnez le paquet puis Choisir une action. Git/filesystem utilisent un chemin ; les scripts utilisent `run` avec un JSON à valeurs scalaires. Ces exemples sont modifiables, jamais exécutés automatiquement.
+
+    Fichiers locaux : `git` propose status, log, diff ; `filesystem` list, read, info. `concat-files` crée des lots de texte : {"InputFolder":".","OutputFolder":"./review-output"}. `system_info` : {"Action":"overview"} ; alternatives env, processes, disk, network. env montre seulement les noms, jamais les valeurs ; network omet les adresses.
+
+    Windows uniquement : `clipboard` lit avec {"Action":"read"}, écrit avec {"Action":"write","Text":"Bonjour"} ; limite 4 KiB. `screenshot` : {"Mode":"active_window","OutputPath":"./capture.png"} ; aussi full_screen et active_monitor. Nouveau PNG dans un dossier local existant, sans lien. La fenêtre au premier plan lors de l’exécution peut être le terminal. Masquez les fenêtres privées : les images ne sont pas expurgées. Aucun envoi ni copie au presse-papiers automatique.
+
+    Internet : `http_request` : {"Url":"https://example.com","Method":"GET"}. Aussi HEAD, POST, PUT ; Body est une chaîne, ContentType facultatif vaut application/json ou text/plain. POST/PUT peuvent modifier des données distantes. HTTPS public, port 443 uniquement ; aucun réseau privé, authentification, en-tête personnalisé, cookie, proxy ou redirection. Délai 15 secondes ; aperçu 4 KiB. `web_search` : {"Query":"PowerShell","MaxResults":3} ; 1–10 résultats. La requête part à DuckDuckGo pour des réponses rapides et sujets liés, pas une recherche web complète ; un résultat vide est valide.
+
+    Heure : `timezone_convert` : {"ToTimeZone":"Asia/Tokyo"} pour maintenant, ou {"FromTimeZone":"Europe/Rome","ToTimeZone":"UTC","Time":"2030-05-20T14:30"}. Liste : {"Action":"list","Filter":"Europe"}. Utilisez des ID exacts pris en charge ; dates sans décalage ; heures ambiguës ou inexistantes liées à l’heure d’été refusées. `set_reminder` utilise manage, pas JSON ; voir le chapitre rappels.
+
+    Examinez et approuvez chaque action ; scripts avec PowerShell 7. Aucune sortie envoyée automatiquement à OpenAI. La revue IA facultative envoie les paramètres avant l’approbation d’exécution ; désactivez-la dans les paramètres pour une revue locale. Aucun secret dans les paramètres ou requêtes Internet.
+  de: |-
+    Zuerst unter `hm --setup` → Skills die Skills und das Gedächtnis aktivieren, das genaue Paket prüfen, einschalten und speichern; Abbrechen verwirft den gemeinsamen Entwurf mit Gedächtnis. Danach `/skills` oder `hm --skills` öffnen, das Paket und Aktion auswählen. Git/filesystem nutzen einen Pfad; Skripte nutzen `run` mit skalaren JSON-Werten. Beispiele sind anpassbar, keine automatisch auszuführenden Befehle.
+
+    Lokale Dateien: `git` bietet status, log, diff; `filesystem` list, read, info. `concat-files` erstellt Textsammlungen: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternativ env, processes, disk, network. env zeigt nur Namen, nie Werte; network keine Adressen.
+
+    Nur Windows: `clipboard` liest mit {"Action":"read"}, schreibt mit {"Action":"write","Text":"Hallo"}; Grenze 4 KiB. `screenshot`: {"Mode":"active_window","OutputPath":"./capture.png"}; auch full_screen und active_monitor. Neue PNG in vorhandenem lokalen Ordner ohne verknüpfte Pfade. Aufgenommen wird der Vordergrund bei Ausführung, eventuell das Terminal. Private Fenster vorher schließen: Bilder werden nicht bereinigt. Kein automatischer Upload oder Kopieren in die Zwischenablage.
+
+    Internet: `http_request`: {"Url":"https://example.com","Method":"GET"}. Auch HEAD, POST, PUT; Body ist Text, optionaler ContentType application/json oder text/plain. POST/PUT können entfernte Daten ändern. Nur öffentliches HTTPS, Port 443; keine privaten Ziele, Anmeldung, eigenen Header, Cookies, Proxys oder Weiterleitungen. Zeitlimit 15 Sekunden, Vorschau 4 KiB. `web_search`: {"Query":"PowerShell","MaxResults":3}; 1–10 Ergebnisse. Sendet die Anfrage für Kurzantworten und verwandte Themen an DuckDuckGo, keine vollständige Websuche; leere Ergebnisse sind gültig.
+
+    Zeit: `timezone_convert`: {"ToTimeZone":"Asia/Tokyo"} für jetzt, oder {"FromTimeZone":"Europe/Rome","ToTimeZone":"UTC","Time":"2030-05-20T14:30"}. IDs auflisten: {"Action":"list","Filter":"Europe"}. Exakte unterstützte IDs verwenden; Datum ohne Offset; mehrdeutige oder übersprungene Sommerzeit-Uhrzeiten werden abgelehnt. `set_reminder` nutzt manage, nicht JSON; siehe Erinnerungen-Kapitel.
+
+    Jede Aktion prüfen und freigeben; Skripte benötigen PowerShell 7. Ausgabe geht nicht automatisch an OpenAI. Optionale KI-Befehlsprüfung sendet Parameter vor der Ausführungsfreigabe; für lokale Prüfung in Einstellungen ausschalten. Keine Geheimnisse in Parametern oder Internetanfragen.
+  es: |-
+    Primero usa `hm --setup` → Skills para activar las skills y la memoria, revisar el paquete exacto, habilitarlo y guardar; Cancelar descarta el borrador compartido con Memoria. Después abre `/skills` o `hm --skills`, selecciona el paquete y Elegir acción. Git/filesystem usan una ruta; los scripts usan `run` con JSON de valores escalares. Los ejemplos se editan, no se ejecutan automáticamente.
+
+    Archivos locales: `git` ofrece status, log, diff; `filesystem` list, read, info. `concat-files` crea conjuntos de texto: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternativas env, processes, disk, network. env muestra solo nombres, nunca valores; network omite direcciones.
+
+    Solo Windows: `clipboard` lee con {"Action":"read"}, escribe con {"Action":"write","Text":"Hola"}; límite 4 KiB. `screenshot`: {"Mode":"active_window","OutputPath":"./capture.png"}; también full_screen y active_monitor. PNG nuevo en una carpeta local existente, sin enlaces. Captura la ventana en primer plano al ejecutarse, quizá el terminal. Oculta ventanas privadas: las imágenes no se censuran. Sin subida ni copia al portapapeles automáticas.
+
+    Internet: `http_request`: {"Url":"https://example.com","Method":"GET"}. También HEAD, POST, PUT; Body es texto, ContentType opcional application/json o text/plain. POST/PUT pueden cambiar datos remotos. Solo HTTPS público en puerto 443; sin destinos privados, autenticación, cabeceras propias, cookies, proxies ni redirecciones. Tiempo límite 15 segundos; vista previa 4 KiB. `web_search`: {"Query":"PowerShell","MaxResults":3}; 1–10 resultados. Envía la consulta a DuckDuckGo para respuestas rápidas y temas relacionados, no una búsqueda web completa; resultados vacíos son válidos.
+
+    Hora: `timezone_convert`: {"ToTimeZone":"Asia/Tokyo"} para ahora, o {"FromTimeZone":"Europe/Rome","ToTimeZone":"UTC","Time":"2030-05-20T14:30"}. Lista: {"Action":"list","Filter":"Europe"}. Usa ID exactos compatibles; fechas sin desfase; rechaza horas ambiguas o inexistentes por horario de verano. `set_reminder` usa manage, no JSON; consulta el capítulo de recordatorios.
+
+    Revisa y aprueba cada acción; los scripts necesitan PowerShell 7. La salida no va automáticamente a OpenAI. La revisión IA opcional envía parámetros antes de aprobar la ejecución; desactívala en Ajustes para una revisión local. Nunca incluyas secretos en parámetros ni consultas Internet.
+  vi: |-
+    Trước tiên mở `hm --setup` → Kỹ năng để bật kỹ năng và bộ nhớ, xem đúng gói, bật gói rồi Lưu; Hủy bỏ bản nháp dùng chung với Bộ nhớ. Sau đó mở `/skills` hoặc `hm --skills`, chọn gói rồi Chọn thao tác. Git/filesystem dùng đường dẫn; script dùng `run` với JSON có giá trị đơn. Ví dụ có thể sửa, không tự chạy.
+
+    Tệp cục bộ: `git` có status, log, diff; `filesystem` có list, read, info. `concat-files` tạo bộ tệp văn bản: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; hoặc env, processes, disk, network. env chỉ hiện tên, không hiện giá trị; network không hiện địa chỉ.
+
+    Chỉ Windows: `clipboard` đọc với {"Action":"read"}, ghi với {"Action":"write","Text":"Xin chao"}; giới hạn 4 KiB. `screenshot`: {"Mode":"active_window","OutputPath":"./capture.png"}; còn có full_screen và active_monitor. PNG mới trong thư mục cục bộ có sẵn, không qua liên kết. Chụp cửa sổ phía trước lúc chạy, có thể là terminal. Ẩn cửa sổ riêng tư trước: ảnh không được che dữ liệu nhạy cảm. Không tự tải lên hoặc sao chép vào clipboard.
+
+    Internet: `http_request`: {"Url":"https://example.com","Method":"GET"}. Còn HEAD, POST, PUT; Body là chuỗi, ContentType tùy chọn application/json hoặc text/plain. POST/PUT có thể sửa dữ liệu từ xa. Chỉ HTTPS công khai cổng 443; không đích riêng tư, xác thực, header riêng, cookie, proxy hoặc chuyển hướng. Tối đa 15 giây; xem trước 4 KiB. `web_search`: {"Query":"PowerShell","MaxResults":3}; 1–10 kết quả. Gửi câu hỏi đến DuckDuckGo để lấy trả lời nhanh và chủ đề liên quan, không phải tìm kiếm web đầy đủ; kết quả rỗng vẫn hợp lệ.
+
+    Giờ: `timezone_convert`: {"ToTimeZone":"Asia/Tokyo"} cho hiện tại, hoặc {"FromTimeZone":"Europe/Rome","ToTimeZone":"UTC","Time":"2030-05-20T14:30"}. Liệt kê ID: {"Action":"list","Filter":"Europe"}. Dùng ID chính xác được hỗ trợ; ngày giờ không có độ lệch; từ chối giờ bị lặp hoặc bỏ qua khi đổi giờ mùa hè. `set_reminder` dùng manage, không dùng JSON; xem chương nhắc việc.
+
+    Xem và duyệt từng thao tác; script cần PowerShell 7. Đầu ra không tự gửi đến OpenAI. Kiểm tra lệnh bằng AI tùy chọn gửi tham số trước khi duyệt chạy; tắt trong Cài đặt để kiểm tra cục bộ. Không đưa bí mật vào tham số hoặc câu hỏi Internet.

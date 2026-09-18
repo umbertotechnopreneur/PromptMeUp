@@ -92,12 +92,12 @@ No AI response can create authorization and `--yes` never applies to `/run`. A m
 
 ## How data is saved
 
-SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `3`. Initialization upgrades older supported databases in a transaction, adding the saved context budget, note storage, and theme selection while retaining settings and history. A database from a newer schema is rejected.
+SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `4`. Initialization upgrades older supported databases in a transaction, adding the saved context budget, note storage, and theme selection while retaining settings and history. Version 4 makes every saved note global, preserving IDs, text, timestamps, duplicates, and provenance. A database from a newer schema is rejected.
 
 | Table | Purpose |
 | --- | --- |
 | `app_settings` | Singleton non-secret setup and memory settings. |
-| `persistent_memories` | Explicit note text, ID, project/global scope, and last-updated timestamp. |
+| `persistent_memories` | Saved note text, ID, last-updated timestamp, and a compatibility scope column written as `global`. |
 | `ai_model_pricing` | Daily normalized model price snapshots. |
 | `organization_costs` | Optional admin Costs API buckets. |
 | `sync_state` | Named synchronization timestamps. |
@@ -124,9 +124,9 @@ Large approved commands travel over standard input. Font checks time out after
 
 Each query or chat receives an isolated `ConversationMemory`. It keeps recent user/assistant messages, caps user-input size, and removes the oldest complete turns to fit the turn and token limits. The default is 12 turns. Completed answers are rendered before pruning; an oversized completed turn can be dropped entirely from future context. There is no automatic summary.
 
-`PersistentMemoryService` stores only notes explicitly saved through `/remember`. A note is limited to 1,000 characters, with up to 100 notes per scope. The project scope is a SHA-256 hash of the nearest Git root, falling back to the current working directory. Global notes are available from any project. Saving an identical note in the same scope refreshes its timestamp.
+`PersistentMemoryService` stores notes explicitly saved through memory commands or the editor; approved Dream proposals also create saved notes. All notes share one collection in the local data folder, independent of the working directory. Each note is limited to 1,000 characters; new notes are accepted below a total of 100. Migrated collections above that limit stay readable, editable, and deletable. Saving identical text refreshes one existing note, without removing any preserved duplicates.
 
-Selection uses local Unicode word overlap, with no provider call or embedding index. Global notes are always eligible; project notes require overlap with the current question. Candidates are sorted by overlap, project scope before global on ties, and recency. Selection removes duplicate text and keeps at most five notes within a 650-token content estimate. The localized `memory-context.yaml` wrapper and JSON note list form a user message capped at 800 estimated tokens; lower-ranked notes are removed until it fits. That message is prepended once per request and is not added to the conversation window.
+Selection uses local Unicode word overlap, with no provider call or embedding index. All notes are eligible; candidates are sorted by overlap, recency, and ID. Selection removes duplicate text and keeps at most five notes within a 650-token content estimate. The localized `memory-context.yaml` wrapper and JSON note list form a user message capped at 800 estimated tokens; lower-ranked notes are removed until it fits. That message is prepended once per request and is not added to the conversation window.
 
 New notes containing recognizable credentials are rejected. Reads reapply redaction and repair stored text when needed. Invalid note input leaves chat open; invalid stored data and database failures propagate rather than silently dropping memories.
 

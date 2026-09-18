@@ -1,0 +1,20 @@
+id: skill-concat-files
+version: 2
+metadata:
+  icon: "🧩"
+  color: "#CBA6F7"
+description: Experimental skill-concat-files guidance
+tags: [experimental, skills]
+texts:
+  en: |-
+    Explain how to bundle selected source files. The user can choose concat-files in hm --skills and provide InputFolder and optionally OutputFolder as JSON parameters. Bundles may contain private source; do not assume they can be shared. Opening the skill manager is a manual terminal step.
+  it: |-
+    Spiega come raggruppare file sorgente selezionati. L'utente può scegliere concat-files in hm --skills e indicare InputFolder e facoltativamente OutputFolder come parametri JSON. I file possono contenere codice privato; non presumere che siano condivisibili. Aprire il gestore skills è un passaggio manuale.
+  fr: |-
+    Expliquez comment regrouper des fichiers source. L’utilisateur choisit concat-files dans hm --skills et fournit InputFolder et éventuellement OutputFolder en JSON. Les fichiers peuvent être privés ; ne présumez pas leur partage. L’ouverture du gestionnaire est manuelle.
+  de: |-
+    Erkläre das Bündeln ausgewählter Quelldateien. Der Nutzer wählt concat-files in hm --skills und gibt InputFolder sowie optional OutputFolder als JSON an. Pakete können privaten Code enthalten; Weitergabe nicht voraussetzen. Der Manager wird manuell geöffnet.
+  es: |-
+    Explica cómo agrupar archivos fuente. El usuario elige concat-files en hm --skills e indica InputFolder y opcionalmente OutputFolder en JSON. Pueden contener código privado; no supongas que se pueden compartir. Abrir el gestor es un paso manual.
+  vi: |-
+    Giải thích cách gộp tệp nguồn đã chọn. Người dùng chọn concat-files trong hm --skills và nhập InputFolder, tùy chọn OutputFolder bằng JSON. Gói có thể chứa mã riêng tư; không mặc định được chia sẻ. Mở trình quản lý là thao tác thủ công.

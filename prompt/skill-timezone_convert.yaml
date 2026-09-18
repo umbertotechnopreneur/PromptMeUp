@@ -1,0 +1,20 @@
+id: skill-timezone_convert
+version: 2
+metadata:
+  icon: "🕒"
+  color: "#F2CDCD"
+description: Guidance for deterministic local time zone conversion
+tags: [experimental, skills, local]
+texts:
+  en: |-
+    Convert dates with the reviewed timezone_convert run action, using exact OS-supported IANA or Windows IDs. Set ToTimeZone and optionally FromTimeZone and Time in yyyy-MM-ddTHH:mm or yyyy-MM-ddTHH:mm:ss form, without an offset. Omit Time for the current instant. Use Action list and optional Filter to find IDs. Reject ambiguous or missing daylight saving times; never guess from city fragments. Conversion is local and requires normal command approval.
+  it: |-
+    Converti date con l'azione run revisionata di timezone_convert e ID IANA o Windows esatti supportati dal sistema. Specifica ToTimeZone e, facoltativamente, FromTimeZone e Time nel formato yyyy-MM-ddTHH:mm o yyyy-MM-ddTHH:mm:ss senza offset. Ometti Time per l'istante attuale. Usa Action list e Filter opzionale per cercare gli ID. Rifiuta orari ambigui o inesistenti dovuti all'ora legale; non indovinare dai nomi di città. Il calcolo è locale e richiede approvazione.
+  fr: |-
+    Convertissez les dates avec l'action run vérifiée de timezone_convert et des ID IANA ou Windows exacts reconnus par le système. Définissez ToTimeZone et éventuellement FromTimeZone et Time au format yyyy-MM-ddTHH:mm ou yyyy-MM-ddTHH:mm:ss sans décalage. Omettez Time pour l'instant présent. Action list avec Filter facultatif cherche les ID. Refusez les heures ambiguës ou inexistantes dues au changement d'heure, sans deviner une ville. Le calcul est local et nécessite une approbation.
+  de: |-
+    Konvertiere mit der geprüften run-Aktion von timezone_convert und exakten, vom System unterstützten IANA- oder Windows-IDs. Setze ToTimeZone und optional FromTimeZone und Time als yyyy-MM-ddTHH:mm oder yyyy-MM-ddTHH:mm:ss ohne Offset. Ohne Time gilt der aktuelle Zeitpunkt. Action list und optional Filter suchen IDs. Lehne mehrdeutige oder fehlende Sommerzeit-Uhrzeiten ab; rate keine Stadtzuordnung. Die Berechnung ist lokal und benötigt Freigabe.
+  es: |-
+    Convierte fechas con la acción run revisada de timezone_convert e ID IANA o Windows exactos admitidos por el sistema. Indica ToTimeZone y, opcionalmente, FromTimeZone y Time como yyyy-MM-ddTHH:mm o yyyy-MM-ddTHH:mm:ss sin desplazamiento. Omite Time para el instante actual. Action list y Filter opcional buscan ID. Rechaza horas ambiguas o inexistentes por el horario de verano; no adivines ciudades. El cálculo es local y requiere aprobación.
+  vi: |-
+    Chuyển đổi ngày giờ bằng hành động run đã xem xét của timezone_convert với ID IANA hoặc Windows chính xác được hệ điều hành hỗ trợ. Đặt ToTimeZone, tùy chọn FromTimeZone và Time theo yyyy-MM-ddTHH:mm hoặc yyyy-MM-ddTHH:mm:ss, không kèm độ lệch múi giờ. Bỏ Time để dùng thời điểm hiện tại. Dùng Action list và Filter tùy chọn để tìm ID. Từ chối giờ bị thiếu hoặc trùng do đổi giờ mùa hè; không đoán tên thành phố. Tính toán cục bộ và cần phê duyệt.

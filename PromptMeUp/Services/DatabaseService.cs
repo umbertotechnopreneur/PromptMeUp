@@ -125,7 +125,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                    custom_instruction, include_windows_location, review_commands_with_ai,
                    prompt_caching_enabled, max_conversation_turns, max_message_characters,
                    max_context_percent, max_command_output_characters, command_timeout_seconds,
-                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme
+                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme, preferred_name
             FROM app_settings
             WHERE id = 1;
             """;
@@ -157,7 +157,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
             DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(18)))
         {
             ContextTokenBudget = reader.GetInt32(19),
-            Theme = reader.GetString(20)
+            Theme = reader.GetString(20),
+            PreferredName = PreferredNamePolicy.Normalize(reader.GetString(21), _redactor)
         };
         var normalizedPreamble = _promptProtection.Protect(settings.CustomInstruction).SanitizedText;
         var safePreamble = _redactor.Redact(normalizedPreamble);
@@ -177,6 +178,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
     public async Task SaveSettingsAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        settings = settings with { PreferredName = PreferredNamePolicy.Normalize(settings.PreferredName, _redactor) };
         ValidateSettings(settings);
         var protectedPreamble = _promptProtection.Protect(settings.CustomInstruction);
 
@@ -190,6 +192,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 SET setup_completed = $setupCompleted,
                     language = $language,
                     theme = $theme,
+                    preferred_name = $preferredName,
                     ai_enabled = $aiEnabled,
                     model = $model,
                     reasoning_effort = $reasoning,
@@ -213,6 +216,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.Parameters.AddWithValue("$setupCompleted", settings.SetupCompleted ? 1 : 0);
             command.Parameters.AddWithValue("$language", settings.Language);
             command.Parameters.AddWithValue("$theme", settings.Theme);
+            command.Parameters.AddWithValue("$preferredName", settings.PreferredName);
             command.Parameters.AddWithValue("$aiEnabled", settings.AiEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$model", settings.Model);
             command.Parameters.AddWithValue("$reasoning", settings.ReasoningEffort);
@@ -728,6 +732,11 @@ public sealed class SqliteDatabaseService : IDatabaseService
             {
                 await EnsureThemeColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
+            if (currentVersion < 4)
+            {
+                await MigrateGlobalMemoriesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
+            await EnsurePreferredNameColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
             {
@@ -741,6 +750,18 @@ public sealed class SqliteDatabaseService : IDatabaseService
             await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
             throw;
         }
+    }
+
+    /// <summary>Makes every legacy note global without replacing identifiers, duplicate content, timestamps, or provenance.</summary>
+    private static async Task MigrateGlobalMemoriesAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "UPDATE persistent_memories SET scope_key = 'global' WHERE scope_key <> 'global';";
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Adds the context setting to legacy databases while preserving their existing preferences and history.</summary>
@@ -776,6 +797,25 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.CommandText = """
                 ALTER TABLE app_settings ADD COLUMN theme TEXT NOT NULL DEFAULT 'cyan'
                     CHECK (length(theme) BETWEEN 1 AND 32);
+                """;
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Adds an optional empty name to existing databases without changing saved preferences or consent.</summary>
+    private static async Task EnsurePreferredNameColumnAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'preferred_name';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            command.CommandText = """
+                ALTER TABLE app_settings ADD COLUMN preferred_name TEXT NOT NULL DEFAULT ''
+                    CHECK (length(preferred_name) <= 80);
                 """;
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }

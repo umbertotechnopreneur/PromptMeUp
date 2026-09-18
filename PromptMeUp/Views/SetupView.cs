@@ -142,6 +142,7 @@ public sealed class SetupView : ISetupView
         var (model, reasoning, detail) = CollectModelSettings(current);
 
         BeginStage(++stage, _text.Text("Setup.Preferences"));
+        var preferredName = PromptForPreferredName(current.PreferredName);
         var customInstruction = PromptForPreamble(current.CustomInstruction);
         var includeLocation = _console.Prompt(new ConfirmationPrompt(
             Markup.Escape(_text.Text("Setup.Location")))
@@ -205,6 +206,7 @@ public sealed class SetupView : ISetupView
             Model = model,
             ReasoningEffort = reasoning,
             OutputDetail = detail,
+            PreferredName = preferredName,
             CustomInstruction = customInstruction,
             IncludeWindowsLocation = includeLocation,
             ReviewCommandsWithAi = reviewCommands,
@@ -359,6 +361,43 @@ public sealed class SetupView : ISetupView
                     ? ValidationResult.Success()
                     : ValidationResult.Error($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.RangeError", minimum, maximum))}[/]")));
 
+    /// <summary>Collects an optional name while preserving an existing value unless the user chooses to edit or clear it.</summary>
+    private string PromptForPreferredName(string current)
+    {
+        _console.Write(new Text(_text.Text("Setup.PreferredNameHelp"), Style.Parse(TerminalTheme.Muted)));
+        _console.WriteLine();
+        if (!string.IsNullOrEmpty(current))
+        {
+            var grid = CreateSummaryGrid();
+            AddSummaryRow(grid, _text.Text("Setup.PreferredName"), current);
+            _console.Write(grid);
+            _console.WriteLine();
+            if (!_console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.ChangePreferredName")))
+            {
+                DefaultValue = false
+            }))
+            {
+                return PreferredNamePolicy.Normalize(current, _redactor);
+            }
+        }
+        var value = _console.Prompt(new TextPrompt<string>(Markup.Escape(_text.Text("Setup.PreferredName")))
+            .AllowEmpty()
+            .Validate(candidate =>
+            {
+                try
+                {
+                    _ = PreferredNamePolicy.Normalize(candidate, _redactor);
+                    return ValidationResult.Success();
+                }
+                catch (ArgumentException)
+                {
+                    return ValidationResult.Error($"[{TerminalTheme.Error}]{Markup.Escape(_text.Text("Setup.PreferredNameInvalid"))}[/]");
+                }
+            }));
+        _console.WriteLine();
+        return PreferredNamePolicy.Normalize(value, _redactor);
+    }
+
     /// <summary>Collects, sanitizes, and reports a multilingual injection-checked preamble of at most 500 words.</summary>
     private string PromptForPreamble(string current)
     {
@@ -413,6 +452,7 @@ public sealed class SetupView : ISetupView
         AddSummaryRow(grid, _text.Text("Status.ApiKey"), hasApiKey ? ready : missing);
         AddSummaryRow(grid, _text.Text("Status.AdminKey"), hasAdminKey ? ready : missing);
         AddAiSummaryRows(grid, aiValues, "Setup.Model", "Setup.Reasoning", "Setup.Detail");
+        AddSummaryRow(grid, _text.Text("Setup.PreferredName"), settings.PreferredName.Length == 0 ? no : settings.PreferredName);
         AddSummaryRow(grid, _text.Text("Setup.Custom"), string.IsNullOrWhiteSpace(settings.CustomInstruction) ? no : yes);
         AddSummaryRow(grid, _text.Text("Setup.Location"), settings.IncludeWindowsLocation ? yes : no);
         AddAiSummaryRows(grid, aiValues,

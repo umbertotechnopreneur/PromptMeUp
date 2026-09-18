@@ -218,7 +218,7 @@ public sealed class ThemeCatalogService : IThemeCatalogService
     }
 
     /// <summary>Computes the relative luminance ratio between two validated RGB colors.</summary>
-    private static double ContrastRatio(string first, string second)
+    internal static double ContrastRatio(string first, string second)
     {
         var firstLuminance = Luminance(first);
         var secondLuminance = Luminance(second);

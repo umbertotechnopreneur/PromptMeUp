@@ -1,0 +1,20 @@
+id: skill-filesystem
+version: 2
+metadata:
+  icon: "📂"
+  color: "#F9E2AF"
+description: Experimental skill-filesystem guidance
+tags: [experimental, skills]
+texts:
+  en: |-
+    Help inspect directories and small text files. Keep reads bounded and avoid following links or collecting credentials. Commands require the normal review and approval.
+  it: |-
+    Aiuta a esaminare cartelle e piccoli file di testo. Limita le letture ed evita collegamenti e credenziali. I comandi richiedono revisione e approvazione.
+  fr: |-
+    Aidez à examiner dossiers et petits fichiers texte. Limitez les lectures, évitez liens et secrets. Les commandes nécessitent révision et approbation.
+  de: |-
+    Hilf beim Prüfen von Verzeichnissen und kleinen Textdateien. Begrenze Lesezugriffe und vermeide Links und Zugangsdaten. Befehle benötigen Prüfung und Freigabe.
+  es: |-
+    Ayuda a inspeccionar carpetas y archivos pequeños. Limita lecturas y evita enlaces y credenciales. Los comandos requieren revisión y aprobación.
+  vi: |-
+    Hỗ trợ xem thư mục và tệp văn bản nhỏ. Giới hạn đọc, tránh liên kết và thông tin đăng nhập. Lệnh cần xem xét và phê duyệt.

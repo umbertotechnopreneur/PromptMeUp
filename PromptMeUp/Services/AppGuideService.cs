@@ -19,7 +19,8 @@ public sealed class AppGuideService : IAppGuideService
 
     public static readonly IReadOnlyList<string> Topics = Array.AsReadOnly(new[]
     {
-        "overview", "settings", "conversation", "memories", "commands", "workflows", "costs", "privacy"
+        "overview", "settings", "conversation", "memories", "commands", "workflows", "costs", "privacy",
+        "skills", "skill-actions", "learning", "reflection", "reminders"
     });
 
     private readonly IPromptCatalogService _catalog;

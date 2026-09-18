@@ -45,6 +45,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly AboutWorkflow? _about;
     private readonly MemoryManagerWorkflow? _memories;
     private readonly MemoryCommandWorkflow? _memoryCommands;
+    private readonly ExperimentalWorkflow? _experimental;
 
     /// <summary>Creates the application orchestrator while keeping business services independent from Spectre views.</summary>
     public PromptMeUpApplication(
@@ -76,7 +77,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         LennaWorkflow? lenna = null,
         AboutWorkflow? about = null,
         MemoryManagerWorkflow? memories = null,
-        MemoryCommandWorkflow? memoryCommands = null)
+        MemoryCommandWorkflow? memoryCommands = null,
+        ExperimentalWorkflow? experimental = null)
     {
         _parser = parser;
         _database = database;
@@ -107,6 +109,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _about = about;
         _memories = memories;
         _memoryCommands = memoryCommands;
+        _experimental = experimental;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -195,6 +198,15 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         switch (options.Command)
         {
+            case AppCommand.Skills:
+            case AppCommand.Learning:
+            case AppCommand.Proposals:
+            case AppCommand.Dream:
+            case AppCommand.Heartbeat:
+                EnsureInteractive();
+                await (_experimental ?? throw new InvalidOperationException(_text.Text("Lab.Invalid")))
+                    .RunAsync(options.Command, settings, cancellationToken).ConfigureAwait(false);
+                return 0;
             case AppCommand.Recipes:
                 if (options.RecipeAction is not ("list" or "show"))
                 {

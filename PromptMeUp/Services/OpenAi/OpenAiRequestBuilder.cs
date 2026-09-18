@@ -2,6 +2,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using PromptMeUp.Models;
 
 namespace PromptMeUp.Services.OpenAi;
@@ -37,6 +38,10 @@ internal static class OpenAiRequestBuilder
         else if (prompt.Id == "memory-forget")
         {
             text["format"] = FeatureResponseFormats.MemoryForget();
+        }
+        else if (prompt.Id is "memory-dream" or "memory-heartbeat")
+        {
+            text["format"] = FeatureResponseFormats.MemoryReflection(prompt.Id == "memory-dream");
         }
         else if (prompt.Id == "chat-display-intent")
         {
@@ -93,7 +98,8 @@ internal static class OpenAiRequestBuilder
         string language,
         RuntimeContext? runtimeContext = null,
         ArtifactLimits? limits = null,
-        AppGuideContext? guide = null)
+        AppGuideContext? guide = null,
+        PromptDefinition? preferredNamePrompt = null)
     {
         var artifactLimits = limits ?? ArtifactLimits.Default;
         var builder = new StringBuilder(prompt.ResolveText(language)
@@ -130,6 +136,16 @@ internal static class OpenAiRequestBuilder
             }
         }
 
+        if (SupportsPreferredName(prompt) && !string.IsNullOrWhiteSpace(settings.PreferredName))
+        {
+            if (preferredNamePrompt?.Id != "preferred-name-context")
+            {
+                throw new InvalidOperationException("Preferred-name guidance is required for a configured name.");
+            }
+            builder.AppendLine().AppendLine().Append(preferredNamePrompt.ResolveText(language)
+                .Replace("{preferred_name}", JsonSerializer.Serialize(settings.PreferredName), StringComparison.Ordinal));
+        }
+
         ValidateGuideContext(guide);
         if (guide is { Topics.Count: > 0 })
         {
@@ -142,6 +158,9 @@ internal static class OpenAiRequestBuilder
 
         return builder.ToString();
     }
+
+    /// <summary>Shares the optional name only with conversational replies, never with internal classifiers or maintenance tasks.</summary>
+    internal static bool SupportsPreferredName(PromptDefinition prompt) => prompt.Id is "chat-system" or "query-system";
 
     /// <summary>Builds a lightweight preflight estimate from the populated instruction and bounded message list.</summary>
     internal static AiContextUsage EstimateContext(

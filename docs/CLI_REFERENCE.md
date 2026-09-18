@@ -2,6 +2,12 @@
 
 Ask `hm` a terminal question, check its answer, and choose whether to run a suggested command. `hm` means **help me** and works on Windows, Linux, and macOS.
 
+## Skills and memory
+
+This branch includes opt-in `hm --skills`, `hm --learning`, `hm --dream`, `hm --heartbeat`, and `hm --proposals` screens. They require an interactive terminal. The same names are available as slash commands inside chat. `--yes` never approves skill actions or memory changes.
+
+See the [skills and memory guide](EXPERIMENTAL_MEMORY_SKILLS.md) before collecting messages or importing a skill. Dream and heartbeat suggest changes; they do not silently change saved notes or schedule background work.
+
 ## Ask or choose a command
 
 ```text
@@ -30,6 +36,8 @@ to a file, this follow-up menu doesn't open.
 | --- | --- | --- |
 | `--query <text>` | `-q` or positional text | Answers one question. In a live terminal, you can continue in chat or review a suggested command. |
 | `--chat` | — | Starts a conversation about terminal work. |
+| `--remember <text>` | `/remember <text>` | Saves a note for future conversations. |
+| `--forget <id or description>` | `/forget <id or description>` | Finds a saved note and asks before deleting it. Descriptions may use AI to find matches. |
 | `--memories` | — | Opens the local memory manager to view, create, edit, or delete saved notes. |
 | `--diagnose [text]` | `--file <log>` or stdin | Explains an error or log excerpt and suggests what to check next. |
 | `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a PowerShell script for you to review and save. |
@@ -55,18 +63,27 @@ Use one main command at a time.
 
 Settings fills the terminal window when it supports fullscreen views and is at
 least 60 columns wide and 20 rows tall. Use the sidebar to choose General, AI,
-Credentials, Conversation, Commands, Personalization, Theme, or About.
+Credentials, Conversation, Commands, Personalization, Theme, Skills, Memory,
+Saved memories, Privacy, or About.
 `--setup`, `--ai-setup`, and `--theme` simply choose where you start.
 
 Select About and press Enter or Right to read about the project. When you close
 it, you'll return to your settings with unsaved changes still there. About is
 also available in the smaller settings menu.
 
+Skills and Memory contain fields in the same Settings form. Turn on the shared
+project switch, then choose individual skills or message collection separately.
+Read the displayed skill instructions and any collection or deletion notice.
+Save applies these choices; Cancel discards them. Opening a section runs nothing.
+Saved memories opens a separate note manager: changes saved there take effect
+immediately and Settings Cancel does not undo them. Privacy explains data use.
+Existing CLI and chat slash commands, including `--learning`, remain available.
+
 Up/Down selects a section; Enter or Right moves into its fields. F6 switches
 between the sidebar and fields, and Ctrl+Left returns to the sidebar. Tab moves
 through fields to Save and Cancel. Left/Right changes a field choice or moves
 between the buttons when an action has focus; Enter activates the focused button.
-Save keeps your changes right away. Cancel or Escape discards them and returns
+Save applies the Settings draft, including Skills and Memory. Cancel or Escape discards that draft and returns
 to your terminal history. Smaller or less capable terminals use a section menu
 with the same Save and Cancel actions. Languages show their flag, native name,
 and code; `--no-emoji` uses plain text. See [terminal themes](TERMINAL_THEMES.md)
@@ -164,10 +181,15 @@ Use the sidebar to open Conversation for its four limits, Commands for execution
 limits, or any other section. General contains language; AI contains availability,
 model preferences, advisory command review, and caching. Credentials contains key
 replacement and an optional connection check. Personalization contains your
-personal instructions and location preference.
+optional name or nickname, personal instructions, and location preference.
 Save applies all draft changes directly; Cancel keeps the previous settings.
 After initial setup, the connection check defaults to off. Saving alone makes no
 provider request and does not refresh pricing.
+
+To change what the assistant calls you, open `hm --setup`, choose Personalization,
+enter your name or nickname, and Save. It is optional and never guessed from your
+account, computer, or memories. It is shared only with OpenAI questions and chat.
+Clear the field and Save to stop adding it; earlier conversations and history remain.
 
 The AI section also lists supported models and cached standard token prices per
 million tokens, with the selected model highlighted. Prices cover input, cached
@@ -348,9 +370,9 @@ commands. The reminder appears once, including when a question continues into ch
 | Control | Behavior |
 | --- | --- |
 | `/run <command>` | Checks risks locally and, optionally, with AI. Shows the exact command and asks before running it. Captured output can be shared in a follow-up. |
-| `/remember [global\|project] <text>` | Saves a note for next time. Notes belong to the current project unless you choose `global`. |
-| `/memories` | Lists saved global and current-project notes with their IDs. |
-| `/forget <id>` | Deletes a saved global or current-project note from future selection. |
+| `/remember <text>` | Saves a note for future conversations. |
+| `/memories` | Lists saved notes and their IDs. |
+| `/forget <id>` | Deletes a saved note from future selection. |
 | `/clear` | Starts fresh in chat. Saved notes, usage counters, and earlier activity history stay. |
 | `/costs` | Shows the cost dashboard without ending the chat. |
 | `/status` or `/context` | Shows current context, the input budget, loaded notes, and token usage. |
@@ -362,41 +384,41 @@ You must answer the approval prompt in a live terminal for every `/run` command.
 
 ### Remember something for next time
 
-Open **Memories** in the left sidebar of Help (`hm`) or Settings (`hm --setup`), or run
+Open **Saved memories** in the left sidebar of Help (`hm`) or Settings (`hm --setup`), or run
 `hm --memories`, to manage saved notes without an AI connection. Select a note to
-read its full text, edit its text or scope, or delete it after confirmation. Choose
-**Create** to add a project or global note. Saving a note applies immediately;
+read its full text, edit it, or delete it after confirmation. Choose
+**Create** to add a note. Saving a note applies immediately;
 canceling its editor leaves the stored note unchanged. Returning to Settings keeps
 any unfinished settings draft.
 
-Save a preference or project fact in chat so you do not have to repeat it:
+Save a preference in chat so you do not have to repeat it:
 
 ```text
-/remember project Build this project with dotnet build.
-/remember global Keep terminal explanations concise.
+/remember Keep terminal explanations concise.
+/remember Explain unfamiliar commands before suggesting them.
 /memories
 /forget <id>
 ```
 
-Omit `project` to use the default project scope. Project notes belong to the
-nearest parent directory containing `.git`, including the current directory. If
-there is no Git repository, they belong to the current directory. Global notes
-are available across projects that use the same local data directory.
+Saved memories share one list across conversations using the same local data
+directory. They are not tied to the folder where you saved them. From the terminal,
+use `hm --remember <text>` or `hm --forget <id or description>`.
 
 Only notes you explicitly save become memories. Each note can contain up to
-1,000 characters, with room for 100 global notes and 100 notes per project.
+1,000 characters. You can add new notes while the list has fewer than 100.
+An upgrade preserves existing notes, including their IDs and dates. If the older
+list has more than 100, you can still read, edit, or delete those notes.
 `/memories` lists the notes available here; use an ID from that list with `/forget`.
 
-For each query or chat request, PromptMeUp considers global notes and project
-notes that share words with the request. It loads at most five notes, within
+For each query or chat request, PromptMeUp considers the shared list of notes.
+It loads at most five notes, within
 800 estimated tokens including their formatting. Selection happens locally,
 without an extra AI call. Saving more notes does not make every request larger.
 
-Selected notes are sent to the provider and can appear in the redacted request
+Selected notes are sent to OpenAI and can appear in the filtered request
 history. Notes cannot authorize a command or override your latest request.
 Recognizable credentials are rejected when saving and redacted again when notes
-are loaded. The notes live in the local SQLite database; project identifiers are
-stored as hashes of their directory paths.
+are loaded. The notes live in the local SQLite database.
 
 Use `/clear` to reset the conversation while keeping your notes. Use `/forget`
 to remove a saved note from future selection. Neither command erases earlier
@@ -409,6 +431,17 @@ Ask in your own words, for example, "How do I change this app's conversation
 budget?" or "How do saved memories work?" The assistant can request relevant
 chapters from the guide included with your installed version. No special chat
 command is needed.
+
+The experimental features have dedicated chapters too. Try asking:
+
+- "How do I enable skills and choose one?"
+- "Which skills are available, and what parameters do they take?"
+- "How do I turn on learning and review proposed memories?"
+- "How do Dream and heartbeat work?"
+- "How do I activate reminders? Why did mine not appear?"
+
+The assistant explains the relevant steps; it does not enable features, run a
+skill, approve a memory, or create a reminder just by answering.
 
 PromptMeUp supplies up to two chapters in your selected language, then makes
 one additional AI call for the answer. The guide stays available for follow-up

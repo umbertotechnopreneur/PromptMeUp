@@ -15,7 +15,11 @@ public sealed record SetupViewState(
 
     public CostOverview? Costs { get; init; }
 
+    public SettingsFeatureOverview? FeatureOverview { get; init; }
+
     public Action? OpenMemories { get; init; }
+
+    public bool SaveSucceeded { get; init; }
 }
 
 public enum SettingsSection
@@ -26,14 +30,25 @@ public enum SettingsSection
     Context,
     Commands,
     Personalization,
-    Theme
+    Theme,
+    Skills,
+    Learning,
+    Memories,
+    Privacy
 }
 
 public sealed record SetupSubmission(
     AppSettings Settings,
     string? ApiKey,
     string? AdminKey,
-    bool TestConnection);
+    bool TestConnection)
+{
+    public SettingsFeatureChanges? Features { get; init; }
+
+    public bool KeepOpen { get; init; }
+
+    public SettingsSection SelectedSection { get; init; } = SettingsSection.General;
+}
 
 public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji, bool SuppressFooter = false);
 

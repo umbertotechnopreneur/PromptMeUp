@@ -30,6 +30,9 @@ internal static partial class UiTextCatalog
         AddContextBreakdownEntries(entries);
         AddCostsEntries(entries);
         AddErrorsEntries(entries);
+        AddExperimentalEntries(entries);
+        AddReflectionEntries(entries);
+        AddReminderEntries(entries);
         AddFormEntries(entries);
         AddHelpBrowserEntries(entries);
         AddLennaEntries(entries);

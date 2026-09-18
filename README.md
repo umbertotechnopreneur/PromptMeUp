@@ -74,26 +74,26 @@ General shows your setup, usage, and estimated costs. Use the sidebar to change 
 Save a note directly from the terminal:
 
 ```powershell
-hm --remember global "Prefer short explanations."
-hm --remember "This project uses .NET 10."
+hm --remember "Prefer short explanations."
+hm --remember "I usually work with C# and .NET 10."
 hm --forget "the preference about short explanations"
 ```
 
-`--remember` saves your exact text locally and confirms the saved ID. `--forget` accepts an ID, exact note text, or a description. IDs and exact text need no AI call. Descriptions send batches of global and current-project notes to AI to find matches, with normal token costs. Choose a matching note by pressing its number, then confirm deletion in a separate menu. Press `0` to cancel; `9` shows the next page when needed. Deletion requires an interactive terminal, even with `--yes`. Missing matches, lookup errors, or notes changed during lookup are never reported as deleted. `hm /remember ...` and `hm /forget ...` also use these flows.
+`--remember` saves your exact text locally and confirms the saved ID. `--forget` accepts an ID, exact note text, or a description. IDs and exact text need no AI call. Descriptions send batches of saved notes to AI to find matches, with normal token costs. Choose a matching note by pressing its number, then confirm deletion in a separate menu. Press `0` to cancel; `9` shows the next page when needed. Deletion requires an interactive terminal, even with `--yes`. Missing matches, lookup errors, or notes changed during lookup are never reported as deleted. `hm /remember ...` and `hm /forget ...` also use these flows.
 
 Save a preference or a useful project fact from inside chat:
 
 ```text
-/remember global Prefer short explanations.
-/remember This project uses .NET 10.
+/remember Prefer short explanations.
+/remember I usually work with C# and .NET 10.
 /memories
 ```
 
-Notes without `global` belong to the current project. They remain available the next time you open `hm`. Use `/memories` to see what is saved and `/forget <id>` to remove a note.
+All saved notes are shared across your chats, wherever you open `hm`. Use `/memories` to see what is saved and `/forget <id>` to remove a note. Existing notes are kept when you upgrade.
 
 Choose **Memories** in the Help or Settings sidebar, or run `hm --memories`, to read, create, edit, and delete saved notes locally. Saving applies immediately; deletion asks for confirmation. Chat and the first question show a compact reminder of the memory commands.
 
-`hm` picks up to five notes to include with a question, looking for shared words in project notes. Global notes can be used in any project. Saving a note makes no extra AI call. See [how memories work](docs/OPENAI_COSTS_AND_CACHING.md) for the limits and how notes are picked.
+`hm` picks up to five notes to include with a question, using shared words and recency. Saving a note makes no extra AI call. See [how memories work](docs/OPENAI_COSTS_AND_CACHING.md) for the limits and how notes are picked.
 
 ## Keep your settings in one place
 
@@ -150,7 +150,7 @@ You can give `hm` a build log, ask for a script, or work through a task step by 
 | Ask one question | `hm "your question"` |
 | Keep the conversation going | `hm --chat` |
 | Manage saved memories | `hm --memories` |
-| Save a note | `hm --remember [global|project] "note"` |
+| Save a note | `hm --remember "note"` |
 | Forget a saved note | `hm --forget "id or description"` |
 | Diagnose an error or log | `hm --diagnose --file build.log` |
 | Draft or revise a PowerShell script | `hm --script "your request"` |
@@ -166,6 +166,10 @@ You can give `hm` a build log, ask for a script, or work through a task step by 
 | See the libraries behind the app | `hm --third-party` |
 
 The [command guide](docs/CLI_REFERENCE.md) has more examples and options. PromptMeUp helps with terminal work: commands, tools, errors, files, and scripts. It doesn't write general prose or generate images.
+
+## Experimental skills and learning
+
+On the experimental branch, you can try [skills and reviewed learning](docs/EXPERIMENTAL_MEMORY_SKILLS.md). Start with `hm --skills` or `hm --learning`. Everything starts disabled; Dream and heartbeat suggest memory changes for you to review, and nothing runs in the background.
 
 ## Before you run a command
 

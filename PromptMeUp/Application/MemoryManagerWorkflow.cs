@@ -13,18 +13,24 @@ public sealed class MemoryManagerWorkflow
     private readonly IMemoryManagerView _view;
     private readonly IConsoleShellView _shell;
     private readonly ILocalizationService _text;
+    private readonly ExperimentalWorkflow? _experimental;
+    private readonly ISettingsService? _settings;
 
     /// <summary>Connects the passive memory manager to local persistence and localized operation feedback.</summary>
     public MemoryManagerWorkflow(
         PersistentMemoryService memories,
         IMemoryManagerView view,
         IConsoleShellView shell,
-        ILocalizationService text)
+        ILocalizationService text,
+        ExperimentalWorkflow? experimental = null,
+        ISettingsService? settings = null)
     {
         _memories = memories ?? throw new ArgumentNullException(nameof(memories));
         _view = view ?? throw new ArgumentNullException(nameof(view));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _text = text ?? throw new ArgumentNullException(nameof(text));
+        _experimental = experimental;
+        _settings = settings;
     }
 
     /// <summary>Refreshes accessible notes after each operation and keeps recoverable input errors inside the manager.</summary>
@@ -59,6 +65,7 @@ public sealed class MemoryManagerWorkflow
                         break;
                     case MemoryManagerAction.Delete:
                         var memory = FindSelected(memories, selection.Id);
+                        _shell.RenderNotice(_text.Text("Lab.ForgetNotice"));
                         if (_view.ConfirmDelete(memory))
                         {
                             if (await _memories.ForgetAsync(memory.Id, cancellationToken).ConfigureAwait(false))
@@ -71,11 +78,26 @@ public sealed class MemoryManagerWorkflow
                             }
                         }
                         break;
+                    case MemoryManagerAction.Proposals:
+                        if (_experimental is not null && _settings is not null)
+                        {
+                            await _experimental.RunAsync(AppCommand.Proposals,
+                                await _settings.LoadAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            _shell.RenderNotice(_text.Text("Lab.Disabled"));
+                        }
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(selection), "Unsupported memory action.");
                 }
             }
             catch (MemoryValidationException exception)
+            {
+                _shell.RenderError(exception.Message);
+            }
+            catch (InvalidOperationException exception) when (selection.Action == MemoryManagerAction.Proposals)
             {
                 _shell.RenderError(exception.Message);
             }
@@ -102,8 +124,8 @@ public sealed class MemoryManagerWorkflow
             try
             {
                 var saved = memory is null
-                    ? await _memories.RememberAsync(draft.Text, draft.IsGlobal, cancellationToken).ConfigureAwait(false)
-                    : await _memories.UpdateAsync(memory.Id, draft.Text, draft.IsGlobal, cancellationToken).ConfigureAwait(false);
+                    ? await _memories.RememberAsync(draft.Text, true, cancellationToken).ConfigureAwait(false)
+                    : await _memories.UpdateAsync(memory.Id, draft.Text, true, cancellationToken).ConfigureAwait(false);
                 _shell.RenderSuccess(_text.Text("Memory.Saved", saved.Id));
                 return;
             }

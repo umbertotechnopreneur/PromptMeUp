@@ -49,6 +49,20 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--skills" or "--learning" or "--proposals" or "--dream" or "--heartbeat":
+                    var experimentalCommand = argument.ToLowerInvariant() switch
+                    {
+                        "--skills" => AppCommand.Skills,
+                        "--learning" => AppCommand.Learning,
+                        "--proposals" => AppCommand.Proposals,
+                        "--dream" => AppCommand.Dream,
+                        _ => AppCommand.Heartbeat
+                    };
+                    if (!TrySelect(experimentalCommand, ref command, ref commandWasSelected, out var skillsError))
+                    {
+                        return FailureMessage(skillsError);
+                    }
+                    break;
                 case "--recipes":
                     if (!TrySelect(AppCommand.Recipes, ref command, ref commandWasSelected, out var recipeError))
                     {

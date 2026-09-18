@@ -12,7 +12,7 @@ public interface IChatView
 
     void RenderMemoryHint();
 
-    string ReadMessage(int maximumCharacters);
+    string ReadMessage(int maximumCharacters, string? userName = null);
 
     void RenderUser(string text);
 
@@ -48,7 +48,7 @@ public sealed class ChatView : IChatView
         _inputHintShown = false;
         var icon = TerminalTheme.IconPrefix(_shell.Options, "💬", ">");
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("Chat.Title")}", TerminalTheme.Accent);
-        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.Branding"))}[/]");
+        _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.CommandsHeading"))}[/]");
         _console.WriteLine();
         RenderCommandHint(_text.Text("Chat.Command.RunSyntax"), "Chat.Command.Run");
         RenderCommandHint("/clear", "Chat.Command.Clear");
@@ -76,12 +76,13 @@ public sealed class ChatView : IChatView
     }
 
     /// <summary>Reads one bounded message while showing the full editing guide only on the first prompt.</summary>
-    public string ReadMessage(int maximumCharacters)
+    public string ReadMessage(int maximumCharacters, string? userName = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
-        var label = $"{TerminalTheme.IconPrefix(_shell.Options, "👤", ">")}{_text.Text("Chat.You")} ›";
+        var name = string.IsNullOrWhiteSpace(userName) ? _text.Text("Chat.You") : userName.Trim();
+        var label = $"{TerminalTheme.IconPrefix(_shell.Options, "👤", ">")}{name} >";
         _console.WriteLine();
-        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters, showHint: !_inputHintShown);
+        var input = new MultilineChatPrompt(_console, _text, _shell.Options).Read(label, maximumCharacters, showHint: !_inputHintShown);
         _inputHintShown = true;
         return input;
     }
@@ -128,6 +129,8 @@ public sealed class ChatView : IChatView
             }
         }
 
+        _console.WriteLine();
+        _console.MarkupLine($"[{TerminalTheme.White}]{Markup.Escape(_text.Text("Chat.EndMessage"))}[/]");
         _console.WriteLine();
     }
 

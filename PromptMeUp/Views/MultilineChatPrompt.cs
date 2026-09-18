@@ -2,6 +2,7 @@
 
 using System.Globalization;
 using System.Text;
+using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -9,10 +10,11 @@ using Spectre.Console.Rendering;
 namespace PromptMeUp.Views;
 
 /// <summary>Edits a small scrolling input area with paste boundaries and an explicit keyboard submission.</summary>
-internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationService text)
+internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions options)
 {
     private int _paintedRows;
     private (int Width, int Height) _paintedSize;
+    private string _label = string.Empty;
 
     /// <summary>Collects bounded pasted or typed text, preserving line breaks until a separate Enter key submits it.</summary>
     internal string Read(string label, int maximumCharacters, bool showHint = true)
@@ -25,8 +27,12 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         }
         var buffer = new ChatInputBuffer(maximumCharacters);
         var reader = new TerminalInputReader(console.Input, maximumCharacters, win32Encoding: OperatingSystem.IsWindows());
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text(showHint ? "Chat.MultilineHint" : "Chat.InputShortHint"))}[/]");
-        console.MarkupLine($"[bold {TerminalTheme.Accent}]{Markup.Escape(label)}[/]");
+        _label = label;
+        var hint = text.Text(
+            showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
+            KeyPrefix("⏎", "Enter"), KeyPrefix("⇧ + ⏎", "Newline"), KeyPrefix("← ↑ ↓ →", "Arrows"), KeyPrefix("⎋", "Escape"));
+        console.MarkupLine($"[{TerminalTheme.FieldValue}]{Markup.Escape(hint)}[/]");
+        console.WriteLine();
         console.Cursor.Hide();
         try
         {
@@ -45,7 +51,10 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                     {
                         EraseDraft();
-                        ConversationText.Write(console, new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
+                        console.Write(new Paragraph()
+                            .Append(SafeDisplay(_label) + " ", Style.Parse($"bold {TerminalTheme.Accent}"))
+                            .Append(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
+                        console.WriteLine();
                         return buffer.Text;
                     }
                     if (!buffer.Edit(key))
@@ -58,8 +67,13 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         finally
         {
             console.Cursor.Show();
+            _label = string.Empty;
         }
     }
+
+    /// <summary>Uses a spaced key symbol or its localized name in plain-text mode.</summary>
+    private string KeyPrefix(string symbol, string key) =>
+        TerminalTheme.IconPrefix(options, symbol, text.Text("Chat.Key." + key) + ":");
 
     /// <summary>Redraws only owned input rows; resizing starts a fresh area without touching earlier scrollback.</summary>
     private void Paint(ChatInputBuffer buffer, string? error, int maximumCharacters)
@@ -85,11 +99,13 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         for (var offset = 0; offset < inputRows; offset++)
         {
             var index = first + offset;
-            var prefix = index == current ? "› " : "  ";
+            var active = index == current;
+            var prompt = active && index == 0 ? _label : active ? "›" : string.Empty;
+            var prefix = active ? "[bold " + TerminalTheme.Accent + "]" + Markup.Escape(prompt) + "[/] " : "  ";
             var line = index < lines.Length ? lines[index] : string.Empty;
-            var markup = $"[bold {TerminalTheme.Accent}]{prefix}[/]"
-                + FormatLine(line, index == current ? buffer.Cursor - lineStart : null, Math.Max(1, width - 2));
-            WriteRow(width >= 3 ? markup : FormatLine(line, null, width));
+            var prefixWidth = active ? new Segment(prompt + " ").CellCount() : 2;
+            var markup = prefix + FormatLine(line, active ? buffer.Cursor - lineStart : null, Math.Max(1, width - prefixWidth));
+            WriteRow(width > prefixWidth ? markup : FormatLine(line, null, width));
         }
         if (showStatus)
         {

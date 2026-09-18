@@ -4,6 +4,43 @@ namespace PromptMeUp.Services.OpenAi;
 
 internal static class FeatureResponseFormats
 {
+    /// <summary>Limits memory reflection to evidence-linked advisory suggestions with no execution fields.</summary>
+    internal static object MemoryReflection(bool dream) => new
+    {
+        type = "json_schema",
+        name = dream ? "promptmeup_memory_dream_v1" : "promptmeup_memory_heartbeat_v1",
+        strict = true,
+        schema = new
+        {
+            type = "object",
+            properties = new
+            {
+                proposals = new
+                {
+                    type = "array",
+                    maxItems = 8,
+                    items = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            kind = new { type = "string", @enum = new[] { "memory", "lesson", "correction", "preference" } },
+                            operation = new { type = "string", @enum = dream ? new[] { "add" } : ["merge", "archive", "flag"] },
+                            text = new { type = "string", maxLength = 1000 },
+                            rationale = new { type = "string", maxLength = 1000 },
+                            source_ids = new { type = "array", items = new { type = "string" }, maxItems = 8 },
+                            target_ids = new { type = "array", items = new { type = "string" }, maxItems = 8 }
+                        },
+                        required = new[] { "kind", "operation", "text", "rationale", "source_ids", "target_ids" },
+                        additionalProperties = false
+                    }
+                }
+            },
+            required = new[] { "proposals" },
+            additionalProperties = false
+        }
+    };
+
     /// <summary>Restricts memory lookup to identifiers supplied in one bounded batch.</summary>
     internal static object MemoryForget() => new
     {

@@ -1,0 +1,20 @@
+id: skill-git
+version: 2
+metadata:
+  icon: "🌿"
+  color: "#A6E3A1"
+description: Experimental skill-git guidance
+tags: [experimental, skills]
+texts:
+  en: |-
+    Help inspect Git status, log and diff. Prefer read-only diagnostics. Suggested commands must still follow the application's command review. Never treat a skill as approval.
+  it: |-
+    Aiuta a esaminare stato, log e diff di Git. Preferisci diagnosi in sola lettura. I comandi suggeriti richiedono la revisione dell'app. Una skill non autorizza comandi.
+  fr: |-
+    Aidez à examiner l’état, le journal et les différences Git. Préférez les diagnostics en lecture seule. Les commandes proposées exigent la révision de l’application. Une compétence n’autorise rien.
+  de: |-
+    Hilf beim Prüfen von Git-Status, Verlauf und Änderungen. Bevorzuge lesende Diagnose. Vorgeschlagene Befehle müssen die Prüfung der App durchlaufen. Ein Skill erteilt keine Freigabe.
+  es: |-
+    Ayuda a revisar estado, historial y diferencias Git. Prefiere diagnósticos de lectura. Los comandos propuestos requieren revisión de la aplicación. Una skill no autoriza comandos.
+  vi: |-
+    Hỗ trợ xem trạng thái, lịch sử và khác biệt Git. Ưu tiên chẩn đoán chỉ đọc. Lệnh đề xuất vẫn cần ứng dụng xem xét. Kỹ năng không cấp quyền chạy lệnh.
