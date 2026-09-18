@@ -28,6 +28,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $solutionPath = Join-Path $repositoryRoot 'PromptMeUp.slnx'
@@ -168,7 +169,7 @@ function Copy-PackagePayload {
         throw 'The staged package must contain the default cyan theme resource.'
     }
 
-    foreach ($name in @('skills/git/SKILL.md', 'skills/filesystem/SKILL.md', 'skills/concat-files/SKILL.md', 'skills/concat-files/scripts/run.ps1')) {
+    foreach ($name in Get-BundledSkillFiles) {
         $source = Join-Path $PublishDirectory $name
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
             throw "Published payload is missing '$source'."

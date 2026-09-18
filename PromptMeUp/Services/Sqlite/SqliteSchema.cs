@@ -172,6 +172,15 @@ internal static class SqliteSchema
             revision TEXT NOT NULL CHECK(length(revision) = 32)
         );
 
+        CREATE TABLE IF NOT EXISTS skill_reminders (
+            id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            message TEXT NOT NULL CHECK(length(message) BETWEEN 1 AND 500),
+            due_unix_ms INTEGER NOT NULL,
+            offset_minutes INTEGER NOT NULL CHECK(offset_minutes BETWEEN -840 AND 840)
+        );
+        CREATE INDEX IF NOT EXISTS ix_skill_reminders_scope_due ON skill_reminders(scope_key, due_unix_ms);
+
         CREATE TABLE IF NOT EXISTS sync_state (
             name TEXT NOT NULL PRIMARY KEY,
             value TEXT NOT NULL

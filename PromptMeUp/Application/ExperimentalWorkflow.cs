@@ -12,7 +12,7 @@ public sealed partial class ExperimentalWorkflow(
     IAuthorizedCommandWorkflow commands, IActivityAuditService audit,
     ExperimentalView view, IConsoleShellView shell, ILocalizationService text,
     MemoryReflectionService reflection, PersistentMemoryService memories, ArtifactAssistant assistant,
-    IEnvironmentSecretService secrets)
+    IEnvironmentSecretService secrets, ReminderService reminders)
 {
     /// <summary>Dispatches interactive experiment commands and reports unsafe local input without leaking package contents.</summary>
     public async Task RunAsync(AppCommand command, AppSettings settings, CancellationToken ct)
@@ -145,10 +145,19 @@ public sealed partial class ExperimentalWorkflow(
                 return;
             }
             var name = availableActions[action - 1];
+            if (skill.Origin == "bundled" && skill.Name == "set_reminder")
+            {
+                await RunRemindersAsync(settings, ct).ConfigureAwait(false);
+                return;
+            }
+            if (skill.Origin == "bundled" && skill.Name == "screenshot")
+            {
+                shell.RenderWarning(text.Text("Lab.ScreenshotPrivacy"));
+            }
             var native = skill.Origin == "bundled" && skill.Name is "git" or "filesystem";
             var command = native
                 ? actions.NativeCommand(skill, name, view.Read(text.Text("Lab.Path"), Environment.CurrentDirectory))
-                : actions.ScriptCommand(skill, name, view.Read(text.Text("Lab.Arguments"), skill.Name == "concat-files" ? "{\"InputFolder\":\".\"}" : "{}"));
+                : actions.ScriptCommand(skill, name, view.Read(text.Text("Lab.Arguments"), actions.DefaultParameters(skill)));
             await using var session = await AuditSessionScope.StartAsync(audit, "skill", settings,
                 new { skill.Name, skill.Fingerprint }, AuditSessionOutcome.Failed, ct).ConfigureAwait(false);
             var result = await commands.RunForResultAsync(session.Id, command, settings, ct).ConfigureAwait(false);

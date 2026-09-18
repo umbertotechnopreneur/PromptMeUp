@@ -1,0 +1,17 @@
+id: skill-screenshot
+version: 1
+description: Guidance for explicitly approved local Windows PNG captures
+tags: [experimental, skills, local]
+texts:
+  en: |-
+    Only offer screenshot capture on explicit request. The reviewed run action takes Mode full_screen, active_window or active_monitor, and OutputPath for a new PNG in an existing local directory. The foreground window is evaluated when the command executes and may be the terminal. Ask the user to hide credentials and private content before approval. Images are not redacted. Never upload automatically or copy to the clipboard; report only the saved path. Normal command approval is required.
+  it: |-
+    Proponi screenshot solo su richiesta esplicita. L'azione run revisionata accetta Mode full_screen, active_window o active_monitor e OutputPath per un nuovo PNG in una cartella locale esistente. La finestra attiva viene rilevata all'esecuzione e potrebbe essere il terminale. Chiedi di nascondere credenziali e contenuti privati prima di approvare. Le immagini non vengono oscurate. Non caricarle automaticamente né copiarle negli appunti; indica solo il percorso salvato. Serve la normale approvazione.
+  fr: |-
+    Proposez une capture uniquement sur demande explicite. L'action run vérifiée accepte Mode full_screen, active_window ou active_monitor et OutputPath pour un nouveau PNG dans un dossier local existant. La fenêtre active est déterminée à l'exécution et peut être le terminal. Demandez de masquer les secrets et données privées avant l'approbation. Les images ne sont pas expurgées. Aucun envoi automatique ni copie au presse-papiers; indiquez seulement le chemin enregistré. Une approbation normale est requise.
+  de: |-
+    Biete Bildschirmaufnahmen nur auf ausdrücklichen Wunsch an. Die geprüfte run-Aktion akzeptiert Mode full_screen, active_window oder active_monitor und OutputPath für eine neue PNG in einem vorhandenen lokalen Ordner. Das aktive Fenster wird bei Ausführung bestimmt und kann das Terminal sein. Bitte vor Freigabe um Ausblenden von Zugangsdaten und privaten Inhalten. Bilder werden nicht bereinigt. Kein automatischer Upload und keine Zwischenablagekopie; melde nur den Speicherpfad. Die normale Freigabe ist erforderlich.
+  es: |-
+    Ofrece capturas solo por petición explícita. La acción run revisada acepta Mode full_screen, active_window o active_monitor y OutputPath para un PNG nuevo en una carpeta local existente. La ventana activa se determina al ejecutar y puede ser el terminal. Pide ocultar credenciales y contenido privado antes de aprobar. Las imágenes no se redactan. No las subas automáticamente ni las copies al portapapeles; informa solo la ruta guardada. Se requiere la aprobación habitual.
+  vi: |-
+    Chỉ đề xuất chụp màn hình khi có yêu cầu rõ ràng. Hành động run đã xem xét nhận Mode full_screen, active_window hoặc active_monitor và OutputPath cho PNG mới trong thư mục cục bộ đã có. Cửa sổ đang hoạt động được xác định khi chạy lệnh và có thể là cửa sổ dòng lệnh. Yêu cầu ẩn thông tin đăng nhập và nội dung riêng tư trước khi phê duyệt. Ảnh không được che thông tin. Không tự động tải lên hoặc sao chép vào bộ nhớ tạm; chỉ báo đường dẫn đã lưu. Cần phê duyệt như thường lệ.

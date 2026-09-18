@@ -47,6 +47,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private readonly SkillCatalogService? _skills;
     private readonly ExperimentalStore? _experiments;
     private readonly ExperimentalWorkflow? _experimentalWorkflow;
+    private readonly ReminderService? _reminders;
 
     /// <summary>Creates the focused query, chat, connection-test, and session-lifecycle workflow.</summary>
     public AiConversationWorkflow(
@@ -67,7 +68,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         IAppGuideService appGuide,
         SkillCatalogService? skills = null,
         ExperimentalStore? experiments = null,
-        ExperimentalWorkflow? experimentalWorkflow = null)
+        ExperimentalWorkflow? experimentalWorkflow = null,
+        ReminderService? reminders = null)
     {
         _memoryService = memoryService ?? throw new ArgumentNullException(nameof(memoryService));
         _openAi = openAi ?? throw new ArgumentNullException(nameof(openAi));
@@ -87,6 +89,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         _skills = skills;
         _experiments = experiments;
         _experimentalWorkflow = experimentalWorkflow;
+        _reminders = reminders;
     }
 
     /// <summary>Runs a single-turn session and offers a safe continuation into chat after the model response.</summary>
@@ -160,6 +163,13 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
+                if (_reminders is not null)
+                {
+                    await _reminders.DeliverDueAsync(reminder =>
+                        _shell.RenderNotice(_text.Text("Reminder.Due", reminder.DueAt.ToLocalTime()
+                            .ToString("yyyy-MM-dd HH:mm zzz", System.Globalization.CultureInfo.InvariantCulture), reminder.Message)),
+                        cancellationToken).ConfigureAwait(false);
+                }
                 var input = _chatView.ReadMessage(settings.MaxMessageCharacters).Trim();
                 if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
                 {

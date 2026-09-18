@@ -62,6 +62,23 @@ public sealed class SkillActionTests
         Assert.DoesNotContain("-File", command);
     }
 
+    /// <summary>Rejects credentials inside escaped JSON bodies before converting them to PowerShell literals.</summary>
+    [Theory]
+    [InlineData("password")]
+    [InlineData("api_key")]
+    [InlineData("access_token")]
+    public void ScriptCommand_SerializedBodyCredentials_AreRejected(string field)
+    {
+        var body = JsonSerializer.Serialize(new Dictionary<string, string> { [field] = "synthetic-value" });
+        var parameters = JsonSerializer.Serialize(new { Url = "https://example.com", Method = "POST", Body = body });
+        var text = new LocalizationService();
+
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            new SkillActionService(new SensitiveDataRedactor(), text).ScriptCommand(Script(), "run", parameters));
+
+        Assert.Equal(text.Text("Memory.Secret"), error.Message);
+    }
+
     /// <summary>Rejects scripts whose relative dependencies cannot be represented by the reviewed inline snapshot.</summary>
     [Theory]
     [InlineData("Get-Content (Join-Path $PSScriptRoot 'unreviewed.txt')")]

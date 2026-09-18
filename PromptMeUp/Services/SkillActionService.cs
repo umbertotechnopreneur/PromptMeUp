@@ -13,8 +13,22 @@ public sealed class SkillActionService(ISensitiveDataRedactor redactor, ILocaliz
     {
         "git" => ["status", "log", "diff"],
         "filesystem" => ["list", "read", "info"],
+        "set_reminder" => ["manage"],
         _ => skill.Scripts.Keys.Order(StringComparer.Ordinal).ToArray()
     } : skill.Scripts.Keys.Order(StringComparer.Ordinal).ToArray();
+
+    /// <summary>Provides editable non-sensitive examples only for known bundled skill contracts.</summary>
+    public string DefaultParameters(SkillDefinition skill) => skill.Origin != "bundled" ? "{}" : skill.Name switch
+    {
+        "concat-files" => "{\"InputFolder\":\".\"}",
+        "clipboard" => "{\"Action\":\"read\"}",
+        "screenshot" => "{\"Mode\":\"active_window\",\"OutputPath\":\"./screenshot.png\"}",
+        "system_info" => "{\"Action\":\"overview\"}",
+        "http_request" => "{\"Url\":\"https://example.com\",\"Method\":\"GET\"}",
+        "web_search" => "{\"Query\":\"PowerShell Get-FileHash\",\"MaxResults\":5}",
+        "timezone_convert" => "{\"ToTimeZone\":\"UTC\"}",
+        _ => "{}"
+    };
 
     /// <summary>Creates a narrowly defined native command using literal quoting and no free-form flags.</summary>
     public string NativeCommand(SkillDefinition skill, string action, string path)
@@ -72,6 +86,10 @@ public sealed class SkillActionService(ISensitiveDataRedactor redactor, ILocaliz
         {
             throw new InvalidOperationException(text.Text("Lab.Invalid"));
         }
+        if (parameters != redactor.Redact(parameters))
+        {
+            throw new InvalidOperationException(text.Text("Memory.Secret"));
+        }
         using var json = JsonDocument.Parse(parameters, new JsonDocumentOptions { MaxDepth = 2 });
         if (json.RootElement.ValueKind != JsonValueKind.Object || json.RootElement.EnumerateObject().Count() > 20)
         {
@@ -79,14 +97,15 @@ public sealed class SkillActionService(ISensitiveDataRedactor redactor, ILocaliz
         }
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var bound = new List<string>();
-        var bundledConcat = skill.Origin == "bundled" && skill.Name == "concat-files";
+        var bundledScript = skill.Origin == "bundled";
+        var failure = text.Text(skill.Name == "concat-files" ? "Lab.ConcatInvalid" : "Lab.SkillActionInvalid");
         foreach (var property in json.RootElement.EnumerateObject())
         {
             if (!names.Add(property.Name) || property.Name.Length is 0 or > 60
                 || !(char.IsAsciiLetter(property.Name[0]) || property.Name[0] == '_')
                 || !property.Name.All(character => char.IsAsciiLetterOrDigit(character) || character == '_')
                 || property.Value.ValueKind is not (JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
-                || (bundledConcat && property.Name.Equals("_ValidationError", StringComparison.OrdinalIgnoreCase)))
+                || (bundledScript && property.Name.Equals("_ValidationError", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new InvalidOperationException(text.Text("Lab.Invalid"));
             }
@@ -107,14 +126,14 @@ public sealed class SkillActionService(ISensitiveDataRedactor redactor, ILocaliz
             };
             bound.Add($"{ScriptArtifactService.Quote(property.Name)} = {value}");
         }
-        if (bundledConcat)
+        if (bundledScript)
         {
-            bound.Add("'_ValidationError' = " + ScriptArtifactService.Quote(text.Text("Lab.ConcatInvalid")));
+            bound.Add("'_ValidationError' = " + ScriptArtifactService.Quote(failure));
         }
         var command = "$skillParameters = @{ " + string.Join("; ", bound) + " }; & {\n" + source + "\n} @skillParameters";
-        if (bundledConcat)
+        if (bundledScript)
         {
-            command = "try { " + command + "; } catch { throw " + ScriptArtifactService.Quote(text.Text("Lab.ConcatInvalid")) + " }";
+            command = "try { " + command + "; } catch { throw " + ScriptArtifactService.Quote(failure) + " }";
         }
         if (command != redactor.Redact(command))
         {

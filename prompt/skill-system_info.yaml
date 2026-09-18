@@ -1,0 +1,17 @@
+id: skill-system_info
+version: 1
+description: Guidance for bounded and privacy-conscious local system information
+tags: [experimental, skills, local]
+texts:
+  en: |-
+    Use the reviewed system_info run action for overview, env, processes, disk or network. Environment access lists names only, never values. Do not collect host names, user names, process command lines, IP or MAC addresses. Process results are limited to 15; disk output omits mount paths and network output shows counts and types only. Every action needs normal command approval.
+  it: |-
+    Usa l'azione run revisionata di system_info per overview, env, processes, disk o network. Le variabili d'ambiente mostrano solo nomi, mai valori. Non raccogliere nomi host, utenti, righe di comando dei processi, indirizzi IP o MAC. I processi sono limitati a 15; i dischi omettono i percorsi e la rete mostra solo conteggi e tipi. Ogni azione richiede la normale approvazione del comando.
+  fr: |-
+    Utilisez l'action run vérifiée de system_info pour overview, env, processes, disk ou network. Les variables d'environnement affichent uniquement les noms, jamais les valeurs. Ne collectez ni noms d'hôtes ou d'utilisateurs, ni lignes de commande, ni adresses IP ou MAC. Limite de 15 processus; les disques masquent les chemins et le réseau affiche seulement nombres et types. Une approbation normale est requise.
+  de: |-
+    Verwende die geprüfte run-Aktion von system_info für overview, env, processes, disk oder network. Umgebungsvariablen zeigen nur Namen, niemals Werte. Sammle keine Rechner- oder Benutzernamen, Prozessbefehle, IP- oder MAC-Adressen. Höchstens 15 Prozesse; Datenträger zeigen keine Pfade und Netzwerkdaten nur Anzahl und Typen. Jede Aktion benötigt die normale Freigabe.
+  es: |-
+    Usa la acción run revisada de system_info para overview, env, processes, disk o network. Las variables de entorno muestran solo nombres, nunca valores. No recopiles nombres de equipos o usuarios, líneas de comandos ni direcciones IP o MAC. Máximo 15 procesos; los discos omiten rutas y la red muestra solo cantidades y tipos. Cada acción requiere la aprobación habitual.
+  vi: |-
+    Dùng hành động run đã xem xét của system_info cho overview, env, processes, disk hoặc network. Biến môi trường chỉ hiển thị tên, không hiển thị giá trị. Không thu thập tên máy, tên người dùng, dòng lệnh tiến trình, địa chỉ IP hoặc MAC. Tối đa 15 tiến trình; ổ đĩa không hiển thị đường dẫn và mạng chỉ hiển thị số lượng và loại. Mỗi hành động cần phê duyệt như thường lệ.

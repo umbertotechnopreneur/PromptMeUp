@@ -12,6 +12,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
 $root = Split-Path -Parent $PSScriptRoot
 if ($IsWindows -and -not $Runtime.StartsWith('win-')) {
     throw 'Build Unix archives on a Unix host to preserve executable permissions.'
@@ -39,7 +40,7 @@ foreach ($file in @('LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.
     if (-not (Test-Path -LiteralPath (Join-Path $payload $file))) { throw "Payload is missing $file." }
 }
 if (@(Get-ChildItem (Join-Path $payload 'prompt') -Filter '*.yaml').Count -lt 4) { throw 'Runtime prompts are missing.' }
-$bundledSkills = @('skills/git/SKILL.md', 'skills/filesystem/SKILL.md', 'skills/concat-files/SKILL.md', 'skills/concat-files/scripts/run.ps1')
+$bundledSkills = @(Get-BundledSkillFiles)
 foreach ($file in $bundledSkills) {
     if (-not (Test-Path -LiteralPath (Join-Path $payload $file) -PathType Leaf)) { throw "Payload is missing $file." }
 }
