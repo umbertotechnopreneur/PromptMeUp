@@ -132,6 +132,7 @@ internal static class Program
         services.AddSingleton<MemoryReflectionService>();
         services.AddSingleton<ReminderService>();
         services.AddSingleton<SkillCatalogService>();
+        services.AddSingleton<SettingsFeatureOverviewService>();
         services.AddSingleton<SkillActionService>();
         services.AddSingleton<ExperimentalView>();
         services.AddSingleton<ExperimentalWorkflow>();

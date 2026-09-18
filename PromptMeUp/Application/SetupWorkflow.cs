@@ -17,7 +17,9 @@ public sealed class SetupWorkflow(
     ILocalizationService text,
     IThemeCatalogService? themes = null,
     IPricingService? pricing = null,
-    MemoryManagerWorkflow? memories = null)
+    MemoryManagerWorkflow? memories = null,
+    ExperimentalWorkflow? experimental = null,
+    SettingsFeatureOverviewService? featureOverview = null)
 {
     /// <summary>Opens the shared settings screen with appearance selected.</summary>
     public Task<int> RunThemeAsync(AppSettings current, CancellationToken cancellationToken) =>
@@ -46,6 +48,9 @@ public sealed class SetupWorkflow(
             InitialSection = initialSection,
             Costs = pricing is null ? null : await pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false),
             OpenMemories = () => OpenMemories(cancellationToken),
+            FeatureOverview = featureOverview is null ? null : await featureOverview.ReadAsync(cancellationToken).ConfigureAwait(false),
+            OpenSkills = () => OpenExperimentalAsync(AppCommand.Skills, cancellationToken).GetAwaiter().GetResult(),
+            OpenLearning = () => OpenExperimentalAsync(AppCommand.Learning, cancellationToken).GetAwaiter().GetResult(),
             ContextBudgetOverridden = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS"))
         });
         if (submission is null)
@@ -111,5 +116,30 @@ public sealed class SetupWorkflow(
     {
         var workflow = memories ?? throw new InvalidOperationException("The memory manager is unavailable.");
         workflow.RunAsync(cancellationToken).GetAwaiter().GetResult();
+    }
+
+    /// <summary>Opens an existing feature menu with persisted AI settings and refreshes only local status on return.</summary>
+    private async Task<SettingsFeatureOverview> OpenExperimentalAsync(AppCommand command, CancellationToken cancellationToken)
+    {
+        var workflow = experimental ?? throw new InvalidOperationException("Experimental navigation must be configured.");
+        var overview = featureOverview ?? throw new InvalidOperationException("The feature overview must be configured.");
+        var savedSettings = await settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await workflow.RunAsync(command, savedSettings, cancellationToken).ConfigureAwait(false);
+        }
+        catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Closing a child menu must not discard the settings draft held by the parent view.
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested
+            && exception is InvalidOperationException or OpenAiRequestException or HttpRequestException or TaskCanceledException
+                or ConversationLimitException)
+        {
+            shell.RenderError(PromptMeUpApplication.FormatErrorMessage(exception, text, OperatingSystem.IsWindows()));
+            await activity.TryRecordAsync("settings-feature", "failed", null,
+                new { menu = command.ToString(), error = exception.GetType().Name }).ConfigureAwait(false);
+        }
+        return await overview.ReadAsync(cancellationToken).ConfigureAwait(false);
     }
 }

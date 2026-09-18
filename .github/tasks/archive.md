@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Connect skills and learning to Settings
+
+- Added Skills and Learning navigation beside the existing Memories manager, plus a read-only Privacy section. General and feature pages show refreshed, local project status without activating features or running maintenance.
+- Reused existing approval menus with saved AI settings and credentials. Child-menu changes are immediate and independent of the parent draft; six-language notices explain this distinction. Returning, cancelling a child menu, or encountering a recoverable action error preserves unsaved settings.
+- Kept Settings accessible when an imported skill is invalid. Unknown counts are marked unavailable, with a visible warning and sanitized diagnostics; actual feature preferences remain visible.
+- Updated the short quick start, CLI reference, and four six-language chat-guide chapters. Added 32 regression cases for passive rendering, refresh, cancellation, invalid catalogs/actions, local-only status reads, and privacy copy.
+
+Validation: preflight, XML summaries, formatting verification, a warning-free Release build, and all 842 tests passed. Navigation used simulated terminal input and disposable local data, without live OpenAI requests or desktop actions. A separate CLI smoke invocation was not run because its combined temporary-directory cleanup command was rejected. Cleaned Release output. Changes remain on the experimental branch and PR #43; main and release versions are unchanged.
+
 ## 2026-09-18 — Add an optional preferred name
 
 - Added an optional name or nickname to Personalization and the setup wizard, with six-language help explaining local storage and sharing with OpenAI. Existing preferences remain unchanged; the field can be edited or cleared.

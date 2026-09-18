@@ -20,7 +20,7 @@ public sealed class PreferredNameViewTests
         var input = new List<ConsoleKeyInfo> { Key(ConsoleKey.Enter) };
         input.AddRange(Type(entered));
         input.Add(Key(ConsoleKey.Enter));
-        input.AddRange(Enumerable.Repeat(Key(ConsoleKey.DownArrow), 12));
+        input.AddRange(Enumerable.Repeat(Key(ConsoleKey.DownArrow), 15));
         input.Add(Key(ConsoleKey.Enter));
         var (console, output, keys) = CreateConsole(input);
         var text = new LocalizationService();

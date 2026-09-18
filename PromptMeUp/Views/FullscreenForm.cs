@@ -119,7 +119,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     {
         while (true)
         {
-            var visiblePages = pages.Where(page => page.Open is not null || page.Fields.Any(IsVisible)).ToArray();
+            var visiblePages = pages.Where(page => page.Open is not null || page.Overview is not null
+                || page.Preview is not null || page.Fields.Any(IsVisible)).ToArray();
             if (visiblePages.Length == 0)
             {
                 throw new InvalidOperationException("The form has no visible pages.");

@@ -4,6 +4,8 @@ Available on the experimental branch, with PromptMeUp's existing interface and O
 
 You can also ask in chat: "How do I enable skills?", "How do I start learning?", "How do Dream and heartbeat work?", or "How do I set a reminder?" The assistant loads the relevant guide chapters in your language and explains the steps. Asking for help does not activate features or approve actions.
 
+Prefer Settings? Open `hm --setup` and choose **Skills**, **Learning**, or **Memories**; **Privacy** is a read-only summary. Opening a section enables nothing. Changes you confirm in these feature menus save immediately, so Settings **Cancel** does not undo them. They use your saved AI, model, and credentials, not an unsaved Settings draft. Returning refreshes the project's status summary. The commands below still work.
+
 ## Use a skill
 
 1. Open `hm --skills` and enable the experiment for your current project.

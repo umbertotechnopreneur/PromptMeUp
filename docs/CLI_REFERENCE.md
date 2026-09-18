@@ -61,18 +61,25 @@ Use one main command at a time.
 
 Settings fills the terminal window when it supports fullscreen views and is at
 least 60 columns wide and 20 rows tall. Use the sidebar to choose General, AI,
-Credentials, Conversation, Commands, Personalization, Theme, or About.
+Credentials, Conversation, Commands, Personalization, Theme, Skills, Learning,
+Memories, Privacy, or About.
 `--setup`, `--ai-setup`, and `--theme` simply choose where you start.
 
 Select About and press Enter or Right to read about the project. When you close
 it, you'll return to your settings with unsaved changes still there. About is
 also available in the smaller settings menu.
 
+Skills, Learning, and Memories open their existing managers. Opening them does
+not activate features. Confirmed changes save immediately; Settings Cancel does
+not undo them. These managers use saved AI, model, and credentials, not the
+unsaved Settings draft. Returning refreshes the saved project status summary.
+Privacy is read-only. Existing CLI and chat slash commands remain available.
+
 Up/Down selects a section; Enter or Right moves into its fields. F6 switches
 between the sidebar and fields, and Ctrl+Left returns to the sidebar. Tab moves
 through fields to Save and Cancel. Left/Right changes a field choice or moves
 between the buttons when an action has focus; Enter activates the focused button.
-Save keeps your changes right away. Cancel or Escape discards them and returns
+Save keeps the ordinary Settings draft. Cancel or Escape discards that draft and returns
 to your terminal history. Smaller or less capable terminals use a section menu
 with the same Save and Cancel actions. Languages show their flag, native name,
 and code; `--no-emoji` uses plain text. See [terminal themes](TERMINAL_THEMES.md)

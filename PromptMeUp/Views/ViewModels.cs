@@ -15,6 +15,12 @@ public sealed record SetupViewState(
 
     public CostOverview? Costs { get; init; }
 
+    public SettingsFeatureOverview? FeatureOverview { get; init; }
+
+    public Func<SettingsFeatureOverview>? OpenSkills { get; init; }
+
+    public Func<SettingsFeatureOverview>? OpenLearning { get; init; }
+
     public Action? OpenMemories { get; init; }
 }
 
@@ -26,7 +32,11 @@ public enum SettingsSection
     Context,
     Commands,
     Personalization,
-    Theme
+    Theme,
+    Skills,
+    Learning,
+    Memories,
+    Privacy
 }
 
 public sealed record SetupSubmission(

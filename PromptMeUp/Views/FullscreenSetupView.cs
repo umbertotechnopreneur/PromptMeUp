@@ -43,7 +43,11 @@ public sealed class FullscreenSetupView
         ArgumentNullException.ThrowIfNull(state);
         var originalLanguage = _text.Language;
         var originalTheme = TerminalTheme.Current;
-        var draft = new SetupDraft(state.Settings) { TestConnection = !state.Settings.SetupCompleted };
+        var draft = new SetupDraft(state.Settings)
+        {
+            TestConnection = !state.Settings.SetupCompleted,
+            FeatureOverview = state.FeatureOverview
+        };
         try
         {
             TerminalTheme.Apply(_themes.Resolve(draft.Settings.Theme));
@@ -167,12 +171,30 @@ public sealed class FullscreenSetupView
                     HelpKey = "Theme.Preview"
                 }
             ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) },
+            new("Settings.Skills", [])
+            {
+                Open = () => OpenFeatureMenu(draft, state.OpenSkills),
+                HelpKey = "Settings.SkillsHelp",
+                Overview = () => CreateFeatureNavigationOverview(draft.FeatureOverview, "Settings.SkillsHelp")
+            },
+            new("Settings.Learning", [])
+            {
+                Open = () => OpenFeatureMenu(draft, state.OpenLearning),
+                HelpKey = "Settings.LearningHelp",
+                Overview = () => CreateFeatureNavigationOverview(draft.FeatureOverview, "Settings.LearningHelp")
+            },
             new("Settings.Memories", [])
             {
-                Open = () => (state.OpenMemories ?? throw new InvalidOperationException("Memory navigation must be configured."))(),
+                Open = () => OpenSavedMenu(state.OpenMemories ?? throw new InvalidOperationException("Memory navigation must be configured.")),
                 HelpKey = "MemoryManager.OpenHint",
-                Preview = () => new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
-                PreviewRows = 3
+                Overview = () => new Rows(
+                    new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
+                    new Text(" "), new Text(_text.Text("Settings.FeatureMenuNotice"), Style.Parse(TerminalTheme.Warning)))
+            },
+            new("Settings.Privacy", [])
+            {
+                HelpKey = "Settings.PrivacyHelp",
+                Overview = () => CreatePrivacyOverview(draft.FeatureOverview)
             },
             new("About.MenuLabel", [])
             {
@@ -203,10 +225,80 @@ public sealed class FullscreenSetupView
         AddOverviewMetric(usage, "Costs.Tokens", costs?.TotalTokensToday.ToString("N0", _text.Culture) ?? unavailable);
         AddOverviewMetric(usage, "Costs.LastSync", costs?.LastPricingSync?.ToLocalTime().ToString("g", _text.Culture) ?? unavailable);
         return new Rows(
-            new Text(TerminalTheme.IconPrefix(_shell.Options, "🪞", "=") + _text.Text("Main.Status"), Style.Parse("bold " + TerminalTheme.Accent)),
+            new Text(TerminalTheme.IconPrefix(_shell.Options, "🪞", "=") + _text.Text("Settings.DraftStatus"), Style.Parse("bold " + TerminalTheme.Accent)),
             status, new Text(" "),
+            CreateFeaturesOverview(draft.FeatureOverview), new Text(" "),
             new Text(TerminalTheme.IconPrefix(_shell.Options, "📊", "=") + _text.Text("Main.Costs"), Style.Parse("bold " + TerminalTheme.Accent)),
             usage);
+    }
+
+    /// <summary>Renders only the latest supplied saved-state snapshot without accessing feature services.</summary>
+    private IRenderable CreateFeaturesOverview(SettingsFeatureOverview? overview)
+    {
+        var status = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
+        var unavailable = _text.Text("Costs.Unavailable");
+        AddOverviewMetric(status, "Settings.FeatureExperiment", FeatureStatus(overview?.Settings.Enabled));
+        AddOverviewMetric(status, "Settings.FeatureSkills", overview is null || overview.CatalogUnavailable ? unavailable
+            : _text.Text("Settings.FeatureSkillCount", overview.EnabledSkillCount, overview.SkillCount));
+        AddOverviewMetric(status, "Settings.FeatureAutomatic", FeatureStatus(overview is null ? null
+            : overview.Settings.Enabled && overview.Settings.AutomaticSkills));
+        AddOverviewMetric(status, "Settings.FeatureCapture", FeatureStatus(overview is null ? null
+            : overview.Settings.Enabled && overview.Settings.CaptureObservations));
+        AddOverviewMetric(status, "Settings.FeatureReminder", FeatureStatus(overview is null ? null
+            : overview.Settings.Enabled && overview.Settings.MaintenanceReminder));
+        var rows = new List<IRenderable>
+        {
+            new Text(_text.Text("Settings.FeaturesTitle"), Style.Parse("bold " + TerminalTheme.Accent)), status,
+            new Text(_text.Text("Settings.FeaturesGate"), Style.Parse(TerminalTheme.Muted))
+        };
+        if (overview?.CatalogUnavailable == true)
+        {
+            rows.Add(new Text(_text.Text("Settings.SkillCatalogUnavailable"), Style.Parse(TerminalTheme.Warning)));
+        }
+        return new Rows(rows);
+    }
+
+    /// <summary>Distinguishes unavailable snapshots from actual saved feature consent.</summary>
+    private string FeatureStatus(bool? enabled) => _text.Text(enabled is null ? "Costs.Unavailable" : enabled.Value ? "Lab.Enabled" : "Lab.Off");
+
+    /// <summary>Explains navigation and immediate persistence without duplicating the feature's controls.</summary>
+    private IRenderable CreateFeatureNavigationOverview(SettingsFeatureOverview? overview, string helpKey) => new Rows(
+        new Text(_text.Text(helpKey), Style.Parse(TerminalTheme.Primary)), new Text(" "),
+        CreateFeaturesOverview(overview), new Text(" "),
+        new Text(_text.Text("Settings.FeatureMenuNotice"), Style.Parse(TerminalTheme.Warning)));
+
+    /// <summary>Shows a short read-only privacy summary alongside actual saved project feature state.</summary>
+    private IRenderable CreatePrivacyOverview(SettingsFeatureOverview? overview)
+    {
+        var facts = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
+        foreach (var key in new[] { "Local", "Provider", "Learning", "Skills", "Control" })
+        {
+            facts.AddRow(new Text(_text.Text("Settings.Privacy" + key), Style.Parse(TerminalTheme.Muted)),
+                new Text(_text.Text("Settings.Privacy" + key + "Info"), Style.Parse(TerminalTheme.Primary)));
+            facts.AddEmptyRow();
+        }
+        return new Rows(CreateFeaturesOverview(overview), new Text(" "), facts);
+    }
+
+    /// <summary>Refreshes the cached snapshot only after an explicitly opened feature menu completes.</summary>
+    private void OpenFeatureMenu(SetupDraft draft, Func<SettingsFeatureOverview>? open) => OpenSavedMenu(() =>
+        draft.FeatureOverview = (open ?? throw new InvalidOperationException("Feature navigation must be configured."))());
+
+    /// <summary>Preserves the parent draft's display preferences around menus that save their own changes immediately.</summary>
+    private void OpenSavedMenu(Action open)
+    {
+        var language = _text.Language;
+        var theme = TerminalTheme.Current;
+        _shell.RenderNotice(_text.Text("Settings.FeatureMenuNotice"));
+        try
+        {
+            open();
+        }
+        finally
+        {
+            _text.SetLanguage(language);
+            TerminalTheme.Apply(theme);
+        }
     }
 
     /// <summary>Separates each muted summary label from its whitesmoke value without editable brackets.</summary>
@@ -453,6 +545,7 @@ public sealed class FullscreenSetupView
         public SetupDraft(AppSettings settings) => Settings = settings;
 
         public AppSettings Settings { get; set; }
+        public SettingsFeatureOverview? FeatureOverview { get; set; }
         public string? ApiKey { get; set; }
         public string? AdminKey { get; set; }
         public bool TestConnection { get; set; }
