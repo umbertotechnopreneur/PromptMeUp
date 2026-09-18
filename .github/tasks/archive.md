@@ -2,6 +2,13 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Remove repeated skill descriptions in Settings
+
+- Omit the metadata summary only when it exactly matches the opening instruction paragraph, allowing an initial heading and blank lines. Keep distinct descriptions, complete literal instructions, scripts, package metadata, and approval fingerprints unchanged.
+- Added regressions for bundled and imported skills, newline variants, longer or differently cased introductions, later examples, and quoted text. Reused the existing Settings layout without editing skill packages or translations.
+
+Validation: preflight, formatting verification, XML summaries, and Release build passed with zero warnings or errors. All 57 targeted Settings view, viewport, and save tests passed. Cleaned Release output. The installed Debug MSIX remains unchanged.
+
 ## 2026-09-18 — Install the global-memory Debug update
 
 - Published source commit `ff6f968` in Debug for Windows x64 and packaged local test MSIX `0.1.5.22` with the existing trusted certificate. Updated the current-user installation from `0.1.5.21` without uninstalling or changing app data, settings, certificate trust, PATH, or fonts.

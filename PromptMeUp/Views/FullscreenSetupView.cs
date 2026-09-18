@@ -311,7 +311,8 @@ public sealed class FullscreenSetupView
         {
             new Text(SafePreview(skill.Name + " " + skill.Version), Style.Parse("bold " + TerminalTheme.Accent)),
             new Text(SafePreview(skill.Directory), Style.Parse(TerminalTheme.Muted)),
-            new Text(SafePreview(skill.Description + "\n\n" + skill.Instructions), Style.Parse(TerminalTheme.Primary))
+            new Text(SafePreview(HasRepeatedSkillIntroduction(skill)
+                ? skill.Instructions : skill.Description + "\n\n" + skill.Instructions), Style.Parse(TerminalTheme.Primary))
         };
         foreach (var script in skill.Scripts)
         {
@@ -321,6 +322,16 @@ public sealed class FullscreenSetupView
         if (skill.UnavailableReason is not null)
             rows.Add(new Text(SafePreview(skill.UnavailableReason), Style.Parse(TerminalTheme.Warning)));
         return new Rows(rows);
+    }
+
+    /// <summary>Omits only a summary repeated verbatim in the opening paragraph, leaving the inspected source untouched.</summary>
+    private static bool HasRepeatedSkillIntroduction(SkillDefinition skill)
+    {
+        var lines = skill.Instructions.ReplaceLineEndings("\n").Split('\n').SkipWhile(string.IsNullOrWhiteSpace);
+        if (lines.FirstOrDefault()?.StartsWith("# ", StringComparison.Ordinal) == true)
+            lines = lines.Skip(1).SkipWhile(string.IsNullOrWhiteSpace);
+        var introduction = string.Join('\n', lines.TakeWhile(line => !string.IsNullOrWhiteSpace(line))).Trim();
+        return string.Equals(introduction, skill.Description.ReplaceLineEndings("\n").Trim(), StringComparison.Ordinal);
     }
 
     /// <summary>Localizes known bundled package labels without renaming imported identities.</summary>

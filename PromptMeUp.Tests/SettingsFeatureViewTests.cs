@@ -1,10 +1,12 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Reflection;
 using System.Text.RegularExpressions;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Views;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Tests;
 
@@ -144,6 +146,64 @@ public sealed class SettingsFeatureViewTests
         Assert.Contains("[red]literal[/]", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("\u001b[2J", harness.Output.ToString(), StringComparison.Ordinal);
         Assert.Empty(harness.Keys);
+    }
+
+    /// <summary>A repeated opening summary is displayed once without modifying the inspected instructions or scripts.</summary>
+    [Theory]
+    [InlineData("bundled", "\n", true)]
+    [InlineData("local", "\r\n", true)]
+    [InlineData("local", "\n", false)]
+    public void SkillOverview_RepeatedIntroduction_ShowsDescriptionOnce(string origin, string newline, bool title)
+    {
+        const string description = "Inspect Git status, commits, branches and diffs.";
+        var instructions = (title ? "# git" + newline + "  " + newline : string.Empty)
+            + description + newline + newline + "Review the full command before execution. [bold]Literal text[/]";
+        var skill = Skill() with { Name = "git", Description = description, Instructions = instructions, Origin = origin };
+
+        var rendered = RenderSkillOverview(skill);
+
+        Assert.Single(Regex.Matches(rendered, Regex.Escape(description)));
+        Assert.Contains(instructions.ReplaceLineEndings("\n"), rendered, StringComparison.Ordinal);
+        Assert.Contains(skill.Directory, rendered, StringComparison.Ordinal);
+        Assert.Contains(skill.Scripts["read"], rendered, StringComparison.Ordinal);
+        Assert.Equal(instructions, skill.Instructions);
+        Assert.Equal("fingerprint", skill.Fingerprint);
+    }
+
+    /// <summary>Unique metadata and summaries that occur only in later examples or longer paragraphs remain visible.</summary>
+    [Theory]
+    [InlineData("Different instructions.")]
+    [InlineData("Package details with additional context.")]
+    [InlineData("package details")]
+    [InlineData("Read this first.\n\nPackage details")]
+    [InlineData("```text\nPackage details\n```")]
+    [InlineData("> Package details")]
+    public void SkillOverview_DistinctIntroduction_PreservesDescriptionAndFullBody(string instructions)
+    {
+        var skill = Skill() with { Instructions = "# Imported skill\n\n" + instructions, UnavailableReason = "Needs review." };
+
+        var rendered = RenderSkillOverview(skill);
+
+        Assert.Contains(skill.Description + "\n\n" + skill.Instructions, rendered, StringComparison.Ordinal);
+        Assert.Contains(skill.Scripts["read"], rendered, StringComparison.Ordinal);
+        Assert.Contains(skill.UnavailableReason, rendered, StringComparison.Ordinal);
+    }
+
+    /// <summary>Renders one passive preview without terminal navigation, filesystem reads, or executing package instructions.</summary>
+    private static string RenderSkillOverview(SkillDefinition skill)
+    {
+        var harness = Create([]);
+        var overview = (IRenderable)typeof(FullscreenSetupView)
+            .GetMethod("CreateSkillOverview", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(harness.View, [skill])!;
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(harness.Output)
+        });
+        console.Profile.Width = 360;
+        console.Write(overview);
+        return Plain(harness.Output).ReplaceLineEndings("\n");
     }
 
     /// <summary>Only bundled package names are translated; local package identities stay literal.</summary>
