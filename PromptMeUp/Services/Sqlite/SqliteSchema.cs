@@ -18,6 +18,7 @@ internal static class SqliteSchema
             setup_completed INTEGER NOT NULL CHECK (setup_completed IN (0, 1)),
             language TEXT NOT NULL,
             theme TEXT NOT NULL DEFAULT 'cyan' CHECK (length(theme) BETWEEN 1 AND 32),
+            preferred_name TEXT NOT NULL DEFAULT '' CHECK (length(preferred_name) <= 80),
             ai_enabled INTEGER NOT NULL CHECK (ai_enabled IN (0, 1)),
             model TEXT NOT NULL,
             reasoning_effort TEXT NOT NULL,

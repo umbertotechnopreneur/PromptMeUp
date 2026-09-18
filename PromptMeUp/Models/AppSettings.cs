@@ -27,6 +27,8 @@ public sealed record AppSettings(
 
     public string Theme { get; init; } = "cyan";
 
+    public string PreferredName { get; init; } = string.Empty;
+
     public const string DefaultEndpoint = "https://api.openai.com/v1/responses";
     public const string DefaultApiKeyVariable = "OPENAI_API_KEY";
     public const string DefaultAdminKeyVariable = "OPENAI_ADMIN_KEY";

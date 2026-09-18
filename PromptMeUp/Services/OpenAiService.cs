@@ -106,12 +106,13 @@ public sealed class OpenAiService : IOpenAiService
         }
 
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
-        settings = ProtectPreamble(settings);
+        settings = ProtectPreferences(settings);
+        var preferredNamePrompt = await LoadPreferredNamePromptAsync(prompt, settings, cancellationToken).ConfigureAwait(false);
         var instructions = OpenAiRequestBuilder.BuildInstructions(
             prompt,
             settings,
             language,
-            _runtimeContext.GetCurrent(), _limits, guide);
+            _runtimeContext.GetCurrent(), _limits, guide, preferredNamePrompt);
         return await SendCoreAsync(
             prompt,
             conversationId,
@@ -176,14 +177,15 @@ public sealed class OpenAiService : IOpenAiService
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(settings);
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
-        settings = ProtectPreamble(settings);
+        settings = ProtectPreferences(settings);
+        var preferredNamePrompt = await LoadPreferredNamePromptAsync(prompt, settings, cancellationToken).ConfigureAwait(false);
         var maxOutputTokens = OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail, _limits);
         return OpenAiRequestBuilder.EstimateContext(
             OpenAiRequestBuilder.BuildInstructions(
                 prompt,
                 settings,
                 language,
-                _runtimeContext.GetCurrent(), _limits, guide),
+                _runtimeContext.GetCurrent(), _limits, guide, preferredNamePrompt),
             messages.Select(message => message with { Content = _redactor.Redact(message.Content) }).ToArray(),
             settings.Model,
             guide) with
@@ -475,8 +477,14 @@ public sealed class OpenAiService : IOpenAiService
         }
     }
 
-    /// <summary>Revalidates and normalizes the configured preamble immediately before provider-bound prompt assembly.</summary>
-    private AppSettings ProtectPreamble(AppSettings settings)
+    /// <summary>Loads name guidance only for user-facing conversations with an explicitly configured name.</summary>
+    private async Task<PromptDefinition?> LoadPreferredNamePromptAsync(PromptDefinition prompt, AppSettings settings, CancellationToken ct) =>
+        OpenAiRequestBuilder.SupportsPreferredName(prompt) && settings.PreferredName.Length > 0
+            ? await _prompts.GetAsync("preferred-name-context", ct).ConfigureAwait(false)
+            : null;
+
+    /// <summary>Revalidates configured personal preferences immediately before provider-bound prompt assembly.</summary>
+    private AppSettings ProtectPreferences(AppSettings settings)
     {
         var result = _promptProtection.Protect(settings.CustomInstruction);
         if (!result.IsSafe || !result.IsWithinWordLimit
@@ -485,7 +493,11 @@ public sealed class OpenAiService : IOpenAiService
             throw new InvalidOperationException("The configured AI preamble did not pass local prompt-injection protection.");
         }
 
-        return settings with { CustomInstruction = result.SanitizedText };
+        return settings with
+        {
+            CustomInstruction = result.SanitizedText,
+            PreferredName = PreferredNamePolicy.Normalize(settings.PreferredName, _redactor)
+        };
     }
 
     /// <summary>Persists telemetry without allowing a database error to conceal the provider result.</summary>

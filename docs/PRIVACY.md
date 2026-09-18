@@ -72,6 +72,7 @@ See the [experimental guide](EXPERIMENTAL_MEMORY_SKILLS.md) for limits and revie
 An ordinary AI request can contain:
 
 - The app's instructions for that task, in your chosen language.
+- Your optional name or nickname, only for questions and chat, if you set it in Personalization.
 - Your optional personal instructions for questions and chat, after local checks. They are marked as preferences, not permission to change the app's rules.
 - For questions and chat, your current folder (with a recognized home folder shown as `~`), operating system, shell, CPU and memory summary, and GPU name when available.
 - General language-region and time-zone details, only if you enable the location option.
@@ -81,6 +82,8 @@ An ordinary AI request can contain:
 - Your model, reasoning, answer length, caching, and output limit settings.
 
 The machine summary doesn't include your username, computer name, network identity, serial numbers, or secrets. It helps `hm` suggest commands that fit your terminal and operating system.
+
+Your preferred name is saved locally, never inferred from accounts, the computer, or memories. It is not added to automatic chat-control checks, command-risk reviews, Dream, heartbeat, or connection checks. Clear it in `hm --setup` → Personalization and Save to stop future inclusion. This does not erase earlier conversations, request history, or provider records.
 
 Questions and chat have a default limit of 16,000 estimated input tokens, including instructions, machine details, notes, and recent messages. Older exchanges are left out as needed to fit. Use `/context` or `/status` to see what's being kept, alongside usage for the last answer and the whole chat. Keeping fewer messages doesn't undo earlier requests or charges.
 

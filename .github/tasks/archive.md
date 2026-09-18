@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Add an optional preferred name
+
+- Added an optional name or nickname to Personalization and the setup wizard, with six-language help explaining local storage and sharing with OpenAI. Existing preferences remain unchanged; the field can be edited or cleared.
+- Added bounded Unicode normalization, credential/control rejection, and an idempotent SQLite upgrade with an empty default. Names stay out of ordinary logs and session metadata.
+- Included the name as escaped literal data through a versioned, six-language prompt only for questions and chat. Empty names are omitted; command review, classifiers, Dream, heartbeat, and connection tests do not receive the preference. Context estimates and cache keys account for the same generated instructions.
+- Updated the settings and privacy guide chapters and short CLI/privacy documentation. Added 50 regression cases for UI edits and clearing, migration, validation, provider requests, localization, caching, and context budgets.
+
+Validation: preflight, formatting verification, XML summaries, a warning-free Release build, and all 810 tests passed. Tests used simulated terminal input and provider responses; no live OpenAI call, real credential, or desktop action was used. Cleaned Release output. Changes remain on the experimental branch and PR #43.
+
 ## 2026-09-18 — Fix experimental consent and skill review findings
 
 - Reject stale settings snapshots inside the save transaction. Changing a reminder or automatic selection in an older window cannot restore revoked capture consent or erase newer evidence.

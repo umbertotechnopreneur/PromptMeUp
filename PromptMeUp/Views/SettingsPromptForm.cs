@@ -92,6 +92,12 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
     /// <summary>Uses the same choice and validation rules as the fullscreen editor without echoing credentials.</summary>
     private void Edit(FormField field)
     {
+        var help = field.Help?.Invoke() ?? (field.HelpKey is null ? null : text.Text(field.HelpKey));
+        if (!string.IsNullOrWhiteSpace(help))
+        {
+            console.Write(new Text(help, Style.Parse(TerminalTheme.Muted)));
+            console.WriteLine();
+        }
         string value;
         if (field.Choices is not null)
         {
@@ -113,7 +119,7 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
             {
                 prompt.Secret(mask: null);
             }
-            else if (!string.IsNullOrEmpty(field.Read()))
+            else if (field.DefaultToCurrentValue && !string.IsNullOrEmpty(field.Read()))
             {
                 prompt.DefaultValue(field.Read());
             }

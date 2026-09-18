@@ -66,6 +66,7 @@ public sealed class FullscreenSetupView
             var settings = draft.Settings with
             {
                 SetupCompleted = true,
+                PreferredName = PreferredNamePolicy.Normalize(draft.Settings.PreferredName, _redactor),
                 CustomInstruction = _protection.Protect(draft.Settings.CustomInstruction).SanitizedText,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -141,6 +142,14 @@ public sealed class FullscreenSetupView
             ]) { HelpKey = "Settings.CommandsHelp" },
             new("Settings.Personalization",
             [
+                new("preferred-name", "Setup.PreferredName", () => draft.Settings.PreferredName,
+                    value => draft.Settings = draft.Settings with { PreferredName = PreferredNamePolicy.Normalize(value, _redactor) })
+                {
+                    Validate = ValidatePreferredName,
+                    HelpKey = "Setup.PreferredNameHelp",
+                    MaxLength = PreferredNamePolicy.MaximumLength,
+                    DefaultToCurrentValue = false
+                },
                 new("custom-instruction", "Setup.Custom", () => draft.Settings.CustomInstruction,
                     value => draft.Settings = draft.Settings with { CustomInstruction = _protection.Protect(value).SanitizedText })
                 {
@@ -328,6 +337,20 @@ public sealed class FullscreenSetupView
             IsVisible = visible,
             HelpKey = "Form.CredentialsHelp"
         };
+
+    /// <summary>Validates an optional display name without exposing rejected input in errors.</summary>
+    private string? ValidatePreferredName(string value)
+    {
+        try
+        {
+            _ = PreferredNamePolicy.Normalize(value, _redactor);
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return _text.Text("Setup.PreferredNameInvalid");
+        }
+    }
 
     /// <summary>Rejects recognizable secrets, oversized preambles, and instruction override attempts before saving.</summary>
     private string? ValidatePreamble(string value)

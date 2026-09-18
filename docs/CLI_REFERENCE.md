@@ -170,10 +170,15 @@ Use the sidebar to open Conversation for its four limits, Commands for execution
 limits, or any other section. General contains language; AI contains availability,
 model preferences, advisory command review, and caching. Credentials contains key
 replacement and an optional connection check. Personalization contains your
-personal instructions and location preference.
+optional name or nickname, personal instructions, and location preference.
 Save applies all draft changes directly; Cancel keeps the previous settings.
 After initial setup, the connection check defaults to off. Saving alone makes no
 provider request and does not refresh pricing.
+
+To change what the assistant calls you, open `hm --setup`, choose Personalization,
+enter your name or nickname, and Save. It is optional and never guessed from your
+account, computer, or memories. It is shared only with OpenAI questions and chat.
+Clear the field and Save to stop adding it; earlier conversations and history remain.
 
 The AI section also lists supported models and cached standard token prices per
 million tokens, with the selected model highlighted. Prices cover input, cached

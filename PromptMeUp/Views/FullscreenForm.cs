@@ -17,6 +17,7 @@ internal sealed record FormField(string Key, string LabelKey, Func<string> Read,
     public Func<string>? Display { get; init; }
     public Func<string>? Help { get; init; }
     public bool Secret { get; init; }
+    public bool DefaultToCurrentValue { get; init; } = true;
     public int MaxLength { get; init; } = 100_000;
     public string? HelpKey { get; init; }
 }
