@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Install the Settings and chat UI Debug update
+
+- Clarified the repository workflow: public release artifacts remain GitHub Actions-only, while an explicitly requested signed Debug MSIX may be built and installed locally from ignored `artifacts/msix` without publishing, tagging, or uploading it.
+- Published source commit `fdd6de7` for Windows x64, created the requested signed local Debug MSIX `0.1.5.23`, and updated the current-user package from `0.1.5.22` without uninstalling or changing application data, certificate trust, or `PATH`.
+- Verified the signature, package registration, `hm.exe` app-execution alias, and matching SHA-256 hashes for the packaged and installed application DLL. Preserved the package and metadata under ignored `artifacts/msix/chat-fdd6de7-debug`.
+
+Validation: preflight, formatting verification, XML summaries, and a warning-free Release build passed. Automated tests were not run. The Debug build output was cleaned after installation; no application launch or live OpenAI call was made.
+
 ## 2026-09-18 — Remove repeated skill descriptions in Settings
 
 - Omit the metadata summary only when it exactly matches the opening instruction paragraph, allowing an initial heading and blank lines. Keep distinct descriptions, complete literal instructions, scripts, package metadata, and approval fingerprints unchanged.
