@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Make Skills and Memory real Settings tabs
+
+- Replaced the separate preference menus with fields in the existing Settings form. Skills, Memory, and ordinary preferences share Save and Cancel; saved-note editing remains explicitly separate. Reused the existing layout, navigation, action bar, palette, and emoji helper.
+- Renamed Learning to Memory and the note manager to Saved memories in all six languages. Added readable bundled skill names and shorter privacy explanations; removed experiment terminology from user-facing copy and the chat guide.
+- Kept full skill instructions and scripts available in a scrollable preview. Collection and deletion require separate consent. Project preferences and skill approvals save together, reject stale drafts and changed packages, and validate the submitted language before activation. Reactivation cannot skip unreadable or omitted approved packages.
+- Updated the quick start, CLI and privacy documentation, and nine versioned chat-guide chapters. Added draft, consent, activation, and viewport regressions without provider calls or real desktop actions.
+
+Validation: preflight, formatting verification, and XML summaries passed. Release builds completed with zero warnings or errors; all 875 tests passed. After the final guide wording edit, all 33 guide/catalog tests passed again. Reviewed captured 60×20 and 100×32 terminal frames and cleaned Release output. No MSIX was rebuilt or installed for this change; main and release versions remain unchanged.
+
 ## 2026-09-18 — Install the Settings integration as a local Debug MSIX
 
 - Built current experimental commit `b2f654a` locally in Debug for Windows x64 and created the requested self-contained MSIX test package `0.1.5.20`. Kept the installed package identity and existing trusted signing certificate; no release workflow or public distribution was used.

@@ -2,11 +2,11 @@
 
 Ask `hm` a terminal question, check its answer, and choose whether to run a suggested command. `hm` means **help me** and works on Windows, Linux, and macOS.
 
-## Experimental skills and learning
+## Skills and memory
 
 This branch includes opt-in `hm --skills`, `hm --learning`, `hm --dream`, `hm --heartbeat`, and `hm --proposals` screens. They require an interactive terminal. The same names are available as slash commands inside chat. `--yes` never approves skill actions or memory changes.
 
-See the [experimental guide](EXPERIMENTAL_MEMORY_SKILLS.md) before enabling capture or importing a package. Dream and heartbeat create proposals; they do not silently change saved notes or schedule background work.
+See the [skills and memory guide](EXPERIMENTAL_MEMORY_SKILLS.md) before collecting messages or importing a skill. Dream and heartbeat suggest changes; they do not silently change saved notes or schedule background work.
 
 ## Ask or choose a command
 
@@ -61,25 +61,27 @@ Use one main command at a time.
 
 Settings fills the terminal window when it supports fullscreen views and is at
 least 60 columns wide and 20 rows tall. Use the sidebar to choose General, AI,
-Credentials, Conversation, Commands, Personalization, Theme, Skills, Learning,
-Memories, Privacy, or About.
+Credentials, Conversation, Commands, Personalization, Theme, Skills, Memory,
+Saved memories, Privacy, or About.
 `--setup`, `--ai-setup`, and `--theme` simply choose where you start.
 
 Select About and press Enter or Right to read about the project. When you close
 it, you'll return to your settings with unsaved changes still there. About is
 also available in the smaller settings menu.
 
-Skills, Learning, and Memories open their existing managers. Opening them does
-not activate features. Confirmed changes save immediately; Settings Cancel does
-not undo them. These managers use saved AI, model, and credentials, not the
-unsaved Settings draft. Returning refreshes the saved project status summary.
-Privacy is read-only. Existing CLI and chat slash commands remain available.
+Skills and Memory contain fields in the same Settings form. Turn on the shared
+project switch, then choose individual skills or message collection separately.
+Read the displayed skill instructions and any collection or deletion notice.
+Save applies these choices; Cancel discards them. Opening a section runs nothing.
+Saved memories opens a separate note manager: changes saved there take effect
+immediately and Settings Cancel does not undo them. Privacy explains data use.
+Existing CLI and chat slash commands, including `--learning`, remain available.
 
 Up/Down selects a section; Enter or Right moves into its fields. F6 switches
 between the sidebar and fields, and Ctrl+Left returns to the sidebar. Tab moves
 through fields to Save and Cancel. Left/Right changes a field choice or moves
 between the buttons when an action has focus; Enter activates the focused button.
-Save keeps the ordinary Settings draft. Cancel or Escape discards that draft and returns
+Save applies the Settings draft, including Skills and Memory. Cancel or Escape discards that draft and returns
 to your terminal history. Smaller or less capable terminals use a section menu
 with the same Save and Cancel actions. Languages show their flag, native name,
 and code; `--no-emoji` uses plain text. See [terminal themes](TERMINAL_THEMES.md)

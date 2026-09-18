@@ -160,7 +160,7 @@ public sealed class HelpView(
                     Arguments = [new("--dry-run", text.Text("Help.Argument.DryRun"))]
                 }
             ]),
-        new("🧠", text.Text("Settings.Memories"), text.Text("Settings.Memories"),
+        new("📚", text.Text("Settings.Memories"), text.Text("Settings.Memories"),
             [new("--memories", text.Text("Help.Memories")),
              new("--remember [global|project] <text>", text.Text("MemoryCli.RememberHelp")),
              new("--forget <id or description>", text.Text("MemoryCli.ForgetHelp"))])
@@ -168,7 +168,7 @@ public sealed class HelpView(
             Open = openMemories,
             OpenHintKey = "MemoryManager.OpenHint"
         },
-        new("🧪", text.Text("Lab.Title"), text.Text("Lab.Title"),
+        new("🧩", text.Text("Lab.Title"), text.Text("Lab.Title"),
             [new("--skills", text.Text("Lab.Skills")),
              new("--learning", text.Text("Lab.CaptureNotice")),
              new("--proposals", text.Text("Lab.Proposals")),

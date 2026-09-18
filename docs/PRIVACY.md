@@ -51,21 +51,21 @@ The filter can't catch everything. Don't paste secrets into questions or command
 Command arguments containing recognizable secrets are rejected. Chat messages
 are filtered before being sent to OpenAI.
 
-## Experimental skills and learning
+## Skills and memory
 
-The experimental branch adds project-scoped settings, skill activation fingerprints, observations, memory proposals, and provenance to local SQLite storage. ZIP imports stay in the application data directory. These features start disabled. Activating a skill can send its instructions with later questions; scripts are never run just by activating them. Review imported packages as carefully as code you would run yourself.
+Skills and memory store project preferences, approved skill versions, collected messages, and memory suggestions locally. ZIP imports stay in the application data directory. These features start disabled. In Settings, Save applies Skills and Memory changes; Cancel discards them. Activating a skill can send its instructions with later questions; it never runs scripts by itself. Review imported packages as carefully as code you would run yourself.
 
 Approved HTTP actions send the displayed request to a public HTTPS site; web search sends the query to DuckDuckGo's Instant Answer service. They do not support credentials, redirects, proxies, or private-network destinations. Skill output is not automatically sent to OpenAI. Windows clipboard actions expose or replace local text; screenshots save a new local PNG without uploading it. Images cannot be redacted: close sensitive windows first. System-info actions omit environment values and network addresses.
 
 Optional AI command review can send the full filtered script and parameters, including a search query, HTTP body, or clipboard write text, to OpenAI before execution approval. Turn off AI command review in Settings to use local risk scoring only.
 
-The separate `set_reminder` skill stores up to 50 credential-free notes per project in SQLite. Due notes appear at the next active chat input prompt and are then deleted; cancellation also deletes them. Turning the skill or experiment off pauses delivery without deleting pending notes. No background alarm, operating-system notification, or OpenAI call is involved.
+The separate `set_reminder` skill stores up to 50 credential-free notes per project in SQLite. Due notes appear at the next active chat input prompt and are then deleted; cancellation also deletes them. Turning the skill or the project's Skills and memory switch off pauses delivery without deleting pending notes. No background alarm, operating-system notification, or OpenAI call is involved.
 
 With observation capture enabled, completed, directly entered user messages of up to 4,000 characters are filtered and retained for 30 days, up to the newest 200 per project. Longer messages are not captured. Assistant replies and command-output follow-ups are not observations. Dream shows a bounded batch and asks before sending it to OpenAI. Heartbeat checks exact duplicates locally and can request a separately confirmed AI review. There is no background process or automatic API call from the reminder.
 
-Proposals remain separate from saved memories until you approve a displayed change. Disabling capture or the experiment clears its observations and proposals. Forgetting, merging, or removing a project memory also clears learning evidence and proposals for that project; a global target clears them for all projects. This conservative purge prevents learning evidence from immediately recreating removed text. Other approved memories, older request history, backups, and text already sent to OpenAI are not erased. Confirmed reflection requests and responses use the ordinary redacted AI history; the learning store's 30-day limit does not expire that history. Retention cleanup runs when learning data is accessed, not on a background timer.
+Suggestions stay separate from saved memories until you approve a displayed change. Turning off message collection or Skills and memory clears collected messages and suggestions after your confirmation. Forgetting, merging, or removing a project memory also clears those messages and suggestions for that project; a global memory clears them for all projects. This prevents collected messages from immediately recreating removed text. Other saved memories, older request history, backups, and text already sent to OpenAI are not erased. Confirmed reflection requests and responses use the ordinary filtered AI history; the collection's 30-day limit does not expire that history. Expired messages are removed when collected data is accessed, not by a background timer.
 
-See the [experimental guide](EXPERIMENTAL_MEMORY_SKILLS.md) for limits and review controls. Secret filtering is not a guarantee: do not capture or import confidential material you cannot share.
+See the [skills and memory guide](EXPERIMENTAL_MEMORY_SKILLS.md) for limits and review controls. Secret filtering is not a guarantee: do not capture or import confidential material you cannot share.
 
 ## Data sent to OpenAI
 

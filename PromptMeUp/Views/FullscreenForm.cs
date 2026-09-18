@@ -16,6 +16,9 @@ internal sealed record FormField(string Key, string LabelKey, Func<string> Read,
     public Func<bool>? IsVisible { get; init; }
     public Func<string>? Display { get; init; }
     public Func<string>? Help { get; init; }
+    public Func<string>? Label { get; init; }
+    public Func<string>? ValueColor { get; init; }
+    public Func<IRenderable>? Overview { get; init; }
     public bool Secret { get; init; }
     public bool DefaultToCurrentValue { get; init; } = true;
     public int MaxLength { get; init; } = 100_000;
@@ -49,6 +52,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private int _messageHeight = FullscreenFooter.NoticeRows;
     private int _overviewOffset;
     private int _overviewMaximumOffset;
+    private Func<IRenderable>? _overviewSource;
     private Action? _pendingOpen;
     private (int Width, int Height, string Theme)? _lastFrame;
 
@@ -151,7 +155,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 _pendingOpen = open;
                 return false;
             }
-            if (visiblePages[_page].Overview is not null && (key.Modifiers & ConsoleModifiers.Control) != 0
+            if ((visiblePages[_page].Overview is not null || (!_sectionsFocused && _focus < fields.Length && fields[_focus].Overview is not null))
+                && (key.Modifiers & ConsoleModifiers.Control) != 0
                 && key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow)
             {
                 _overviewOffset = Math.Clamp(_overviewOffset + (key.Key == ConsoleKey.UpArrow ? -1 : 1), 0, _overviewMaximumOffset);
@@ -259,7 +264,11 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     }
 
     /// <summary>Moves keyboard focus cyclically through fields and navigation actions.</summary>
-    private void MoveFocus(int delta, int count) => _focus = (_focus + delta + count) % count;
+    private void MoveFocus(int delta, int count)
+    {
+        _focus = (_focus + delta + count) % count;
+        _overviewOffset = 0;
+    }
 
     /// <summary>Changes section while keeping the form draft intact.</summary>
     private void ChangePage(int delta, int count)
@@ -423,25 +432,32 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
 
         var sectionNavigation = _allowSectionNavigation && pages.Count > 1;
         var focused = !_sectionsFocused && _focus < fields.Count ? fields[_focus] : null;
+        var overview = focused?.Overview ?? pages[_page].Overview;
+        if (!ReferenceEquals(overview, _overviewSource))
+        {
+            _overviewOffset = 0;
+            _overviewSource = overview;
+        }
         var helpKey = pages[_page].Open is not null && !_sectionsFocused
             ? "Form.NavigationHelp"
             : pages[_page].HelpKey ?? (sectionNavigation ? "Form.NavigationHelp" : "Form.Help");
         var guidance = focused?.Help?.Invoke() ?? text.Text(focused?.HelpKey ?? helpKey);
-        if (pages[_page].Overview is not null)
+        if (overview is not null)
         {
             guidance += " " + text.Text("Settings.OverviewScroll");
         }
-        var hint = _error ?? (focused is null ? guidance : text.Text(focused.LabelKey) + ": " + guidance);
+        var hint = _error ?? (focused is null ? guidance : FieldLabel(focused, text) + ": " + guidance);
         var hintWidth = Math.Max(1, frame.Width - 5);
-        var minimumBodyRows = RowsPerField + (pages[_page].Overview is not null ? 3 : 0);
+        var minimumBodyRows = RowsPerField + (overview is not null ? 3 : 0);
         _messageHeight = Math.Clamp((int)Math.Ceiling(Segment.CellCount([new Segment(hint)]) / (double)hintWidth) + 1,
             FullscreenFooter.NoticeRows, Math.Min(6, frame.Height - FixedBodyRows - minimumBodyRows));
         var section = SectionTitle(pages[_page]);
         var availableRows = BodyRows();
-        var fieldRows = pages[_page].Overview is null ? availableRows
-            : Math.Min(fields.Count * RowsPerField, Math.Max(RowsPerField, (availableRows - 3) / RowsPerField * RowsPerField));
+        var reservedOverviewRows = focused?.Overview is null ? 3 : Math.Max(3, (availableRows + 1) / 2);
+        var fieldRows = overview is null ? availableRows
+            : Math.Min(fields.Count * RowsPerField, Math.Max(RowsPerField, (availableRows - reservedOverviewRows) / RowsPerField * RowsPerField));
         var fieldBody = FieldsBody(fields, fieldRows);
-        if (pages[_page].Overview is { } overview)
+        if (overview is not null)
         {
             var overviewWidth = frame.Width - 5 - (sectionNavigation ? FullscreenWorkspace.SidebarWidth(frame.Width) : 0);
             var overviewHeight = availableRows - Math.Min(fields.Count, fieldRows / RowsPerField) * RowsPerField;
@@ -502,7 +518,10 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     }
 
     /// <summary>Adds meaningful setup section icons through the shared emoji and ASCII fallback helper.</summary>
-    private string SectionTitle(FormPage page)
+    private string SectionTitle(FormPage page) => SectionTitle(page, text, _options);
+
+    /// <summary>Shares localized section icons between fullscreen and scrolling settings.</summary>
+    internal static string SectionTitle(FormPage page, ILocalizationService text, ConsoleRenderOptions options)
     {
         var icon = page.TitleKey switch
         {
@@ -520,11 +539,17 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             "Settings.Personalization" => "📝",
             "Settings.Theme" => "🎨",
             "About.MenuLabel" => "ℹ️",
-            "Settings.Memories" => "🧠",
+            "Settings.Skills" => "🧩",
+            "Settings.Learning" => "💭",
+            "Settings.Memories" => "📚",
+            "Settings.Privacy" => "🔒",
             _ => null
         };
-        return (icon is null ? string.Empty : TerminalTheme.IconPrefix(_options, icon, "-")) + text.Text(page.TitleKey);
+        return (icon is null ? string.Empty : TerminalTheme.IconPrefix(options, icon, "-")) + text.Text(page.TitleKey);
     }
+
+    /// <summary>Uses literal supplied labels for inspected packages and localized labels for ordinary fields.</summary>
+    internal static string FieldLabel(FormField field, ILocalizationService text) => SafeText(field.Label?.Invoke() ?? text.Text(field.LabelKey));
 
     /// <summary>Renders spaced editable fields while keeping the complete selected field inside the viewport.</summary>
     private IRenderable FieldsBody(IReadOnlyList<FormField> fields, int availableRows)
@@ -537,9 +562,9 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             var field = fields[index];
             var selected = !_sectionsFocused && index == _focus;
             rows.Add(FieldBlock(
-                Styled($"{(selected ? ">" : " ")} {text.Text(field.LabelKey)}", selected ? TerminalTheme.Accent : TerminalTheme.Primary),
+                Styled($"{(selected ? ">" : " ")} {FieldLabel(field, text)}", selected ? TerminalTheme.Accent : TerminalTheme.Primary),
                 width => Styled($"[ {FieldValue(field, width - 4)} ]",
-                    (selected ? "bold underline " : string.Empty) + TerminalTheme.FieldValue)));
+                    (selected ? "bold underline " : string.Empty) + (field.ValueColor?.Invoke() ?? TerminalTheme.FieldValue))));
         }
         return new Rows(rows);
     }

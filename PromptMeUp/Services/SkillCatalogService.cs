@@ -175,6 +175,21 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
         await store.SetAsync("skill:" + skill.Name, enabled ? skill.Fingerprint : string.Empty, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Rechecks an inspected approval draft against the current effective package without writing preferences.</summary>
+    internal async Task ValidateActivationAsync(SkillDefinition skill, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var current = Inspect(skill.Directory, skill.Origin);
+        var effective = List().SingleOrDefault(candidate => candidate.Name == skill.Name);
+        if (current.Name != skill.Name || current.Fingerprint != skill.Fingerprint || current.UnavailableReason is not null
+            || effective is null || effective.Fingerprint != current.Fingerprint || effective.Directory != current.Directory
+            || effective.Origin != current.Origin)
+        {
+            throw Invalid();
+        }
+        await EnsureContextFitsAsync(current, ct).ConfigureAwait(false);
+    }
+
     /// <summary>Rejects an unusable manual selection before replacing the user's current choice.</summary>
     public async Task SelectForQuestionsAsync(SkillDefinition skill, CancellationToken ct)
     {

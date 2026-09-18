@@ -49,6 +49,9 @@ public sealed class SettingsFeatureOverviewTests
         Assert.Equal(baseline.SkillCount + 1, masterOff.SkillCount);
         Assert.Equal(0, masterOff.EnabledSkillCount);
         Assert.True(await catalog.IsEnabledAsync(first, default));
+        var retainedApproval = Assert.Single(masterOff.Skills, state => state.Skill.Name == first.Name);
+        Assert.True(retainedApproval.Enabled);
+        Assert.Equal(first.Fingerprint, retainedApproval.ApprovalFingerprint);
 
         var settings = new ExperimentalSettings(Enabled: true, MaintenanceReminder: true);
         await store.SaveSettingsAsync(settings, masterOff.Settings, default);
@@ -98,6 +101,9 @@ public sealed class SettingsFeatureOverviewTests
         Assert.NotNull(unsupported.UnavailableReason);
         Assert.Equal(baseline.SkillCount + 3, overview.SkillCount);
         Assert.Equal(1, overview.EnabledSkillCount);
+        var unsupportedState = Assert.Single(overview.Skills, state => state.Skill.Name == unsupported.Name);
+        Assert.True(unsupportedState.Enabled);
+        Assert.Equal(unsupported.Fingerprint, unsupportedState.ApprovalFingerprint);
         Assert.Equal(changed.Fingerprint, await store.GetAsync("skill:" + changed.Name, default));
         Assert.Equal(unsupported.Fingerprint, await store.GetAsync("skill:" + unsupported.Name, default));
     }
@@ -123,7 +129,12 @@ public sealed class SettingsFeatureOverviewTests
         var second = await service.ReadAsync(default);
 
         Assert.Equal(settings, first.Settings);
-        Assert.Equal(first, second);
+        Assert.Equal(first.Settings, second.Settings);
+        Assert.Equal(first.EnabledSkillCount, second.EnabledSkillCount);
+        Assert.Equal(first.SkillCount, second.SkillCount);
+        Assert.Equal(first.CatalogUnavailable, second.CatalogUnavailable);
+        Assert.Equal(first.Skills.Select(state => (state.Skill.Name, state.Skill.Fingerprint, state.Enabled, state.ApprovalFingerprint)),
+            second.Skills.Select(state => (state.Skill.Name, state.Skill.Fingerprint, state.Enabled, state.ApprovalFingerprint)));
         Assert.Equal(0, first.EnabledSkillCount);
         Assert.Equal(storedSettings, await store.GetAsync("settings", default));
         Assert.Equal(revision, await store.RevisionAsync(default));

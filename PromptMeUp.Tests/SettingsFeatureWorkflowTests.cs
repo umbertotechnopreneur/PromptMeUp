@@ -5,37 +5,31 @@ using PromptMeUp.Application;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Views;
-using Spectre.Console;
 
 namespace PromptMeUp.Tests;
 
 public sealed class SettingsFeatureWorkflowTests
 {
-    /// <summary>Opening or cancelling Settings reads status without loading credentials, invoking a child menu, or changing consent.</summary>
+    /// <summary>Opening and cancelling settings leaves project defaults and consent untouched.</summary>
     [Fact]
-    public async Task RunAsync_StatusOnly_PreservesDisabledDefaults()
+    public async Task RunAsync_Cancel_PreservesDisabledDefaults()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        var loads = 0;
-        var services = Settings(() => loads++, _ => throw new InvalidOperationException("Unexpected settings save."));
-        var workflow = Workflow(fixture, services, state =>
+        var workflow = Workflow(fixture, state =>
         {
             Assert.NotNull(state.FeatureOverview);
             Assert.False(state.FeatureOverview.Settings.Enabled);
-            Assert.NotNull(state.OpenSkills);
-            Assert.NotNull(state.OpenLearning);
+            Assert.NotEmpty(state.FeatureOverview.Skills);
             return null;
-        }, () => throw new InvalidOperationException("Unexpected child menu."));
+        }, _ => throw new InvalidOperationException("Unexpected settings save."));
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
-
-        Assert.Equal(0, loads);
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
     }
 
-    /// <summary>A malformed local package is reported as unavailable without blocking unrelated settings or enabling experiments.</summary>
+    /// <summary>A malformed local package does not prevent opening unrelated settings.</summary>
     [Fact]
     public async Task RunAsync_InvalidCatalog_StillOpensSettings()
     {
@@ -45,210 +39,212 @@ public sealed class SettingsFeatureWorkflowTests
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "SKILL.md"), "Invalid synthetic package");
         var collected = false;
-        var services = Settings(() => throw new InvalidOperationException("Unexpected action settings load."),
-            _ => throw new InvalidOperationException("Unexpected save."));
-        var workflow = Workflow(fixture, services, state =>
+        var workflow = Workflow(fixture, state =>
         {
             collected = true;
             Assert.True(state.FeatureOverview!.CatalogUnavailable);
             Assert.False(state.FeatureOverview.Settings.Enabled);
             return null;
-        }, () => throw new InvalidOperationException("Unexpected child menu."));
+        }, _ => throw new InvalidOperationException("Unexpected settings save."));
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
-
         Assert.True(collected);
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
     }
 
-    /// <summary>An explicitly attempted action on a disabled skill reports its error while keeping the parent draft saveable.</summary>
+    /// <summary>A single submission saves both inline project preferences and ordinary app settings.</summary>
     [Fact]
-    public async Task RunAsync_InvalidChildAction_ReportsErrorAndPreservesDraft()
+    public async Task RunAsync_Save_AppliesInlineFeatureAndOrdinaryDrafts()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        var text = new LocalizationService();
-        var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
-        await store.SaveSettingsAsync(new(Enabled: true), new(), default);
-        var catalog = new SkillCatalogService(fixture.Paths, store, text,
-            new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
-        var index = catalog.List().ToList().FindIndex(skill => skill.Name == "filesystem");
-        Assert.True(index >= 0);
-        var keys = new Queue<ConsoleKeyInfo>([
-            .. Enumerable.Repeat(Key(ConsoleKey.DownArrow), index + 5), Key(ConsoleKey.Enter),
-            .. Enumerable.Repeat(Key(ConsoleKey.DownArrow), 3), Key(ConsoleKey.Enter)]);
-        var errors = new List<string>();
-        AppSettings? saved = null;
         var expected = AppSettings.Default with { SetupCompleted = true, PreferredName = "Morgan" };
-        var workflow = Workflow(fixture, Settings(() => { }, value => saved = value), state =>
+        var desired = new ExperimentalSettings(Enabled: true, AutomaticSkills: true);
+        AppSettings? saved = null;
+        var workflow = Workflow(fixture, state => new SetupSubmission(expected, null, null, false)
         {
-            var refreshed = state.OpenSkills!();
-            Assert.Equal(state.FeatureOverview, refreshed);
-            return new SetupSubmission(expected, null, null, false);
-        }, keys.Dequeue, errors.Add);
+            Features = new(state.FeatureOverview!.Settings, desired, [])
+        }, value => { saved = value; return Task.CompletedTask; });
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
-
-        Assert.Empty(keys);
-        Assert.Equal(text.Text("Lab.Activate"), Assert.Single(errors));
         Assert.Same(expected, saved);
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings WHERE name LIKE 'skill:%';"));
-    }
-
-    /// <summary>Explicit child-menu decisions survive parent cancellation and return refreshed project status.</summary>
-    [Fact]
-    public async Task RunAsync_ChildMenus_PreserveImmediateConsentAcrossParentCancel()
-    {
-        using var fixture = new RegressionFixture();
-        await fixture.Database.InitializeAsync(default);
-        var loads = 0;
-        var input = new Queue<ConsoleKeyInfo>([
-            Key(ConsoleKey.DownArrow), Key(ConsoleKey.Enter), Key(ConsoleKey.Enter), Key(ConsoleKey.Enter)]);
-        var services = Settings(() => loads++, _ => throw new InvalidOperationException("Unexpected parent save."));
-        var workflow = Workflow(fixture, services, state =>
-        {
-            Assert.False(state.FeatureOverview!.Settings.Enabled);
-            var skills = state.OpenSkills!();
-            Assert.True(skills.Settings.Enabled);
-            Assert.False(skills.Settings.CaptureObservations);
-            Assert.Equal(0, skills.EnabledSkillCount);
-            var learning = state.OpenLearning!();
-            Assert.Equal(skills, learning);
-            return null;
-        }, input.Dequeue);
-
-        Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
-
-        Assert.Empty(input);
-        Assert.Equal(2, loads);
-        var preferences = await new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService()).SettingsAsync(default);
-        Assert.Equal(new ExperimentalSettings(Enabled: true), preferences);
+        Assert.Equal(desired, await Store(fixture).SettingsAsync(default));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_observations;"));
     }
 
-    /// <summary>Escape closes only the child menu, leaving the parent's pending submission available to save.</summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task RunAsync_ChildEscape_PreservesParentSubmission(bool skills)
+    /// <summary>An ordinary settings save does not create or purge feature data.</summary>
+    [Fact]
+    public async Task RunAsync_NoFeatureChanges_DoesNotPersistFeatureSettings()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        var loads = 0;
-        AppSettings? saved = null;
-        var expected = AppSettings.Default with { SetupCompleted = true, PreferredName = "Morgan" };
-        var services = Settings(() => loads++, value => saved = value);
-        var workflow = Workflow(fixture, services, state =>
-        {
-            var refreshed = (skills ? state.OpenSkills : state.OpenLearning)!();
-            Assert.Equal(state.FeatureOverview, refreshed);
-            return new SetupSubmission(expected, null, null, false);
-        }, () => throw new InteractiveFlowCanceledException());
+        var saves = 0;
+        var workflow = Workflow(fixture, _ => new SetupSubmission(AppSettings.Default, null, null, false),
+            _ => { saves++; return Task.CompletedTask; });
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
+        Assert.Equal(1, saves);
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
+    }
 
-        Assert.Equal(1, loads);
-        Assert.Same(expected, saved);
+    /// <summary>A concurrent preference update rejects the stale draft before credentials or app settings are written.</summary>
+    [Fact]
+    public async Task RunAsync_StaleDraft_DoesNotApplyAnySubmissionWrites()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var newer = new ExperimentalSettings(Enabled: true, CaptureObservations: true);
+        var workflow = Workflow(fixture, state =>
+        {
+            Store(fixture).SaveSettingsAsync(newer, state.FeatureOverview!.Settings, default).GetAwaiter().GetResult();
+            return new SetupSubmission(AppSettings.Default, "unused-synthetic-value", null, false)
+            {
+                Features = new(state.FeatureOverview.Settings, new(Enabled: true), [])
+            };
+        }, _ => throw new InvalidOperationException("Unexpected settings save."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.RunAsync(AppSettings.Default, default));
+        Assert.Equal(newer, await Store(fixture).SettingsAsync(default));
+    }
+
+    /// <summary>Capture requires explicit consent before any submission writes can occur.</summary>
+    [Fact]
+    public async Task RunAsync_MissingCaptureConsent_RejectsSave()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var workflow = Workflow(fixture, state => new SetupSubmission(AppSettings.Default, "unused-synthetic-value", null, false)
+        {
+            Features = new(state.FeatureOverview!.Settings, new(Enabled: true, CaptureObservations: true), [])
+        }, _ => throw new InvalidOperationException("Unexpected settings save."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.RunAsync(AppSettings.Default, default));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
     }
 
-    /// <summary>Application cancellation must propagate rather than reopening the parent settings form.</summary>
+    /// <summary>A later app settings failure accurately reports already committed feature preferences.</summary>
     [Fact]
-    public async Task RunAsync_ShutdownInChildMenu_PropagatesCancellation()
+    public async Task RunAsync_LaterSaveFailure_ReportsPartialPersistence()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        using var cancellation = new CancellationTokenSource();
-        var services = Settings(() => { }, _ => throw new InvalidOperationException("Unexpected save."));
-        var workflow = Workflow(fixture, services, state =>
+        var desired = new ExperimentalSettings(Enabled: true);
+        var warnings = new List<string>();
+        var workflow = Workflow(fixture, state => new SetupSubmission(AppSettings.Default, null, null, false)
         {
-            state.OpenSkills!();
-            throw new InvalidOperationException("The child must propagate shutdown.");
-        }, () =>
-        {
-            cancellation.Cancel();
-            throw new InteractiveFlowCanceledException();
-        });
+            Features = new(state.FeatureOverview!.Settings, desired, [])
+        }, _ => Task.FromException(new IOException("Synthetic settings write failure.")), warnings.Add);
 
-        await Assert.ThrowsAsync<InteractiveFlowCanceledException>(() => workflow.RunAsync(AppSettings.Default, cancellation.Token));
+        await Assert.ThrowsAsync<IOException>(() => workflow.RunAsync(AppSettings.Default, default));
+        Assert.Equal(desired, await Store(fixture).SettingsAsync(default));
+        Assert.Equal(new LocalizationService().Text("Settings.FeaturesPartiallySaved"), Assert.Single(warnings));
     }
 
-    /// <summary>Supplies persisted preferences separately from the caller's draft and records only explicit saves.</summary>
-    private static ISettingsService Settings(Action loaded, Action<AppSettings> saved) =>
-        TestProxy.Create<ISettingsService>((method, args) =>
-        {
-            switch (method.Name)
-            {
-                case "LoadAsync":
-                    loaded();
-                    return Task.FromResult(AppSettings.Default with { SetupCompleted = true, AiEnabled = false });
-                case "SaveAsync":
-                    saved((AppSettings)args[0]!);
-                    return Task.CompletedTask;
-                default:
-                    throw new NotSupportedException(method.Name);
-            }
-        });
-
-    /// <summary>Wires production child menus to disposable storage and synthetic input with provider and command calls forbidden.</summary>
-    private static SetupWorkflow Workflow(RegressionFixture fixture, ISettingsService settings,
-        Func<SetupViewState, SetupSubmission?> collect, Func<ConsoleKeyInfo> readKey, Action<string>? error = null)
+    /// <summary>A simultaneous language and skill edit budgets the target translation before persisting any part of the submission.</summary>
+    [Fact]
+    public async Task RunAsync_NewLanguageOversizedSkill_RejectsAndRestoresOriginalLanguage()
     {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
         var text = new LocalizationService();
-        var redactor = new SensitiveDataRedactor();
-        var store = new ExperimentalStore(fixture.Paths, redactor, text);
+        var realPrompts = new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance);
+        var translations = SupportedLanguages.Codes.ToDictionary(language => language, _ => "Short synthetic instructions.");
+        translations["it"] = new string('a', 8000);
+        var translated = new PromptDefinition("skill-set_reminder", 1, "Synthetic translated budget regression", [],
+            translations, new Dictionary<string, string>());
+        var prompts = TestProxy.Create<IPromptCatalogService>((method, args) => method.Name == nameof(IPromptCatalogService.GetAsync)
+            ? (string)args[0]! == translated.Id
+                ? Task.FromResult(translated)
+                : realPrompts.GetAsync((string)args[0]!, (CancellationToken)args[1]!)
+            : throw new NotSupportedException(method.Name));
+        var warnings = new List<string>();
+        var workflow = Workflow(fixture, state =>
+        {
+            Assert.Equal("en", text.Language);
+            var skill = Assert.Single(state.FeatureOverview!.Skills, item => item.Skill.Name == "set_reminder");
+            return new SetupSubmission(AppSettings.Default with { Language = "it" }, null, null, false)
+            {
+                Features = new(state.FeatureOverview.Settings, new(Enabled: true),
+                [new(skill.Skill, skill.Enabled, true) { ExpectedApprovalFingerprint = skill.ApprovalFingerprint }])
+            };
+        }, _ => throw new InvalidOperationException("App settings must not be saved after a failed target-language budget check."),
+            warnings.Add, text, prompts);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.RunAsync(AppSettings.Default, default));
+
+        var italian = new LocalizationService();
+        italian.SetLanguage("it");
+        Assert.Equal(italian.Text("Lab.SkillTooLarge", "set_reminder", SkillCatalogService.MaximumContextTokens), error.Message);
+        Assert.Equal("en", text.Language);
+        Assert.Empty(warnings);
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests;"));
+    }
+
+    /// <summary>A successfully validated feature save restores the old language for later writes and applies the target only after success.</summary>
+    [Fact]
+    public async Task RunAsync_NewLanguageValidSkill_AppliesLanguageOnlyAfterSuccessfulSave()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var text = new LocalizationService();
+        var saved = false;
+        var workflow = Workflow(fixture, state =>
+        {
+            var skill = Assert.Single(state.FeatureOverview!.Skills, item => item.Skill.Name == "set_reminder");
+            return new SetupSubmission(AppSettings.Default with { Language = "it" }, null, null, false)
+            {
+                Features = new(state.FeatureOverview.Settings, new(Enabled: true),
+                [new(skill.Skill, skill.Enabled, true) { ExpectedApprovalFingerprint = skill.ApprovalFingerprint }])
+            };
+        }, value =>
+        {
+            Assert.Equal("en", text.Language);
+            Assert.Equal("it", value.Language);
+            saved = true;
+            return Task.CompletedTask;
+        }, localization: text);
+
+        Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
+
+        Assert.True(saved);
+        Assert.Equal("it", text.Language);
+        Assert.True((await Store(fixture).SettingsAsync(default)).Enabled);
+    }
+
+    /// <summary>Creates a feature store over the isolated test database.</summary>
+    private static ExperimentalStore Store(RegressionFixture fixture) =>
+        new(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
+
+    /// <summary>Uses real feature persistence while forbidding provider calls and unexpected secret access.</summary>
+    private static SetupWorkflow Workflow(RegressionFixture fixture, Func<SetupViewState, SetupSubmission?> collect,
+        Func<AppSettings, Task> save, Action<string>? warning = null, ILocalizationService? localization = null,
+        IPromptCatalogService? prompts = null)
+    {
+        var text = localization ?? new LocalizationService();
+        var store = Store(fixture);
         var catalog = new SkillCatalogService(fixture.Paths, store, text,
-            new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
+            prompts ?? new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
         var secrets = TestProxy.Create<IEnvironmentSecretService>((method, _) => method.Name == "IsConfigured"
             ? false : throw new InvalidOperationException("Credentials must not be read or changed."));
         var shell = TestProxy.Create<IConsoleShellView>((method, args) =>
         {
-            if (method.Name == "RenderError" && error is not null)
+            if (method.Name == "RenderWarning" && warning is not null)
             {
-                error((string)args[0]!);
+                warning((string)args[0]!);
                 return null;
             }
             return method.Name is "RenderNotice" or "RenderSuccess"
                 ? null : throw new InvalidOperationException("Unexpected shell action: " + method.Name);
         });
-        var console = Console(readKey);
-        var experimental = new ExperimentalWorkflow(catalog, new SkillActionService(redactor, text), store,
-            TestProxy.Create<IAuthorizedCommandWorkflow>((_, _) => throw new InvalidOperationException("Commands are forbidden.")),
-            fixture.Audit, new ExperimentalView(console, text), shell, text, new MemoryReflectionService(redactor, text),
-            new PersistentMemoryService(fixture.Paths, redactor, text, NullLogger<PersistentMemoryService>.Instance),
-            new ArtifactAssistant(TestProxy.Create<IOpenAiService>((_, _) => throw new InvalidOperationException("Provider calls are forbidden.")),
-                fixture.Audit, new BoundedTextInput(redactor, text), shell, text),
-            secrets, new ReminderService(fixture.Paths, redactor, text, catalog));
+        var settings = TestProxy.Create<ISettingsService>((method, args) => method.Name == "SaveAsync"
+            ? save((AppSettings)args[0]!) : throw new InvalidOperationException("Unexpected settings action."));
         return new SetupWorkflow(settings, secrets,
             TestProxy.Create<IAiConversationWorkflow>((_, _) => throw new InvalidOperationException("AI calls are forbidden.")),
             new ApplicationActivityRecorder(fixture.Audit, NullLogger<ApplicationActivityRecorder>.Instance),
             TestProxy.Create<ISetupView>((_, args) => collect((SetupViewState)args[0]!)), shell, text,
-            experimental: experimental, featureOverview: new SettingsFeatureOverviewService(store, catalog));
+            featureOverview: new SettingsFeatureOverviewService(store, catalog));
     }
-
-    /// <summary>Creates an in-memory interactive terminal without accessing the user's real console.</summary>
-    private static IAnsiConsole Console(Func<ConsoleKeyInfo> readKey)
-    {
-        var input = TestProxy.Create<IAnsiConsoleInput>((method, _) => method.Name switch
-        {
-            "ReadKey" => readKey(),
-            "ReadKeyAsync" => Task.FromResult<ConsoleKeyInfo?>(readKey()),
-            "IsKeyAvailable" => true,
-            _ => throw new NotSupportedException(method.Name)
-        });
-        var rendering = AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Ansi = AnsiSupport.Yes,
-            ColorSystem = ColorSystemSupport.NoColors,
-            Out = new AnsiConsoleOutput(new StringWriter())
-        });
-        rendering.Profile.Width = 240;
-        rendering.Profile.Capabilities.Interactive = true;
-        rendering.Profile.Capabilities.AlternateBuffer = false;
-        return TestProxy.Create<IAnsiConsole>((method, args) => method.Name == "get_Input"
-            ? input : method.Invoke(rendering, args));
-    }
-
-    /// <summary>Creates one synthetic navigation key for the child selection prompt.</summary>
-    private static ConsoleKeyInfo Key(ConsoleKey key) => new(key == ConsoleKey.Enter ? '\r' : '\0', key, false, false, false);
 }

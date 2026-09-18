@@ -43,10 +43,9 @@ public sealed class FullscreenSetupView
         ArgumentNullException.ThrowIfNull(state);
         var originalLanguage = _text.Language;
         var originalTheme = TerminalTheme.Current;
-        var draft = new SetupDraft(state.Settings)
+        var draft = new SetupDraft(state.Settings, state.FeatureOverview)
         {
-            TestConnection = !state.Settings.SetupCompleted,
-            FeatureOverview = state.FeatureOverview
+            TestConnection = !state.Settings.SetupCompleted
         };
         try
         {
@@ -59,9 +58,9 @@ public sealed class FullscreenSetupView
             }
             var saved = FullscreenForm.CanUse(_console)
                 ? new FullscreenForm(_console, _text, _shell.Options).Run(
-                    "Settings.Title", pages, () => ValidatePages(pages), initialPage: initialPage)
+                    "Settings.Title", pages, () => ValidatePages(pages) ?? ValidateFeatures(draft), initialPage: initialPage)
                 : new SettingsPromptForm(_console, _text, _shell.Options).Run(
-                    pages, initialPage, () => ValidatePages(pages));
+                    pages, initialPage, () => ValidatePages(pages) ?? ValidateFeatures(draft));
             if (!saved)
             {
                 return null;
@@ -78,7 +77,10 @@ public sealed class FullscreenSetupView
                 settings,
                 draft.ApiKey,
                 draft.AdminKey,
-                settings.AiEnabled && HasApiKey(draft, state) && draft.TestConnection);
+                settings.AiEnabled && HasApiKey(draft, state) && draft.TestConnection)
+            {
+                Features = draft.FeatureChanges()
+            };
         }
         finally
         {
@@ -171,17 +173,15 @@ public sealed class FullscreenSetupView
                     HelpKey = "Theme.Preview"
                 }
             ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) },
-            new("Settings.Skills", [])
+            new("Settings.Skills", CreateSkillsFields(draft))
             {
-                Open = () => OpenFeatureMenu(draft, state.OpenSkills),
-                HelpKey = "Settings.SkillsHelp",
-                Overview = () => CreateFeatureNavigationOverview(draft.FeatureOverview, "Settings.SkillsHelp")
+                HelpKey = "Settings.FeaturesDraftHelp",
+                Overview = () => CreateFeaturePageNotice(draft, skills: true)
             },
-            new("Settings.Learning", [])
+            new("Settings.Learning", CreateMemoryFields(draft))
             {
-                Open = () => OpenFeatureMenu(draft, state.OpenLearning),
-                HelpKey = "Settings.LearningHelp",
-                Overview = () => CreateFeatureNavigationOverview(draft.FeatureOverview, "Settings.LearningHelp")
+                HelpKey = "Settings.FeaturesDraftHelp",
+                Overview = () => CreateFeaturePageNotice(draft, skills: false)
             },
             new("Settings.Memories", [])
             {
@@ -189,12 +189,12 @@ public sealed class FullscreenSetupView
                 HelpKey = "MemoryManager.OpenHint",
                 Overview = () => new Rows(
                     new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
-                    new Text(" "), new Text(_text.Text("Settings.FeatureMenuNotice"), Style.Parse(TerminalTheme.Warning)))
+                    new Text(" "), new Text(_text.Text("Settings.SavedMemoriesNotice"), Style.Parse(TerminalTheme.Warning)))
             },
             new("Settings.Privacy", [])
             {
                 HelpKey = "Settings.PrivacyHelp",
-                Overview = () => CreatePrivacyOverview(draft.FeatureOverview)
+                Overview = CreatePrivacyOverview
             },
             new("About.MenuLabel", [])
             {
@@ -227,48 +227,123 @@ public sealed class FullscreenSetupView
         return new Rows(
             new Text(TerminalTheme.IconPrefix(_shell.Options, "🪞", "=") + _text.Text("Settings.DraftStatus"), Style.Parse("bold " + TerminalTheme.Accent)),
             status, new Text(" "),
-            CreateFeaturesOverview(draft.FeatureOverview), new Text(" "),
             new Text(TerminalTheme.IconPrefix(_shell.Options, "📊", "=") + _text.Text("Main.Costs"), Style.Parse("bold " + TerminalTheme.Accent)),
             usage);
     }
 
-    /// <summary>Renders only the latest supplied saved-state snapshot without accessing feature services.</summary>
-    private IRenderable CreateFeaturesOverview(SettingsFeatureOverview? overview)
+    /// <summary>Builds ordinary skill preference fields from the inspected snapshot without reading files.</summary>
+    private IReadOnlyList<FormField> CreateSkillsFields(SetupDraft draft)
     {
-        var status = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
-        var unavailable = _text.Text("Costs.Unavailable");
-        AddOverviewMetric(status, "Settings.FeatureExperiment", FeatureStatus(overview?.Settings.Enabled));
-        AddOverviewMetric(status, "Settings.FeatureSkills", overview is null || overview.CatalogUnavailable ? unavailable
-            : _text.Text("Settings.FeatureSkillCount", overview.EnabledSkillCount, overview.SkillCount));
-        AddOverviewMetric(status, "Settings.FeatureAutomatic", FeatureStatus(overview is null ? null
-            : overview.Settings.Enabled && overview.Settings.AutomaticSkills));
-        AddOverviewMetric(status, "Settings.FeatureCapture", FeatureStatus(overview is null ? null
-            : overview.Settings.Enabled && overview.Settings.CaptureObservations));
-        AddOverviewMetric(status, "Settings.FeatureReminder", FeatureStatus(overview is null ? null
-            : overview.Settings.Enabled && overview.Settings.MaintenanceReminder));
+        if (draft.FeatureSettings is null) return [];
+        var fields = new List<FormField>
+        {
+            FeatureMaster(draft),
+            Toggle("Settings.FeatureAutomatic", () => draft.FeatureSettings!.AutomaticSkills,
+                value => draft.FeatureSettings = draft.FeatureSettings! with { AutomaticSkills = value },
+                () => draft.FeatureSettings!.Enabled) with { HelpKey = "Settings.SkillsHelp" }
+        };
+        foreach (var item in draft.Skills)
+        {
+            fields.Add(Toggle("Settings.FeatureSkills", () => item.Enabled, value => item.Enabled = value,
+                () => draft.FeatureSettings!.Enabled) with
+            {
+                Label = () => SkillLabel(item.State.Skill),
+                HelpKey = "Settings.SkillApprovalHelp",
+                Overview = () => CreateSkillOverview(item.State.Skill),
+                Choices = () => item.State.Skill.UnavailableReason is null || item.Enabled
+                    ? [new("true", _text.Text("Common.Yes")), new("false", _text.Text("Common.No"))]
+                    : [new("false", _text.Text("Common.No"))]
+            });
+        }
+        fields.Add(ClearLearningConsent(draft));
+        return fields;
+    }
+
+    /// <summary>Builds local collection preferences and explicit acknowledgements in the same draft.</summary>
+    private IReadOnlyList<FormField> CreateMemoryFields(SetupDraft draft)
+    {
+        if (draft.FeatureSettings is null) return [];
+        return
+        [
+            FeatureMaster(draft),
+            Toggle("Settings.FeatureCapture", () => draft.FeatureSettings!.CaptureObservations, draft.SetCapture,
+                () => draft.FeatureSettings!.Enabled) with { HelpKey = "Settings.LearningHelp" },
+            Toggle("Settings.FeatureReminder", () => draft.FeatureSettings!.MaintenanceReminder,
+                value => draft.FeatureSettings = draft.FeatureSettings! with { MaintenanceReminder = value },
+                () => draft.FeatureSettings!.Enabled) with { HelpKey = "Settings.LearningHelp" },
+            Toggle("Settings.CaptureConsent", () => draft.CaptureConsent, value => draft.CaptureConsent = value,
+                () => draft.NeedsCaptureConsent) with
+            {
+                Overview = () => Disclosure("Lab.StartCapture", "Lab.CaptureNotice", "Lab.Retention"),
+                HelpKey = "Settings.FeaturesDraftHelp"
+            },
+            ClearLearningConsent(draft)
+        ];
+    }
+
+    /// <summary>Links the two sections to the same project gate without reviving latent collection.</summary>
+    private FormField FeatureMaster(SetupDraft draft) => Toggle("Settings.FeatureMaster", () => draft.FeatureSettings!.Enabled,
+        draft.SetMaster) with
+    { HelpKey = "Settings.FeatureMasterHelp" };
+
+    /// <summary>Requires an explicit acknowledgement before a draft can delete collected evidence.</summary>
+    private FormField ClearLearningConsent(SetupDraft draft) => Toggle("Settings.ClearLearningConsent", () => draft.ClearLearningConsent,
+        value => draft.ClearLearningConsent = value, () => draft.NeedsClearConsent) with
+    {
+        Overview = () => Disclosure(draft.FeatureSettings!.Enabled ? "Lab.StopCapture" : "Settings.DisableFeaturesConsentInfo", "Lab.Retention"),
+        HelpKey = "Settings.FeaturesDraftHelp"
+    };
+
+    /// <summary>Keeps ordinary sections compact while distinguishing missing snapshots and damaged catalogs.</summary>
+    private IRenderable CreateFeaturePageNotice(SetupDraft draft, bool skills)
+    {
+        if (draft.FeatureSettings is null) return new Text(_text.Text("Costs.Unavailable"), Style.Parse(TerminalTheme.Warning));
+        if (skills && draft.FeatureOverview!.CatalogUnavailable)
+            return new Text(_text.Text("Settings.SkillCatalogUnavailable"), Style.Parse(TerminalTheme.Warning));
+        return new Text(_text.Text(draft.FeatureSettings.Enabled ? skills ? "Settings.SkillsHelp" : "Settings.LearningHelp"
+            : "Settings.FeatureEnableFirst"), Style.Parse(TerminalTheme.Muted));
+    }
+
+    /// <summary>Displays the complete inspected content as literal text before approval, with no filesystem access.</summary>
+    private IRenderable CreateSkillOverview(SkillDefinition skill)
+    {
         var rows = new List<IRenderable>
         {
-            new Text(_text.Text("Settings.FeaturesTitle"), Style.Parse("bold " + TerminalTheme.Accent)), status,
-            new Text(_text.Text("Settings.FeaturesGate"), Style.Parse(TerminalTheme.Muted))
+            new Text(SafePreview(skill.Name + " " + skill.Version), Style.Parse("bold " + TerminalTheme.Accent)),
+            new Text(SafePreview(skill.Directory), Style.Parse(TerminalTheme.Muted)),
+            new Text(SafePreview(skill.Description + "\n\n" + skill.Instructions), Style.Parse(TerminalTheme.Primary))
         };
-        if (overview?.CatalogUnavailable == true)
+        foreach (var script in skill.Scripts)
         {
-            rows.Add(new Text(_text.Text("Settings.SkillCatalogUnavailable"), Style.Parse(TerminalTheme.Warning)));
+            rows.Add(new Text(SafePreview(script.Key + ".ps1"), Style.Parse(TerminalTheme.Accent)));
+            rows.Add(new Text(SafePreview(script.Value), Style.Parse(TerminalTheme.Primary)));
         }
+        if (skill.UnavailableReason is not null)
+            rows.Add(new Text(SafePreview(skill.UnavailableReason), Style.Parse(TerminalTheme.Warning)));
         return new Rows(rows);
     }
 
-    /// <summary>Distinguishes unavailable snapshots from actual saved feature consent.</summary>
-    private string FeatureStatus(bool? enabled) => _text.Text(enabled is null ? "Costs.Unavailable" : enabled.Value ? "Lab.Enabled" : "Lab.Off");
+    /// <summary>Localizes known bundled package labels without renaming imported identities.</summary>
+    private string SkillLabel(SkillDefinition skill)
+    {
+        var key = "Lab.SkillName." + skill.Name;
+        var label = skill.Origin == "bundled" ? _text.Text(key) : skill.Name;
+        return string.Equals(label, key, StringComparison.Ordinal) ? skill.Name : label;
+    }
 
-    /// <summary>Explains navigation and immediate persistence without duplicating the feature's controls.</summary>
-    private IRenderable CreateFeatureNavigationOverview(SettingsFeatureOverview? overview, string helpKey) => new Rows(
-        new Text(_text.Text(helpKey), Style.Parse(TerminalTheme.Primary)), new Text(" "),
-        CreateFeaturesOverview(overview), new Text(" "),
-        new Text(_text.Text("Settings.FeatureMenuNotice"), Style.Parse(TerminalTheme.Warning)));
+    /// <summary>Retains complete privacy disclosures only while their explicit acknowledgement is focused.</summary>
+    private IRenderable Disclosure(params string[] keys) => new Rows(keys.Select(key =>
+        new Text(_text.Text(key), Style.Parse(TerminalTheme.Warning))));
 
-    /// <summary>Shows a short read-only privacy summary alongside actual saved project feature state.</summary>
-    private IRenderable CreatePrivacyOverview(SettingsFeatureOverview? overview)
+    /// <summary>Preserves inspected source line breaks while removing terminal controls and markup interpretation.</summary>
+    private static string SafePreview(string value) => new(value.Where(character => !char.IsControl(character) || character is '\n' or '\t').ToArray());
+
+    /// <summary>Blocks saving until required data-collection or destructive acknowledgements are explicit.</summary>
+    private string? ValidateFeatures(SetupDraft draft) => draft.NeedsCaptureConsent && !draft.CaptureConsent
+        || draft.NeedsClearConsent && !draft.ClearLearningConsent ? _text.Text("Settings.FeatureConsentRequired") : null;
+
+    /// <summary>Shows a short read-only privacy summary without duplicating preference controls.</summary>
+    private IRenderable CreatePrivacyOverview()
     {
         var facts = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
         foreach (var key in new[] { "Local", "Provider", "Learning", "Skills", "Control" })
@@ -277,19 +352,15 @@ public sealed class FullscreenSetupView
                 new Text(_text.Text("Settings.Privacy" + key + "Info"), Style.Parse(TerminalTheme.Primary)));
             facts.AddEmptyRow();
         }
-        return new Rows(CreateFeaturesOverview(overview), new Text(" "), facts);
+        return facts;
     }
-
-    /// <summary>Refreshes the cached snapshot only after an explicitly opened feature menu completes.</summary>
-    private void OpenFeatureMenu(SetupDraft draft, Func<SettingsFeatureOverview>? open) => OpenSavedMenu(() =>
-        draft.FeatureOverview = (open ?? throw new InvalidOperationException("Feature navigation must be configured."))());
 
     /// <summary>Preserves the parent draft's display preferences around menus that save their own changes immediately.</summary>
     private void OpenSavedMenu(Action open)
     {
         var language = _text.Language;
         var theme = TerminalTheme.Current;
-        _shell.RenderNotice(_text.Text("Settings.FeatureMenuNotice"));
+        _shell.RenderNotice(_text.Text("Settings.SavedMemoriesNotice"));
         try
         {
             open();
@@ -399,6 +470,7 @@ public sealed class FullscreenSetupView
         new(labelKey, labelKey, () => read() ? "true" : "false", value => write(bool.Parse(value)))
         {
             Choices = () => [new("true", _text.Text("Common.Yes")), new("false", _text.Text("Common.No"))],
+            ValueColor = () => read() ? TerminalTheme.Success : TerminalTheme.Muted,
             IsVisible = visible
         };
 
@@ -473,7 +545,7 @@ public sealed class FullscreenSetupView
             }
             if (error is not null)
             {
-                return _text.Text(field.LabelKey) + ": " + error;
+                return FullscreenForm.FieldLabel(field, _text) + ": " + error;
             }
         }
         return null;
@@ -542,12 +614,62 @@ public sealed class FullscreenSetupView
     private sealed class SetupDraft
     {
         /// <summary>Starts a local settings draft without reading or copying stored secret values.</summary>
-        public SetupDraft(AppSettings settings) => Settings = settings;
+        public SetupDraft(AppSettings settings, SettingsFeatureOverview? overview = null)
+        {
+            Settings = settings;
+            FeatureOverview = overview;
+            FeatureSettings = overview?.Settings;
+            Skills = overview is { CatalogUnavailable: false } ? overview.Skills.Select(item => new SkillDraft(item)).ToArray() : [];
+        }
 
         public AppSettings Settings { get; set; }
-        public SettingsFeatureOverview? FeatureOverview { get; set; }
+        public SettingsFeatureOverview? FeatureOverview { get; }
+        public ExperimentalSettings? FeatureSettings { get; set; }
+        public IReadOnlyList<SkillDraft> Skills { get; }
+        public bool CaptureConsent { get; set; }
+        public bool ClearLearningConsent { get; set; }
+        public bool NeedsCaptureConsent => FeatureSettings is { Enabled: true, CaptureObservations: true }
+            && FeatureOverview?.Settings is not { Enabled: true, CaptureObservations: true };
+        public bool NeedsClearConsent => FeatureOverview is { } original && FeatureSettings is { } current
+            && ((original.Settings.Enabled && !current.Enabled) || (original.Settings.CaptureObservations && !current.CaptureObservations));
         public string? ApiKey { get; set; }
         public string? AdminKey { get; set; }
         public bool TestConnection { get; set; }
+
+        /// <summary>Changes the shared master gate and invalidates earlier acknowledgements without persisting anything.</summary>
+        public void SetMaster(bool enabled)
+        {
+            var current = FeatureSettings!;
+            FeatureSettings = current with { Enabled = enabled, CaptureObservations = enabled && !current.Enabled ? false : current.CaptureObservations };
+            CaptureConsent = false;
+            ClearLearningConsent = false;
+        }
+
+        /// <summary>Changes collection preference and requires fresh acknowledgement for its final transition.</summary>
+        public void SetCapture(bool enabled)
+        {
+            FeatureSettings = FeatureSettings! with { CaptureObservations = enabled };
+            CaptureConsent = false;
+            ClearLearningConsent = false;
+        }
+
+        /// <summary>Returns an optimistic snapshot only when an explicit save changes feature preferences or package approvals.</summary>
+        public SettingsFeatureChanges? FeatureChanges()
+        {
+            if (FeatureOverview is null || FeatureSettings is null
+                || FeatureSettings == FeatureOverview.Settings && Skills.All(item => item.Enabled == item.State.Enabled)) return null;
+            return new(FeatureOverview.Settings, FeatureSettings, Skills.Select(item =>
+                new SettingsSkillChange(item.State.Skill, item.State.Enabled, item.Enabled)
+                {
+                    ExpectedApprovalFingerprint = item.State.ApprovalFingerprint
+                }).ToArray(), CaptureConsent, ClearLearningConsent);
+        }
+    }
+
+    /// <summary>Keeps each inspected package and its unsaved approval separate from the supplied snapshot.</summary>
+    private sealed class SkillDraft(SettingsSkillState state)
+    {
+        public SettingsSkillState State { get; } = state;
+        public bool Enabled { get; set; } = state.Enabled;
     }
 }

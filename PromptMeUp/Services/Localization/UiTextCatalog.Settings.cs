@@ -127,98 +127,252 @@ internal static partial class UiTextCatalog
             Spanish: "Vista previa de la paleta",
             Vietnamese: "Xem trước bảng màu"));
         entries.Add("Settings.Skills", new("Skills", "Skills", "Compétences", "Skills", "Skills", "Kỹ năng"));
-        entries.Add("Settings.Learning", new("Learning", "Apprendimento", "Apprentissage", "Lernen", "Aprendizaje", "Học hỏi"));
+        entries.Add("Settings.Learning", new(
+            "Memory",
+            "Memoria",
+            "Mémoire",
+            "Gedächtnis",
+            "Memoria",
+            "Bộ nhớ"));
         entries.Add("Settings.Privacy", new("Privacy", "Privacy", "Confidentialité", "Datenschutz", "Privacidad", "Quyền riêng tư"));
         entries.Add("Settings.DraftStatus", new(
-            "Settings draft · apply with Save", "Bozza impostazioni · applica con Salva", "Brouillon des réglages · appliquer avec Enregistrer",
-            "Einstellungsentwurf · mit Speichern anwenden", "Borrador de ajustes · aplicar con Guardar", "Bản nháp cài đặt · áp dụng bằng Lưu"));
+            "Save applies your changes",
+            "Salva applica le modifiche",
+            "Enregistrer applique vos changements",
+            "Speichern übernimmt deine Änderungen",
+            "Guardar aplica tus cambios",
+            "Lưu để áp dụng thay đổi"));
         entries.Add("Settings.FeaturesTitle", new(
-            "Current project · feature status", "Progetto corrente · stato delle funzionalità", "Projet actuel · état des fonctionnalités",
-            "Aktuelles Projekt · Funktionsstatus", "Proyecto actual · estado de las funciones", "Dự án hiện tại · trạng thái tính năng"));
+            "This project",
+            "Questo progetto",
+            "Ce projet",
+            "Dieses Projekt",
+            "Este proyecto",
+            "Dự án này"));
         entries.Add("Settings.FeaturesGate", new(
-            "Saved options apply only while the experiment is enabled.", "Le opzioni salvate si applicano solo mentre l’esperimento è abilitato.",
-            "Les options enregistrées s’appliquent uniquement lorsque l’expérience est activée.", "Gespeicherte Optionen gelten nur bei aktiviertem Experiment.",
-            "Las opciones guardadas solo se aplican mientras el experimento está activado.", "Tùy chọn đã lưu chỉ áp dụng khi thử nghiệm được bật."));
+            "These options work when Skills and memory is on for this project.",
+            "Queste opzioni funzionano quando Skills e memoria è attivo per questo progetto.",
+            "Ces options fonctionnent lorsque Compétences et mémoire est activé pour ce projet.",
+            "Diese Optionen gelten, wenn Skills und Gedächtnis für dieses Projekt aktiv ist.",
+            "Estas opciones funcionan cuando Skills y memoria está activo para este proyecto.",
+            "Các tùy chọn này hoạt động khi bật Kỹ năng và bộ nhớ cho dự án này."));
         entries.Add("Settings.SkillCatalogUnavailable", new(
-            "Skill catalog unavailable. Check imported packages; other settings remain accessible.",
-            "Catalogo skills non disponibile. Controlla i pacchetti importati; le altre impostazioni restano accessibili.",
-            "Catalogue de compétences indisponible. Vérifiez les paquets importés ; les autres réglages restent accessibles.",
-            "Skill-Katalog nicht verfügbar. Prüfe importierte Pakete; andere Einstellungen bleiben zugänglich.",
-            "Catálogo de skills no disponible. Revisa los paquetes importados; los demás ajustes siguen accesibles.",
-            "Danh mục kỹ năng không khả dụng. Kiểm tra các gói đã nhập; vẫn có thể mở các cài đặt khác."));
-        entries.Add("Settings.FeatureExperiment", new("Experiment", "Esperimento", "Expérience", "Experiment", "Experimento", "Thử nghiệm"));
-        entries.Add("Settings.FeatureSkills", new("Enabled skills", "Skills abilitate", "Compétences activées", "Aktivierte Skills", "Skills habilitadas", "Kỹ năng đã bật"));
+            "Cannot read the skills. Check imported skills; you can still change other settings.",
+            "Non riesco a leggere le skill. Controlla quelle importate; puoi comunque cambiare le altre impostazioni.",
+            "Impossible de lire les compétences. Vérifiez celles importées ; vous pouvez modifier les autres réglages.",
+            "Die Skills lassen sich nicht lesen. Prüfe importierte Skills; andere Einstellungen bleiben verfügbar.",
+            "No se pueden leer las skills. Revisa las importadas; puedes cambiar los demás ajustes.",
+            "Không đọc được kỹ năng. Hãy kiểm tra kỹ năng đã nhập; bạn vẫn có thể đổi cài đặt khác."));
+        entries.Add("Settings.FeatureExperiment", new(
+            "Skills and memory",
+            "Skills e memoria",
+            "Compétences et mémoire",
+            "Skills und Gedächtnis",
+            "Skills y memoria",
+            "Kỹ năng và bộ nhớ"));
+        entries.Add("Settings.FeatureSkills", new(
+            "Active skills",
+            "Skill attive",
+            "Compétences actives",
+            "Aktive Skills",
+            "Skills activas",
+            "Kỹ năng đang hoạt động"));
         entries.Add("Settings.FeatureSkillCount", new("{0:N0} / {1:N0}", "{0:N0} / {1:N0}", "{0:N0} / {1:N0}", "{0:N0} / {1:N0}", "{0:N0} / {1:N0}", "{0:N0} / {1:N0}"));
-        entries.Add("Settings.FeatureAutomatic", new("Contextual selection", "Selezione contestuale", "Sélection contextuelle", "Kontextuelle Auswahl", "Selección contextual", "Chọn theo ngữ cảnh"));
-        entries.Add("Settings.FeatureCapture", new("Learning capture", "Raccolta per apprendimento", "Collecte pour l’apprentissage", "Lerndatenerfassung", "Captura para aprendizaje", "Thu thập dữ liệu học"));
-        entries.Add("Settings.FeatureReminder", new("Maintenance reminder", "Promemoria manutenzione", "Rappel de maintenance", "Wartungshinweis", "Recordatorio de mantenimiento", "Nhắc bảo trì"));
+        entries.Add("Settings.FeatureAutomatic", new(
+            "Choose skills based on the question",
+            "Scegli le skill in base alla domanda",
+            "Choisir les compétences selon la question",
+            "Skills passend zur Frage auswählen",
+            "Elegir skills según la pregunta",
+            "Chọn kỹ năng phù hợp với câu hỏi"));
+        entries.Add("Settings.FeatureCapture", new(
+            "Keep my messages",
+            "Conserva i miei messaggi",
+            "Conserver mes messages",
+            "Meine Nachrichten speichern",
+            "Guardar mis mensajes",
+            "Giữ tin nhắn của tôi"));
+        entries.Add("Settings.FeatureReminder", new(
+            "Remind me to review memories",
+            "Promemoria per rivedere i ricordi",
+            "Me rappeler de vérifier les souvenirs",
+            "An die Prüfung von Erinnerungen erinnern",
+            "Recordarme revisar los recuerdos",
+            "Nhắc tôi kiểm tra ghi nhớ"));
         entries.Add("Settings.SkillsHelp", new(
-            "Open the existing skills menu to inspect, enable or run a package. Visiting this section runs nothing.",
-            "Apri il menu skills esistente per esaminare, abilitare o eseguire un pacchetto. Visitare questa sezione non esegue nulla.",
-            "Ouvrez le menu des compétences pour examiner, activer ou lancer un paquet. Consulter cette section ne lance rien.",
-            "Öffne das bestehende Skill-Menü zum Prüfen, Aktivieren oder Ausführen eines Pakets. Der Abschnitt allein führt nichts aus.",
-            "Abre el menú de skills para revisar, habilitar o ejecutar un paquete. Visitar esta sección no ejecuta nada.",
-            "Mở menu kỹ năng hiện có để xem, bật hoặc chạy gói. Chỉ xem phần này không chạy gì."));
+            "Skills help with tasks such as reading files or searching the web. Choose which ones you want to use; actions still need your approval.",
+            "Le skill aiutano con attività come leggere file o cercare sul web. Scegli quelle da usare; le azioni richiedono comunque la tua conferma.",
+            "Les compétences aident à lire des fichiers ou chercher sur le web. Choisissez celles à utiliser ; les actions nécessitent toujours votre accord.",
+            "Skills helfen etwa beim Lesen von Dateien oder bei der Websuche. Wähle die gewünschten Skills; Aktionen brauchen weiterhin deine Zustimmung.",
+            "Las skills ayudan a leer archivos o buscar en la web. Elige cuáles usar; las acciones siguen requiriendo tu aprobación.",
+            "Kỹ năng giúp đọc tệp hoặc tìm trên web. Chọn kỹ năng muốn dùng; thao tác vẫn cần bạn xác nhận."));
         entries.Add("Settings.LearningHelp", new(
-            "Open learning preferences to manage capture, inspect observations or choose a maintenance reminder. Dream and heartbeat still require explicit review.",
-            "Apri le preferenze di apprendimento per gestire la raccolta, leggere le osservazioni o scegliere il promemoria. Dream e heartbeat richiedono sempre una revisione esplicita.",
-            "Ouvrez les préférences d’apprentissage pour gérer la collecte, lire les observations ou choisir un rappel. Dream et heartbeat exigent toujours un examen explicite.",
-            "Öffne die Lerneinstellungen für Erfassung, Beobachtungen und Wartungshinweis. Dream und Heartbeat erfordern weiterhin ausdrückliche Prüfung.",
-            "Abre las preferencias de aprendizaje para gestionar la captura, leer observaciones o elegir un recordatorio. Dream y heartbeat siguen requiriendo revisión explícita.",
-            "Mở tùy chọn học để quản lý thu thập, xem quan sát hoặc chọn nhắc bảo trì. Dream và heartbeat vẫn cần xem xét rõ ràng."));
+            "Keep your messages so Dream can suggest useful memories, such as «I prefer short answers». You decide which memories to save.",
+            "Conserva i tuoi messaggi perché Dream suggerisca ricordi utili, come «preferisco risposte brevi». Decidi tu quali salvare.",
+            "Conservez vos messages pour que Dream suggère des souvenirs utiles, comme «je préfère les réponses courtes». Vous décidez lesquels enregistrer.",
+            "Behalte deine Nachrichten, damit Dream nützliche Erinnerungen vorschlagen kann, etwa «Ich bevorzuge kurze Antworten». Du entscheidest, was gespeichert wird.",
+            "Conserva tus mensajes para que Dream sugiera recuerdos útiles, como «prefiero respuestas breves». Tú decides cuáles guardar.",
+            "Giữ tin nhắn để Dream đề xuất ghi nhớ hữu ích, như «tôi thích câu trả lời ngắn». Bạn quyết định ghi nhớ nào được lưu."));
         entries.Add("Settings.FeatureMenuNotice", new(
-            "Changes in Skills, Learning and Memories save immediately; cancelling Settings does not undo them. These menus use the saved AI, model and credentials until you save the main settings.",
-            "Le modifiche in Skills, Apprendimento e Memorie si salvano subito; Annulla nelle Impostazioni non le annulla. Questi menu usano AI, modello e credenziali già salvati finché non salvi le impostazioni principali.",
-            "Les changements dans Compétences, Apprentissage et Mémoires sont immédiats ; annuler les réglages ne les annule pas. Ces menus utilisent l’IA, le modèle et les identifiants enregistrés jusqu’à l’enregistrement des réglages.",
-            "Änderungen in Skills, Lernen und Erinnerungen werden sofort gespeichert; Abbrechen in Einstellungen macht sie nicht rückgängig. Die Menüs nutzen gespeicherte KI-, Modell- und Zugangsdaten bis zum Speichern der Haupteinstellungen.",
-            "Los cambios en Skills, Aprendizaje y Memorias se guardan al instante; cancelar Ajustes no los deshace. Estos menús usan la IA, el modelo y las credenciales guardados hasta guardar los ajustes principales.",
-            "Thay đổi trong Kỹ năng, Học hỏi và Ghi nhớ được lưu ngay; hủy Cài đặt không hoàn tác chúng. Các menu dùng AI, mô hình và thông tin xác thực đã lưu cho đến khi lưu cài đặt chính."));
+            "Memories save separately: Cancel in Settings does not undo them.",
+            "I ricordi si salvano a parte: Annulla nelle impostazioni non li ripristina.",
+            "Les souvenirs sont enregistrés à part : annuler les réglages ne les annule pas.",
+            "Erinnerungen werden separat gespeichert: Abbrechen in Einstellungen macht sie nicht rückgängig.",
+            "Los recuerdos se guardan aparte: Cancelar en Configuración no los deshace.",
+            "Ghi nhớ được lưu riêng: Hủy trong Cài đặt không hoàn tác chúng."));
         entries.Add("Settings.PrivacyHelp", new(
-            "Read-only privacy summary. Feature states are saved settings, not this form’s draft.",
-            "Riepilogo privacy in sola lettura. Gli stati delle funzionalità sono salvati, non fanno parte di questa bozza.",
-            "Résumé de confidentialité en lecture seule. Les états des fonctionnalités sont enregistrés, pas ceux du brouillon.",
-            "Datenschutzübersicht nur zum Lesen. Funktionszustände sind gespeichert, nicht Teil dieses Entwurfs.",
-            "Resumen de privacidad de solo lectura. Los estados de las funciones son los guardados, no los del borrador.",
-            "Tóm tắt quyền riêng tư chỉ đọc. Trạng thái tính năng đã được lưu, không phải bản nháp này."));
-        entries.Add("Settings.PrivacyLocal", new("On your machine", "Sul tuo computer", "Sur votre appareil", "Auf deinem Gerät", "En tu equipo", "Trên máy của bạn"));
+            "Where your data stays and when it leaves your computer.",
+            "Dove restano i tuoi dati e quando escono dal computer.",
+            "Où restent vos données et quand elles quittent votre appareil.",
+            "Wo deine Daten bleiben und wann sie dein Gerät verlassen.",
+            "Dónde quedan tus datos y cuándo salen de tu equipo.",
+            "Dữ liệu được lưu ở đâu và khi nào rời khỏi máy của bạn."));
+        entries.Add("Settings.PrivacyLocal", new(
+            "On your computer",
+            "Sul tuo computer",
+            "Sur votre appareil",
+            "Auf deinem Gerät",
+            "En tu equipo",
+            "Trên máy của bạn"));
         entries.Add("Settings.PrivacyLocalInfo", new(
-            "Settings, saved notes, learning evidence and activity history stay in local storage. API keys are not saved in settings or the database.",
-            "Impostazioni, note salvate, evidenze di apprendimento e cronologia attività restano nell’archivio locale. Le chiavi API non vengono salvate nelle impostazioni o nel database.",
-            "Réglages, notes, preuves d’apprentissage et historique d’activité restent en stockage local. Les clés API ne sont pas enregistrées dans les réglages ni la base.",
-            "Einstellungen, Notizen, Lernbelege und Aktivitätsverlauf bleiben lokal gespeichert. API-Schlüssel stehen weder in Einstellungen noch Datenbank.",
-            "Ajustes, notas, evidencias de aprendizaje e historial de actividad quedan en almacenamiento local. Las claves API no se guardan en ajustes ni en la base de datos.",
-            "Cài đặt, ghi chú, bằng chứng học và lịch sử hoạt động được lưu cục bộ. Khóa API không lưu trong cài đặt hoặc cơ sở dữ liệu."));
-        entries.Add("Settings.PrivacyProvider", new("Sent to OpenAI", "Inviato a OpenAI", "Envoyé à OpenAI", "An OpenAI gesendet", "Enviado a OpenAI", "Gửi đến OpenAI"));
+            "Settings, history, memories and screenshots are saved on your computer. API keys are separate, not in settings or the database.",
+            "Impostazioni, cronologia, ricordi e screenshot sono salvati sul computer. Le chiavi API sono separate, non nelle impostazioni o nel database.",
+            "Réglages, historique, souvenirs et captures sont enregistrés sur votre appareil. Les clés API sont séparées, ni dans les réglages ni dans la base de données.",
+            "Einstellungen, Verlauf, Erinnerungen und Bildschirmfotos werden auf deinem Gerät gespeichert. API-Schlüssel liegen separat, nicht in Einstellungen oder Datenbank.",
+            "Ajustes, historial, recuerdos y capturas se guardan en tu equipo. Las claves API van aparte, no en los ajustes ni en la base de datos.",
+            "Cài đặt, lịch sử, ghi nhớ và ảnh chụp được lưu trên máy. Khóa API được giữ riêng, không trong cài đặt hay cơ sở dữ liệu."));
+        entries.Add("Settings.PrivacyProvider", new(
+            "Sent to OpenAI",
+            "Inviato a OpenAI",
+            "Envoyé à OpenAI",
+            "An OpenAI gesendet",
+            "Enviado a OpenAI",
+            "Gửi đến OpenAI"));
         entries.Add("Settings.PrivacyProviderInfo", new(
-            "Questions include retained chat, selected notes and skills, and an optional preferred name. Optional AI command review sends command data before execution approval. Secret filtering is not a guarantee.",
-            "Le domande includono chat conservata, note e skills selezionate e l’eventuale nome preferito. La revisione AI facoltativa invia dati del comando prima dell’approvazione. Il filtro dei segreti non è una garanzia.",
-            "Les questions incluent le chat conservé, notes et compétences choisies, et le nom facultatif. La revue IA facultative envoie la commande avant l’autorisation d’exécution. Le filtrage des secrets n’est pas une garantie.",
-            "Fragen enthalten behaltenen Chat, ausgewählte Notizen und Skills sowie den optionalen Namen. Optionale KI-Prüfung sendet Befehlsdaten vor der Ausführungsfreigabe. Geheimnisfilter bieten keine Garantie.",
-            "Las preguntas incluyen chat conservado, notas y skills seleccionadas y el nombre opcional. La revisión IA opcional envía datos del comando antes de autorizarlo. El filtro de secretos no es una garantía.",
-            "Câu hỏi gồm chat được giữ, ghi chú và kỹ năng đã chọn, cùng tên tùy chọn. Kiểm tra lệnh bằng AI có thể gửi dữ liệu lệnh trước khi duyệt chạy. Bộ lọc bí mật không bảo đảm tuyệt đối."));
-        entries.Add("Settings.PrivacyLearning", new("Learning retention", "Durata apprendimento", "Durée de conservation", "Aufbewahrung von Lerndaten", "Retención del aprendizaje", "Lưu giữ dữ liệu học"));
+            "OpenAI receives your question, recent chat, relevant memories, selected skill instructions and your name if set. Secret filtering can miss things: avoid entering private credentials.",
+            "OpenAI riceve domanda, chat recente, ricordi utili, istruzioni delle skill scelte e nome, se impostato. Il filtro può non riconoscere tutti i segreti: evita di inserirli.",
+            "OpenAI reçoit votre question, le chat récent, les souvenirs utiles, les instructions des compétences choisies et votre nom si renseigné. Le filtre peut manquer des secrets : évitez de saisir des identifiants confidentiels.",
+            "OpenAI erhält deine Frage, den jüngsten Chat, passende Erinnerungen, ausgewählte Skill-Anweisungen und deinen Namen, falls angegeben. Der Filter erkennt nicht jedes Geheimnis: Gib keine vertraulichen Zugangsdaten ein.",
+            "OpenAI recibe tu pregunta, el chat reciente, los recuerdos útiles, las instrucciones de las skills elegidas y tu nombre si lo indicaste. El filtro puede pasar por alto secretos: evita introducirlos.",
+            "OpenAI nhận câu hỏi, trò chuyện gần đây, ghi nhớ liên quan, hướng dẫn kỹ năng đã chọn và tên nếu bạn đã đặt. Bộ lọc có thể bỏ sót bí mật: tránh nhập thông tin xác thực riêng tư."));
+        entries.Add("Settings.PrivacyLearning", new(
+            "Messages for new memories",
+            "Messaggi per nuovi ricordi",
+            "Messages pour de nouveaux souvenirs",
+            "Nachrichten für neue Erinnerungen",
+            "Mensajes para nuevos recuerdos",
+            "Tin nhắn để tạo ghi nhớ mới"));
         entries.Add("Settings.PrivacyLearningInfo", new(
-            "Opt-in capture keeps up to 200 observations per project; entries older than 30 days are removed on the next learning access. Turning it off clears observations and proposals, not approved memories or earlier history. Dream and AI heartbeat ask before sharing.",
-            "La raccolta facoltativa conserva fino a 200 osservazioni per progetto; quelle oltre 30 giorni vengono rimosse al prossimo accesso all’apprendimento. Disabilitarla cancella osservazioni e proposte, non memorie approvate o cronologia precedente. Dream e heartbeat AI chiedono prima dell’invio.",
-            "La collecte volontaire garde jusqu’à 200 observations par projet ; celles de plus de 30 jours sont supprimées au prochain accès à l’apprentissage. La désactiver efface observations et propositions, pas les mémoires approuvées ni l’historique. Dream et heartbeat IA demandent avant l’envoi.",
-            "Optionale Erfassung behält bis zu 200 Beobachtungen je Projekt; Einträge über 30 Tage werden beim nächsten Lernzugriff entfernt. Ausschalten löscht Beobachtungen und Vorschläge, nicht genehmigte Erinnerungen oder früheren Verlauf. Dream und KI-Heartbeat fragen vor dem Teilen.",
-            "La captura voluntaria guarda hasta 200 observaciones por proyecto; las de más de 30 días se eliminan al próximo acceso al aprendizaje. Desactivarla borra observaciones y propuestas, no memorias aprobadas ni historial previo. Dream y heartbeat IA preguntan antes de enviar.",
-            "Thu thập tự chọn giữ tối đa 200 quan sát mỗi dự án; mục quá 30 ngày được xóa khi truy cập dữ liệu học lần tới. Tắt sẽ xóa quan sát và đề xuất, không xóa ghi nhớ đã duyệt hay lịch sử cũ. Dream và heartbeat AI hỏi trước khi gửi."));
-        entries.Add("Settings.PrivacySkills", new("Skill actions", "Azioni delle skills", "Actions des compétences", "Skill-Aktionen", "Acciones de skills", "Thao tác kỹ năng"));
+            "You can choose to keep your messages for memory suggestions. Dream and AI memory review ask for confirmation before sending data to OpenAI.",
+            "Puoi scegliere di conservare i tuoi messaggi per suggerire ricordi. Dream e la revisione AI dei ricordi chiedono conferma prima dell’invio a OpenAI.",
+            "Vous pouvez choisir de conserver vos messages pour suggérer des souvenirs. Dream et l’examen IA des souvenirs demandent confirmation avant l’envoi à OpenAI.",
+            "Du kannst deine Nachrichten für Erinnerungsvorschläge behalten lassen. Dream und die KI-Prüfung von Erinnerungen fragen vor dem Senden an OpenAI nach.",
+            "Puedes elegir conservar tus mensajes para sugerir recuerdos. Dream y la revisión de recuerdos con IA piden confirmación antes de enviar datos a OpenAI.",
+            "Bạn có thể chọn giữ tin nhắn để nhận đề xuất ghi nhớ. Dream và tính năng kiểm tra ghi nhớ bằng AI yêu cầu xác nhận trước khi gửi dữ liệu tới OpenAI."));
+        entries.Add("Settings.PrivacySkills", new(
+            "Actions and the web",
+            "Azioni e accesso al web",
+            "Actions et accès au web",
+            "Aktionen und Webzugriff",
+            "Acciones y acceso a la web",
+            "Thao tác và truy cập web"));
         entries.Add("Settings.PrivacySkillsInfo", new(
-            "Actions need approval. HTTP and web search contact the chosen site or DuckDuckGo. Screenshots stay local; images cannot be redacted. Skill output is not automatically sent to OpenAI.",
-            "Le azioni richiedono approvazione. HTTP e ricerca web contattano il sito scelto o DuckDuckGo. Gli screenshot restano locali; le immagini non possono essere oscurate. L’output delle skills non va automaticamente a OpenAI.",
-            "Les actions exigent une approbation. HTTP et recherche web contactent le site choisi ou DuckDuckGo. Les captures restent locales ; les images ne sont pas expurgées. Aucune sortie de compétence n’est envoyée automatiquement à OpenAI.",
-            "Aktionen brauchen Freigabe. HTTP und Websuche kontaktieren die gewählte Seite oder DuckDuckGo. Bildschirmfotos bleiben lokal; Bilder können nicht bereinigt werden. Skill-Ausgabe geht nicht automatisch an OpenAI.",
-            "Las acciones requieren aprobación. HTTP y búsqueda web contactan el sitio elegido o DuckDuckGo. Las capturas quedan locales; las imágenes no se censuran. La salida de skills no se envía automáticamente a OpenAI.",
-            "Thao tác cần được duyệt. HTTP và tìm kiếm web liên hệ trang đã chọn hoặc DuckDuckGo. Ảnh chụp lưu cục bộ; không thể tự che bí mật trong ảnh. Đầu ra kỹ năng không tự gửi đến OpenAI."));
-        entries.Add("Settings.PrivacyControl", new("Your control", "Il tuo controllo", "Votre contrôle", "Deine Kontrolle", "Tu control", "Bạn kiểm soát"));
+            "Actions require approval; optional AI review sends command data to OpenAI before execution approval. Web actions contact the chosen site or DuckDuckGo; skill results are not automatically sent to OpenAI.",
+            "Le azioni richiedono conferma; il controllo AI facoltativo invia il comando e i suoi dati a OpenAI prima della tua conferma. Le azioni web contattano il sito scelto o DuckDuckGo; i risultati delle skill non vanno automaticamente a OpenAI.",
+            "Les actions nécessitent votre accord ; l’examen IA facultatif envoie la commande à OpenAI avant l’autorisation d’exécution. Les actions web contactent le site choisi ou DuckDuckGo ; leurs résultats ne vont pas automatiquement à OpenAI.",
+            "Aktionen brauchen deine Zustimmung; die optionale KI-Prüfung sendet Befehlsdaten vor der Ausführungsfreigabe an OpenAI. Webaktionen kontaktieren die gewählte Seite oder DuckDuckGo; Skill-Ergebnisse gehen nicht automatisch an OpenAI.",
+            "Las acciones requieren aprobación; la revisión IA opcional envía el comando a OpenAI antes de autorizar su ejecución. Las acciones web contactan el sitio elegido o DuckDuckGo; sus resultados no se envían automáticamente a OpenAI.",
+            "Thao tác cần được duyệt; kiểm tra AI tùy chọn gửi dữ liệu lệnh tới OpenAI trước khi bạn duyệt chạy. Thao tác web liên hệ trang đã chọn hoặc DuckDuckGo; kết quả kỹ năng không tự gửi tới OpenAI."));
+        entries.Add("Settings.PrivacyControl", new(
+            "What gets deleted",
+            "Cosa viene cancellato",
+            "Ce qui est supprimé",
+            "Was gelöscht wird",
+            "Qué se borra",
+            "Nội dung bị xóa"));
         entries.Add("Settings.PrivacyControlInfo", new(
-            "Viewing these pages makes no AI request. Saving can test the connection if that option is selected. There is no background learner or alarm. Clearing learning data does not erase earlier requests or provider records.",
-            "Visitare queste pagine non invia richieste AI. Salvare può verificare la connessione se l’opzione è selezionata. Nessun apprendimento o allarme in background. Cancellare i dati di apprendimento non elimina richieste precedenti o dati del provider.",
-            "Consulter ces pages ne lance aucune requête IA. Enregistrer peut tester la connexion si l’option est choisie. Aucun apprentissage ni alarme en arrière-plan. Effacer les données d’apprentissage ne supprime pas les anciennes requêtes ou données du fournisseur.",
-            "Diese Seiten anzusehen sendet keine KI-Anfrage. Speichern kann die Verbindung bei gewählter Option testen. Kein Lernen oder Alarm im Hintergrund. Lerndaten löschen entfernt keine früheren Anfragen oder Anbieteraufzeichnungen.",
-            "Ver estas páginas no hace solicitudes IA. Guardar puede probar la conexión si se selecciona esa opción. No hay aprendizaje ni alarmas en segundo plano. Borrar aprendizaje no elimina solicitudes previas ni registros del proveedor.",
-            "Xem các trang này không gửi yêu cầu AI. Lưu có thể kiểm tra kết nối nếu đã chọn. Không có học hay báo thức nền. Xóa dữ liệu học không xóa yêu cầu cũ hoặc hồ sơ phía nhà cung cấp."));
+            "Turning collection off deletes collected messages and suggestions, not saved memories or history. It does not remove copies already sent to OpenAI.",
+            "Spegnere la raccolta cancella messaggi raccolti e suggerimenti, non ricordi salvati o cronologia. Non rimuove le copie già inviate a OpenAI.",
+            "Arrêter la collecte supprime messages collectés et suggestions, pas les souvenirs enregistrés ni l’historique. Cela ne retire pas les copies déjà envoyées à OpenAI.",
+            "Ausschalten der Erfassung löscht erfasste Nachrichten und Vorschläge, nicht gespeicherte Erinnerungen oder den Verlauf. Bereits an OpenAI gesendete Kopien bleiben bestehen.",
+            "Desactivar la recopilación borra mensajes recopilados y sugerencias, no recuerdos guardados ni historial. No elimina las copias ya enviadas a OpenAI.",
+            "Tắt thu thập xóa tin nhắn đã thu thập và đề xuất, không xóa ghi nhớ đã lưu hay lịch sử. Việc này không xóa bản sao đã gửi tới OpenAI."));
+        entries.Add("Settings.FeaturesDraftHelp", new(
+            "Save applies these changes; Cancel discards them.",
+            "Salva applica queste modifiche; Annulla le scarta.",
+            "Enregistrer applique ces changements ; Annuler les abandonne.",
+            "Speichern übernimmt diese Änderungen; Abbrechen verwirft sie.",
+            "Guardar aplica estos cambios; Cancelar los descarta.",
+            "Lưu áp dụng thay đổi; Hủy bỏ qua chúng."));
+        entries.Add("Settings.FeaturesPartiallySaved", new(
+            "Skills and memory were saved. The other settings could not be saved.",
+            "Skills e memoria salvate. Non è stato possibile salvare le altre impostazioni.",
+            "Les compétences et la mémoire ont été enregistrées. Les autres réglages n’ont pas pu être enregistrés.",
+            "Skills und Gedächtnis wurden gespeichert. Die anderen Einstellungen konnten nicht gespeichert werden.",
+            "Skills y memoria se guardaron. No se pudieron guardar los demás ajustes.",
+            "Đã lưu kỹ năng và bộ nhớ. Không thể lưu các cài đặt khác."));
+        entries.Add("Settings.FeatureMaster", new(
+            "Project skills and memory",
+            "Skills e memoria del progetto",
+            "Compétences et mémoire du projet",
+            "Skills und Gedächtnis im Projekt",
+            "Skills y memoria del proyecto",
+            "Kỹ năng và bộ nhớ dự án"));
+        entries.Add("Settings.FeatureMasterHelp", new(
+            "Turns on skill and memory options for this project. Message collection stays off until you choose it separately.",
+            "Attiva le opzioni di skills e memoria per questo progetto. I messaggi non vengono raccolti finché non scegli di farlo a parte.",
+            "Active les options de compétences et mémoire pour ce projet. La collecte de messages reste désactivée tant que vous ne la choisissez pas séparément.",
+            "Aktiviert Skill- und Gedächtnisoptionen für dieses Projekt. Nachrichten werden erst erfasst, wenn du dies separat auswählst.",
+            "Activa las opciones de skills y memoria para este proyecto. Los mensajes no se recopilan hasta que lo elijas por separado.",
+            "Bật các tùy chọn kỹ năng và bộ nhớ cho dự án này. Tin nhắn chỉ được thu thập khi bạn bật riêng tùy chọn đó."));
+        entries.Add("Settings.FeatureEnableFirst", new(
+            "First turn on Skills and memory for this project.",
+            "Prima attiva Skills e memoria per questo progetto.",
+            "Activez d’abord Compétences et mémoire pour ce projet.",
+            "Aktiviere zuerst Skills und Gedächtnis für dieses Projekt.",
+            "Primero activa Skills y memoria para este proyecto.",
+            "Trước tiên bật Kỹ năng và bộ nhớ cho dự án này."));
+        entries.Add("Settings.CaptureConsent", new(
+            "I agree to keep my messages",
+            "Accetto di conservare i messaggi",
+            "J’accepte de conserver mes messages",
+            "Speichern meiner Nachrichten erlauben",
+            "Acepto guardar mis mensajes",
+            "Tôi đồng ý giữ tin nhắn"));
+        entries.Add("Settings.ClearLearningConsent", new(
+            "I confirm deletion",
+            "Confermo la cancellazione",
+            "Je confirme la suppression",
+            "Löschung bestätigen",
+            "Confirmo el borrado",
+            "Tôi xác nhận xóa"));
+        entries.Add("Settings.FeatureConsentRequired", new(
+            "Confirm the requested collection or deletion before saving.",
+            "Conferma la raccolta o la cancellazione richiesta prima di salvare.",
+            "Confirmez la collecte ou la suppression demandée avant d’enregistrer.",
+            "Bestätige die gewünschte Erfassung oder Löschung vor dem Speichern.",
+            "Confirma la recopilación o el borrado solicitado antes de guardar.",
+            "Xác nhận việc thu thập hoặc xóa được yêu cầu trước khi lưu."));
+        entries.Add("Settings.SkillApprovalHelp", new(
+            "Read this skill’s instructions and scripts below; use Ctrl+↑/↓ to scroll. Turning it on approves these exact files, not automatic actions.",
+            "Leggi qui sotto istruzioni e script della skill; scorri con Ctrl+↑/↓. Attivarla approva questi file, non l’esecuzione automatica di azioni.",
+            "Lisez les instructions et scripts ci-dessous ; faites défiler avec Ctrl+↑/↓. L’activation approuve ces fichiers précis, pas des actions automatiques.",
+            "Lies die Anweisungen und Skripte unten; scrolle mit Strg+↑/↓. Aktivieren genehmigt genau diese Dateien, keine automatischen Aktionen.",
+            "Lee las instrucciones y los scripts de abajo; desplázate con Ctrl+↑/↓. Activarla aprueba estos archivos exactos, no acciones automáticas.",
+            "Đọc hướng dẫn và mã lệnh bên dưới; dùng Ctrl+↑/↓ để cuộn. Bật kỹ năng là duyệt đúng các tệp này, không cho phép thao tác tự chạy."));
+        entries.Add("Settings.SavedMemoriesNotice", new(
+            "Memories save separately: Cancel in Settings does not undo them.",
+            "I ricordi si salvano a parte: Annulla nelle impostazioni non li ripristina.",
+            "Les souvenirs sont enregistrés à part : annuler les réglages ne les annule pas.",
+            "Erinnerungen werden separat gespeichert: Abbrechen in Einstellungen macht sie nicht rückgängig.",
+            "Los recuerdos se guardan aparte: Cancelar en Configuración no los deshace.",
+            "Ghi nhớ được lưu riêng: Hủy trong Cài đặt không hoàn tác chúng."));
+        entries.Add("Settings.DisableFeaturesConsentInfo", new(
+            "Saving this choice turns off skills and memory for this project and permanently deletes collected messages and suggestions. Saved memories and earlier history remain.",
+            "Salvare questa scelta disattiva skills e memoria per questo progetto e cancella definitivamente messaggi raccolti e suggerimenti. I ricordi salvati e la cronologia precedente restano.",
+            "Enregistrer ce choix désactive compétences et mémoire pour ce projet et supprime définitivement messages collectés et suggestions. Les souvenirs enregistrés et l’historique précédent restent.",
+            "Diese Wahl zu speichern deaktiviert Skills und Gedächtnis für dieses Projekt und löscht erfasste Nachrichten und Vorschläge endgültig. Gespeicherte Erinnerungen und der frühere Verlauf bleiben.",
+            "Guardar esta opción desactiva skills y memoria para este proyecto y borra definitivamente mensajes recopilados y sugerencias. Los recuerdos guardados y el historial anterior permanecen.",
+            "Lưu lựa chọn này sẽ tắt kỹ năng và bộ nhớ cho dự án, đồng thời xóa vĩnh viễn tin nhắn đã thu thập và đề xuất. Ghi nhớ đã lưu và lịch sử trước đó vẫn còn."));
     }
 }

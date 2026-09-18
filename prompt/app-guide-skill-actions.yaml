@@ -1,5 +1,5 @@
 id: app-guide-skill-actions
-version: 1
+version: 2
 description: Practical examples and privacy limits for the ten bundled skills.
 tags:
   - app-guide
@@ -10,7 +10,7 @@ metadata:
   source: packaged-local-guide
 texts:
   en: |-
-    Open `/skills` or `hm --skills`, enable the experiment and exact package, then Choose an action. Git/filesystem use a path; other scripts use `run` with scalar JSON parameters. Examples are editable, not commands to execute automatically.
+    First use `hm --setup` → Skills to enable skills and memory, inspect the exact package, enable it, and Save; Cancel discards the shared Skills/Memory draft. Then open `/skills` or `hm --skills`, select the package, and Choose an action. Git/filesystem use a path; other scripts use `run` with scalar JSON parameters. Examples are editable, not commands to execute automatically.
 
     Local files: `git` offers status, log, diff; `filesystem` offers list, read, info. `concat-files` creates text bundles: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternatives env, processes, disk, network. env shows names only, never values; network omits addresses.
 
@@ -22,7 +22,7 @@ texts:
 
     Review and approve every action; PowerShell 7 is required for scripts. Output is not automatically sent to OpenAI. Optional AI command review sends script parameters before execution approval; disable it in Settings to keep that review local. Never include secrets in parameters or network queries.
   it: |-
-    Apri `/skills` o `hm --skills`, abilita esperimento e pacchetto esatto, poi Scegli un’azione. Git/filesystem usano un percorso; gli altri script usano `run` con parametri JSON scalari. Gli esempi sono modificabili, non comandi da eseguire automaticamente.
+    Usa prima `hm --setup` → Skills per abilitare skills e memoria, esaminare il pacchetto esatto, abilitarlo e Salvare; Annulla scarta la bozza condivisa con Memoria. Poi apri `/skills` o `hm --skills`, seleziona il pacchetto e Scegli un’azione. Git/filesystem usano un percorso; gli altri script usano `run` con parametri JSON scalari. Gli esempi sono modificabili, non comandi da eseguire automaticamente.
 
     File locali: `git` offre status, log, diff; `filesystem` list, read, info. `concat-files` crea raccolte di testo: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternative env, processes, disk, network. env mostra solo nomi, mai valori; network omette gli indirizzi.
 
@@ -34,7 +34,7 @@ texts:
 
     Esamina e approva ogni azione; gli script richiedono PowerShell 7. L’output non va automaticamente a OpenAI. La revisione AI facoltativa invia i parametri prima dell’approvazione dell’esecuzione; disabilitala nelle Impostazioni per tenere locale la verifica. Mai segreti nei parametri o nelle query Internet.
   fr: |-
-    Ouvrez `/skills` ou `hm --skills`, activez l’expérience et le paquet précis, puis Choisir une action. Git/filesystem utilisent un chemin ; les scripts utilisent `run` avec un JSON à valeurs scalaires. Ces exemples sont modifiables, jamais exécutés automatiquement.
+    Ouvrez d'abord `hm --setup` → Compétences pour activer les compétences et la mémoire, examiner le paquet précis, l'activer et enregistrer ; Annuler abandonne le brouillon commun avec Mémoire. Ouvrez ensuite `/skills` ou `hm --skills`, sélectionnez le paquet puis Choisir une action. Git/filesystem utilisent un chemin ; les scripts utilisent `run` avec un JSON à valeurs scalaires. Ces exemples sont modifiables, jamais exécutés automatiquement.
 
     Fichiers locaux : `git` propose status, log, diff ; `filesystem` list, read, info. `concat-files` crée des lots de texte : {"InputFolder":".","OutputFolder":"./review-output"}. `system_info` : {"Action":"overview"} ; alternatives env, processes, disk, network. env montre seulement les noms, jamais les valeurs ; network omet les adresses.
 
@@ -46,7 +46,7 @@ texts:
 
     Examinez et approuvez chaque action ; scripts avec PowerShell 7. Aucune sortie envoyée automatiquement à OpenAI. La revue IA facultative envoie les paramètres avant l’approbation d’exécution ; désactivez-la dans les paramètres pour une revue locale. Aucun secret dans les paramètres ou requêtes Internet.
   de: |-
-    `/skills` oder `hm --skills` öffnen, Experiment und genaues Paket aktivieren, dann Aktion auswählen. Git/filesystem nutzen einen Pfad; Skripte nutzen `run` mit skalaren JSON-Werten. Beispiele sind anpassbar, keine automatisch auszuführenden Befehle.
+    Zuerst unter `hm --setup` → Skills die Skills und das Gedächtnis aktivieren, das genaue Paket prüfen, einschalten und speichern; Abbrechen verwirft den gemeinsamen Entwurf mit Gedächtnis. Danach `/skills` oder `hm --skills` öffnen, das Paket und Aktion auswählen. Git/filesystem nutzen einen Pfad; Skripte nutzen `run` mit skalaren JSON-Werten. Beispiele sind anpassbar, keine automatisch auszuführenden Befehle.
 
     Lokale Dateien: `git` bietet status, log, diff; `filesystem` list, read, info. `concat-files` erstellt Textsammlungen: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternativ env, processes, disk, network. env zeigt nur Namen, nie Werte; network keine Adressen.
 
@@ -58,7 +58,7 @@ texts:
 
     Jede Aktion prüfen und freigeben; Skripte benötigen PowerShell 7. Ausgabe geht nicht automatisch an OpenAI. Optionale KI-Befehlsprüfung sendet Parameter vor der Ausführungsfreigabe; für lokale Prüfung in Einstellungen ausschalten. Keine Geheimnisse in Parametern oder Internetanfragen.
   es: |-
-    Abre `/skills` o `hm --skills`, activa experimento y paquete exacto y elige Elegir acción. Git/filesystem usan una ruta; los scripts usan `run` con JSON de valores escalares. Los ejemplos se editan, no se ejecutan automáticamente.
+    Primero usa `hm --setup` → Skills para activar las skills y la memoria, revisar el paquete exacto, habilitarlo y guardar; Cancelar descarta el borrador compartido con Memoria. Después abre `/skills` o `hm --skills`, selecciona el paquete y Elegir acción. Git/filesystem usan una ruta; los scripts usan `run` con JSON de valores escalares. Los ejemplos se editan, no se ejecutan automáticamente.
 
     Archivos locales: `git` ofrece status, log, diff; `filesystem` list, read, info. `concat-files` crea conjuntos de texto: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; alternativas env, processes, disk, network. env muestra solo nombres, nunca valores; network omite direcciones.
 
@@ -70,7 +70,7 @@ texts:
 
     Revisa y aprueba cada acción; los scripts necesitan PowerShell 7. La salida no va automáticamente a OpenAI. La revisión IA opcional envía parámetros antes de aprobar la ejecución; desactívala en Ajustes para una revisión local. Nunca incluyas secretos en parámetros ni consultas Internet.
   vi: |-
-    Mở `/skills` hoặc `hm --skills`, bật thử nghiệm và đúng gói, rồi Chọn thao tác. Git/filesystem dùng đường dẫn; script dùng `run` với JSON có giá trị đơn. Ví dụ có thể sửa, không tự chạy.
+    Trước tiên mở `hm --setup` → Kỹ năng để bật kỹ năng và bộ nhớ, xem đúng gói, bật gói rồi Lưu; Hủy bỏ bản nháp dùng chung với Bộ nhớ. Sau đó mở `/skills` hoặc `hm --skills`, chọn gói rồi Chọn thao tác. Git/filesystem dùng đường dẫn; script dùng `run` với JSON có giá trị đơn. Ví dụ có thể sửa, không tự chạy.
 
     Tệp cục bộ: `git` có status, log, diff; `filesystem` có list, read, info. `concat-files` tạo bộ tệp văn bản: {"InputFolder":".","OutputFolder":"./review-output"}. `system_info`: {"Action":"overview"}; hoặc env, processes, disk, network. env chỉ hiện tên, không hiện giá trị; network không hiện địa chỉ.
 

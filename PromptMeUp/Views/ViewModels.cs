@@ -17,10 +17,6 @@ public sealed record SetupViewState(
 
     public SettingsFeatureOverview? FeatureOverview { get; init; }
 
-    public Func<SettingsFeatureOverview>? OpenSkills { get; init; }
-
-    public Func<SettingsFeatureOverview>? OpenLearning { get; init; }
-
     public Action? OpenMemories { get; init; }
 }
 
@@ -43,7 +39,10 @@ public sealed record SetupSubmission(
     AppSettings Settings,
     string? ApiKey,
     string? AdminKey,
-    bool TestConnection);
+    bool TestConnection)
+{
+    public SettingsFeatureChanges? Features { get; init; }
+}
 
 public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji, bool SuppressFooter = false);
 

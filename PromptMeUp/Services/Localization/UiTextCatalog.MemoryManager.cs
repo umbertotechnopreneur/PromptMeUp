@@ -8,12 +8,12 @@ internal static partial class UiTextCatalog
     private static void AddMemoryManagerEntries(Dictionary<string, LocalizedText> entries)
     {
         entries.Add("Settings.Memories", new(
-            English: "Memories",
-            Italian: "Memorie",
-            French: "Mémoires",
-            German: "Erinnerungen",
-            Spanish: "Memorias",
-            Vietnamese: "Ghi nhớ"));
+            English: "Saved memories",
+            Italian: "Ricordi salvati",
+            French: "Souvenirs enregistrés",
+            German: "Gespeicherte Erinnerungen",
+            Spanish: "Recuerdos guardados",
+            Vietnamese: "Ghi nhớ đã lưu"));
         entries.Add("Help.Memories", new(
             English: "View, create, update, or delete global and project memories",
             Italian: "Visualizza, crea, aggiorna o elimina memorie globali e del progetto",
