@@ -36,10 +36,9 @@ public sealed class MemoryForgetView(IAnsiConsole console, ILocalizationService 
             for (var index = 0; index < visible.Length; index++)
             {
                 var memory = visible[index];
-                var scope = text.Text(memory.IsGlobal ? "Memory.Global" : "Memory.Project");
                 choices.AddRow(Number(index + 1),
                     $"[{TerminalTheme.Primary}]{Markup.Escape(memory.Text)}[/]\n" +
-                    $"[{TerminalTheme.Muted}]{Markup.Escape(scope)} · {memory.Id}[/]");
+                    $"[{TerminalTheme.Muted}]{memory.Id}[/]");
             }
             if (pageCount > 1)
             {

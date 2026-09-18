@@ -196,7 +196,7 @@ public sealed partial class ExperimentalStore
         await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
-    /// <summary>Applies a reviewed proposal and its exact source snapshots in one SQLite transaction.</summary>
+    /// <summary>Applies a reviewed proposal to global memory; the legacy scope argument no longer changes its destination.</summary>
     public async Task ApproveAsync(MemoryProposal proposal, string reviewedText, bool global, CancellationToken ct)
     {
         ValidateProposal(proposal);
@@ -225,7 +225,7 @@ public sealed partial class ExperimentalStore
         {
             throw InvalidLearning();
         }
-        var scope = (proposal.Targets.Count > 0 ? proposal.Targets[0].IsGlobal : global) ? "global" : projectScope;
+        const string scope = "global";
         if (proposal.Operation is "merge" or "archive")
         {
             foreach (var target in proposal.Targets)
@@ -243,6 +243,9 @@ public sealed partial class ExperimentalStore
         }
         if (proposal.Operation is "add" or "merge")
         {
+            // A bounded cleanup can leave other identical legacy copies for a later explicit review.
+            var mergingIdenticalCopies = proposal.Operation == "merge"
+                && proposal.Targets.All(target => string.Equals(target.Text, reviewedText.Trim(), StringComparison.Ordinal));
             await using var check = connection.CreateCommand();
             check.Transaction = transaction;
             check.CommandText = "SELECT COUNT(*), COALESCE(SUM(body = $body), 0) FROM persistent_memories WHERE scope_key = $scope;";
@@ -250,7 +253,9 @@ public sealed partial class ExperimentalStore
             check.Parameters.AddWithValue("$body", reviewedText.Trim());
             await using (var reader = await check.ExecuteReaderAsync(ct).ConfigureAwait(false))
             {
-                if (!await reader.ReadAsync(ct).ConfigureAwait(false) || reader.GetInt64(0) >= PersistentMemoryService.MaximumMemoriesPerScope || reader.GetInt64(1) > 0)
+                if (!await reader.ReadAsync(ct).ConfigureAwait(false)
+                    || (proposal.Operation == "add" && reader.GetInt64(0) >= PersistentMemoryService.MaximumMemoriesPerScope)
+                    || (reader.GetInt64(1) > 0 && !mergingIdenticalCopies))
                 {
                     throw InvalidLearning();
                 }

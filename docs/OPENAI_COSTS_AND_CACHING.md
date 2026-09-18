@@ -1,14 +1,14 @@
 # Memory, context, and costs
 
-Want `hm` to remember a project detail? Curious about the usage numbers? This
+Want `hm` to remember a useful detail? Curious about the usage numbers? This
 guide explains saved notes, chat limits, and costs. Start with these commands:
 
 | What you want to do | Command |
 | --- | --- |
 | Open settings at the model preferences, then choose Conversation for its limits | `hm --ai-setup` or `hm --ai-settings` |
 | Check context and token usage during chat | `/status` or `/context` |
-| Save a project fact | `/remember project Build this project with dotnet build.` |
-| Save a preference across projects | `/remember global Keep terminal explanations concise.` |
+| Save a useful fact | `/remember I use PowerShell for terminal commands.` |
+| Save a preference for future conversations | `/remember Keep terminal explanations concise.` |
 | See or remove saved notes | `/memories`, then `/forget <id>` |
 | Start fresh in chat | `/clear` |
 | Check costs | `/costs` in chat, or `hm --costs` from your shell |
@@ -49,25 +49,22 @@ reviews use separate audit sessions and appear in the overall `/costs` totals.
 
 ## Save notes you want to reuse
 
-Use `/remember [global|project] <text>` in chat. Without a scope, the note belongs
-to the current project. `/memories` lists your global notes and the current
-project's notes, along with the IDs you can use with `/forget`.
+Use `/remember <text>` in chat or `hm --remember "your note"` in the terminal.
+All saved memories form one list, shared across conversations using the same
+local data folder. Changing the working folder does not hide them. `/memories`
+lists notes and IDs; `hm --memories` opens the editor.
 
-Project notes belong to the nearest folder containing `.git`, looking upward
-from your current folder. Outside a Git project, they belong to your current
-folder. Global notes are shared by projects using the same local data folder.
-The notes live in SQLite. A hash (a code calculated from the folder path)
-identifies the project.
+Each note can contain up to **1,000 characters**. You can add notes while the
+total is below **100**. Older installations keep every existing note, including
+any above that limit; those notes remain readable, editable, and deletable.
+Only notes you save or suggestions you approve become saved memories.
 
-Each note can contain up to **1,000 characters**. You can keep **100 global notes
-and 100 notes per project**. Only notes you explicitly save become memories;
-PromptMeUp does not create automatic summaries or infer facts to remember.
-
-For each question, `hm` looks at global notes and project notes with matching
-words. It picks the best matches, up to **five notes within 800 estimated tokens**.
+For each question, `hm` looks for matching words in the shared list.
+It picks the best matches, up to **five notes within 800 estimated tokens**.
 That limit includes the notes' instructions and JSON formatting, and counts
-toward your input budget. Saving, listing, deleting, and picking notes all happen
-on your machine, with no extra AI calls.
+toward your input budget. Saving, listing, editing, and selecting notes happen
+on your machine. Forgetting by ID or exact text is local; searching by a
+description sends batches of notes to OpenAI before you select and confirm.
 
 Selected notes go to OpenAI with your question and may appear in the filtered
 request history. They can't override the app's rules, facts about your machine,
@@ -75,7 +72,8 @@ your latest request, or command approval. Notes with recognizable secrets are
 rejected when saved and filtered again when read.
 
 `/clear` removes active conversation messages but keeps saved notes and recorded
-usage. `/forget` deletes a saved note from future selection; text already in the
+usage. Forgetting a saved note removes it from future selection and clears all
+collected messages and pending suggestions. Other notes, text already in the
 conversation, earlier audit records, and usage records remain. See
 [privacy and data flow](PRIVACY.md) for local storage details.
 

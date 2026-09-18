@@ -732,6 +732,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
             {
                 await EnsureThemeColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
+            if (currentVersion < 4)
+            {
+                await MigrateGlobalMemoriesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
             await EnsurePreferredNameColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
@@ -746,6 +750,18 @@ public sealed class SqliteDatabaseService : IDatabaseService
             await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
             throw;
         }
+    }
+
+    /// <summary>Makes every legacy note global without replacing identifiers, duplicate content, timestamps, or provenance.</summary>
+    private static async Task MigrateGlobalMemoriesAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "UPDATE persistent_memories SET scope_key = 'global' WHERE scope_key <> 'global';";
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Adds the context setting to legacy databases while preserving their existing preferences and history.</summary>

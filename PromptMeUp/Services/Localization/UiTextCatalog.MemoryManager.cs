@@ -15,26 +15,26 @@ internal static partial class UiTextCatalog
             Spanish: "Recuerdos guardados",
             Vietnamese: "Ghi nhớ đã lưu"));
         entries.Add("Help.Memories", new(
-            English: "View, create, update, or delete global and project memories",
-            Italian: "Visualizza, crea, aggiorna o elimina memorie globali e del progetto",
-            French: "Afficher, créer, modifier ou supprimer les mémoires globales et du projet",
-            German: "Globale und Projekterinnerungen anzeigen, erstellen, ändern oder löschen",
-            Spanish: "Ver, crear, actualizar o eliminar memorias globales y del proyecto",
-            Vietnamese: "Xem, tạo, cập nhật hoặc xóa ghi nhớ chung và của dự án"));
+            "Read, add, edit, or delete saved memories",
+            "Leggi, aggiungi, modifica o elimina i ricordi salvati",
+            "Lire, ajouter, modifier ou supprimer les souvenirs enregistrés",
+            "Gespeicherte Erinnerungen lesen, hinzufügen, ändern oder löschen",
+            "Leer, añadir, editar o borrar recuerdos guardados",
+            "Đọc, thêm, sửa hoặc xóa ghi nhớ đã lưu"));
         entries.Add("MemoryManager.Help", new(
-            English: "View, create, edit, and delete global or current-project notes.",
-            Italian: "Visualizza, crea, modifica ed elimina note globali o del progetto corrente.",
-            French: "Afficher, créer, modifier et supprimer les notes globales ou du projet actuel.",
-            German: "Globale Notizen oder Notizen des aktuellen Projekts anzeigen, erstellen, ändern und löschen.",
-            Spanish: "Ver, crear, editar y eliminar notas globales o del proyecto actual.",
-            Vietnamese: "Xem, tạo, sửa và xóa ghi chú chung hoặc của dự án hiện tại."));
+            "Your saved memories, available in every conversation.",
+            "I tuoi ricordi salvati, disponibili in ogni conversazione.",
+            "Vos souvenirs enregistrés, disponibles dans chaque conversation.",
+            "Deine gespeicherten Erinnerungen, in jedem Gespräch verfügbar.",
+            "Tus recuerdos guardados, disponibles en cada conversación.",
+            "Ghi nhớ đã lưu của bạn, dùng được trong mọi cuộc trò chuyện."));
         entries.Add("MemoryManager.OpenHint", new(
-            English: "Enter/Right: open memories",
-            Italian: "Invio/Destra: apri memorie",
-            French: "Entrée/Droite : ouvrir les mémoires",
-            German: "Enter/Rechts: Erinnerungen öffnen",
-            Spanish: "Intro/Derecha: abrir memorias",
-            Vietnamese: "Enter/Phải: mở ghi nhớ"));
+            "Enter/Right: open memories",
+            "Invio/Destra: apri ricordi",
+            "Entrée/Droite : ouvrir les souvenirs",
+            "Enter/Rechts: Erinnerungen öffnen",
+            "Intro/Derecha: abrir recuerdos",
+            "Enter/Phải: mở ghi nhớ"));
         entries.Add("MemoryManager.Create", new(
             English: "Create",
             Italian: "Crea",
@@ -78,19 +78,12 @@ internal static partial class UiTextCatalog
             Spanish: "Usa Arriba/Abajo para ver más opciones",
             Vietnamese: "Dùng Lên/Xuống để xem thêm lựa chọn"));
         entries.Add("MemoryManager.DeleteConfirm", new(
-            English: "Delete this memory? Select Delete to confirm.",
-            Italian: "Eliminare questa memoria? Scegli Elimina per confermare.",
-            French: "Supprimer cette mémoire ? Choisissez Supprimer pour confirmer.",
-            German: "Diese Erinnerung löschen? Zum Bestätigen Löschen wählen.",
-            Spanish: "¿Eliminar esta memoria? Elige Eliminar para confirmar.",
-            Vietnamese: "Xóa ghi nhớ này? Chọn Xóa để xác nhận."));
-        entries.Add("MemoryManager.ScopeHelp", new(
-            English: "Global: all projects. Project: the current project only.",
-            Italian: "Globale: tutti i progetti. Progetto: solo il progetto corrente.",
-            French: "Globale : tous les projets. Projet : uniquement le projet actuel.",
-            German: "Global: alle Projekte. Projekt: nur das aktuelle Projekt.",
-            Spanish: "Global: todos los proyectos. Proyecto: solo el proyecto actual.",
-            Vietnamese: "Chung: mọi dự án. Dự án: chỉ dự án hiện tại."));
+            "Delete this memory? Select Delete to confirm.",
+            "Eliminare questo ricordo? Scegli Elimina per confermare.",
+            "Supprimer ce souvenir ? Choisissez Supprimer pour confirmer.",
+            "Diese Erinnerung löschen? Zum Bestätigen Löschen wählen.",
+            "¿Eliminar este recuerdo? Elige Eliminar para confirmar.",
+            "Xóa ghi nhớ này? Chọn Xóa để xác nhận."));
         entries.Add("MemoryManager.NoteHelp", new(
             English: "Up to 1,000 characters. Enter accepts the field; Ctrl+U clears it. Existing line breaks are preserved.",
             Italian: "Fino a 1.000 caratteri. Invio conferma il campo; Ctrl+U lo svuota. Gli a capo esistenti vengono conservati.",
@@ -99,12 +92,12 @@ internal static partial class UiTextCatalog
             Spanish: "Hasta 1.000 caracteres. Intro acepta el campo; Ctrl+U lo vacía. Se conservan los saltos de línea existentes.",
             Vietnamese: "Tối đa 1.000 ký tự. Enter chấp nhận trường; Ctrl+U xóa nội dung. Các dấu xuống dòng hiện có được giữ nguyên."));
         entries.Add("MemoryManager.EditHelp", new(
-            English: "Edit the scope or note, then Save. Memories save independently of settings.",
-            Italian: "Modifica ambito o nota, poi Salva. Le memorie si salvano indipendentemente dalle impostazioni.",
-            French: "Modifiez la portée ou la note, puis Enregistrer. Les mémoires sont enregistrées indépendamment des réglages.",
-            German: "Bereich oder Notiz ändern, dann Speichern. Erinnerungen werden unabhängig von den Einstellungen gespeichert.",
-            Spanish: "Edita el ámbito o la nota y elige Guardar. Las memorias se guardan independientemente de la configuración.",
-            Vietnamese: "Sửa phạm vi hoặc ghi chú, rồi chọn Lưu. Ghi nhớ được lưu độc lập với cài đặt."));
+            "Edit the note, then Save. Memories save separately from Settings.",
+            "Modifica la nota, poi Salva. I ricordi si salvano separatamente dalle impostazioni.",
+            "Modifiez la note, puis Enregistrer. Les souvenirs sont enregistrés séparément des réglages.",
+            "Notiz bearbeiten, dann Speichern. Erinnerungen werden getrennt von Einstellungen gespeichert.",
+            "Edita la nota y elige Guardar. Los recuerdos se guardan por separado de Configuración.",
+            "Sửa ghi chú rồi Lưu. Ghi nhớ được lưu riêng với Cài đặt."));
         entries.Add("MemoryManager.ReplaceHelp", new(
             English: "Enter replacement text on one line, or press Enter to keep the current note, including all line breaks.",
             Italian: "Inserisci il nuovo testo su una riga, oppure premi Invio per conservare la nota attuale con tutti gli a capo.",

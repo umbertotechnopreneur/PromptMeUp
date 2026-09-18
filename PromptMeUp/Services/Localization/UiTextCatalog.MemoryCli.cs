@@ -8,30 +8,33 @@ internal static partial class UiTextCatalog
     private static void AddMemoryCliEntries(Dictionary<string, LocalizedText> entries)
     {
         entries.Add("MemoryCli.Usage", new(
-            English: "Use hm --remember [global|project] <text> or hm --forget <id or description>.",
-            Italian: "Usa hm --remember [global|project] <testo> oppure hm --forget <id o descrizione>.",
-            French: "Utilisez hm --remember [global|project] <texte> ou hm --forget <id ou description>.",
-            German: "Verwenden Sie hm --remember [global|project] <Text> oder hm --forget <ID oder Beschreibung>.",
-            Spanish: "Usa hm --remember [global|project] <texto> o hm --forget <id o descripción>.",
-            Vietnamese: "Dùng hm --remember [global|project] <nội dung> hoặc hm --forget <ID hoặc mô tả>."));
+            "Use hm --remember <text> or hm --forget <id or description>.",
+            "Usa hm --remember <testo> oppure hm --forget <id o descrizione>.",
+            "Utilisez hm --remember <texte> ou hm --forget <id ou description>.",
+            "Verwenden Sie hm --remember <Text> oder hm --forget <ID oder Beschreibung>.",
+            "Usa hm --remember <texto> o hm --forget <id o descripción>.",
+            "Dùng hm --remember <nội dung> hoặc hm --forget <ID hoặc mô tả>."));
         entries.Add("MemoryCli.RememberHelp", new(
-            English: "Save a note locally; project scope is the default",
-            Italian: "Salva una nota locale; l'ambito predefinito è il progetto",
-            French: "Enregistrer une note locale ; portée projet par défaut",
-            German: "Notiz lokal speichern; Standard ist der Projektbereich",
-            Spanish: "Guardar una nota local; ámbito de proyecto por defecto",
-            Vietnamese: "Lưu ghi chú cục bộ; mặc định thuộc phạm vi dự án"));
+            "Save a note for future conversations",
+            "Salva una nota per le prossime conversazioni",
+            "Enregistrer une note pour les prochaines conversations",
+            "Notiz für künftige Gespräche speichern",
+            "Guardar una nota para futuras conversaciones",
+            "Lưu ghi chú cho các cuộc trò chuyện sau"));
         entries.Add("MemoryCli.ForgetHelp", new(
-            English: "Delete one note by ID or exact text; descriptions use AI lookup",
-            Italian: "Elimina una nota per ID o testo esatto; le descrizioni usano la ricerca AI",
-            French: "Supprimer une note par ID ou texte exact ; recherche IA pour les descriptions",
-            German: "Eine Notiz nach ID oder genauem Text löschen; Beschreibungen nutzen KI-Suche",
-            Spanish: "Eliminar una nota por ID o texto exacto; las descripciones usan búsqueda con IA",
-            Vietnamese: "Xóa một ghi chú theo ID hoặc nội dung chính xác; mô tả dùng AI để tìm"));
+            English: "Choose and delete a saved note; AI is used only to search by description",
+            Italian: "Scegli ed elimina un ricordo; l’AI serve solo per cercarlo con una descrizione",
+            French: "Choisir et supprimer un souvenir ; IA seulement pour chercher par description",
+            German: "Erinnerung auswählen und löschen; KI nur für die Suche per Beschreibung",
+            Spanish: "Elegir y borrar un recuerdo; IA solo para buscarlo por descripción",
+            Vietnamese: "Chọn và xóa ghi nhớ; chỉ dùng AI khi tìm theo mô tả"));
         entries.Add("MemoryCli.Choose", new(
-            English: "Choose the memory to forget", Italian: "Scegli la memoria da dimenticare",
-            French: "Choisissez la mémoire à oublier", German: "Erinnerung zum Vergessen auswählen",
-            Spanish: "Elige la memoria que quieres olvidar", Vietnamese: "Chọn ghi nhớ muốn quên"));
+            "Choose the memory to forget",
+            "Scegli il ricordo da dimenticare",
+            "Choisissez le souvenir à oublier",
+            "Erinnerung zum Vergessen auswählen",
+            "Elige el recuerdo que quieres olvidar",
+            "Chọn ghi nhớ muốn quên"));
         entries.Add("MemoryCli.Page", new(
             English: "Page {0} of {1}", Italian: "Pagina {0} di {1}", French: "Page {0} sur {1}",
             German: "Seite {0} von {1}", Spanish: "Página {0} de {1}", Vietnamese: "Trang {0} trên {1}"));
@@ -54,8 +57,12 @@ internal static partial class UiTextCatalog
             Spanish: "La nota cambió o se quitó durante la búsqueda. No se eliminó nada; revisa las notas y vuelve a intentarlo.",
             Vietnamese: "Ghi chú đã thay đổi hoặc bị xóa trong lúc tìm. Chưa xóa gì; kiểm tra ghi chú rồi thử lại."));
         entries.Add("MemoryCli.Forgotten", new(
-            English: "Memory {0} deleted.", Italian: "Memoria {0} eliminata.", French: "Mémoire {0} supprimée.",
-            German: "Erinnerung {0} gelöscht.", Spanish: "Memoria {0} eliminada.", Vietnamese: "Đã xóa ghi nhớ {0}."));
+            "Memory {0} deleted.",
+            "Ricordo {0} eliminato.",
+            "Souvenir {0} supprimé.",
+            "Erinnerung {0} gelöscht.",
+            "Recuerdo {0} eliminado.",
+            "Đã xóa ghi nhớ {0}."));
         entries.Add("MemoryCli.InvalidResponse", new(
             English: "AI memory lookup returned an invalid selection. Nothing was deleted.",
             Italian: "La ricerca AI delle memorie ha restituito una selezione non valida. Non è stato eliminato nulla.",

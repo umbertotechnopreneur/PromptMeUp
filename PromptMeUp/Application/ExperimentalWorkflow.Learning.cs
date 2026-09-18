@@ -185,7 +185,7 @@ public sealed partial class ExperimentalWorkflow
         }
     }
 
-    /// <summary>Shows exact target snapshots, full source observations, scope, and edited text before final confirmation.</summary>
+    /// <summary>Shows exact target snapshots, full source observations, and edited text before final confirmation.</summary>
     private async Task ReviewProposalAsync(MemoryProposal proposal, CancellationToken ct)
     {
         var evidence = await store.ObservationsAsync(ct).ConfigureAwait(false);
@@ -195,11 +195,10 @@ public sealed partial class ExperimentalWorkflow
         }
         var sources = proposal.SourceIds.Select(id => evidence.Single(item => item.Id == id)).ToArray();
         var reviewed = proposal.Text;
-        var global = proposal.Targets.FirstOrDefault()?.IsGlobal ?? false;
         while (true)
         {
             ct.ThrowIfCancellationRequested();
-            RenderProposal(proposal, reviewed, global, sources);
+            RenderProposal(proposal, reviewed, sources);
             var choices = new List<(string Key, string Action)>
             {
                 ("Lab.Cancel", "cancel"), ("Lab.Reject", "reject")
@@ -213,10 +212,6 @@ public sealed partial class ExperimentalWorkflow
                 if (proposal.Operation is "add" or "merge")
                 {
                     choices.Add(("Lab.Edit", "edit"));
-                }
-                if (proposal.Operation == "add")
-                {
-                    choices.Add(("Memory.Scope", "scope"));
                 }
                 choices.Add(("Lab.Approve", "approve"));
             }
@@ -235,21 +230,13 @@ public sealed partial class ExperimentalWorkflow
             {
                 reviewed = reflection.ValidateReviewedText(view.Read(text.Text("Lab.Edit"), reviewed));
             }
-            if (selected == "scope")
-            {
-                var scope = view.Choose(text.Text("Memory.Scope"), text.Text("Lab.Back"), text.Text("Memory.Project"), text.Text("Memory.Global"));
-                if (scope != 0)
-                {
-                    global = scope == 2;
-                }
-            }
             if (selected == "approve")
             {
                 reviewed = reflection.ValidateReviewedText(reviewed);
-                RenderProposal(proposal, reviewed, global, sources);
+                RenderProposal(proposal, reviewed, sources);
                 if (view.Confirm(text.Text("Lab.Approve")))
                 {
-                    await store.ApproveAsync(proposal, reviewed, global, ct).ConfigureAwait(false);
+                    await store.ApproveAsync(proposal, reviewed, true, ct).ConfigureAwait(false);
                     shell.RenderSuccess(text.Text("Lab.Saved"));
                     return;
                 }
@@ -258,7 +245,7 @@ public sealed partial class ExperimentalWorkflow
     }
 
     /// <summary>Displays unabridged before/after content and evidence without changing any stored memory.</summary>
-    private void RenderProposal(MemoryProposal proposal, string reviewed, bool global, IReadOnlyList<LearningObservation> sources)
+    private void RenderProposal(MemoryProposal proposal, string reviewed, IReadOnlyList<LearningObservation> sources)
     {
         var before = proposal.Targets.Count == 0 ? text.Text("Lab.NoPrevious")
             : string.Join("\n\n", proposal.Targets.Select(target => target.Id + " · " + target.UpdatedAt.ToString("u", CultureInfo.InvariantCulture) + "\n" + target.Text));
@@ -269,7 +256,6 @@ public sealed partial class ExperimentalWorkflow
         view.Render(text.Text("Lab.Proposals"),
             [(text.Text("Lab.Operation"), text.Text("Lab.Operation." + proposal.Operation)),
              (text.Text("Lab.Kind"), text.Text("Lab.Kind." + proposal.Kind)),
-             (text.Text("Memory.Scope"), text.Text(global ? "Memory.Global" : "Memory.Project")),
              (text.Text("Lab.Before"), before), (text.Text("Lab.After"), after),
              (text.Text("Lab.Reason"), proposal.Operation is "archive" or "flag" ? proposal.Text + "\n\n" + proposal.Rationale : proposal.Rationale),
              (text.Text("Lab.Sources"), sourceText)]);

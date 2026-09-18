@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 
 using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 
@@ -97,12 +98,14 @@ public sealed class MemoryReflectionTests
         Assert.Throws<InvalidOperationException>(() => service.Parse(response, batch));
     }
 
-    /// <summary>Binds maintenance targets to their complete local snapshots rather than model-authored memory contents.</summary>
-    [Fact]
-    public void Parse_HeartbeatMerge_PreservesExactSnapshots()
+    /// <summary>Binds maintenance targets to complete snapshots regardless of obsolete destination flags.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Parse_HeartbeatMerge_PreservesExactSnapshotsWithoutScopePartition(bool legacyFlag)
     {
         var service = Create();
-        var saved = new[] { Memory(false, "A note."), Memory(false, "A related note.") };
+        var saved = new[] { Memory(false, "A note."), Memory(legacyFlag, "A related note.") };
         var batch = service.HeartbeatBatch(saved, 4000);
 
         var result = service.Parse(Response("merge", [], saved.Select(item => item.Id).ToArray()), batch);
@@ -110,27 +113,22 @@ public sealed class MemoryReflectionTests
         Assert.Equal(saved, Assert.Single(result).Targets);
     }
 
-    /// <summary>Stops maintenance from merging global and project memories or citing memories outside the approved batch.</summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Parse_UnsupportedMaintenanceTargets_Rejects(bool mixedScope)
+    /// <summary>Stops maintenance from citing a note outside the exact approved batch.</summary>
+    [Fact]
+    public void Parse_UnknownMaintenanceTarget_Rejects()
     {
         var service = Create();
-        var saved = new[] { Memory(false, "A note."), Memory(mixedScope, "A related note.") };
+        var saved = new[] { Memory(true, "A note."), Memory(true, "A related note.") };
         var batch = service.HeartbeatBatch(saved, 4000);
         var ids = saved.Select(item => item.Id).ToArray();
-        if (!mixedScope)
-        {
-            ids[1] = Guid.NewGuid().ToString("N");
-        }
+        ids[1] = Guid.NewGuid().ToString("N");
 
         Assert.Throws<InvalidOperationException>(() => service.Parse(Response("merge", [], ids), batch));
     }
 
-    /// <summary>Limits local duplicate proposals to exact same-scope text without deleting or modifying any input.</summary>
+    /// <summary>Finds exact duplicates in one saved-note collection without preserving obsolete scope partitions.</summary>
     [Fact]
-    public void FindDuplicates_RequiresExactSameScopeText()
+    public void FindDuplicates_RequiresExactTextRegardlessOfLegacyFlag()
     {
         var saved = new[]
         {
@@ -140,8 +138,45 @@ public sealed class MemoryReflectionTests
         var proposal = Assert.Single(Create().FindDuplicates(saved));
 
         Assert.Equal("merge", proposal.Operation);
-        Assert.Equal(saved.Take(2).Select(item => item.Id).Order(), proposal.Targets.Select(item => item.Id).Order());
+        Assert.Equal(saved.Take(3).Select(item => item.Id).Order(), proposal.Targets.Select(item => item.Id).Order());
         Assert.Empty(proposal.SourceIds);
+    }
+
+    /// <summary>Preserved legacy collections above two hundred notes can still produce complete, bounded maintenance batches.</summary>
+    [Fact]
+    public async Task HeartbeatBatch_ListsOverTwoHundredLegacyNotesAndKeepsProviderInputBounded()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        await fixture.ScalarAsync("""
+            WITH RECURSIVE legacy(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM legacy WHERE n < 205)
+            INSERT INTO persistent_memories(id, scope_key, body, updated_unix)
+            SELECT printf('%032x', n), CASE WHEN n % 3 = 0 THEN 'global' ELSE printf('%064x', n % 3) END,
+                   'Preserved preference ' || n || '.', 1700000000 + n
+            FROM legacy;
+            """);
+        var store = new PersistentMemoryService(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService(),
+            NullLogger<PersistentMemoryService>.Instance);
+        var listed = await store.ListAsync(default);
+
+        var batch = Create().HeartbeatBatch(listed, 4000);
+
+        Assert.Equal(205, listed.Count);
+        Assert.All(listed, memory => Assert.True(memory.IsGlobal));
+        Assert.InRange(batch.Memories.Count, 1, 24);
+        Assert.Equal(listed.Count - batch.Memories.Count, batch.OmittedCount);
+        Assert.InRange(batch.Request.Length, 1, 4000);
+        Assert.Equal(205L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories;"));
+        using var request = JsonDocument.Parse(batch.Request);
+        var supplied = request.RootElement.GetProperty("memories");
+        Assert.Equal(batch.Memories.Count, supplied.GetArrayLength());
+        foreach (var item in supplied.EnumerateArray())
+        {
+            Assert.Equal(new[] { "id", "text", "updated_at" }, item.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
+            Assert.False(item.TryGetProperty("scope", out _));
+            var original = Assert.Single(listed, memory => memory.Id == item.GetProperty("id").GetString());
+            Assert.Equal(original.Text, item.GetProperty("text").GetString());
+        }
     }
 
     /// <summary>Creates a deterministic local reflection service with no network or filesystem dependencies.</summary>
@@ -150,7 +185,7 @@ public sealed class MemoryReflectionTests
     /// <summary>Creates synthetic source evidence without captured user data.</summary>
     private static LearningObservation Observation(string session, string text) => new(Guid.NewGuid().ToString("N"), session, text, DateTimeOffset.UtcNow);
 
-    /// <summary>Creates a synthetic exact memory snapshot for scope and identity checks.</summary>
+    /// <summary>Creates an exact synthetic memory snapshot, including flags retained by legacy callers.</summary>
     private static PersistentMemory Memory(bool global, string text) => new(Guid.NewGuid().ToString("N"), text, global, DateTimeOffset.UtcNow);
 
     /// <summary>Serializes a complete provider contract for structural and evidence-validation cases.</summary>

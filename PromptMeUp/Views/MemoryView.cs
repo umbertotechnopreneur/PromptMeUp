@@ -23,7 +23,7 @@ public sealed class MemoryView : IMemoryView
         _text = text ?? throw new ArgumentNullException(nameof(text));
     }
 
-    /// <summary>Displays saved notes with their removable identifiers and scope while preserving scrollback.</summary>
+    /// <summary>Displays saved notes with their removable identifiers while preserving scrollback.</summary>
     public void Render(IReadOnlyList<PersistentMemory> memories)
     {
         ArgumentNullException.ThrowIfNull(memories);
@@ -39,13 +39,11 @@ public sealed class MemoryView : IMemoryView
             .Border(TableBorder.Simple)
             .BorderStyle(Style.Parse(TerminalTheme.Accent))
             .AddColumn(new TableColumn(new Text("ID", Style.Parse(TerminalTheme.Muted))))
-            .AddColumn(new TableColumn(new Text(_text.Text("Memory.Scope"), Style.Parse(TerminalTheme.Muted))))
             .AddColumn(new TableColumn(new Text(_text.Text("Memory.Note"), Style.Parse(TerminalTheme.Muted))));
         foreach (var memory in memories)
         {
             table.AddRow(
                 new Text(memory.Id, Style.Parse(TerminalTheme.Info)),
-                new Text(_text.Text(memory.IsGlobal ? "Memory.Global" : "Memory.Project"), Style.Parse(TerminalTheme.Primary)),
                 new Text(memory.Text, Style.Parse(TerminalTheme.Primary)));
         }
 

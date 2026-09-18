@@ -10,7 +10,7 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-/// <summary>Stores explicit project and global notes and selects a small local context without provider calls.</summary>
+/// <summary>Stores explicit global notes and selects a small local context without provider calls.</summary>
 public sealed partial class PersistentMemoryService
 {
     public const int MaximumCharacters = 1_000;
@@ -47,11 +47,10 @@ public sealed partial class PersistentMemoryService
         }.ToString();
     }
 
-    /// <summary>Persists a bounded, credential-free note or refreshes the matching note in the requested scope.</summary>
+    /// <summary>Persists a bounded, credential-free global note or refreshes a match; the legacy global parameter is ignored.</summary>
     public async Task<PersistentMemory> RememberAsync(string text, bool global, CancellationToken cancellationToken)
     {
         var note = ValidateInput(text);
-        var scope = global ? GlobalScope : ResolveProjectScope();
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -59,8 +58,7 @@ public sealed partial class PersistentMemoryService
             await using var transaction = connection.BeginTransaction();
             await using var existing = connection.CreateCommand();
             existing.Transaction = transaction;
-            existing.CommandText = "SELECT id FROM persistent_memories WHERE scope_key = $scope AND body = $body;";
-            existing.Parameters.AddWithValue("$scope", scope);
+            existing.CommandText = "SELECT id FROM persistent_memories WHERE body = $body ORDER BY updated_unix DESC, id ASC LIMIT 1;";
             existing.Parameters.AddWithValue("$body", note);
             var existingId = await existing.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
             if (existingId is not null && !Guid.TryParseExact(existingId, "N", out _))
@@ -69,14 +67,9 @@ public sealed partial class PersistentMemoryService
             }
             await using var count = connection.CreateCommand();
             count.Transaction = transaction;
-            count.CommandText = "SELECT COUNT(*) FROM persistent_memories WHERE scope_key = $scope;";
-            count.Parameters.AddWithValue("$scope", scope);
+            count.CommandText = "SELECT COUNT(*) FROM persistent_memories;";
             var storedCount = Convert.ToInt64(await count.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
-            if (storedCount > MaximumMemoriesPerScope)
-            {
-                throw new InvalidDataException(_text.Text("Memory.Invalid"));
-            }
-            if (existingId is null && storedCount == MaximumMemoriesPerScope)
+            if (existingId is null && storedCount >= MaximumMemoriesPerScope)
             {
                 throw new MemoryValidationException(_text.Text("Memory.Limit", MaximumMemoriesPerScope));
             }
@@ -87,16 +80,16 @@ public sealed partial class PersistentMemoryService
             save.CommandText = """
                 INSERT INTO persistent_memories (id, scope_key, body, updated_unix)
                 VALUES ($id, $scope, $body, $updated)
-                ON CONFLICT (id) DO UPDATE SET updated_unix = excluded.updated_unix;
+                ON CONFLICT (id) DO UPDATE SET scope_key = excluded.scope_key, updated_unix = excluded.updated_unix;
                 """;
             save.Parameters.AddWithValue("$id", id);
-            save.Parameters.AddWithValue("$scope", scope);
+            save.Parameters.AddWithValue("$scope", GlobalScope);
             save.Parameters.AddWithValue("$body", note);
             save.Parameters.AddWithValue("$updated", updated.ToUnixTimeSeconds());
             await save.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Explicit memory saved. Global={Global}", global);
-            return new PersistentMemory(id, note, global, updated);
+            _logger.LogInformation("Explicit global memory saved.");
+            return new PersistentMemory(id, note, true, updated);
         }
         finally
         {
@@ -104,7 +97,7 @@ public sealed partial class PersistentMemoryService
         }
     }
 
-    /// <summary>Updates one accessible note without changing its identifier or replacing a different saved note.</summary>
+    /// <summary>Updates one global note without replacing another identifier; the legacy global parameter is ignored.</summary>
     public async Task<PersistentMemory> UpdateAsync(string id, string text, bool global, CancellationToken cancellationToken)
     {
         if (!Guid.TryParseExact(id, "N", out _))
@@ -112,8 +105,6 @@ public sealed partial class PersistentMemoryService
             throw new MemoryValidationException(_text.Text("Memory.InvalidId"));
         }
         var note = ValidateInput(text);
-        var projectScope = ResolveProjectScope();
-        var targetScope = global ? GlobalScope : projectScope;
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -121,39 +112,20 @@ public sealed partial class PersistentMemoryService
             await using var transaction = connection.BeginTransaction();
             await using var existing = connection.CreateCommand();
             existing.Transaction = transaction;
-            existing.CommandText = """
-                SELECT scope_key FROM persistent_memories
-                WHERE id = $id AND (scope_key = $project OR scope_key = $global);
-                """;
+            existing.CommandText = "SELECT body FROM persistent_memories WHERE id = $id;";
             existing.Parameters.AddWithValue("$id", id);
-            existing.Parameters.AddWithValue("$project", projectScope);
-            existing.Parameters.AddWithValue("$global", GlobalScope);
-            var originalScope = await existing.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string
+            var originalBody = await existing.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string
                 ?? throw new MemoryValidationException(_text.Text("Memory.NotFound"));
 
             await using var duplicate = connection.CreateCommand();
             duplicate.Transaction = transaction;
-            duplicate.CommandText = "SELECT COUNT(*) FROM persistent_memories WHERE scope_key = $scope AND body = $body AND id <> $id;";
-            duplicate.Parameters.AddWithValue("$scope", targetScope);
+            duplicate.CommandText = "SELECT COUNT(*) FROM persistent_memories WHERE body = $body AND id <> $id;";
             duplicate.Parameters.AddWithValue("$body", note);
             duplicate.Parameters.AddWithValue("$id", id);
-            if (Convert.ToInt64(await duplicate.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) > 0)
+            if (!string.Equals(originalBody, note, StringComparison.Ordinal)
+                && Convert.ToInt64(await duplicate.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) > 0)
             {
                 throw new MemoryValidationException(_text.Text("Memory.Duplicate"));
-            }
-
-            await using var count = connection.CreateCommand();
-            count.Transaction = transaction;
-            count.CommandText = "SELECT COUNT(*) FROM persistent_memories WHERE scope_key = $scope;";
-            count.Parameters.AddWithValue("$scope", targetScope);
-            var storedCount = Convert.ToInt64(await count.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
-            if (storedCount > MaximumMemoriesPerScope)
-            {
-                throw new InvalidDataException(_text.Text("Memory.Invalid"));
-            }
-            if (originalScope != targetScope && storedCount == MaximumMemoriesPerScope)
-            {
-                throw new MemoryValidationException(_text.Text("Memory.Limit", MaximumMemoriesPerScope));
             }
 
             var updated = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
@@ -161,20 +133,19 @@ public sealed partial class PersistentMemoryService
             save.Transaction = transaction;
             save.CommandText = """
                 UPDATE persistent_memories SET scope_key = $scope, body = $body, updated_unix = $updated
-                WHERE id = $id AND scope_key = $original;
+                WHERE id = $id;
                 """;
-            save.Parameters.AddWithValue("$scope", targetScope);
+            save.Parameters.AddWithValue("$scope", GlobalScope);
             save.Parameters.AddWithValue("$body", note);
             save.Parameters.AddWithValue("$updated", updated.ToUnixTimeSeconds());
             save.Parameters.AddWithValue("$id", id);
-            save.Parameters.AddWithValue("$original", originalScope);
             if (await save.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) != 1)
             {
                 throw new MemoryValidationException(_text.Text("Memory.NotFound"));
             }
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Explicit memory updated. Global={Global}", global);
-            return new PersistentMemory(id, note, global, updated);
+            _logger.LogInformation("Explicit global memory updated.");
+            return new PersistentMemory(id, note, true, updated);
         }
         finally
         {
@@ -182,10 +153,9 @@ public sealed partial class PersistentMemoryService
         }
     }
 
-    /// <summary>Lists bounded notes in the current project and global scopes, reapplying current credential redaction.</summary>
+    /// <summary>Lists every saved global note, including migrated collections above the creation limit, with current redaction.</summary>
     public async Task<IReadOnlyList<PersistentMemory>> ListAsync(CancellationToken cancellationToken)
     {
-        var scope = ResolveProjectScope();
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -194,15 +164,10 @@ public sealed partial class PersistentMemoryService
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = """
-                SELECT id, body, scope_key, updated_unix
+                SELECT id, body, updated_unix
                 FROM persistent_memories
-                WHERE scope_key = $scope OR scope_key = $global
-                ORDER BY updated_unix DESC, id ASC
-                LIMIT $limit;
+                ORDER BY updated_unix DESC, id ASC;
                 """;
-            command.Parameters.AddWithValue("$scope", scope);
-            command.Parameters.AddWithValue("$global", GlobalScope);
-            command.Parameters.AddWithValue("$limit", MaximumMemoriesPerScope * 2 + 1);
             var memories = new List<PersistentMemory>();
             var repairs = new List<PersistentMemory>();
             await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
@@ -211,7 +176,7 @@ public sealed partial class PersistentMemoryService
                 {
                     var id = reader.GetString(0);
                     var body = reader.GetString(1);
-                    var updatedUnix = reader.GetInt64(3);
+                    var updatedUnix = reader.GetInt64(2);
                     if (!Guid.TryParseExact(id, "N", out _) || string.IsNullOrWhiteSpace(body)
                         || body.Length > MaximumCharacters || updatedUnix < 0
                         || updatedUnix > DateTimeOffset.MaxValue.ToUnixTimeSeconds())
@@ -223,7 +188,7 @@ public sealed partial class PersistentMemoryService
                     {
                         throw new InvalidDataException(_text.Text("Memory.Invalid"));
                     }
-                    var memory = new PersistentMemory(id, safeBody, reader.GetString(2) == GlobalScope,
+                    var memory = new PersistentMemory(id, safeBody, true,
                         DateTimeOffset.FromUnixTimeSeconds(updatedUnix));
                     memories.Add(memory);
                     if (!string.Equals(body, safeBody, StringComparison.Ordinal))
@@ -231,11 +196,6 @@ public sealed partial class PersistentMemoryService
                         repairs.Add(memory);
                     }
                 }
-            }
-            if (memories.Count(memory => memory.IsGlobal) > MaximumMemoriesPerScope
-                || memories.Count(memory => !memory.IsGlobal) > MaximumMemoriesPerScope)
-            {
-                throw new InvalidDataException(_text.Text("Memory.Invalid"));
             }
             foreach (var memory in repairs)
             {
@@ -259,14 +219,13 @@ public sealed partial class PersistentMemoryService
         }
     }
 
-    /// <summary>Deletes an accessible note by ID, optionally requiring its reviewed content, scope, and timestamp to remain unchanged.</summary>
+    /// <summary>Deletes a global note by ID, optionally requiring its reviewed content and timestamp to remain unchanged.</summary>
     public async Task<bool> ForgetAsync(string id, CancellationToken cancellationToken, PersistentMemory? expected = null)
     {
         if (!Guid.TryParseExact(id, "N", out _) || (expected is not null && expected.Id != id))
         {
             throw new MemoryValidationException(_text.Text("Memory.InvalidId"));
         }
-        var scope = ResolveProjectScope();
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -274,24 +233,19 @@ public sealed partial class PersistentMemoryService
             await using var transaction = connection.BeginTransaction();
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = "SELECT scope_key FROM persistent_memories WHERE id = $id AND (scope_key = $scope OR scope_key = $global);";
-            command.Parameters.AddWithValue("$id", id);
-            command.Parameters.AddWithValue("$scope", scope);
-            command.Parameters.AddWithValue("$global", GlobalScope);
-            var forgottenScope = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
             command.CommandText = """
-                DELETE FROM persistent_memories WHERE id = $id AND (scope_key = $scope OR scope_key = $global)
-                AND ($check = 0 OR (body = $body AND updated_unix = $updated AND scope_key = $expectedScope));
+                DELETE FROM persistent_memories WHERE id = $id
+                AND ($check = 0 OR (body = $body AND updated_unix = $updated));
                 """;
+            command.Parameters.AddWithValue("$id", id);
             command.Parameters.AddWithValue("$check", expected is null ? 0 : 1);
             command.Parameters.AddWithValue("$body", expected?.Text ?? string.Empty);
             command.Parameters.AddWithValue("$updated", expected?.UpdatedAt.ToUnixTimeSeconds() ?? 0);
-            command.Parameters.AddWithValue("$expectedScope", expected?.IsGlobal == true ? GlobalScope : scope);
             var removed = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) > 0;
             if (removed)
             {
-                await ExperimentalStore.ClearLearningAsync(connection, transaction, forgottenScope!, cancellationToken).ConfigureAwait(false);
-                await ExperimentalStore.AdvanceRevisionAsync(connection, transaction, forgottenScope!, cancellationToken).ConfigureAwait(false);
+                await ExperimentalStore.ClearLearningAsync(connection, transaction, GlobalScope, cancellationToken).ConfigureAwait(false);
+                await ExperimentalStore.AdvanceRevisionAsync(connection, transaction, GlobalScope, cancellationToken).ConfigureAwait(false);
             }
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Explicit memory deletion completed. Removed={Removed}", removed);
@@ -303,7 +257,7 @@ public sealed partial class PersistentMemoryService
         }
     }
 
-    /// <summary>Ranks global preferences and lexically relevant project notes within a fixed estimated content budget.</summary>
+    /// <summary>Ranks all saved notes by lexical relevance and recency within a fixed estimated content budget.</summary>
     public async Task<MemorySelection> SelectAsync(string query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -314,9 +268,7 @@ public sealed partial class PersistentMemoryService
             var safe = memory with { Text = _redactor.Redact(memory.Text) };
             return (Memory: safe, Overlap: ExtractTerms(safe.Text).Count(terms.Contains));
         })
-            .Where(candidate => candidate.Memory.IsGlobal || candidate.Overlap > 0)
             .OrderByDescending(candidate => candidate.Overlap)
-            .ThenBy(candidate => candidate.Memory.IsGlobal)
             .ThenByDescending(candidate => candidate.Memory.UpdatedAt)
             .ThenBy(candidate => candidate.Memory.Id, StringComparer.Ordinal);
         var selected = new List<PersistentMemory>();

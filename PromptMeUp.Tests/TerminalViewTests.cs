@@ -50,7 +50,7 @@ public sealed class TerminalViewTests
         Assert.Contains("/costs", rendered, StringComparison.Ordinal);
         Assert.Contains("/status", rendered, StringComparison.Ordinal);
         Assert.Contains("/context", rendered, StringComparison.Ordinal);
-        Assert.Contains("/remember [global|project] <testo>", rendered, StringComparison.Ordinal);
+        Assert.Contains("/remember <testo>", rendered, StringComparison.Ordinal);
         Assert.Contains("/memories", rendered, StringComparison.Ordinal);
         Assert.Contains("/forget <id>", rendered, StringComparison.Ordinal);
         Assert.Contains("Memorie in chat:", rendered, StringComparison.Ordinal);

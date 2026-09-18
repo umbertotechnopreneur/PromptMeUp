@@ -35,9 +35,14 @@ public sealed class MemoryCommandTests
     public void Parser_InvalidMemoryCommand_Fails(params string[] args) =>
         Assert.False(new CommandLineParser(new LocalizationService()).Parse(args).Succeeded);
 
-    /// <summary>Saving persists the note in the manager's store and exact-ID deletion needs no model.</summary>
-    [Fact]
-    public async Task Remember_ThenForgetById_PersistsAndDeletesWithoutAi()
+    /// <summary>Default and legacy-prefixed saves create global notes, and exact-ID deletion needs no model.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("global ")]
+    [InlineData("project ")]
+    [InlineData("GLOBAL ")]
+    [InlineData("PROJECT ")]
+    public async Task Remember_ThenForgetById_PersistsGloballyAndDeletesWithoutAi(string prefix)
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -47,14 +52,36 @@ public sealed class MemoryCommandTests
             matches => Assert.Single(matches).Id);
         var settings = AppSettings.Default with { AiEnabled = false };
 
-        Assert.Equal(0, await workflow.RunAsync(Options("--remember", "global Prefer concise answers."), settings, default));
+        Assert.Equal(0, await workflow.RunAsync(Options("--remember", prefix + "Prefer concise answers."), settings, default));
         var saved = Assert.Single(await Store(fixture).ListAsync(default));
         Assert.True(saved.IsGlobal);
         Assert.Equal("Prefer concise answers.", saved.Text);
+        Assert.Equal("global", await fixture.ScalarAsync("SELECT scope_key FROM persistent_memories WHERE id=$id;", ("$id", saved.Id)));
         Assert.Contains(successes, message => message.Contains(saved.Id, StringComparison.Ordinal));
         Assert.Equal(0, await workflow.RunAsync(Options("--forget", saved.Id), settings, default));
         Assert.Empty(await service.ListAsync(default));
         Assert.Equal(2, successes.Count);
+    }
+
+    /// <summary>Legacy destination prefixes are aliases for one note collection, not separate copies of the same text.</summary>
+    [Fact]
+    public async Task Remember_DefaultAndLegacyPrefixes_ResolveToOneGlobalNote()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var service = Store(fixture);
+        var workflow = Workflow(fixture, service, [], _ => throw new InvalidOperationException("Unexpected AI call."), _ => null);
+        string? firstId = null;
+        foreach (var prefix in new[] { string.Empty, "global ", "project " })
+        {
+            Assert.Equal(0, await workflow.RunAsync(Options("--remember", prefix + "Prefer concise answers."),
+                AppSettings.Default with { AiEnabled = false }, default));
+            var saved = Assert.Single(await service.ListAsync(default));
+            firstId ??= saved.Id;
+            Assert.Equal(firstId, saved.Id);
+            Assert.True(saved.IsGlobal);
+            Assert.Equal("Prefer concise answers.", saved.Text);
+        }
     }
 
     /// <summary>All lookup batches finish before the user chooses and confirms one of their combined matches.</summary>
@@ -76,11 +103,17 @@ public sealed class MemoryCommandTests
             using var request = JsonDocument.Parse(Assert.Single(messages).Content);
             var notes = request.RootElement.GetProperty("memories");
             Assert.InRange(notes.GetArrayLength(), 1, 8);
+            foreach (var note in notes.EnumerateArray())
+            {
+                Assert.Equal(new[] { "id", "note" }, note.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
+                Assert.False(note.TryGetProperty("scope", out _));
+            }
             return JsonSerializer.Serialize(new { matched_ids = new[] { notes[0].GetProperty("id").GetString() } });
         }, matches =>
         {
             Assert.Equal(3, calls);
             Assert.Equal(3, matches.Count);
+            Assert.All(matches, note => Assert.True(note.IsGlobal));
             selectedId = matches[2].Id;
             return selectedId;
         });

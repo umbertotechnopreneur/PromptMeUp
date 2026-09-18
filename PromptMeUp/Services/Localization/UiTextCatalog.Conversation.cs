@@ -120,33 +120,33 @@ internal static partial class UiTextCatalog
             Spanish: "Cierra el chat interactivo.",
             Vietnamese: "Đóng chat tương tác."));
         entries.Add("Chat.Command.Forget", new(
-            English: "Delete a saved memory",
-            Italian: "Elimina una memoria salvata",
-            French: "Supprimer une mémoire enregistrée",
-            German: "Gespeicherte Erinnerung löschen",
-            Spanish: "Eliminar una memoria guardada",
-            Vietnamese: "Xóa ghi nhớ đã lưu"));
+            "Delete a saved memory",
+            "Elimina un ricordo salvato",
+            "Supprimer un souvenir enregistré",
+            "Gespeicherte Erinnerung löschen",
+            "Eliminar un recuerdo guardado",
+            "Xóa ghi nhớ đã lưu"));
         entries.Add("Chat.Command.Memories", new(
-            English: "List global and current-project memories",
-            Italian: "Elenca memorie globali e del progetto corrente",
-            French: "Lister les mémoires globales et du projet courant",
-            German: "Globale und aktuelle Projekterinnerungen auflisten",
-            Spanish: "Listar memorias globales y del proyecto actual",
-            Vietnamese: "Liệt kê ghi nhớ chung và của dự án hiện tại"));
+            "List saved memories",
+            "Elenca i ricordi salvati",
+            "Lister les souvenirs enregistrés",
+            "Gespeicherte Erinnerungen auflisten",
+            "Listar recuerdos guardados",
+            "Liệt kê ghi nhớ đã lưu"));
         entries.Add("Chat.Command.Remember", new(
-            English: "Save a note (project by default)",
-            Italian: "Salva una nota (progetto predefinito)",
-            French: "Enregistrer une note (projet par défaut)",
-            German: "Notiz speichern (standardmäßig im Projekt)",
-            Spanish: "Guardar una nota (proyecto por defecto)",
-            Vietnamese: "Lưu ghi chú (mặc định cho dự án)"));
+            "Save a note for future conversations",
+            "Salva una nota per le prossime conversazioni",
+            "Enregistrer une note pour les prochaines conversations",
+            "Notiz für künftige Gespräche speichern",
+            "Guardar una nota para futuras conversaciones",
+            "Lưu ghi chú cho các cuộc trò chuyện sau"));
         entries.Add("Chat.Command.RememberSyntax", new(
-            English: "/remember [global|project] <text>",
-            Italian: "/remember [global|project] <testo>",
-            French: "/remember [global|project] <texte>",
-            German: "/remember [global|project] <Text>",
-            Spanish: "/remember [global|project] <texto>",
-            Vietnamese: "/remember [global|project] <văn-bản>"));
+            "/remember <text>",
+            "/remember <testo>",
+            "/remember <texte>",
+            "/remember <Text>",
+            "/remember <texto>",
+            "/remember <văn-bản>"));
         entries.Add("Chat.Command.Run", new(
             English: "Preview a shell command, assess its risk, then request exact authorization.",
             Italian: "Mostra l'anteprima di un comando, ne valuta il rischio e chiede l'autorizzazione esatta.",
@@ -253,19 +253,12 @@ internal static partial class UiTextCatalog
             Spanish: "Proporciona una nota de memoria no vacía.",
             Vietnamese: "Nhập nội dung ghi nhớ không rỗng."));
         entries.Add("Memory.Forgotten", new(
-            English: "Memory deleted.",
-            Italian: "Memoria eliminata.",
-            French: "Mémoire supprimée.",
-            German: "Erinnerung gelöscht.",
-            Spanish: "Memoria eliminada.",
-            Vietnamese: "Đã xóa ghi nhớ."));
-        entries.Add("Memory.Global", new(
-            English: "Global",
-            Italian: "Globale",
-            French: "Globale",
-            German: "Global",
-            Spanish: "Global",
-            Vietnamese: "Chung"));
+            "Memory deleted.",
+            "Ricordo eliminato.",
+            "Souvenir supprimé.",
+            "Erinnerung gelöscht.",
+            "Recuerdo eliminado.",
+            "Đã xóa ghi nhớ."));
         entries.Add("Memory.Invalid", new(
             English: "Saved memory data is invalid and cannot be loaded.",
             Italian: "I dati delle memorie salvate non sono validi e non possono essere caricati.",
@@ -281,26 +274,26 @@ internal static partial class UiTextCatalog
             Spanish: "Proporciona un ID válido de memoria guardada.",
             Vietnamese: "Nhập một ID ghi nhớ đã lưu hợp lệ."));
         entries.Add("Memory.Limit", new(
-            English: "This scope already contains {0:N0} memories. Delete a note before saving another.",
-            Italian: "Questo ambito contiene già {0:N0} memorie. Elimina una nota prima di salvarne un'altra.",
-            French: "Cette portée contient déjà {0:N0} mémoires. Supprimez une note avant d'en enregistrer une autre.",
-            German: "Dieser Geltungsbereich enthält bereits {0:N0} Erinnerungen. Löschen Sie vor dem Speichern eine Notiz.",
-            Spanish: "Este ámbito ya contiene {0:N0} memorias. Elimina una nota antes de guardar otra.",
-            Vietnamese: "Phạm vi này đã có {0:N0} ghi nhớ. Xóa một ghi chú trước khi lưu thêm."));
+            "You already have {0:N0} saved memories. Delete a note before adding another.",
+            "Hai già {0:N0} ricordi salvati. Elimina una nota prima di aggiungerne un’altra.",
+            "Vous avez déjà {0:N0} souvenirs enregistrés. Supprimez une note avant d’en ajouter une autre.",
+            "Du hast bereits {0:N0} gespeicherte Erinnerungen. Lösche eine Notiz, bevor du eine weitere hinzufügst.",
+            "Ya tienes {0:N0} recuerdos guardados. Borra una nota antes de añadir otra.",
+            "Bạn đã có {0:N0} ghi nhớ. Xóa một ghi chú trước khi thêm ghi chú khác."));
         entries.Add("Memory.None", new(
-            English: "No global or current-project memories saved yet.",
-            Italian: "Nessuna memoria globale o del progetto corrente salvata.",
-            French: "Aucune mémoire globale ou du projet courant enregistrée.",
-            German: "Noch keine globalen oder aktuellen Projekterinnerungen gespeichert.",
-            Spanish: "Todavía no hay memorias globales ni del proyecto actual.",
-            Vietnamese: "Chưa có ghi nhớ chung hoặc của dự án hiện tại."));
+            "No saved memories yet.",
+            "Non ci sono ancora ricordi salvati.",
+            "Aucun souvenir enregistré pour le moment.",
+            "Noch keine gespeicherten Erinnerungen.",
+            "Todavía no hay recuerdos guardados.",
+            "Chưa có ghi nhớ đã lưu."));
         entries.Add("Memory.NotFound", new(
-            English: "No matching global or current-project memory.",
-            Italian: "Nessuna memoria corrispondente globale o del progetto corrente.",
-            French: "Aucune mémoire globale ou du projet courant correspondante.",
-            German: "Keine passende globale oder aktuelle Projekterinnerung gefunden.",
-            Spanish: "No hay memoria global o del proyecto actual con ese ID.",
-            Vietnamese: "Không tìm thấy ghi nhớ chung hoặc của dự án hiện tại tương ứng."));
+            "No matching saved memory.",
+            "Nessun ricordo salvato corrispondente.",
+            "Aucun souvenir enregistré correspondant.",
+            "Keine passende gespeicherte Erinnerung.",
+            "No hay un recuerdo guardado que coincida.",
+            "Không tìm thấy ghi nhớ phù hợp."));
         entries.Add("Memory.Note", new(
             English: "Note",
             Italian: "Nota",
@@ -308,27 +301,13 @@ internal static partial class UiTextCatalog
             German: "Notiz",
             Spanish: "Nota",
             Vietnamese: "Ghi chú"));
-        entries.Add("Memory.Project", new(
-            English: "Current project",
-            Italian: "Progetto corrente",
-            French: "Projet courant",
-            German: "Aktuelles Projekt",
-            Spanish: "Proyecto actual",
-            Vietnamese: "Dự án hiện tại"));
         entries.Add("Memory.Saved", new(
-            English: "Memory saved: {0}",
-            Italian: "Memoria salvata: {0}",
-            French: "Mémoire enregistrée : {0}",
-            German: "Erinnerung gespeichert: {0}",
-            Spanish: "Memoria guardada: {0}",
-            Vietnamese: "Đã lưu ghi nhớ: {0}"));
-        entries.Add("Memory.Scope", new(
-            English: "Scope",
-            Italian: "Ambito",
-            French: "Portée",
-            German: "Geltungsbereich",
-            Spanish: "Ámbito",
-            Vietnamese: "Phạm vi"));
+            "Memory saved: {0}",
+            "Ricordo salvato: {0}",
+            "Souvenir enregistré : {0}",
+            "Erinnerung gespeichert: {0}",
+            "Recuerdo guardado: {0}",
+            "Đã lưu ghi nhớ: {0}"));
         entries.Add("Memory.Secret", new(
             English: "Memory was not saved because it contains recognizable credentials or redaction markers.",
             Italian: "Memoria non salvata: contiene credenziali riconoscibili o marcatori di redazione.",
@@ -337,19 +316,19 @@ internal static partial class UiTextCatalog
             Spanish: "Memoria no guardada: contiene credenciales reconocibles o marcas de ocultación.",
             Vietnamese: "Không lưu ghi nhớ vì chứa thông tin xác thực nhận diện được hoặc dấu đã lọc."));
         entries.Add("Memory.Syntax", new(
-            English: "Use /remember [global|project] <text>, /memories, or /forget <id>.",
-            Italian: "Usa /remember [global|project] <testo>, /memories oppure /forget <id>.",
-            French: "Utilisez /remember [global|project] <texte>, /memories ou /forget <id>.",
-            German: "Verwenden Sie /remember [global|project] <Text>, /memories oder /forget <id>.",
-            Spanish: "Usa /remember [global|project] <texto>, /memories o /forget <id>.",
-            Vietnamese: "Dùng /remember [global|project] <văn-bản>, /memories hoặc /forget <id>."));
+            "Use /remember <text>, /memories, or /forget <id>.",
+            "Usa /remember <testo>, /memories oppure /forget <id>.",
+            "Utilisez /remember <texte>, /memories ou /forget <id>.",
+            "Verwenden Sie /remember <Text>, /memories oder /forget <id>.",
+            "Usa /remember <texto>, /memories o /forget <id>.",
+            "Dùng /remember <văn-bản>, /memories hoặc /forget <id>."));
         entries.Add("Memory.Title", new(
-            English: "Saved memories",
-            Italian: "Memorie salvate",
-            French: "Mémoires enregistrées",
-            German: "Gespeicherte Erinnerungen",
-            Spanish: "Memorias guardadas",
-            Vietnamese: "Ghi nhớ đã lưu"));
+            "Saved memories",
+            "Ricordi salvati",
+            "Souvenirs enregistrés",
+            "Gespeicherte Erinnerungen",
+            "Recuerdos guardados",
+            "Ghi nhớ đã lưu"));
         entries.Add("Memory.TooLong", new(
             English: "Memory exceeds {0:N0} characters. Keep the note short.",
             Italian: "La memoria supera {0:N0} caratteri. Mantieni la nota breve.",

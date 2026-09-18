@@ -184,9 +184,13 @@ public sealed class AiConversationWorkflowTests
         Assert.Equal("completed", await fixture.ScalarAsync("SELECT status FROM ai_sessions;"));
     }
 
-    /// <summary>Verifies saving, listing, and forgetting an explicit note stay local and remove the persisted note.</summary>
-    [Fact]
-    public async Task RunChatAsync_MemoryAdministration_DoesNotCallProvider()
+    /// <summary>Default and legacy-prefixed memory commands share global storage and never call the provider.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("global ")]
+    [InlineData("project ")]
+    [InlineData("PROJECT ")]
+    public async Task RunChatAsync_MemoryAdministration_IsGlobalAndDoesNotCallProvider(string prefix)
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -194,7 +198,7 @@ public sealed class AiConversationWorkflowTests
         using var http = new HttpClient(handler);
         var displayed = new List<IReadOnlyList<PersistentMemory>>();
         var inputs = new Queue<Func<string>>([
-            () => "/remember global Use concise terminal explanations.",
+            () => "/remember " + prefix + "Use concise terminal explanations.",
             () => "/memories",
             () => "/forget " + Assert.Single(displayed[0]).Id,
             () => "/memories",
@@ -228,7 +232,7 @@ public sealed class AiConversationWorkflowTests
         var displayed = new List<IReadOnlyList<PersistentMemory>>();
         var snapshots = new List<ShellRuntimeStatus>();
         var inputs = new Queue<Func<string>>([
-            () => "/remember global " + note,
+            () => "/remember " + note,
             () => "/memories",
             () => "Explain build commands.",
             () => "Explain directory commands.",

@@ -75,7 +75,7 @@ public sealed class PreferredNameSettingsTests
         }
     }
 
-    /// <summary>Adds an empty name to a legacy version-three database while preserving its preferences, preamble, notes, and schema version.</summary>
+    /// <summary>Adds an empty name and upgrades a legacy database while preserving its preferences, preamble, and notes.</summary>
     [Fact]
     public async Task Database_LegacySettings_AddEmptyNameIdempotently()
     {
@@ -96,6 +96,7 @@ public sealed class PreferredNameSettingsTests
             ALTER TABLE app_settings DROP COLUMN preferred_name;
             INSERT INTO persistent_memories (id, scope_key, body, updated_unix)
             VALUES ($id, 'global', 'Keep this saved note.', 1);
+            PRAGMA user_version = 3;
             """, ("$id", Guid.NewGuid().ToString("N")));
         Assert.Equal(3L, await fixture.ScalarAsync("PRAGMA user_version;"));
 
@@ -106,7 +107,7 @@ public sealed class PreferredNameSettingsTests
         Assert.Equal(string.Empty, await fixture.ScalarAsync("SELECT preferred_name FROM app_settings;"));
         Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'preferred_name';"));
         Assert.Equal("Keep this saved note.", await fixture.ScalarAsync("SELECT body FROM persistent_memories;"));
-        Assert.Equal(3L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(4L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Persists only the normalized name, survives reinitialization, and clears it without altering other settings.</summary>

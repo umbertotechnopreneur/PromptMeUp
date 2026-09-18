@@ -49,7 +49,7 @@ public sealed class MemoryReflectionService(ISensitiveDataRedactor redactor, ILo
         return new(true, request, seeds.AsReadOnly(), [], observations.Count - seeds.Count);
     }
 
-    /// <summary>Selects complete current-project and global memory snapshots within the serialized input ceiling.</summary>
+    /// <summary>Selects complete saved memory snapshots within the serialized input ceiling.</summary>
     public MemoryReflectionBatch HeartbeatBatch(IReadOnlyList<PersistentMemory> memories, int maximumCharacters)
     {
         ValidateMemories(memories);
@@ -74,13 +74,13 @@ public sealed class MemoryReflectionService(ISensitiveDataRedactor redactor, ILo
         return new(false, request, [], selected.AsReadOnly(), memories.Count - selected.Count);
     }
 
-    /// <summary>Suggests only exact same-scope duplicates locally, preserving complete targets for later review.</summary>
+    /// <summary>Suggests only exact duplicate notes locally, preserving complete targets for later review.</summary>
     public IReadOnlyList<MemoryProposal> FindDuplicates(IReadOnlyList<PersistentMemory> memories)
     {
         ValidateMemories(memories);
-        return memories.GroupBy(item => (item.IsGlobal, item.Text))
+        return memories.GroupBy(item => item.Text, StringComparer.Ordinal)
             .Where(group => group.Count() >= 2).Take(8)
-            .Select(group => new MemoryProposal(Guid.NewGuid().ToString("N"), "memory", "merge", group.Key.Text,
+            .Select(group => new MemoryProposal(Guid.NewGuid().ToString("N"), "memory", "merge", group.Key,
                 text.Text("Lab.DuplicateReason"), [], group.OrderBy(item => item.Id, StringComparer.Ordinal).Take(8).ToArray(), DateTimeOffset.UtcNow))
             .ToArray();
     }
@@ -129,8 +129,7 @@ public sealed class MemoryReflectionService(ISensitiveDataRedactor redactor, ILo
                     }
                 }
                 else if (operation is not ("merge" or "archive" or "flag") || sourceIds.Count != 0
-                    || targets.Length < (operation == "merge" ? 2 : 1)
-                    || targets.Select(target => target.IsGlobal).Distinct().Count() > 1)
+                    || targets.Length < (operation == "merge" ? 2 : 1))
                 {
                     throw Invalid();
                 }
@@ -163,7 +162,7 @@ public sealed class MemoryReflectionService(ISensitiveDataRedactor redactor, ILo
         {
             mode = dream ? "dream" : "heartbeat",
             observations = observations.Select(item => new { id = item.Id, session_id = item.SessionId, text = item.Text, created_at = item.CreatedAt }),
-            memories = memories.Select(item => new { id = item.Id, scope = item.IsGlobal ? "global" : "project", text = item.Text, updated_at = item.UpdatedAt })
+            memories = memories.Select(item => new { id = item.Id, text = item.Text, updated_at = item.UpdatedAt })
         }, Json);
 
     /// <summary>Validates captured evidence before allocating or sharing provider-bound batches.</summary>
@@ -184,8 +183,7 @@ public sealed class MemoryReflectionService(ISensitiveDataRedactor redactor, ILo
     /// <summary>Rejects invalid memory snapshots instead of revising their displayed content in transit.</summary>
     private void ValidateMemories(IReadOnlyList<PersistentMemory> memories)
     {
-        if (memories.Count > PersistentMemoryService.MaximumMemoriesPerScope * 2
-            || memories.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != memories.Count
+        if (memories.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != memories.Count
             || memories.Any(item => !Guid.TryParseExact(item.Id, "N", out _) || string.IsNullOrWhiteSpace(item.Text)
                 || item.Text.Length > PersistentMemoryService.MaximumCharacters))
         {

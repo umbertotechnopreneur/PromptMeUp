@@ -7,6 +7,41 @@ internal static partial class UiTextCatalog
     /// <summary>Adds all six translations for opt-in skills and reviewed memory learning.</summary>
     private static void AddExperimentalEntries(Dictionary<string, LocalizedText> entries)
     {
+        entries.Add("Help.Skills", new(
+            "Choose and enable tools for files, the web and reminders. Import skills or run their actions, always with your approval.",
+            "Scegli e attiva strumenti per file, web e promemoria. Puoi importarli e avviare le loro azioni, sempre con la tua conferma.",
+            "Choisissez et activez des outils pour les fichiers, le web et les rappels. Importez des compétences ou lancez leurs actions, toujours avec votre accord.",
+            "Wähle und aktiviere Werkzeuge für Dateien, das Web und Erinnerungen. Importiere Skills oder starte ihre Aktionen, immer mit deiner Zustimmung.",
+            "Elige y activa herramientas para archivos, web y recordatorios. Importa skills o ejecuta sus acciones, siempre con tu aprobación.",
+            "Chọn và bật công cụ cho tệp, web và lời nhắc. Nhập kỹ năng hoặc chạy thao tác của chúng, luôn cần bạn xác nhận."));
+        entries.Add("Help.Learning", new(
+            "Choose whether to keep messages from future chats for memory suggestions. You can also read or delete the collected messages here.",
+            "Scegli se conservare i messaggi delle prossime chat per suggerire ricordi. Qui puoi anche leggere o cancellare quelli raccolti.",
+            "Choisissez de conserver ou non les messages des prochains chats pour suggérer des souvenirs. Ici, vous pouvez aussi lire ou supprimer les messages collectés.",
+            "Entscheide, ob Nachrichten aus künftigen Chats für Erinnerungsvorschläge gespeichert werden. Hier kannst du gesammelte Nachrichten auch lesen oder löschen.",
+            "Elige si guardar mensajes de próximos chats para sugerir recuerdos. Aquí también puedes leer o borrar los mensajes recopilados.",
+            "Chọn có giữ tin nhắn từ các cuộc trò chuyện sau để đề xuất ghi nhớ hay không. Bạn cũng có thể đọc hoặc xóa tin nhắn đã thu thập tại đây."));
+        entries.Add("Help.Proposals", new(
+            "Review suggested memories and changes: edit the text, approve what you want to keep, or reject the rest.",
+            "Rivedi i ricordi suggeriti e le modifiche proposte: correggi il testo, approva ciò che vuoi tenere o scarta il resto.",
+            "Examinez les souvenirs et changements proposés : corrigez le texte, approuvez ce que vous souhaitez garder ou rejetez le reste.",
+            "Prüfe vorgeschlagene Erinnerungen und Änderungen: Bearbeite den Text, genehmige das Gewünschte oder verwerfe den Rest.",
+            "Revisa los recuerdos y cambios propuestos: corrige el texto, aprueba lo que quieras conservar o descarta el resto.",
+            "Xem lại ghi nhớ và thay đổi được đề xuất: sửa nội dung, duyệt phần muốn giữ hoặc bỏ phần còn lại."));
+        entries.Add("Help.Dream", new(
+            "Ask AI to suggest memories from collected messages, such as how you prefer answers. Then choose which memories to save.",
+            "Chiedi all’AI di ricavare ricordi dai messaggi raccolti, per esempio come preferisci le risposte. Poi scegli quali salvare.",
+            "Demandez à l’IA de proposer des souvenirs à partir des messages collectés, comme votre style de réponse préféré. Choisissez ensuite lesquels enregistrer.",
+            "Lass die KI aus gesammelten Nachrichten Erinnerungen vorschlagen, etwa deinen bevorzugten Antwortstil. Wähle danach, was gespeichert wird.",
+            "Pide a la IA que sugiera recuerdos a partir de mensajes recopilados, como tu estilo de respuesta preferido. Luego elige cuáles guardar.",
+            "Nhờ AI đề xuất ghi nhớ từ tin nhắn đã thu thập, chẳng hạn cách bạn muốn nhận câu trả lời. Sau đó chọn ghi nhớ cần lưu."));
+        entries.Add("Help.Heartbeat", new(
+            "Find duplicate memories and suggested merges. You can also request an AI review; every change needs your approval.",
+            "Trova ricordi duplicati e propone di unirli. Puoi chiedere anche una revisione AI; ogni modifica richiede la tua conferma.",
+            "Repérez les souvenirs en double et les regroupements proposés. Vous pouvez aussi demander un examen IA ; chaque changement nécessite votre accord.",
+            "Finde doppelte Erinnerungen und Vorschläge zum Zusammenführen. Du kannst auch eine KI-Prüfung anfordern; jede Änderung braucht deine Zustimmung.",
+            "Encuentra recuerdos duplicados y propuestas para unirlos. También puedes pedir una revisión con IA; cada cambio requiere tu aprobación.",
+            "Tìm ghi nhớ trùng lặp và đề xuất gộp chúng. Bạn cũng có thể nhờ AI kiểm tra; mọi thay đổi đều cần bạn duyệt."));
         entries.Add("Lab.SkillName.filesystem", new("Files and folders", "File e cartelle", "Fichiers et dossiers", "Dateien und Ordner", "Archivos y carpetas", "Tệp và thư mục"));
         entries.Add("Lab.SkillName.git", new("Git history and changes", "Cronologia e modifiche Git", "Historique et modifications Git", "Git-Verlauf und Änderungen", "Historial y cambios de Git", "Lịch sử và thay đổi Git"));
         entries.Add("Lab.SkillName.clipboard", new("Clipboard", "Appunti", "Presse-papiers", "Zwischenablage", "Portapapeles", "Bộ nhớ tạm"));
@@ -70,7 +105,7 @@ internal static partial class UiTextCatalog
         entries.Add("Lab.LastRun", new("Last completed review", "Ultimo controllo completato", "Dernier examen terminé", "Letzte abgeschlossene Prüfung", "Última revisión completada", "Lần kiểm tra hoàn tất gần nhất"));
         entries.Add("Lab.ReviewButton", new("Suggested memories", "Ricordi suggeriti", "Souvenirs suggérés", "Vorgeschlagene Erinnerungen", "Recuerdos sugeridos", "Ghi nhớ được đề xuất"));
         entries.Add("Lab.SkillActionInvalid", new("The skill could not complete. Check its parameters, permissions, and supported platform.", "La skill non è riuscita a completare l’azione. Controlla parametri, permessi e piattaforma supportata.", "La compétence n’a pas pu terminer. Vérifiez les paramètres, les autorisations et la plateforme prise en charge.", "Der Skill konnte nicht abgeschlossen werden. Prüfe Parameter, Berechtigungen und unterstützte Plattform.", "La skill no pudo completar la acción. Revisa parámetros, permisos y plataforma compatible.", "Kỹ năng không thể hoàn tất. Kiểm tra tham số, quyền và nền tảng được hỗ trợ."));
-        entries.Add("Lab.ForgetNotice", new("Forgetting also permanently clears learning observations and proposals in this scope (all projects for a global memory). Other approved memories and earlier audit records remain.", "Dimenticare cancella definitivamente anche osservazioni e proposte di questo ambito (tutti i progetti per una memoria globale). Le altre memorie approvate e i registri precedenti restano.", "Oublier efface définitivement les observations et propositions de cette portée (tous les projets pour une mémoire globale). Les autres mémoires approuvées et anciennes traces restent.", "Vergessen löscht auch Beobachtungen und Vorschläge dieses Bereichs endgültig (alle Projekte bei globalen Erinnerungen). Andere genehmigte Erinnerungen und frühere Protokolle bleiben.", "Olvidar borra definitivamente observaciones y propuestas de este ámbito (todos los proyectos si es global). Otras memorias aprobadas y registros anteriores permanecen.", "Quên sẽ xóa vĩnh viễn quan sát và đề xuất trong phạm vi này (mọi dự án nếu là ghi nhớ toàn cục). Ghi nhớ đã duyệt khác và nhật ký trước đó vẫn còn."));
+        entries.Add("Lab.ForgetNotice", new("Deleting this memory also permanently clears all collected messages and suggestions. Other saved memories and earlier history remain.", "Eliminare questo ricordo cancella definitivamente anche tutti i messaggi raccolti e i suggerimenti. Gli altri ricordi salvati e la cronologia precedente restano.", "Supprimer ce souvenir efface aussi définitivement tous les messages conservés et les suggestions. Les autres souvenirs et l’historique restent.", "Diese Erinnerung zu löschen entfernt auch alle gesammelten Nachrichten und Vorschläge endgültig. Andere Erinnerungen und der bisherige Verlauf bleiben.", "Eliminar este recuerdo también borra definitivamente todos los mensajes conservados y las sugerencias. Los demás recuerdos y el historial permanecen.", "Xóa ghi nhớ này cũng xóa vĩnh viễn mọi tin nhắn đã thu thập và đề xuất. Ghi nhớ khác và lịch sử trước đó vẫn còn."));
         entries.Add("Lab.ConcatInvalid", new("The selected paths or files are invalid, linked, or exceed the concatenation limits.", "I percorsi o i file selezionati non sono validi, sono collegamenti o superano i limiti di concatenazione.", "Les chemins ou fichiers sélectionnés sont invalides, sont des liens ou dépassent les limites de concaténation.", "Die gewählten Pfade oder Dateien sind ungültig, sind Verknüpfungen oder überschreiten die Zusammenführungslimits.", "Las rutas o los archivos seleccionados no son válidos, son enlaces o superan los límites de concatenación.", "Đường dẫn hoặc tệp đã chọn không hợp lệ, là liên kết hoặc vượt giới hạn ghép tệp."));
     }
 }

@@ -29,10 +29,12 @@ public sealed class MemoryCommandWorkflow(
             if (options.Command == AppCommand.Remember)
             {
                 var parts = request.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
-                var global = parts[0].Equals("global", StringComparison.OrdinalIgnoreCase);
-                var explicitScope = global || parts[0].Equals("project", StringComparison.OrdinalIgnoreCase);
+                var prefix = parts.FirstOrDefault();
+                // Accept old command syntax without creating folder-specific memories.
+                var explicitScope = string.Equals(prefix, "global", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(prefix, "project", StringComparison.OrdinalIgnoreCase);
                 var note = explicitScope ? parts.ElementAtOrDefault(1) ?? string.Empty : request;
-                var saved = await memories.RememberAsync(note, global, cancellationToken).ConfigureAwait(false);
+                var saved = await memories.RememberAsync(note, true, cancellationToken).ConfigureAwait(false);
                 shell.RenderSuccess(text.Text("Memory.Saved", saved.Id));
                 view.Render([saved]);
                 await activity.TryRecordAsync("remember", "completed", null, new { saved.Id, saved.IsGlobal }).ConfigureAwait(false);
@@ -114,7 +116,7 @@ public sealed class MemoryCommandWorkflow(
             var payload = JsonSerializer.Serialize(new
             {
                 request,
-                memories = batch.Select(memory => new { id = memory.Id, scope = memory.IsGlobal ? "global" : "project", note = memory.Text })
+                memories = batch.Select(memory => new { id = memory.Id, note = memory.Text })
             });
             var response = await shell.RunWithStatusAsync(text.Text("Status.Thinking"),
                 () => openAi.SendAsync("memory-forget", session.Id, [new ChatMessage("user", payload)],

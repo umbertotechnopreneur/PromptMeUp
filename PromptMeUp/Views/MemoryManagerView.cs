@@ -50,19 +50,12 @@ public sealed class MemoryManagerView : IMemoryManagerView
         }
     }
 
-    /// <summary>Edits a scope and bounded note in a disposable draft, retaining existing line breaks.</summary>
+    /// <summary>Edits a bounded saved note in a disposable draft, retaining existing line breaks.</summary>
     public MemoryDraft? Edit(PersistentMemory? memory, MemoryDraft? draft = null, string? error = null)
     {
         var note = draft?.Text ?? memory?.Text ?? string.Empty;
-        var global = draft?.IsGlobal ?? memory?.IsGlobal ?? false;
         var fields = new FormField[]
         {
-            new("scope", "Memory.Scope", () => global ? "global" : "project", value => { global = value == "global"; error = null; })
-            {
-                Choices = () => [new("project", _text.Text("Memory.Project")), new("global", _text.Text("Memory.Global"))],
-                Help = () => error ?? _text.Text("MemoryManager.ScopeHelp"),
-                HelpKey = "MemoryManager.ScopeHelp"
-            },
             new("note", "Memory.Note", () => note, value => { note = value; error = null; })
             {
                 MaxLength = PersistentMemoryService.MaximumCharacters,
@@ -83,7 +76,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
             var saved = FullscreenForm.CanUse(_console)
                 ? new FullscreenForm(_console, _text, _shell.Options).Run("Settings.Memories", [page], () => ValidateNote(note))
                 : EditScrolling(page, () => error);
-            return saved ? new(note, global) : null;
+            return saved ? new(note, true) : null;
         }
         catch (InteractiveFlowCanceledException)
         {
@@ -267,7 +260,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
             body, Navigation(memories, bodyRows), footer, FullscreenFooter.NoticeRows));
     }
 
-    /// <summary>Keeps the active scope and note preview visible within a bounded left navigation column.</summary>
+    /// <summary>Keeps the selected note preview visible within a bounded left navigation column.</summary>
     private IRenderable Navigation(IReadOnlyList<PersistentMemory> memories, int bodyRows)
     {
         var capacity = Math.Max(1, (bodyRows - 2) / 2);
@@ -277,10 +270,10 @@ public sealed class MemoryManagerView : IMemoryManagerView
         {
             var memory = memories[index];
             var selected = index == _selected;
-            rows.Add(Line($"{(selected ? ">" : " ")} {_text.Text(memory.IsGlobal ? "Memory.Global" : "Memory.Project")}",
+            rows.Add(Line($"{(selected ? ">" : " ")} {SafeText(memory.Text).ReplaceLineEndings(" ")}",
                 selected && _focus == 0 ? TerminalTheme.SelectionForeground : selected ? TerminalTheme.Accent : TerminalTheme.Muted,
                 selected && _focus == 0 ? TerminalTheme.SelectionBackground : null));
-            rows.Add(Line("  " + SafeText(memory.Text).ReplaceLineEndings(" "), TerminalTheme.Primary));
+            rows.Add(new Text(" "));
         }
         return Inset(new Rows(rows));
     }
@@ -289,7 +282,6 @@ public sealed class MemoryManagerView : IMemoryManagerView
     private IRenderable Details(PersistentMemory memory)
     {
         var grid = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
-        AddPair(grid, _text.Text("Memory.Scope"), _text.Text(memory.IsGlobal ? "Memory.Global" : "Memory.Project"));
         AddPair(grid, "ID", memory.Id);
         AddPair(grid, _text.Text("MemoryManager.Updated"), memory.UpdatedAt.ToLocalTime().ToString("g", _text.Culture));
         return new Rows(grid, new Text(SafeText(memory.Text), Style.Parse(TerminalTheme.Primary)));
@@ -337,10 +329,9 @@ public sealed class MemoryManagerView : IMemoryManagerView
     /// <summary>Keeps compact menu previews to one row while the selected note retains its complete detail.</summary>
     private string PreviewLabel(PersistentMemory memory)
     {
-        var scope = _text.Text(memory.IsGlobal ? "Memory.Global" : "Memory.Project");
-        var width = Math.Max(1, _console.Profile.Width - new Segment(scope).CellCount() - 6);
+        var width = Math.Max(1, _console.Profile.Width - 6);
         var preview = new Segment(SafeText(memory.Text).ReplaceLineEndings(" "));
-        return $"{scope} · {string.Concat(Segment.SplitOverflow(preview, Overflow.Ellipsis, width).Select(segment => segment.Text))}";
+        return string.Concat(Segment.SplitOverflow(preview, Overflow.Ellipsis, width).Select(segment => segment.Text));
     }
 
     /// <summary>Edits the same draft fields with two-column rows and an explicit save action in compact terminals.</summary>
@@ -369,7 +360,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
             }
             if (selected.Id == "save")
             {
-                var error = ValidateNote(page.Fields[1].Read());
+                var error = ValidateNote(page.Fields[0].Read());
                 if (error is null)
                 {
                     return true;
@@ -406,7 +397,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"))
         .UseConverter(choice => Markup.Escape(choice.Label)).AddChoices(choices));
 
-    /// <summary>Checks only local draft shape while persistence applies authoritative privacy and scope validation.</summary>
+    /// <summary>Checks only local draft shape while persistence applies authoritative privacy validation.</summary>
     private string? ValidateNote(string value) => string.IsNullOrWhiteSpace(value) ? _text.Text("Memory.Empty")
         : value.Trim().Length > PersistentMemoryService.MaximumCharacters ? _text.Text("Memory.TooLong", PersistentMemoryService.MaximumCharacters) : null;
 

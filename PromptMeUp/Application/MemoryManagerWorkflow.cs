@@ -124,8 +124,8 @@ public sealed class MemoryManagerWorkflow
             try
             {
                 var saved = memory is null
-                    ? await _memories.RememberAsync(draft.Text, draft.IsGlobal, cancellationToken).ConfigureAwait(false)
-                    : await _memories.UpdateAsync(memory.Id, draft.Text, draft.IsGlobal, cancellationToken).ConfigureAwait(false);
+                    ? await _memories.RememberAsync(draft.Text, true, cancellationToken).ConfigureAwait(false)
+                    : await _memories.UpdateAsync(memory.Id, draft.Text, true, cancellationToken).ConfigureAwait(false);
                 _shell.RenderSuccess(_text.Text("Memory.Saved", saved.Id));
                 return;
             }

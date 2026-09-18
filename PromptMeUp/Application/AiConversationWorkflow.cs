@@ -703,12 +703,12 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 case "/remember" when parts.Length == 2:
                     var note = parts[1].Trim();
                     var scope = note.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
-                    var global = scope[0].Equals("global", StringComparison.OrdinalIgnoreCase);
-                    if (global || scope[0].Equals("project", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(scope.FirstOrDefault(), "global", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(scope.FirstOrDefault(), "project", StringComparison.OrdinalIgnoreCase))
                     {
                         note = scope.Length == 2 ? scope[1].Trim() : string.Empty;
                     }
-                    var saved = await _persistentMemory.RememberAsync(note, global, cancellationToken).ConfigureAwait(false);
+                    var saved = await _persistentMemory.RememberAsync(note, true, cancellationToken).ConfigureAwait(false);
                     _shell.RenderSuccess(_text.Text("Memory.Saved", saved.Id));
                     break;
                 case "/forget" when parts.Length == 2:

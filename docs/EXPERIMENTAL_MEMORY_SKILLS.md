@@ -46,7 +46,7 @@ You can import up to 64 local packages. If a skill's instructions exceed the cha
 
 ## Use memories
 
-Save a note directly with `/remember This project uses .NET 10.` in chat. Add `global` after `/remember` for a note shared across projects. Open `hm --memories` to read, edit, or delete saved notes.
+Save a note directly with `/remember Keep terminal explanations concise.` in chat, or `hm --remember "Keep terminal explanations concise."` from the terminal. All saved memories share one list across your conversations; there is no folder or scope to choose. Open `hm --memories` to read, edit, or delete them. Older notes are preserved when you upgrade.
 
 For suggestions from future messages, open Settings → Memory. Turn on the shared project switch, choose to keep your messages, read the notice, give consent, and **Save**. The project switch alone never starts collection. To stop collecting, turn it off, confirm deletion of collected messages and suggestions, and Save; saved memories remain.
 
@@ -61,6 +61,6 @@ These commands also work in chat as `/skills`, `/learning`, `/dream`, `/proposal
 
 ## Keep control of your data
 
-- Collection keeps the newest 200 user messages per project and hides recognizable credentials. Messages over 4,000 characters are skipped. Messages and suggestions older than 30 days are removed when those records are next used. Stopping collection clears messages and suggestions, not saved memories. Deleting or merging a memory also clears collected messages and suggestions in its scope, with a warning first.
+- Collection keeps the newest 200 user messages per project and hides recognizable credentials. Messages over 4,000 characters are skipped. Messages and suggestions older than 30 days are removed when those records are next used. Stopping collection clears messages and suggestions, not saved memories. Deleting or merging a saved memory clears all collected messages and suggestions, with a warning first.
 - HTTP sends your request to the chosen public site; web search sends your query to DuckDuckGo. No credentials, private-network destinations, redirects, or proxy access are supported. Output is not automatically sent to OpenAI, but optional AI command review sends script parameters before execution approval. Disable AI command review in Settings to keep that review local.
 - Close sensitive windows before screenshots: images cannot hide private details. Clipboard output and generated bundles can also be private. Reminders stay local. Clearing collected messages does not erase earlier history or information already shared; see [Privacy](PRIVACY.md).

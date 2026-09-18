@@ -36,6 +36,8 @@ to a file, this follow-up menu doesn't open.
 | --- | --- | --- |
 | `--query <text>` | `-q` or positional text | Answers one question. In a live terminal, you can continue in chat or review a suggested command. |
 | `--chat` | — | Starts a conversation about terminal work. |
+| `--remember <text>` | `/remember <text>` | Saves a note for future conversations. |
+| `--forget <id or description>` | `/forget <id or description>` | Finds a saved note and asks before deleting it. Descriptions may use AI to find matches. |
 | `--memories` | — | Opens the local memory manager to view, create, edit, or delete saved notes. |
 | `--diagnose [text]` | `--file <log>` or stdin | Explains an error or log excerpt and suggests what to check next. |
 | `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a PowerShell script for you to review and save. |
@@ -368,9 +370,9 @@ commands. The reminder appears once, including when a question continues into ch
 | Control | Behavior |
 | --- | --- |
 | `/run <command>` | Checks risks locally and, optionally, with AI. Shows the exact command and asks before running it. Captured output can be shared in a follow-up. |
-| `/remember [global\|project] <text>` | Saves a note for next time. Notes belong to the current project unless you choose `global`. |
-| `/memories` | Lists saved global and current-project notes with their IDs. |
-| `/forget <id>` | Deletes a saved global or current-project note from future selection. |
+| `/remember <text>` | Saves a note for future conversations. |
+| `/memories` | Lists saved notes and their IDs. |
+| `/forget <id>` | Deletes a saved note from future selection. |
 | `/clear` | Starts fresh in chat. Saved notes, usage counters, and earlier activity history stay. |
 | `/costs` | Shows the cost dashboard without ending the chat. |
 | `/status` or `/context` | Shows current context, the input budget, loaded notes, and token usage. |
@@ -382,41 +384,41 @@ You must answer the approval prompt in a live terminal for every `/run` command.
 
 ### Remember something for next time
 
-Open **Memories** in the left sidebar of Help (`hm`) or Settings (`hm --setup`), or run
+Open **Saved memories** in the left sidebar of Help (`hm`) or Settings (`hm --setup`), or run
 `hm --memories`, to manage saved notes without an AI connection. Select a note to
-read its full text, edit its text or scope, or delete it after confirmation. Choose
-**Create** to add a project or global note. Saving a note applies immediately;
+read its full text, edit it, or delete it after confirmation. Choose
+**Create** to add a note. Saving a note applies immediately;
 canceling its editor leaves the stored note unchanged. Returning to Settings keeps
 any unfinished settings draft.
 
-Save a preference or project fact in chat so you do not have to repeat it:
+Save a preference in chat so you do not have to repeat it:
 
 ```text
-/remember project Build this project with dotnet build.
-/remember global Keep terminal explanations concise.
+/remember Keep terminal explanations concise.
+/remember Explain unfamiliar commands before suggesting them.
 /memories
 /forget <id>
 ```
 
-Omit `project` to use the default project scope. Project notes belong to the
-nearest parent directory containing `.git`, including the current directory. If
-there is no Git repository, they belong to the current directory. Global notes
-are available across projects that use the same local data directory.
+Saved memories share one list across conversations using the same local data
+directory. They are not tied to the folder where you saved them. From the terminal,
+use `hm --remember <text>` or `hm --forget <id or description>`.
 
 Only notes you explicitly save become memories. Each note can contain up to
-1,000 characters, with room for 100 global notes and 100 notes per project.
+1,000 characters. You can add new notes while the list has fewer than 100.
+An upgrade preserves existing notes, including their IDs and dates. If the older
+list has more than 100, you can still read, edit, or delete those notes.
 `/memories` lists the notes available here; use an ID from that list with `/forget`.
 
-For each query or chat request, PromptMeUp considers global notes and project
-notes that share words with the request. It loads at most five notes, within
+For each query or chat request, PromptMeUp considers the shared list of notes.
+It loads at most five notes, within
 800 estimated tokens including their formatting. Selection happens locally,
 without an extra AI call. Saving more notes does not make every request larger.
 
-Selected notes are sent to the provider and can appear in the redacted request
+Selected notes are sent to OpenAI and can appear in the filtered request
 history. Notes cannot authorize a command or override your latest request.
 Recognizable credentials are rejected when saving and redacted again when notes
-are loaded. The notes live in the local SQLite database; project identifiers are
-stored as hashes of their directory paths.
+are loaded. The notes live in the local SQLite database.
 
 Use `/clear` to reset the conversation while keeping your notes. Use `/forget`
 to remove a saved note from future selection. Neither command erases earlier

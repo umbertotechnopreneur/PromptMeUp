@@ -7,9 +7,9 @@ namespace PromptMeUp.Tests;
 
 public sealed class PersistentMemoryTests
 {
-    /// <summary>Explicit notes survive reopening, retain their scope, and avoid duplicate records or persisted project paths.</summary>
+    /// <summary>Explicit notes survive reopening as global regardless of the legacy flag and avoid duplicate records.</summary>
     [Fact]
-    public async Task Remember_ReopenedStore_PreservesScopesAndDeduplicates()
+    public async Task Remember_ReopenedStore_UsesGlobalStorageAndDeduplicates()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -22,34 +22,29 @@ public sealed class PersistentMemoryTests
 
         Assert.Equal(project.Id, repeated.Id);
         Assert.Equal(2, memories.Count);
-        Assert.Contains(memories, memory => memory.Id == project.Id && !memory.IsGlobal);
+        Assert.Contains(memories, memory => memory.Id == project.Id && memory.IsGlobal);
         Assert.Contains(memories, memory => memory.Id == global.Id && memory.IsGlobal);
         var scope = Assert.IsType<string>(await fixture.ScalarAsync(
             "SELECT scope_key FROM persistent_memories WHERE id = $id;", ("$id", project.Id)));
-        Assert.Equal(64, scope.Length);
-        Assert.All(scope, character => Assert.True(Uri.IsHexDigit(character)));
+        Assert.Equal("global", scope);
     }
 
-    /// <summary>Notes in another project remain invisible and cannot be deleted using their exact identifier.</summary>
+    /// <summary>Both legacy scope flags address the same global note, which can be selected and deleted by identifier.</summary>
     [Fact]
-    public async Task ScopeIsolation_ExcludesOtherProjectsFromReadSelectAndForget()
+    public async Task LegacyScopeFlags_AddressOneGlobalCollection()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        var foreignId = Guid.NewGuid().ToString("N");
-        await fixture.ScalarAsync("""
-            INSERT INTO persistent_memories (id, scope_key, body, updated_unix)
-            VALUES ($id, $scope, 'Release instructions for another project.', 1);
-            """, ("$id", foreignId), ("$scope", new string('F', 64)));
         var service = CreateService(fixture);
-        var local = await service.RememberAsync("Release instructions for this project.", false, default);
+        var saved = await service.RememberAsync("Release instructions for every project.", false, default);
+        var repeated = await service.RememberAsync(saved.Text, true, default);
 
-        Assert.DoesNotContain(await service.ListAsync(default), memory => memory.Id == foreignId);
-        Assert.DoesNotContain((await service.SelectAsync("Release instructions", default)).Memories, memory => memory.Id == foreignId);
-        Assert.False(await service.ForgetAsync(foreignId, default));
-        Assert.True(await service.ForgetAsync(local.Id, default));
-        Assert.False(await service.ForgetAsync(local.Id, default));
-        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories;"));
+        Assert.Equal(saved.Id, repeated.Id);
+        Assert.True(Assert.Single(await service.ListAsync(default)).IsGlobal);
+        Assert.Equal(saved.Id, Assert.Single((await service.SelectAsync("Release instructions", default)).Memories).Id);
+        Assert.True(await service.ForgetAsync(saved.Id, default));
+        Assert.False(await service.ForgetAsync(saved.Id, default));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories;"));
     }
 
     /// <summary>Rejected note inputs never reach SQLite and surface recoverable validation errors.</summary>
@@ -81,9 +76,9 @@ public sealed class PersistentMemoryTests
         Assert.Single(await service.ListAsync(default));
     }
 
-    /// <summary>Full scopes refuse another note while allowing duplicate refreshes and notes in another scope.</summary>
+    /// <summary>A full collection refuses new notes under either legacy flag while allowing duplicate refreshes.</summary>
     [Fact]
-    public async Task ScopeLimit_IsAtomicAndIndependent()
+    public async Task CollectionLimit_IsAtomicAndIgnoresLegacyScope()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -92,16 +87,17 @@ public sealed class PersistentMemoryTests
 
         await Assert.ThrowsAsync<MemoryValidationException>(() => service.RememberAsync("One note too many.", true, default));
         await service.RememberAsync("Synthetic note 1", true, default);
-        await service.RememberAsync("Independent project note.", false, default);
+        await Assert.ThrowsAsync<MemoryValidationException>(() => service.RememberAsync("Another new note.", false, default));
+        await service.RememberAsync("Synthetic note 2", false, default);
 
         var memories = await service.ListAsync(default);
         Assert.Equal(PersistentMemoryService.MaximumMemoriesPerScope, memories.Count(memory => memory.IsGlobal));
-        Assert.Single(memories, memory => !memory.IsGlobal);
+        Assert.All(memories, memory => Assert.True(memory.IsGlobal));
     }
 
-    /// <summary>Project notes require lexical relevance, global preferences remain eligible, and duplicate content loads once.</summary>
+    /// <summary>All notes remain eligible, lexical relevance ranks first, and repeated content loads once.</summary>
     [Fact]
-    public async Task Select_RelevanceAndDeduplication_KeepOnlyUsefulNotes()
+    public async Task Select_RelevanceAndDeduplication_RankGlobalNotes()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -113,10 +109,11 @@ public sealed class PersistentMemoryTests
 
         var selection = await service.SelectAsync("Prepare release builds", default);
 
-        Assert.Equal(2, selection.Memories.Count);
+        Assert.Equal(3, selection.Memories.Count);
+        Assert.Equal(project.Id, selection.Memories[0].Id);
         Assert.Contains(selection.Memories, memory => memory.Id == project.Id);
         Assert.Contains(selection.Memories, memory => memory.Id == preference.Id);
-        Assert.DoesNotContain(selection.Memories, memory => memory.Id == unrelated.Id);
+        Assert.Contains(selection.Memories, memory => memory.Id == unrelated.Id);
     }
 
     /// <summary>Multibyte notes are charged by UTF-8 size and never exceed the total memory content allowance.</summary>
@@ -172,15 +169,20 @@ public sealed class PersistentMemoryTests
         Assert.Equal(safe, await fixture.ScalarAsync("SELECT body FROM persistent_memories;"));
     }
 
-    /// <summary>Externally corrupted scope bounds fail explicitly instead of hiding excess persisted rows.</summary>
+    /// <summary>Legacy collections above the creation limit stay fully listable and allow existing notes to refresh.</summary>
     [Fact]
-    public async Task Read_OverfullStoredScope_FailsExplicitly()
+    public async Task Read_OverfullCollection_PreservesEveryNoteAndAllowsRefresh()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        await SeedGlobalNotesAsync(fixture, PersistentMemoryService.MaximumMemoriesPerScope + 1);
+        var count = PersistentMemoryService.MaximumMemoriesPerScope * 3 + 1;
+        await SeedGlobalNotesAsync(fixture, count);
+        var service = CreateService(fixture);
 
-        await Assert.ThrowsAsync<InvalidDataException>(() => CreateService(fixture).ListAsync(default));
+        Assert.Equal(count, (await service.ListAsync(default)).Count);
+        await Assert.ThrowsAsync<MemoryValidationException>(() => service.RememberAsync("Another new note.", false, default));
+        await service.RememberAsync("Synthetic note 1", false, default);
+        Assert.Equal(count, (await service.ListAsync(default)).Count);
     }
 
     /// <summary>Creates the actual memory service using isolated persistence and the production redaction policy.</summary>

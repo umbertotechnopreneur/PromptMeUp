@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Use one saved-memory collection and explain feature commands
+
+- Made saved memories global across conversations using the same local data folder. SQLite schema 4 preserves every old note, identifier, timestamp, duplicate, and provenance record; collections above the new-note limit remain accessible and editable. Old scope prefixes are accepted only as compatibility aliases.
+- Removed scope controls and labels from saved-note views, command help, and proposal review. New notes and approved suggestions always save globally. Existing project-scoped collection consent, skill approvals, and reminders are unchanged.
+- Replaced generic Skills and memory help labels with short purpose descriptions in all six languages. Updated the built-in guide, runtime memory prompts, README, CLI reference, architecture, and privacy documentation without changing the existing UI style.
+- Added migration, rollback, global command, view, bounded reflection, and duplicate-cleanup regressions. Deleting a saved note still requires the existing confirmation and clears collected evidence and suggestions; stale pre-migration proposals require fresh review.
+
+Validation: preflight, formatting verification, XML summaries, and the final Release build passed with zero warnings or errors. All 915 tests passed against the final source and packaged prompts. Cleaned Release build output. No real user data was migrated during validation, no live OpenAI calls were made, and no MSIX was rebuilt or installed.
+
 ## 2026-09-18 — Install the inline Settings Debug update
 
 - Published source commit `3d1b2c5` locally in Debug for Windows x64 and packaged the requested test MSIX `0.1.5.21` with the existing trusted certificate. Updated the current-user installation from `0.1.5.20` without uninstalling, changing certificate trust, or modifying app data.

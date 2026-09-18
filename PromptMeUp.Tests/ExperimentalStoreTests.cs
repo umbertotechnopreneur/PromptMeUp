@@ -113,9 +113,11 @@ public sealed class ExperimentalStoreTests
         Assert.NotEqual(revision, await store.RevisionAsync(default));
     }
 
-    /// <summary>Valid independent-session evidence promotes exactly once into the explicitly reviewed scope.</summary>
-    [Fact]
-    public async Task Approve_Add_RequiresExactPayloadAndPersistsProvenance()
+    /// <summary>Valid independent-session evidence promotes exactly once into global memory regardless of the legacy scope argument.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Approve_Add_RequiresExactPayloadAndPersistsProvenance(bool legacyGlobal)
     {
         using var fixture = new RegressionFixture();
         var store = await PrepareAsync(fixture);
@@ -125,7 +127,7 @@ public sealed class ExperimentalStoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.ApproveAsync(
             proposal with { Rationale = "A different unseen explanation." }, proposal.Text, true, default));
         Assert.Empty(await CreateMemories(fixture).ListAsync(default));
-        await store.ApproveAsync(proposal, "Reviewed preference.", true, default);
+        await store.ApproveAsync(proposal, "Reviewed preference.", legacyGlobal, default);
 
         var memory = Assert.Single(await CreateMemories(fixture).ListAsync(default));
         Assert.True(memory.IsGlobal);
@@ -218,6 +220,88 @@ public sealed class ExperimentalStoreTests
         await store.ApproveAsync(proposal, "Combined reviewed memory.", false, default);
         Assert.Equal(2, (await memories.ListAsync(default)).Count);
         Assert.Empty(await store.ProposalsAsync(default));
+    }
+
+    /// <summary>Merging preserved legacy notes above the creation limit remains possible and only new additions are blocked.</summary>
+    [Fact]
+    public async Task Approve_AboveGlobalLimit_AllowsMergeButRejectsNewMemory()
+    {
+        using var fixture = new RegressionFixture();
+        var store = await PrepareAsync(fixture);
+        var memories = CreateMemories(fixture);
+        await fixture.ScalarAsync("""
+            WITH RECURSIVE numbers(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM numbers WHERE n < 105)
+            INSERT INTO persistent_memories(id, scope_key, body, updated_unix)
+            SELECT lower(hex(randomblob(16))), 'global', 'Preserved note ' || n, $now FROM numbers;
+            """, ("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        var add = await AddProposalAsync(store);
+        await store.SaveProposalsAsync([add], default);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.ApproveAsync(add, add.Text, false, default));
+        Assert.Equal(105, (await memories.ListAsync(default)).Count);
+
+        var targets = (await memories.ListAsync(default)).Take(2).ToArray();
+        var merge = Proposal("merge", [], targets);
+        await store.SaveProposalsAsync([merge], default);
+        await store.ApproveAsync(merge, "Combined preserved notes.", false, default);
+
+        var saved = await memories.ListAsync(default);
+        Assert.Equal(104, saved.Count);
+        Assert.All(saved, note => Assert.True(note.IsGlobal));
+        Assert.Contains(saved, note => note.Text == "Combined preserved notes.");
+        Assert.DoesNotContain(saved, note => targets.Any(target => target.Id == note.Id));
+    }
+
+    /// <summary>Large groups of preserved duplicates can be merged in explicitly reviewed batches without changing other notes.</summary>
+    [Theory]
+    [InlineData(9)]
+    [InlineData(17)]
+    public async Task Approve_ManyIdenticalLegacyNotes_AllowsBoundedCleanup(int count)
+    {
+        using var fixture = new RegressionFixture();
+        var store = await PrepareAsync(fixture);
+        var memories = CreateMemories(fixture);
+        var unrelated = await memories.RememberAsync("Keep this unrelated note.", true, default);
+        await fixture.ScalarAsync("""
+            WITH RECURSIVE numbers(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM numbers WHERE n < $count)
+            INSERT INTO persistent_memories(id, scope_key, body, updated_unix)
+            SELECT lower(hex(randomblob(16))), 'global', 'Repeated legacy preference.', $now FROM numbers;
+            """, ("$count", count), ("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        var reflection = new MemoryReflectionService(new SensitiveDataRedactor(), new LocalizationService());
+        while ((await memories.ListAsync(default)).Count > 2)
+        {
+            var before = await memories.ListAsync(default);
+            var proposal = Assert.Single(reflection.FindDuplicates(before));
+            Assert.InRange(proposal.Targets.Count, 2, 8);
+            await store.SaveProposalsAsync([proposal], default);
+            await store.ApproveAsync(proposal, proposal.Text, false, default);
+            Assert.Equal(before.Count - proposal.Targets.Count + 1, (await memories.ListAsync(default)).Count);
+        }
+
+        var remaining = await memories.ListAsync(default);
+        Assert.Equal(2, remaining.Count);
+        Assert.Contains(unrelated, remaining);
+        Assert.Single(remaining, note => note.Text == "Repeated legacy preference.");
+    }
+
+    /// <summary>A proposal reviewed before the global migration cannot silently approve its changed destination snapshot.</summary>
+    [Fact]
+    public async Task Approve_PreMigrationTarget_RequiresFreshReview()
+    {
+        using var fixture = new RegressionFixture();
+        var store = await PrepareAsync(fixture);
+        var memories = CreateMemories(fixture);
+        var original = await memories.RememberAsync("Keep this migrated note.", true, default);
+        await fixture.ScalarAsync("UPDATE persistent_memories SET scope_key = $scope WHERE id = $id; PRAGMA user_version = 3;",
+            ("$scope", PersistentMemoryService.ResolveProjectScope()), ("$id", original.Id));
+        var proposal = Proposal("archive", [], [original with { IsGlobal = false }]);
+        await store.SaveProposalsAsync([proposal], default);
+
+        await fixture.Database.InitializeAsync(default);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.ApproveAsync(proposal, proposal.Text, true, default));
+        Assert.Equal(original, Assert.Single(await memories.ListAsync(default)));
+        Assert.Empty(await store.ProposalsAsync(default));
+        Assert.Equal("expired", await fixture.ScalarAsync("SELECT status FROM memory_proposals WHERE id = $id;", ("$id", proposal.Id)));
     }
 
     /// <summary>Modified target snapshots cannot be approved and automatically leave the pending review queue.</summary>
