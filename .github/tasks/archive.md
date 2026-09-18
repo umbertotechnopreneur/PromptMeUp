@@ -2,6 +2,12 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Install the global-memory Debug update
+
+- Published source commit `ff6f968` in Debug for Windows x64 and packaged local test MSIX `0.1.5.22` with the existing trusted certificate. Updated the current-user installation from `0.1.5.21` without uninstalling or changing app data, settings, certificate trust, PATH, or fonts.
+- Verified Debug assembly metadata, the source revision, the package signature, all 320 installed payload hashes, and the `hm` execution alias pointing to the new version. Staged safely while the app was open, then completed registration after the user closed it; no process was terminated.
+- Preserved the signed MSIX and verification record under ignored `artifacts/msix/memory-ff6f968-debug`. Cleaned matching Debug/runtime build output. No application launch or live OpenAI calls; the 915 source tests had passed before packaging.
+
 ## 2026-09-18 — Use one saved-memory collection and explain feature commands
 
 - Made saved memories global across conversations using the same local data folder. SQLite schema 4 preserves every old note, identifier, timestamp, duplicate, and provenance record; collections above the new-note limit remain accessible and editable. Old scope prefixes are accepted only as compatibility aliases.
