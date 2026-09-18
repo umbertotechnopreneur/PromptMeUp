@@ -18,6 +18,8 @@ public sealed record SetupViewState(
     public SettingsFeatureOverview? FeatureOverview { get; init; }
 
     public Action? OpenMemories { get; init; }
+
+    public bool SaveSucceeded { get; init; }
 }
 
 public enum SettingsSection
@@ -42,6 +44,10 @@ public sealed record SetupSubmission(
     bool TestConnection)
 {
     public SettingsFeatureChanges? Features { get; init; }
+
+    public bool KeepOpen { get; init; }
+
+    public SettingsSection SelectedSection { get; init; } = SettingsSection.General;
 }
 
 public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji, bool SuppressFooter = false);

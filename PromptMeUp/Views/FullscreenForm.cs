@@ -56,6 +56,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private Action? _pendingOpen;
     private (int Width, int Height, string Theme)? _lastFrame;
 
+    internal int SelectedPageIndex => _page;
+
     /// <summary>Checks terminal capabilities before opting into a fullscreen form.</summary>
     internal static bool CanUse(IAnsiConsole console) =>
         console.Profile.Capabilities.Ansi && console.Profile.Capabilities.AlternateBuffer

@@ -56,11 +56,7 @@ public sealed class FullscreenSetupView
             {
                 throw new ArgumentOutOfRangeException(nameof(state), "Unsupported settings section.");
             }
-            var saved = FullscreenForm.CanUse(_console)
-                ? new FullscreenForm(_console, _text, _shell.Options).Run(
-                    "Settings.Title", pages, () => ValidatePages(pages) ?? ValidateFeatures(draft), initialPage: initialPage)
-                : new SettingsPromptForm(_console, _text, _shell.Options).Run(
-                    pages, initialPage, () => ValidatePages(pages) ?? ValidateFeatures(draft));
+            var (saved, selectedPage) = CollectPages(pages, initialPage, draft);
             if (!saved)
             {
                 return null;
@@ -79,7 +75,9 @@ public sealed class FullscreenSetupView
                 draft.AdminKey,
                 settings.AiEnabled && HasApiKey(draft, state) && draft.TestConnection)
             {
-                Features = draft.FeatureChanges()
+                Features = draft.FeatureChanges(),
+                KeepOpen = true,
+                SelectedSection = SelectedSection(pages[selectedPage])
             };
         }
         finally
@@ -88,6 +86,27 @@ public sealed class FullscreenSetupView
             TerminalTheme.Apply(originalTheme);
         }
     }
+
+    /// <summary>Collects a validated settings draft and records the section that initiated its explicit save.</summary>
+    private (bool Saved, int SelectedPage) CollectPages(IReadOnlyList<FormPage> pages, int initialPage, SetupDraft draft)
+    {
+        if (FullscreenForm.CanUse(_console))
+        {
+            var form = new FullscreenForm(_console, _text, _shell.Options);
+            var saved = form.Run("Settings.Title", pages, () => ValidatePages(pages) ?? ValidateFeatures(draft), initialPage);
+            return (saved, form.SelectedPageIndex);
+        }
+        var promptForm = new SettingsPromptForm(_console, _text, _shell.Options);
+        var savedDraft = promptForm.Run(pages, initialPage, () => ValidatePages(pages) ?? ValidateFeatures(draft));
+        return (savedDraft, promptForm.SelectedPageIndex);
+    }
+
+    /// <summary>Maps a visible form page back to the stable settings section used when reopening the editor.</summary>
+    private static SettingsSection SelectedSection(FormPage page) =>
+        page.TitleKey.StartsWith("Settings.", StringComparison.Ordinal)
+            && Enum.TryParse<SettingsSection>(page.TitleKey["Settings.".Length..], ignoreCase: false, out var section)
+            ? section
+            : SettingsSection.General;
 
     /// <summary>Groups every preference into stable sidebar sections that share one local draft.</summary>
     private IReadOnlyList<FormPage> CreateSetupPages(SetupDraft draft, SetupViewState state)
@@ -107,7 +126,7 @@ public sealed class FullscreenSetupView
         {
             context[0] = context[0] with { HelpKey = "AiSettings.ContextOverride" };
         }
-        return
+        return AddSaveNotice(
         [
             new("Settings.General",
             [
@@ -203,7 +222,28 @@ public sealed class FullscreenSetupView
                 Preview = () => new Text(_text.Text("Help.About"), Style.Parse(TerminalTheme.Primary)),
                 PreviewRows = 3
             }
-        ];
+        ], state.SaveSucceeded);
+    }
+
+    /// <summary>Adds a clear success acknowledgement to every section when the saved editor immediately reopens.</summary>
+    private IReadOnlyList<FormPage> AddSaveNotice(IReadOnlyList<FormPage> pages, bool saveSucceeded)
+    {
+        if (!saveSucceeded)
+        {
+            return pages;
+        }
+        return pages.Select(page =>
+        {
+            var overview = page.Overview;
+            return page with
+            {
+                Overview = () => overview is null
+                    ? new Text(_text.Text("Setup.Saved"), Style.Parse(TerminalTheme.Success))
+                    : new Rows(
+                        new Text(_text.Text("Setup.Saved"), Style.Parse(TerminalTheme.Success)),
+                        new Text(" "), overview())
+            };
+        }).ToArray();
     }
 
     /// <summary>Combines current draft status and cached usage in one passive, unboxed overview.</summary>

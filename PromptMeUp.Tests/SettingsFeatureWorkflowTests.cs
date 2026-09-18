@@ -88,6 +88,47 @@ public sealed class SettingsFeatureWorkflowTests
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
     }
 
+    /// <summary>Saving from the fullscreen editor reopens the saved draft on its active section until the user cancels.</summary>
+    [Fact]
+    public async Task RunAsync_KeepOpen_ReopensSavedSettingsOnSelectedSection()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var expected = AppSettings.Default with { SetupCompleted = true, Theme = "violet" };
+        var states = new List<SetupViewState>();
+        var saves = 0;
+        var workflow = Workflow(fixture, state =>
+        {
+            states.Add(state);
+            return states.Count == 1
+                ? new SetupSubmission(expected, null, null, false)
+                {
+                    KeepOpen = true,
+                    SelectedSection = SettingsSection.Theme
+                }
+                : null;
+        }, _ =>
+        {
+            saves++;
+            return Task.CompletedTask;
+        });
+
+        Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
+        Assert.Equal(1, saves);
+        Assert.Collection(states,
+            first =>
+            {
+                Assert.Equal(SettingsSection.General, first.InitialSection);
+                Assert.False(first.SaveSucceeded);
+            },
+            second =>
+            {
+                Assert.Equal(expected, second.Settings);
+                Assert.Equal(SettingsSection.Theme, second.InitialSection);
+                Assert.True(second.SaveSucceeded);
+            });
+    }
+
     /// <summary>A concurrent preference update rejects the stale draft before credentials or app settings are written.</summary>
     [Fact]
     public async Task RunAsync_StaleDraft_DoesNotApplyAnySubmissionWrites()

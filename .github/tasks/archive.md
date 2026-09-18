@@ -903,3 +903,11 @@ Validation: GitHub's repository API returned the exact new description and the e
 - Kept internal, community, release, and GitHub-native links untagged so campaign attribution remains limited to owned analytics-enabled destinations.
 
 Validation: repository preflight, restore, format verification, XML comment check, Release build with zero warnings/errors, and 182/182 tests passed; `git diff --check` passed for the README change.
+
+## 2026-09-18 — Keep the settings editor open after saving
+
+- Saving settings now persists the validated draft and immediately reopens the editor on its active section, with a visible saved confirmation.
+- Cancelling still exits the editor without persisting an unsaved draft.
+- Added workflow coverage for the save, reopen, and cancel sequence.
+
+Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.

@@ -8,12 +8,15 @@ namespace PromptMeUp.Views;
 /// <summary>Keeps every settings section accessible when the terminal cannot host an alternate-buffer form.</summary>
 internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions options)
 {
+    internal int SelectedPageIndex { get; private set; }
+
     /// <summary>Edits the shared draft from the requested section and saves only through the explicit action.</summary>
     internal bool Run(IReadOnlyList<FormPage> pages, int initialPage, Func<string?> validate)
     {
         var pageIndex = initialPage;
         while (true)
         {
+            SelectedPageIndex = pageIndex;
             var page = pages[pageIndex];
             var fields = page.Fields.Where(field => field.IsVisible?.Invoke() != false).ToArray();
             TerminalTheme.WriteSection(console,
