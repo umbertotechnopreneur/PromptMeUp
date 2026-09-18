@@ -42,6 +42,7 @@ public sealed partial class PersistentMemoryService
             Mode = SqliteOpenMode.ReadWrite,
             Cache = SqliteCacheMode.Shared,
             Pooling = true,
+            ForeignKeys = true,
             DefaultTimeout = 5
         }.ToString();
     }
@@ -261,7 +262,7 @@ public sealed partial class PersistentMemoryService
     /// <summary>Deletes an accessible note by ID, optionally requiring its reviewed content, scope, and timestamp to remain unchanged.</summary>
     public async Task<bool> ForgetAsync(string id, CancellationToken cancellationToken, PersistentMemory? expected = null)
     {
-        if (!Guid.TryParseExact(id, "N", out _))
+        if (!Guid.TryParseExact(id, "N", out _) || (expected is not null && expected.Id != id))
         {
             throw new MemoryValidationException(_text.Text("Memory.InvalidId"));
         }
@@ -270,19 +271,29 @@ public sealed partial class PersistentMemoryService
         try
         {
             await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var transaction = connection.BeginTransaction();
             await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "SELECT scope_key FROM persistent_memories WHERE id = $id AND (scope_key = $scope OR scope_key = $global);";
+            command.Parameters.AddWithValue("$id", id);
+            command.Parameters.AddWithValue("$scope", scope);
+            command.Parameters.AddWithValue("$global", GlobalScope);
+            var forgottenScope = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
             command.CommandText = """
                 DELETE FROM persistent_memories WHERE id = $id AND (scope_key = $scope OR scope_key = $global)
                 AND ($check = 0 OR (body = $body AND updated_unix = $updated AND scope_key = $expectedScope));
                 """;
-            command.Parameters.AddWithValue("$id", id);
-            command.Parameters.AddWithValue("$scope", scope);
-            command.Parameters.AddWithValue("$global", GlobalScope);
             command.Parameters.AddWithValue("$check", expected is null ? 0 : 1);
             command.Parameters.AddWithValue("$body", expected?.Text ?? string.Empty);
             command.Parameters.AddWithValue("$updated", expected?.UpdatedAt.ToUnixTimeSeconds() ?? 0);
             command.Parameters.AddWithValue("$expectedScope", expected?.IsGlobal == true ? GlobalScope : scope);
             var removed = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) > 0;
+            if (removed)
+            {
+                await ExperimentalStore.ClearLearningAsync(connection, transaction, forgottenScope!, cancellationToken).ConfigureAwait(false);
+                await ExperimentalStore.AdvanceRevisionAsync(connection, transaction, forgottenScope!, cancellationToken).ConfigureAwait(false);
+            }
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Explicit memory deletion completed. Removed={Removed}", removed);
             return removed;
         }

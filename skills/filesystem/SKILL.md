@@ -14,4 +14,3 @@ metadata:
 List directories, read bounded files and inspect file information.
 
 Enable this package in `hm --skills`. Choose an action to review its full command before execution. The package grants no execution permission.
-

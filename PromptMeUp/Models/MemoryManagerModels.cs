@@ -8,6 +8,7 @@ public enum MemoryManagerAction
     Create,
     Edit,
     Delete,
+    Proposals,
     Close
 }
 

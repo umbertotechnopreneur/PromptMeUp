@@ -15,4 +15,3 @@ texts:
     Explica cómo agrupar archivos fuente. El usuario elige concat-files en hm --skills e indica InputFolder y opcionalmente OutputFolder en JSON. Pueden contener código privado; no supongas que se pueden compartir. Abrir el gestor es un paso manual.
   vi: |-
     Giải thích cách gộp tệp nguồn đã chọn. Người dùng chọn concat-files trong hm --skills và nhập InputFolder, tùy chọn OutputFolder bằng JSON. Gói có thể chứa mã riêng tư; không mặc định được chia sẻ. Mở trình quản lý là thao tác thủ công.
-

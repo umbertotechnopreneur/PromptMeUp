@@ -62,6 +62,7 @@ public sealed class MemoryCommandWorkflow(
                 shell.RenderWarning(text.Text("Memory.NotFound"));
                 return 1;
             }
+            shell.RenderNotice(text.Text("Lab.ForgetNotice"));
             var selectedId = forgetView.SelectForDeletion(matches);
             if (selectedId is null)
             {

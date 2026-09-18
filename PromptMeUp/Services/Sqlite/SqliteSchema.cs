@@ -138,33 +138,38 @@ internal static class SqliteSchema
         CREATE INDEX IF NOT EXISTS ix_organization_costs_bucket ON organization_costs (bucket_start_unix);
 
         CREATE TABLE IF NOT EXISTS experimental_settings (
-            scope_key TEXT NOT NULL,
-            name TEXT NOT NULL,
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 120),
             value TEXT NOT NULL CHECK(length(value) <= 4096),
             PRIMARY KEY(scope_key, name)
         );
         CREATE TABLE IF NOT EXISTS learning_observations (
-            id TEXT NOT NULL PRIMARY KEY,
-            scope_key TEXT NOT NULL,
-            session_id TEXT NOT NULL,
+            id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            session_id TEXT NOT NULL CHECK(length(session_id) = 32),
             body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 4000),
-            created_unix INTEGER NOT NULL
+            created_unix INTEGER NOT NULL CHECK(created_unix >= 0)
         );
         CREATE INDEX IF NOT EXISTS ix_learning_scope ON learning_observations(scope_key, created_unix);
         CREATE TABLE IF NOT EXISTS memory_proposals (
-            id TEXT NOT NULL PRIMARY KEY,
-            scope_key TEXT NOT NULL,
-            payload_json TEXT NOT NULL CHECK(json_valid(payload_json)),
+            id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
+            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            payload_json TEXT NOT NULL CHECK(length(payload_json) <= 32768 AND json_valid(payload_json)),
             status TEXT NOT NULL CHECK(status IN ('pending', 'approved', 'rejected', 'expired')),
-            created_unix INTEGER NOT NULL
+            created_unix INTEGER NOT NULL CHECK(created_unix >= 0)
         );
         CREATE INDEX IF NOT EXISTS ix_proposals_scope ON memory_proposals(scope_key, status, created_unix);
         CREATE TABLE IF NOT EXISTS memory_provenance (
             memory_id TEXT NOT NULL PRIMARY KEY,
-            kind TEXT NOT NULL,
-            sources_json TEXT NOT NULL CHECK(json_valid(sources_json)),
-            proposal_id TEXT NOT NULL,
+            kind TEXT NOT NULL CHECK(kind IN ('memory', 'lesson', 'correction', 'preference')),
+            sources_json TEXT NOT NULL CHECK(length(sources_json) <= 1024 AND json_valid(sources_json)),
+            proposal_id TEXT NOT NULL CHECK(length(proposal_id) = 32),
             FOREIGN KEY(memory_id) REFERENCES persistent_memories(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS learning_revisions (
+            scope_key TEXT NOT NULL PRIMARY KEY CHECK(scope_key = 'global' OR length(scope_key) = 64),
+            revision TEXT NOT NULL CHECK(length(revision) = 32)
         );
 
         CREATE TABLE IF NOT EXISTS sync_state (

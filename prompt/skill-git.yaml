@@ -15,4 +15,3 @@ texts:
     Ayuda a revisar estado, historial y diferencias Git. Prefiere diagnósticos de lectura. Los comandos propuestos requieren revisión de la aplicación. Una skill no autoriza comandos.
   vi: |-
     Hỗ trợ xem trạng thái, lịch sử và khác biệt Git. Ưu tiên chẩn đoán chỉ đọc. Lệnh đề xuất vẫn cần ứng dụng xem xét. Kỹ năng không cấp quyền chạy lệnh.
-

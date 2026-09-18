@@ -10,8 +10,44 @@ namespace PromptMeUp.Application;
 public sealed partial class ExperimentalWorkflow(
     SkillCatalogService skills, SkillActionService actions, ExperimentalStore store,
     IAuthorizedCommandWorkflow commands, IActivityAuditService audit,
-    ExperimentalView view, IConsoleShellView shell, ILocalizationService text)
+    ExperimentalView view, IConsoleShellView shell, ILocalizationService text,
+    MemoryReflectionService reflection, PersistentMemoryService memories, ArtifactAssistant assistant,
+    IEnvironmentSecretService secrets)
 {
+    /// <summary>Dispatches interactive experiment commands and reports unsafe local input without leaking package contents.</summary>
+    public async Task RunAsync(AppCommand command, AppSettings settings, CancellationToken ct)
+    {
+        try
+        {
+            switch (command)
+            {
+                case AppCommand.Skills:
+                    await RunSkillsAsync(settings, ct).ConfigureAwait(false);
+                    break;
+                case AppCommand.Learning:
+                    await RunLearningAsync(settings, ct).ConfigureAwait(false);
+                    break;
+                case AppCommand.Proposals:
+                    await RunProposalsAsync(settings, ct).ConfigureAwait(false);
+                    break;
+                case AppCommand.Dream:
+                case AppCommand.Heartbeat:
+                    await RunReflectionAsync(command == AppCommand.Dream, settings, ct).ConfigureAwait(false);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(command));
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+            or YamlDotNet.Core.YamlException or System.Text.Json.JsonException or ArgumentException)
+        {
+            throw new InvalidOperationException(text.Text("Lab.Invalid"));
+        }
+    }
+
+    /// <summary>Confirms the memory deletion and its explicit learning-evidence purge, defaulting to cancellation.</summary>
+    public bool ConfirmMemoryForget() => view.Confirm(text.Text("Lab.ForgetNotice"));
+
     /// <summary>Manages project activation, exact package approvals, imports, and skill selection.</summary>
     public async Task RunSkillsAsync(AppSettings settings, CancellationToken ct)
     {
@@ -109,9 +145,10 @@ public sealed partial class ExperimentalWorkflow(
                 return;
             }
             var name = availableActions[action - 1];
-            var command = skill.Scripts.ContainsKey(name)
-                ? actions.ScriptCommand(skill, name, view.Read(text.Text("Lab.Arguments"), skill.Name == "concat-files" ? "{\"InputFolder\":\".\"}" : "{}"))
-                : actions.NativeCommand(skill, name, view.Read(text.Text("Lab.Path"), Environment.CurrentDirectory));
+            var native = skill.Origin == "bundled" && skill.Name is "git" or "filesystem";
+            var command = native
+                ? actions.NativeCommand(skill, name, view.Read(text.Text("Lab.Path"), Environment.CurrentDirectory))
+                : actions.ScriptCommand(skill, name, view.Read(text.Text("Lab.Arguments"), skill.Name == "concat-files" ? "{\"InputFolder\":\".\"}" : "{}"));
             await using var session = await AuditSessionScope.StartAsync(audit, "skill", settings,
                 new { skill.Name, skill.Fingerprint }, AuditSessionOutcome.Failed, ct).ConfigureAwait(false);
             var result = await commands.RunForResultAsync(session.Id, command, settings, ct).ConfigureAwait(false);

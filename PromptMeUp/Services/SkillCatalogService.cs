@@ -1,10 +1,12 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using PromptMeUp.Infrastructure;
 using PromptMeUp.Models;
+using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
 namespace PromptMeUp.Services;
@@ -51,6 +53,20 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     /// <summary>Parses the YAML front matter and hashes every bounded regular file in the package.</summary>
     public SkillDefinition Inspect(string directory, string origin = "local")
     {
+        try
+        {
+            return InspectCore(Path.GetFullPath(directory), origin);
+        }
+        catch (Exception exception) when (exception is YamlException or DecoderFallbackException or IOException
+            or UnauthorizedAccessException or ArgumentException)
+        {
+            throw Invalid();
+        }
+    }
+
+    /// <summary>Validates package structure and reads strict metadata from a bounded UTF-8 snapshot.</summary>
+    private SkillDefinition InspectCore(string directory, string origin)
+    {
         var files = PackageFiles(directory);
         var definition = files.SingleOrDefault(file => Path.GetRelativePath(directory, file) == "SKILL.md") ?? throw Invalid();
         var snapshot = files.ToDictionary(file => file, ReadBytes);
@@ -58,7 +74,8 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
         {
             throw Invalid();
         }
-        var content = Encoding.UTF8.GetString(snapshot[definition]).TrimStart('\uFEFF').Replace("\r\n", "\n", StringComparison.Ordinal);
+        var utf8 = new UTF8Encoding(false, true);
+        var content = utf8.GetString(snapshot[definition]).TrimStart('\uFEFF').Replace("\r\n", "\n", StringComparison.Ordinal);
         if (!content.StartsWith("---\n", StringComparison.Ordinal))
         {
             throw Invalid();
@@ -69,20 +86,24 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
             throw Invalid();
         }
         var yaml = new YamlStream();
-        using var reader = new StringReader(content[4..end]);
+        var header = content[4..end];
+        ValidateYamlDepth(header);
+        using var reader = new StringReader(header);
         yaml.Load(reader);
         if (yaml.Documents.Count != 1 || yaml.Documents[0].RootNode is not YamlMappingNode root)
         {
             throw Invalid();
         }
-        var name = Scalar(root, "name");
+        var name = Scalar(root, "name").ToLowerInvariant();
         var description = Scalar(root, "description");
-        if (!ValidName(name) || name == "metals-dev-monitor" || string.IsNullOrWhiteSpace(description) || description.Length > 500)
+        var version = Scalar(root, "version", "1.0.0");
+        if (!ValidName(name) || !ValidPathPart(name) || name == "metals-dev-monitor" || string.IsNullOrWhiteSpace(description) || description.Length > 500
+            || version.Length is 0 or > 64 || version.Any(char.IsControl))
         {
             throw Invalid();
         }
         var instructions = content[(end + 5)..].Trim();
-        if (instructions.Length > 12_000)
+        if (instructions.Length is 0 or > 12_000)
         {
             throw Invalid();
         }
@@ -94,7 +115,8 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
         }
         var currentOs = OperatingSystem.IsWindows() ? "win32" : OperatingSystem.IsMacOS() ? "darwin" : "linux";
         string? reason = os.Count > 0 && !os.Contains("any") && !os.Contains(currentOs) ? text.Text("Lab.Platform") : null;
-        foreach (var binary in Values(Mapping(metadata, "requires"), "bins"))
+        var requirements = Mapping(metadata, "requires") ?? Mapping(root, "requires");
+        foreach (var binary in Values(requirements, "bins"))
         {
             if (!ValidName(binary) || !HasBinary(binary))
             {
@@ -102,23 +124,40 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
             }
         }
         // Environment requirements are metadata only: their values never enter a prompt or a command.
-        foreach (var variable in Values(Mapping(metadata, "requires"), "env"))
+        foreach (var variable in Values(requirements, "env"))
         {
-            if (variable.Length > 100 || string.IsNullOrEmpty(Environment.GetEnvironmentVariable(variable)))
+            if (variable.Length is 0 or > 100 || !(char.IsAsciiLetter(variable[0]) || variable[0] == '_')
+                || !variable.All(character => char.IsAsciiLetterOrDigit(character) || character == '_'))
+            {
+                throw Invalid();
+            }
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(variable)))
             {
                 reason = text.Text("Lab.Dependency", variable);
             }
         }
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var scripts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in files)
         {
-            hash.AppendData(Encoding.UTF8.GetBytes(Path.GetRelativePath(directory, file).Replace('\\', '/') + "\0"));
+            var relative = Path.GetRelativePath(directory, file).Replace('\\', '/');
+            hash.AppendData(Encoding.UTF8.GetBytes(relative + "\0" + snapshot[file].Length.ToString(CultureInfo.InvariantCulture) + "\0"));
             hash.AppendData(snapshot[file]);
+            if (relative.StartsWith("scripts/", StringComparison.Ordinal)
+                && string.Equals(Path.GetExtension(file), ".ps1", StringComparison.OrdinalIgnoreCase))
+            {
+                var action = Path.GetFileNameWithoutExtension(file);
+                var source = utf8.GetString(snapshot[file]).TrimStart('\uFEFF');
+                if (!ValidName(action) || source.Any(character => char.IsControl(character) && character is not ('\r' or '\n' or '\t'))
+                    || !scripts.TryAdd(action, source))
+                {
+                    throw Invalid();
+                }
+            }
         }
-        return new SkillDefinition(name, description, Scalar(root, "version", "1.0.0"), instructions,
+        return new SkillDefinition(name, description, version, instructions,
             Path.GetFullPath(directory), origin, Convert.ToHexString(hash.GetHashAndReset()), reason,
-            files.Where(file => Path.GetRelativePath(directory, file).Replace('\\', '/').StartsWith("scripts/", StringComparison.Ordinal)
-                && Path.GetExtension(file) == ".ps1").ToDictionary(file => Path.GetFileNameWithoutExtension(file), file => Encoding.UTF8.GetString(snapshot[file])));
+            scripts);
     }
 
     /// <summary>Records the exact inspected content as enabled, or removes its activation.</summary>
@@ -142,11 +181,11 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
             .Where(word => word.Length >= 3).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var selected = new List<SkillDefinition>();
         long tokens = 0;
-        foreach (var candidate in List().Select(skill => (Skill: skill, Score: skill.Name == explicitName ? int.MaxValue
+        foreach (var candidate in List().Select(skill => (Skill: skill, Score: string.Equals(skill.Name, explicitName, StringComparison.OrdinalIgnoreCase) ? int.MaxValue
                      : settings.AutomaticSkills ? words.Count(word => (skill.Name + " " + skill.Description).Contains(word, StringComparison.OrdinalIgnoreCase)) : 0))
                  .Where(item => item.Score > 0).OrderByDescending(item => item.Score).ThenBy(item => item.Skill.Name, StringComparer.Ordinal))
         {
-            var cost = ContextTokenEstimator.Text(candidate.Skill.Instructions) + 100;
+            var cost = ContextTokenEstimator.Text(candidate.Skill.Instructions) + ContextTokenEstimator.Text(candidate.Skill.Name) + 100;
             if (tokens + cost <= 1800 && await IsEnabledAsync(candidate.Skill, ct).ConfigureAwait(false))
             {
                 selected.Add(candidate.Skill);
@@ -159,18 +198,21 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     /// <summary>Inspects a bounded ZIP into an isolated staging directory; importing never executes scripts.</summary>
     public string StageZip(string path)
     {
-        if (!File.Exists(path) || new FileInfo(path).Length > MaximumPackageBytes || Path.GetExtension(path) != ".zip")
+        if (!File.Exists(path) || new FileInfo(path).Length > MaximumPackageBytes
+            || !string.Equals(Path.GetExtension(path), ".zip", StringComparison.OrdinalIgnoreCase))
         {
             throw Invalid();
         }
         var staging = Path.Combine(paths.DataDirectory, "skill-staging", Guid.NewGuid().ToString("N"));
+        RejectLinks(staging);
         Directory.CreateDirectory(staging);
         try
         {
             using var zip = ZipFile.OpenRead(path);
             long total = 0;
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (zip.Entries.Count > MaximumFiles)
+            var pathsSeen = new Dictionary<string, (string Spelling, bool Directory)>(StringComparer.OrdinalIgnoreCase);
+            if (zip.Entries.Count is 0 or > MaximumFiles)
             {
                 throw Invalid();
             }
@@ -181,9 +223,24 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
                 var mode = (entry.ExternalAttributes >> 16) & 0xF000;
                 if (parts.Any(part => !ValidPathPart(part)) || !names.Add(relative.TrimEnd('/'))
                     || mode is not (0 or 0x8000 or 0x4000) || entry.Length > MaximumFileBytes
+                    || (entry.ExternalAttributes & (int)FileAttributes.ReparsePoint) != 0
+                    || (relative.EndsWith('/') && (entry.Length != 0 || mode == 0x8000))
+                    || (!relative.EndsWith('/') && mode == 0x4000)
                     || (total += entry.Length) > MaximumPackageBytes)
                 {
                     throw Invalid();
+                }
+                // Register implicit directories too, so case aliases and file/directory collisions fail on every OS.
+                for (var index = 0; index < parts.Length; index++)
+                {
+                    var segment = string.Join('/', parts.Take(index + 1));
+                    var isDirectory = index < parts.Length - 1 || relative.EndsWith('/');
+                    if (pathsSeen.TryGetValue(segment, out var seen)
+                        && (seen.Spelling != segment || seen.Directory != isDirectory))
+                    {
+                        throw Invalid();
+                    }
+                    pathsSeen[segment] = (segment, isDirectory);
                 }
                 var target = Path.GetFullPath(Path.Combine(staging, relative));
                 if (!target.StartsWith(staging + Path.DirectorySeparatorChar, StringComparison.Ordinal))
@@ -210,6 +267,10 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
                         }
                         destination.Write(buffer, 0, count);
                     }
+                    if (written != entry.Length)
+                    {
+                        throw Invalid();
+                    }
                 }
             }
             var roots = Directory.GetDirectories(staging);
@@ -220,9 +281,14 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
             _ = Inspect(roots[0]);
             return roots[0];
         }
-        catch
+        catch (Exception exception)
         {
+            RejectLinks(staging);
             Directory.Delete(staging, true);
+            if (exception is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
+            {
+                throw Invalid();
+            }
             throw;
         }
     }
@@ -231,12 +297,13 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     public void Import(SkillDefinition reviewed)
     {
         ValidateStaging(reviewed.Directory);
-        if (Inspect(reviewed.Directory).Fingerprint != reviewed.Fingerprint)
+        var current = Inspect(reviewed.Directory);
+        if (current.Fingerprint != reviewed.Fingerprint || current.Name != reviewed.Name)
         {
             throw Invalid();
         }
-        Directory.CreateDirectory(LocalRoot);
         RejectLinks(LocalRoot);
+        Directory.CreateDirectory(LocalRoot);
         Directory.Move(reviewed.Directory, Path.Combine(LocalRoot, reviewed.Name));
     }
 
@@ -244,7 +311,7 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     public void DiscardStaging(string directory)
     {
         ValidateStaging(directory);
-        var parent = Path.GetDirectoryName(directory)!;
+        var parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)))!;
         if (Directory.Exists(parent))
         {
             Directory.Delete(parent, true);
@@ -254,8 +321,9 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     /// <summary>Checks that staging cleanup cannot escape a generated GUID child.</summary>
     private void ValidateStaging(string directory)
     {
-        var parent = Path.GetDirectoryName(Path.GetFullPath(directory))!;
-        if (Path.GetDirectoryName(parent) != Path.Combine(paths.DataDirectory, "skill-staging")
+        var parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)))!;
+        if (!string.Equals(Path.GetDirectoryName(parent), Path.GetFullPath(Path.Combine(paths.DataDirectory, "skill-staging")),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
             || !Guid.TryParseExact(Path.GetFileName(parent), "N", out _))
         {
             throw Invalid();
@@ -268,6 +336,7 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     {
         var files = new List<string>();
         var pending = new Queue<string>();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         pending.Enqueue(directory);
         var entries = 0;
         long bytes = 0;
@@ -278,7 +347,8 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
             foreach (var item in Directory.EnumerateFileSystemEntries(current))
             {
                 RejectLinks(item);
-                if (++entries > MaximumFiles)
+                if (++entries > MaximumFiles || !ValidPathPart(Path.GetFileName(item))
+                    || !names.Add(Path.GetRelativePath(directory, item).Replace('\\', '/')))
                 {
                     throw Invalid();
                 }
@@ -324,29 +394,77 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
             .Contains(part.Split('.')[0], StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Checks executable presence without running commands during catalog discovery.</summary>
-    private static bool HasBinary(string name) => (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
-        .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-        .Any(directory => Path.IsPathFullyQualified(directory) && File.Exists(Path.Combine(directory, OperatingSystem.IsWindows() ? name + ".exe" : name)));
+    private static bool HasBinary(string name)
+    {
+        foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+                     .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!Path.IsPathFullyQualified(directory))
+            {
+                continue;
+            }
+            var path = Path.Combine(directory, OperatingSystem.IsWindows() ? name + ".exe" : name);
+            if (File.Exists(path) && (OperatingSystem.IsWindows()
+                || (File.GetUnixFileMode(path) & (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) != 0))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /// <summary>Returns an optional nested YAML mapping without flattening its scope.</summary>
-    private static YamlMappingNode? Mapping(YamlMappingNode? node, string key) =>
-        Child(node, key) as YamlMappingNode;
+    private YamlMappingNode? Mapping(YamlMappingNode? node, string key) => Child(node, key) switch
+    {
+        null => null,
+        YamlMappingNode mapping => mapping,
+        _ => throw Invalid()
+    };
 
     /// <summary>Reads a scalar metadata field.</summary>
-    private static string Scalar(YamlMappingNode? node, string key, string fallback = "") =>
-        (Child(node, key) as YamlScalarNode)?.Value ?? fallback;
+    private string Scalar(YamlMappingNode? node, string key, string fallback = "") => Child(node, key) switch
+    {
+        null => fallback,
+        YamlScalarNode { Value: not null } scalar => scalar.Value,
+        _ => throw Invalid()
+    };
 
     /// <summary>Reads a scoped scalar or sequence requirement.</summary>
-    private static IReadOnlyList<string> Values(YamlMappingNode? node, string key) =>
+    private IReadOnlyList<string> Values(YamlMappingNode? node, string key) =>
         Child(node, key) switch
         {
-            YamlSequenceNode sequence => sequence.Children.Select(item => ((YamlScalarNode)item).Value ?? string.Empty).ToArray(),
-            YamlScalarNode scalar when scalar.Value is not null => [scalar.Value],
-            _ => []
+            null => [],
+            YamlSequenceNode sequence when sequence.Children.Count <= 32 => sequence.Children
+                .Select(item => item is YamlScalarNode { Value: not null } scalar && scalar.Value.Length is > 0 and <= 100
+                    ? scalar.Value : throw Invalid()).ToArray(),
+            YamlScalarNode { Value: not null } scalar when scalar.Value.Length is > 0 and <= 100 => [scalar.Value],
+            _ => throw Invalid()
         };
 
     /// <summary>Produces a localized fail-closed package validation error.</summary>
     private InvalidOperationException Invalid() => new(text.Text("Lab.Invalid"));
+
+    /// <summary>Caps YAML nesting before constructing a recursive representation of untrusted front matter.</summary>
+    private void ValidateYamlDepth(string header)
+    {
+        using var reader = new StringReader(header);
+        var parser = new Parser(reader);
+        var depth = 0;
+        while (parser.MoveNext())
+        {
+            if (parser.Current is YamlDotNet.Core.Events.MappingStart or YamlDotNet.Core.Events.SequenceStart)
+            {
+                if (++depth > 8)
+                {
+                    throw Invalid();
+                }
+            }
+            else if (parser.Current is YamlDotNet.Core.Events.MappingEnd or YamlDotNet.Core.Events.SequenceEnd)
+            {
+                depth--;
+            }
+        }
+    }
 
     /// <summary>Reads at most one package file limit even when a file grows during inspection.</summary>
     private byte[] ReadBytes(string path)

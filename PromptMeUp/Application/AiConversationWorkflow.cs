@@ -45,6 +45,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private readonly IDatabaseService _database;
     private readonly IAppGuideService _appGuide;
     private readonly SkillCatalogService? _skills;
+    private readonly ExperimentalStore? _experiments;
+    private readonly ExperimentalWorkflow? _experimentalWorkflow;
 
     /// <summary>Creates the focused query, chat, connection-test, and session-lifecycle workflow.</summary>
     public AiConversationWorkflow(
@@ -63,7 +65,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         IMemoryView memoryView,
         IDatabaseService database,
         IAppGuideService appGuide,
-        SkillCatalogService? skills = null)
+        SkillCatalogService? skills = null,
+        ExperimentalStore? experiments = null,
+        ExperimentalWorkflow? experimentalWorkflow = null)
     {
         _memoryService = memoryService ?? throw new ArgumentNullException(nameof(memoryService));
         _openAi = openAi ?? throw new ArgumentNullException(nameof(openAi));
@@ -81,6 +85,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _appGuide = appGuide ?? throw new ArgumentNullException(nameof(appGuide));
         _skills = skills;
+        _experiments = experiments;
+        _experimentalWorkflow = experimentalWorkflow;
     }
 
     /// <summary>Runs a single-turn session and offers a safe continuation into chat after the model response.</summary>
@@ -108,7 +114,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             settings,
             offerChatContinuation: IsInteractive,
             promptId,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            captureObservation: promptId == "query-system").ConfigureAwait(false);
         if (action.StartChat)
         {
             _chatView.RenderIntro(includeMemoryHints: !renderQuery);
@@ -128,6 +135,16 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         await using var session = await AuditSessionScope.StartAsync(
             _audit, "chat", settings, new { invocation = "chat" }, AuditSessionOutcome.Cancelled, cancellationToken).ConfigureAwait(false);
         _chatView.RenderIntro();
+        if (_experiments is not null)
+        {
+            var experiments = await _experiments.SettingsAsync(cancellationToken).ConfigureAwait(false);
+            var lastRun = await _experiments.GetAsync("last-heartbeat", cancellationToken).ConfigureAwait(false);
+            if (experiments.Enabled && experiments.MaintenanceReminder
+                && (lastRun is null || !DateTimeOffset.TryParse(lastRun, out var last) || DateTimeOffset.UtcNow - last > TimeSpan.FromDays(7)))
+            {
+                _shell.RenderNotice(_text.Text("Lab.Due"));
+            }
+        }
         session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
     }
 
@@ -169,7 +186,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                     await RenderActiveSnapshotAsync(sessionId, memory, settings, memory.RunningCost, "chat-system", cancellationToken, force: true).ConfigureAwait(false);
                     continue;
                 }
-                if (await HandleMemoryCommandAsync(input, cancellationToken).ConfigureAwait(false))
+                if (await HandleExperimentalCommandAsync(input, settings, cancellationToken).ConfigureAwait(false)
+                    || await HandleMemoryCommandAsync(input, cancellationToken).ConfigureAwait(false))
                 {
                     await RenderActiveSnapshotAsync(sessionId, memory, settings, memory.RunningCost, "chat-system", cancellationToken).ConfigureAwait(false);
                     continue;
@@ -213,7 +231,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                     offerChatContinuation: false,
                     "chat-system",
                     cancellationToken,
-                    classifyDisplayIntent: true).ConfigureAwait(false);
+                    classifyDisplayIntent: true,
+                    captureObservation: true).ConfigureAwait(false);
             }
             catch (ConversationLimitException)
             {
@@ -231,10 +250,11 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         bool offerChatContinuation,
         string promptId,
         CancellationToken cancellationToken,
-        bool classifyDisplayIntent = false)
+        bool classifyDisplayIntent = false,
+        bool captureObservation = false)
     {
         var turn = await SendTurnAsync(
-            sessionId, userText, memory, settings, memory.RunningCost, promptId, cancellationToken, classifyDisplayIntent).ConfigureAwait(false);
+            sessionId, userText, memory, settings, memory.RunningCost, promptId, cancellationToken, classifyDisplayIntent, captureObservation).ConfigureAwait(false);
         var action = await OfferSuggestedActionsAsync(
             sessionId, turn.Response, memory, settings, memory.RunningCost, offerChatContinuation, promptId, cancellationToken).ConfigureAwait(false);
         memory.RunningCost = action.RunningCost;
@@ -377,9 +397,12 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         decimal runningCost,
         string promptId,
         CancellationToken cancellationToken,
-        bool classifyDisplayIntent = false)
+        bool classifyDisplayIntent = false,
+        bool captureObservation = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
+        var captureRevision = captureObservation && _experiments is not null
+            ? await _experiments.RevisionAsync(cancellationToken).ConfigureAwait(false) : null;
         if (userText.Length > settings.MaxMessageCharacters)
         {
             throw new ConversationLimitException(_text.Text("Chat.InputTooLong", settings.MaxMessageCharacters));
@@ -399,6 +422,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         _chatView.RenderAssistant(response.Text, animate: true, cancellationToken);
         memory.LastResponse = response;
         var assistantUpdate = memory.Memory.Add("assistant", response.Text);
+        if (captureObservation && _experiments is not null)
+        {
+            await _experiments.CaptureAsync(sessionId, userText, cancellationToken, captureRevision).ConfigureAwait(false);
+        }
         await AuditPruningAsync(sessionId, assistantUpdate.PrunedMessages, cancellationToken).ConfigureAwait(false);
         var turnCost = memory.RunningCost - runningCost;
         await RenderActiveSnapshotAsync(sessionId, memory, settings, memory.RunningCost, promptId, cancellationToken).ConfigureAwait(false);
@@ -602,6 +629,43 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Keeps explicit experiment administration out of chat context and automatic provider requests.</summary>
+    private async Task<bool> HandleExperimentalCommandAsync(string input, AppSettings settings, CancellationToken ct)
+    {
+        var parts = input.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts.FirstOrDefault()?.ToLowerInvariant() switch
+        {
+            "/skills" => AppCommand.Skills,
+            "/learning" => AppCommand.Learning,
+            "/proposals" => AppCommand.Proposals,
+            "/dream" => AppCommand.Dream,
+            "/heartbeat" => AppCommand.Heartbeat,
+            _ => (AppCommand?)null
+        };
+        if (command is null)
+        {
+            return false;
+        }
+        if (parts.Length != 1 || _experimentalWorkflow is null)
+        {
+            _shell.RenderError(_text.Text("Lab.Invalid"));
+            return true;
+        }
+        try
+        {
+            await _experimentalWorkflow.RunAsync(command.Value, settings, ct).ConfigureAwait(false);
+        }
+        catch (InteractiveFlowCanceledException) when (!ct.IsCancellationRequested)
+        {
+            _shell.RenderNotice(_text.Text("Common.Cancelled"));
+        }
+        catch (InvalidOperationException exception)
+        {
+            _shell.RenderError(exception.Message);
+        }
+        return true;
+    }
+
     /// <summary>Handles explicit note commands locally so neither note administration nor invalid syntax reaches the provider.</summary>
     private async Task<bool> HandleMemoryCommandAsync(string input, CancellationToken cancellationToken)
     {
@@ -634,6 +698,11 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                     _shell.RenderSuccess(_text.Text("Memory.Saved", saved.Id));
                     break;
                 case "/forget" when parts.Length == 2:
+                    if (_experimentalWorkflow is not null && !_experimentalWorkflow.ConfirmMemoryForget())
+                    {
+                        _shell.RenderNotice(_text.Text("Common.Cancelled"));
+                        break;
+                    }
                     var removed = await _persistentMemory.ForgetAsync(parts[1].Trim(), cancellationToken).ConfigureAwait(false);
                     if (removed)
                     {
@@ -660,8 +729,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private async Task<MemoryEnvelope> LoadMemoryEnvelopeAsync(string query, CancellationToken cancellationToken)
     {
         var selection = await _persistentMemory.SelectAsync(query, cancellationToken).ConfigureAwait(false);
-        var template = (await _prompts.GetAsync("memory-context", cancellationToken).ConfigureAwait(false)).ResolveText(_text.Language);
         var notes = selection.Memories.ToList();
+        var template = notes.Count == 0 ? string.Empty
+            : (await _prompts.GetAsync("memory-context", cancellationToken).ConfigureAwait(false)).ResolveText(_text.Language);
         var memoryText = string.Empty;
         while (notes.Count > 0)
         {

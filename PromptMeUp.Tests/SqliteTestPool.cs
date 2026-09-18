@@ -22,6 +22,9 @@ internal static class SqliteTestPool
         settings.Mode = SqliteOpenMode.ReadWrite;
         settings.DefaultTimeout = 5;
         ClearPool(settings);
+
+        settings.ForeignKeys = true;
+        ClearPool(settings);
     }
 
     /// <summary>Closes idle handles belonging to one exact connection-string pool.</summary>

@@ -199,9 +199,13 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         switch (options.Command)
         {
             case AppCommand.Skills:
+            case AppCommand.Learning:
+            case AppCommand.Proposals:
+            case AppCommand.Dream:
+            case AppCommand.Heartbeat:
                 EnsureInteractive();
                 await (_experimental ?? throw new InvalidOperationException(_text.Text("Lab.Invalid")))
-                    .RunSkillsAsync(settings, cancellationToken).ConfigureAwait(false);
+                    .RunAsync(options.Command, settings, cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.Recipes:
                 if (options.RecipeAction is not ("list" or "show"))

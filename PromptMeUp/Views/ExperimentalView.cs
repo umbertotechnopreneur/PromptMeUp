@@ -32,8 +32,16 @@ public sealed class ExperimentalView(IAnsiConsole console, ILocalizationService 
     }
 
     /// <summary>Reads one bounded text field without interpreting it as markup.</summary>
-    public string Read(string label, string initial = "") => console.Prompt(new TextPrompt<string>(Markup.Escape(label) + ": ")
-        .DefaultValue(initial).AllowEmpty()).Trim();
+    public string Read(string label, string initial = "")
+    {
+        var prompt = new TextPrompt<string>(Markup.Escape(label) + ": ").AllowEmpty()
+            .Validate(value => value.Length <= 4096 ? ValidationResult.Success() : ValidationResult.Error(text.Text("Lab.Invalid")));
+        if (initial.Length > 0)
+        {
+            prompt.DefaultValue(initial);
+        }
+        return console.Prompt(prompt).Trim();
+    }
 
     /// <summary>Defaults every state-changing confirmation to cancellation.</summary>
     public bool Confirm(string message) => Choose(message, text.Text("Lab.Cancel"), text.Text("Lab.Confirm")) == 1;

@@ -9,6 +9,22 @@ public sealed class CommandLineParserTests
 {
     private readonly CommandLineParser _parser = new(new LocalizationService());
 
+    /// <summary>Parses experimental screens without accepting unreviewed payloads or combining top-level actions.</summary>
+    [Theory]
+    [InlineData("--skills", AppCommand.Skills)]
+    [InlineData("--learning", AppCommand.Learning)]
+    [InlineData("--proposals", AppCommand.Proposals)]
+    [InlineData("--dream", AppCommand.Dream)]
+    [InlineData("--heartbeat", AppCommand.Heartbeat)]
+    public void Parse_Experiment_RequiresOneScreen(string argument, AppCommand expected)
+    {
+        var result = _parser.Parse([argument, "--language", "it"]);
+        Assert.True(result.Succeeded);
+        Assert.Equal(expected, result.Options!.Command);
+        Assert.False(_parser.Parse([argument, "unreviewed input"]).Succeeded);
+        Assert.False(_parser.Parse([argument, "--chat"]).Succeeded);
+    }
+
     /// <summary>Verifies the local memory screen accepts interface preferences without a note command-line value.</summary>
     [Fact]
     public void Parse_Memories_SelectsLocalManager()

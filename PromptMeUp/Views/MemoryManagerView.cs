@@ -237,6 +237,10 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _visibleRows = bodyRows - 2;
         var contentWidth = width - FullscreenWorkspace.SidebarWidth(_console.Profile.Width) - 4;
         IRenderable details = memories.Count == 0 ? new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Primary)) : Details(memories[_selected]);
+        if (deleting)
+        {
+            details = new Rows(details, new Text(" "), new Text(_text.Text("Lab.ForgetNotice"), Style.Parse(TerminalTheme.Warning)));
+        }
         var renderOptions = new RenderOptions(_console.Profile.Capabilities, new Size(width, height));
         var lines = Segment.SplitLines(details.Render(renderOptions, contentWidth)).ToArray();
         _lineCount = lines.Length;
@@ -304,11 +308,17 @@ public sealed class MemoryManagerView : IMemoryManagerView
             }
             var choices = memories.Select(memory => new MenuChoice(memory.Id, PreviewLabel(memory)))
                 .Prepend(new("create", _text.Text("MemoryManager.Create")))
+                .Append(new("proposals", _text.Text("Lab.Proposals")))
                 .Append(new("close", _text.Text("Help.Browse.Close"))).ToArray();
             var selected = Prompt(_text.Text("MemoryManager.Choose"), choices);
-            if (selected.Id is "create" or "close")
+            if (selected.Id is "create" or "close" or "proposals")
             {
-                return new(selected.Id == "create" ? MemoryManagerAction.Create : MemoryManagerAction.Close);
+                return new(selected.Id switch
+                {
+                    "create" => MemoryManagerAction.Create,
+                    "proposals" => MemoryManagerAction.Proposals,
+                    _ => MemoryManagerAction.Close
+                });
             }
             var memory = memories.First(item => item.Id == selected.Id);
             _selectedId = memory.Id;
@@ -403,8 +413,8 @@ public sealed class MemoryManagerView : IMemoryManagerView
     /// <summary>Limits actions to valid selections and places cancellation first in delete confirmation.</summary>
     private static MemoryManagerAction[] Actions(bool hasMemory, bool deleting) => deleting
         ? [MemoryManagerAction.Close, MemoryManagerAction.Delete]
-        : hasMemory ? [MemoryManagerAction.Create, MemoryManagerAction.Edit, MemoryManagerAction.Delete, MemoryManagerAction.Close]
-        : [MemoryManagerAction.Create, MemoryManagerAction.Close];
+        : hasMemory ? [MemoryManagerAction.Create, MemoryManagerAction.Edit, MemoryManagerAction.Delete, MemoryManagerAction.Proposals, MemoryManagerAction.Close]
+        : [MemoryManagerAction.Create, MemoryManagerAction.Proposals, MemoryManagerAction.Close];
 
     /// <summary>Resolves concise action labels while distinguishing close from cancel during confirmation.</summary>
     private string ActionLabel(MemoryManagerAction action, bool deleting) => _text.Text(action switch
@@ -412,6 +422,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         MemoryManagerAction.Create => "MemoryManager.Create",
         MemoryManagerAction.Edit => "MemoryManager.Edit",
         MemoryManagerAction.Delete => "MemoryManager.Delete",
+        MemoryManagerAction.Proposals => "Lab.ReviewButton",
         MemoryManagerAction.Close => deleting ? "Form.Cancel" : "Help.Browse.Close",
         _ => throw new ArgumentOutOfRangeException(nameof(action))
     });
@@ -421,6 +432,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
     {
         MemoryManagerAction.Create => TerminalTheme.Success,
         MemoryManagerAction.Edit => TerminalTheme.Info,
+        MemoryManagerAction.Proposals => TerminalTheme.Info,
         MemoryManagerAction.Delete => TerminalTheme.Error,
         _ => TerminalTheme.Warning
     };

@@ -14,4 +14,3 @@ metadata:
 Inspect Git status, commits, branches and diffs. Git repository diagnostics.
 
 Enable this package in `hm --skills`. Choose an action to review its full command before execution. The package grants no execution permission.
-
