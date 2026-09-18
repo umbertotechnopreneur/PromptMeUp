@@ -22,6 +22,15 @@ public sealed class AppGuideServiceTests
         var catalog = new YamlPromptCatalogService(paths, NullLogger<YamlPromptCatalogService>.Instance);
         var service = new AppGuideService(catalog, NullLogger<AppGuideService>.Instance);
 
+        string[] expectedTopics =
+        [
+            "overview", "settings", "conversation", "memories", "commands", "workflows", "costs", "privacy",
+            "skills", "skill-actions", "learning", "reflection", "reminders"
+        ];
+        Assert.Equal(expectedTopics.Order(StringComparer.Ordinal), AppGuideService.Topics.Order(StringComparer.Ordinal));
+        Assert.Equal(2, AppGuideService.MaxTopics);
+        Assert.Equal(3000L, AppGuideService.MaximumTokens);
+
         foreach (var language in SupportedLanguages.Codes)
         {
             for (var first = 0; first < AppGuideService.Topics.Count; first++)
@@ -53,6 +62,9 @@ public sealed class AppGuideServiceTests
     [InlineData("unknown")]
     [InlineData("../settings")]
     [InlineData("SETTINGS")]
+    [InlineData("SKILLS")]
+    [InlineData("skill_actions")]
+    [InlineData("../skills")]
     [InlineData("")]
     public async Task LoadAsync_InvalidTopic_DoesNotReadCatalog(string topic)
     {

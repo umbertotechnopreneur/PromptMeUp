@@ -416,6 +416,17 @@ budget?" or "How do saved memories work?" The assistant can request relevant
 chapters from the guide included with your installed version. No special chat
 command is needed.
 
+The experimental features have dedicated chapters too. Try asking:
+
+- "How do I enable skills and choose one?"
+- "Which skills are available, and what parameters do they take?"
+- "How do I turn on learning and review proposed memories?"
+- "How do Dream and heartbeat work?"
+- "How do I activate reminders? Why did mine not appear?"
+
+The assistant explains the relevant steps; it does not enable features, run a
+skill, approve a memory, or create a reminder just by answering.
+
 PromptMeUp supplies up to two chapters in your selected language, then makes
 one additional AI call for the answer. The guide stays available for follow-up
 questions. New topics can replace earlier chapters; `/clear` removes the loaded

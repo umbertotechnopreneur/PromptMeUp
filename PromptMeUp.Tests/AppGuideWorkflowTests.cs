@@ -12,6 +12,64 @@ namespace PromptMeUp.Tests;
 
 public sealed class AppGuideWorkflowTests
 {
+    /// <summary>Supplies synthetic guide-routing replies and verifies localized two-step query and chat retrieval without enabling features.</summary>
+    [Theory]
+    [InlineData("en", "skills", "skill-actions", "How do I enable a skill and run one of its actions?")]
+    [InlineData("it", "learning", "reflection", "Come attivo la memoria e uso Dream?")]
+    [InlineData("fr", "reminders", "skills", "Comment activer les rappels dans cette application ?")]
+    [InlineData("de", "reflection", "learning", "Wie verwende ich Dream und bestätige Erinnerungen?")]
+    [InlineData("es", "skill-actions", "reminders", "¿Cómo uso las acciones de las skills y los recordatorios?")]
+    [InlineData("vi", "skills", "learning", "Làm sao bật kỹ năng và bộ nhớ trong ứng dụng?")]
+    public async Task NewGuideChapters_QueryAndChatRetrieveLocalizedContext(string language, string firstTopic, string secondTopic, string question)
+    {
+        foreach (var chat in new[] { false, true })
+        {
+            using var fixture = new RegressionFixture();
+            await fixture.Database.InitializeAsync(default);
+            string[] topics = [firstTopic, secondTopic];
+            using var handler = new GuideHttpHandler(index => Reply(index, index == 1 ? topics : []));
+            using var http = new HttpClient(handler);
+            var answers = new List<string>();
+            var inputs = new Queue<string>(chat ? [question, "/exit"] : []);
+            var workflow = CreateWorkflow(fixture, http, inputs, [], answers, language);
+            var settings = AppSettings.Default with { Language = language, PromptCachingEnabled = false };
+
+            if (chat)
+            {
+                await workflow.RunChatAsync(settings, default);
+            }
+            else
+            {
+                await workflow.RunQueryAsync(question, settings, renderQuery: true, default);
+            }
+
+            Assert.Empty(inputs);
+            Assert.Single(answers);
+            Assert.Equal(chat ? 3 : 2, handler.RequestBodies.Count);
+            Assert.Equal(2, handler.ConversationRequestBodies.Count);
+            using var first = JsonDocument.Parse(handler.ConversationRequestBodies[0]);
+            using var guided = JsonDocument.Parse(handler.ConversationRequestBodies[1]);
+            Assert.DoesNotContain("<chapter id=", first.RootElement.GetProperty("instructions").GetString());
+            var guideSchema = first.RootElement.GetProperty("text").GetProperty("format").GetProperty("schema")
+                .GetProperty("properties").GetProperty("guide_topics");
+            Assert.Equal(AppGuideService.Topics, guideSchema.GetProperty("items").GetProperty("enum")
+                .EnumerateArray().Select(item => item.GetString()));
+            Assert.Equal(2, guideSchema.GetProperty("maxItems").GetInt32());
+            var catalog = new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance);
+            foreach (var topic in topics)
+            {
+                var chapter = await catalog.GetAsync("app-guide-" + topic, default);
+                Assert.Contains(chapter.Texts[language], guided.RootElement.GetProperty("instructions").GetString());
+            }
+            var input = Assert.Single(guided.RootElement.GetProperty("input").EnumerateArray());
+            Assert.Equal(question, input.GetProperty("content").GetString());
+            Assert.DoesNotContain("<app-guide>", input.GetProperty("content").GetString());
+            Assert.Equal(chat ? 3L : 2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+            Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_session_events WHERE event_type = 'app_guide_loaded';"));
+            Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        }
+    }
+
     /// <summary>Verifies display classification, guide routing, localized context, cost accounting, reuse, and clearing.</summary>
     [Theory]
     [InlineData("en", "How do I change this app's conversation budget?")]

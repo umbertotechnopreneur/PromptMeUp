@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Explain experimental features through the chat guide
+
+- Added five concise, six-language guide chapters: skills, skill-actions, learning, reflection, and reminders. Documented exact activation steps, examples, privacy limits, and the distinction between manual memories, learning capture, heartbeat hints, and dated reminders.
+- Extended the packaged topic allowlist and the versioned chat/query guidance. Natural-language questions can request the new chapters through the existing schema and reader; the two-chapter, 3,000-token limit remains unchanged.
+- Clarified that activation means enabling features in the app, not publishing online. Guide answers do not change settings, approve memories, run skills, or create reminders.
+- Added short example questions to the CLI reference and quick start. Added synthetic query/chat retrieval coverage for all six languages and checks that guide requests leave experiment settings unchanged.
+
+Validation: preflight, XML summaries, formatting, a warning-free Release build, and all 728 tests passed. The production YAML reader validated the new chapters, and every chapter pair fits the guide allowance in all six languages. Provider responses were simulated; no live OpenAI request or feature action ran. Cleaned Release output before handoff. Changes stay on the existing experimental branch and draft PR #43.
+
 ## 2026-09-18 — Complete the skill catalog and simplify the user guide
 
 - Added the seven remaining supported CLI-Intelligence skills: clipboard, screenshot, system_info, http_request, web_search, timezone_convert, and set_reminder. The catalog now has ten skills; metals-dev-monitor remains excluded. Kept PromptMeUp's interface and OpenAI integration.

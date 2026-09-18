@@ -2,6 +2,8 @@
 
 Available on the experimental branch, with PromptMeUp's existing interface and OpenAI provider. Everything experimental starts disabled. `metals-dev-monitor` is not included and cannot be imported.
 
+You can also ask in chat: "How do I enable skills?", "How do I start learning?", "How do Dream and heartbeat work?", or "How do I set a reminder?" The assistant loads the relevant guide chapters in your language and explains the steps. Asking for help does not activate features or approve actions.
+
 ## Use a skill
 
 1. Open `hm --skills` and enable the experiment for your current project.
