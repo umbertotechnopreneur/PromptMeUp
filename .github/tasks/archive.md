@@ -912,6 +912,12 @@ Validation: repository preflight, restore, format verification, XML comment chec
 
 Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
 
+## 2026-09-18 — Allow two-digit settings shortcuts
+
+- Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.
+
+Validation: formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
+
 ## 2026-09-18 — Improve settings and chat guidance
 
 - Reframed Privacy as a full-width guide with content scrolling and clear section headings.

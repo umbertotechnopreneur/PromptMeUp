@@ -38,7 +38,7 @@ internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields
 internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions? options = null)
 {
     private const int RowsPerField = 2;
-    private const int SectionNumberTimeoutMilliseconds = 350;
+    private const int SectionNumberTimeoutMilliseconds = 1_000;
     // Shared chrome, section heading, and the reserved terminal row, excluding the variable notice height.
     private const int FixedBodyRows = FullscreenHeader.Height + FullscreenFooter.ActionsRows + FullscreenFooter.HintRows + 3;
     private readonly ConsoleRenderOptions _options = options ?? new(false, false);
