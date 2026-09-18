@@ -1,5 +1,8 @@
 id: skill-set_reminder
-version: 1
+version: 2
+metadata:
+  icon: "⏰"
+  color: "#F38BA8"
 description: Guidance for explicitly reviewed local project reminders
 tags: [experimental, skills, reminders]
 texts:

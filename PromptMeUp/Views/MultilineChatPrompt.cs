@@ -2,6 +2,7 @@
 
 using System.Globalization;
 using System.Text;
+using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -9,7 +10,7 @@ using Spectre.Console.Rendering;
 namespace PromptMeUp.Views;
 
 /// <summary>Edits a small scrolling input area with paste boundaries and an explicit keyboard submission.</summary>
-internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationService text)
+internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions options)
 {
     private int _paintedRows;
     private (int Width, int Height) _paintedSize;
@@ -27,7 +28,11 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var buffer = new ChatInputBuffer(maximumCharacters);
         var reader = new TerminalInputReader(console.Input, maximumCharacters, win32Encoding: OperatingSystem.IsWindows());
         _label = label;
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text(showHint ? "Chat.MultilineHint" : "Chat.InputShortHint"))}[/]");
+        var hint = text.Text(
+            showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
+            KeyPrefix("⏎", "Enter"), KeyPrefix("⇧ + ⏎", "Newline"), KeyPrefix("← ↑ ↓ →", "Arrows"), KeyPrefix("⎋", "Escape"));
+        console.MarkupLine($"[{TerminalTheme.FieldValue}]{Markup.Escape(hint)}[/]");
+        console.WriteLine();
         console.Cursor.Hide();
         try
         {
@@ -46,7 +51,10 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                     {
                         EraseDraft();
-                        ConversationText.Write(console, new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
+                        console.Write(new Paragraph()
+                            .Append(SafeDisplay(_label) + " ", Style.Parse($"bold {TerminalTheme.Accent}"))
+                            .Append(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
+                        console.WriteLine();
                         return buffer.Text;
                     }
                     if (!buffer.Edit(key))
@@ -62,6 +70,10 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
             _label = string.Empty;
         }
     }
+
+    /// <summary>Uses a spaced key symbol or its localized name in plain-text mode.</summary>
+    private string KeyPrefix(string symbol, string key) =>
+        TerminalTheme.IconPrefix(options, symbol, text.Text("Chat.Key." + key) + ":");
 
     /// <summary>Redraws only owned input rows; resizing starts a fresh area without touching earlier scrollback.</summary>
     private void Paint(ChatInputBuffer buffer, string? error, int maximumCharacters)

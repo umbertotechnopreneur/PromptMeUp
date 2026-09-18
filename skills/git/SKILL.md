@@ -1,7 +1,9 @@
 ---
 name: git
 description: Inspect Git status, commits, branches and diffs. Git repository diagnostics.
-version: 1.0.0
+version: 1.0.1
+icon: "🌿"
+color: "#A6E3A1"
 metadata:
   openclaw:
     os: [win32, darwin, linux]

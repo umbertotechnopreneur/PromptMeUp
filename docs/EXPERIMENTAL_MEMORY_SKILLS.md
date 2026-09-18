@@ -44,6 +44,10 @@ Choosing skills based on the question uses only enabled skills. **Import a skill
 
 You can import up to 64 local packages. If a skill's instructions exceed the chat allowance, shorten them before enabling or selecting it; the app explains the limit. This allowance includes the instructions' final formatting, not just their character count.
 
+Active skills appear with their own icon and colored name. A package can declare `icon: "🧩"` and `color: "#CBA6F7"` in the YAML header of `SKILL.md`. Use one printable symbol or emoji and a six-digit RGB color with at least 4.5:1 contrast against the default background. Missing fields use the shared puzzle icon and a bright cyan color. If a chosen theme reduces contrast, the app uses its primary text color. `--no-emoji` uses plain symbols.
+
+Bundled skill prompts repeat these values under `metadata.icon` and `metadata.color` in `prompt/skill-<name>.yaml`. These fields describe the local display; they are not sent as skill instructions to the AI. Changing package metadata changes its approval fingerprint, so approve the updated skill again before using it.
+
 ## Use memories
 
 Save a note directly with `/remember Keep terminal explanations concise.` in chat, or `hm --remember "Keep terminal explanations concise."` from the terminal. All saved memories share one list across your conversations; there is no folder or scope to choose. Open `hm --memories` to read, edit, or delete them. Older notes are preserved when you upgrade.

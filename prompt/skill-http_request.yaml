@@ -1,5 +1,8 @@
 id: skill-http_request
-version: 1
+version: 2
+metadata:
+  icon: "🔗"
+  color: "#FAB387"
 description: Experimental public HTTPS request guidance
 tags: [experimental, skills]
 texts:

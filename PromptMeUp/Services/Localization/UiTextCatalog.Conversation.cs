@@ -14,13 +14,14 @@ internal static partial class UiTextCatalog
             German: "PromptMeUp",
             Spanish: "PromptMeUp",
             Vietnamese: "PromptMeUp"));
-        entries.Add("Chat.Branding", new(
-            English: "A focused workspace for safe, terminal-native assistance.",
-            Italian: "Uno spazio di lavoro mirato per assistenza sicura e nativa da terminale.",
-            French: "Un espace ciblé pour une assistance sûre, native du terminal.",
-            German: "Ein fokussierter Bereich für sichere, terminalnative Unterstützung.",
-            Spanish: "Un espacio enfocado para ayuda segura y nativa de terminal.",
-            Vietnamese: "Không gian tập trung cho trợ giúp an toàn, thuần terminal."));
+        entries.Add("Chat.CommandsHeading", new(
+            English: "Chat commands:",
+            Italian: "Comandi chat:",
+            French: "Commandes du chat :",
+            German: "Chat-Befehle:",
+            Spanish: "Comandos del chat:",
+            Vietnamese: "Lệnh trò chuyện:"));
+        entries.Add("Chat.EndMessage", new("-= end =-", "-= fine =-", "-= fin =-", "-= Ende =-", "-= fin =-", "-= hết =-"));
         entries.Add("Chat.Cleared", new(
             English: "Conversation cleared.",
             Italian: "Conversazione azzerata.",
@@ -36,19 +37,23 @@ internal static partial class UiTextCatalog
             Spanish: "Pide con tus palabras ocultar o mostrar el resumen de sesión y las vistas previas de comandos.",
             Vietnamese: "Bạn có thể yêu cầu ẩn hoặc hiện bảng tóm tắt phiên và phần xem trước lệnh bằng lời nói tự nhiên."));
         entries.Add("Chat.MultilineHint", new(
-            English: "Paste keeps line breaks. Enter: send · Shift+Enter: new line · Arrows: edit · Esc: cancel.",
-            Italian: "L'incolla conserva gli a capo. Invio: invia · Shift+Invio: a capo · Frecce: modifica · Esc: annulla.",
-            French: "Le collage conserve les sauts de ligne. Entrée : envoyer · Maj+Entrée : nouvelle ligne · Flèches : modifier · Échap : annuler.",
-            German: "Einfügen behält Zeilenumbrüche. Eingabe: senden · Umschalt+Eingabe: neue Zeile · Pfeile: bearbeiten · Esc: abbrechen.",
-            Spanish: "Pegar conserva los saltos de línea. Intro: enviar · Mayús+Intro: nueva línea · Flechas: editar · Esc: cancelar.",
-            Vietnamese: "Dán giữ nguyên xuống dòng. Enter: gửi · Shift+Enter: xuống dòng · Phím mũi tên: sửa · Esc: hủy."));
+            English: "Paste keeps line breaks. {0}send · {1}new line · {2}edit · {3}cancel.",
+            Italian: "L'incolla conserva gli a capo. {0}invia · {1}a capo · {2}modifica · {3}annulla.",
+            French: "Le collage conserve les sauts de ligne. {0}envoyer · {1}nouvelle ligne · {2}modifier · {3}annuler.",
+            German: "Einfügen behält Zeilenumbrüche. {0}senden · {1}neue Zeile · {2}bearbeiten · {3}abbrechen.",
+            Spanish: "Pegar conserva los saltos de línea. {0}enviar · {1}nueva línea · {2}editar · {3}cancelar.",
+            Vietnamese: "Dán giữ nguyên xuống dòng. {0}gửi · {1}xuống dòng · {2}sửa · {3}hủy."));
         entries.Add("Chat.InputShortHint", new(
-            English: "Enter: send · Shift+Enter: new line · Esc: cancel",
-            Italian: "Invio: invia · Shift+Invio: a capo · Esc: annulla",
-            French: "Entrée : envoyer · Maj+Entrée : nouvelle ligne · Échap : annuler",
-            German: "Eingabe: senden · Umschalt+Eingabe: neue Zeile · Esc: abbrechen",
-            Spanish: "Intro: enviar · Mayús+Intro: nueva línea · Esc: cancelar",
-            Vietnamese: "Enter: gửi · Shift+Enter: xuống dòng · Esc: hủy"));
+            English: "{0}send · {1}new line · {3}cancel",
+            Italian: "{0}invia · {1}a capo · {3}annulla",
+            French: "{0}envoyer · {1}nouvelle ligne · {3}annuler",
+            German: "{0}senden · {1}neue Zeile · {3}abbrechen",
+            Spanish: "{0}enviar · {1}nueva línea · {3}cancelar",
+            Vietnamese: "{0}gửi · {1}xuống dòng · {3}hủy"));
+        entries.Add("Chat.Key.Enter", new("Enter", "Invio", "Entrée", "Eingabe", "Intro", "Enter"));
+        entries.Add("Chat.Key.Newline", new("Shift+Enter", "Shift+Invio", "Maj+Entrée", "Umschalt+Eingabe", "Mayús+Intro", "Shift+Enter"));
+        entries.Add("Chat.Key.Arrows", new("Arrows", "Frecce", "Flèches", "Pfeile", "Flechas", "Phím mũi tên"));
+        entries.Add("Chat.Key.Escape", new("Esc", "Esc", "Échap", "Esc", "Esc", "Esc"));
         entries.Add("Chat.InputLine", new(
             English: "Line {0} of {1} · Enter to send",
             Italian: "Riga {0} di {1} · Invio per inviare",

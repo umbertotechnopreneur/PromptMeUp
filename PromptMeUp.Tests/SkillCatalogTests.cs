@@ -17,6 +17,12 @@ public sealed class SkillCatalogTests
     [InlineData("name: demo\ndescription: Example\nversion: [invalid]")]
     [InlineData("name: demo\ndescription: Example\nunused: [[[[[[[[[nested]]]]]]]]]")]
     [InlineData("name: demo\ndescription: [")]
+    [InlineData("name: demo\ndescription: Example\nicon: [invalid]")]
+    [InlineData("name: demo\ndescription: Example\nicon: ''")]
+    [InlineData("name: demo\ndescription: Example\nicon: '🧩 🧩'")]
+    [InlineData("name: demo\ndescription: Example\nicon: '\u202E'")]
+    [InlineData("name: demo\ndescription: Example\ncolor: '[red on blue]'")]
+    [InlineData("name: demo\ndescription: Example\ncolor: '#121212'")]
     public void Inspect_InvalidYaml_ReportsLocalizedError(string metadata)
     {
         using var fixture = new RegressionFixture();
@@ -25,6 +31,29 @@ public sealed class SkillCatalogTests
         var error = Assert.Throws<InvalidOperationException>(() => Catalog(fixture).Inspect(directory));
 
         Assert.Equal(new LocalizationService().Text("Lab.Invalid"), error.Message);
+    }
+
+    /// <summary>Keeps older imports usable while binding appearance changes to a fresh package approval.</summary>
+    [Fact]
+    public async Task Inspect_AppearanceChange_InvalidatesPreviousApproval()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var catalog = Catalog(fixture);
+        var directory = Package(fixture, "demo", Definition("demo"));
+        var original = catalog.Inspect(directory);
+        await catalog.EnableAsync(original, true, default);
+        Assert.True(await catalog.IsEnabledAsync(original, default));
+        Assert.False(string.IsNullOrWhiteSpace(original.Icon));
+        Assert.False(string.IsNullOrWhiteSpace(original.Color));
+
+        File.WriteAllText(Path.Combine(directory, "SKILL.md"), Definition("demo").Replace(
+            "name: demo", "name: demo\nicon: '🖥️'\ncolor: '#cba6f7'", StringComparison.Ordinal));
+        var changed = catalog.Inspect(directory);
+
+        Assert.Equal("🖥️", changed.Icon);
+        Assert.Equal("#CBA6F7", changed.Color);
+        Assert.False(await catalog.IsEnabledAsync(changed, default));
     }
 
     /// <summary>Excludes the unwanted package independent of metadata casing and rejects device aliases.</summary>

@@ -1,5 +1,8 @@
 id: skill-concat-files
-version: 1
+version: 2
+metadata:
+  icon: "🧩"
+  color: "#CBA6F7"
 description: Experimental skill-concat-files guidance
 tags: [experimental, skills]
 texts:

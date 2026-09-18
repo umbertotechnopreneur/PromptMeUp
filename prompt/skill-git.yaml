@@ -1,5 +1,8 @@
 id: skill-git
-version: 1
+version: 2
+metadata:
+  icon: "🌿"
+  color: "#A6E3A1"
 description: Experimental skill-git guidance
 tags: [experimental, skills]
 texts:

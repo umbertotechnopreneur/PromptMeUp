@@ -126,6 +126,7 @@ public sealed class BundledSkillTests
     {
         using var fixture = new RegressionFixture();
         var prompts = new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance);
+        var packages = Catalog(fixture, new LocalizationService()).List();
 
         foreach (var name in ExpectedNames)
         {
@@ -133,6 +134,9 @@ public sealed class BundledSkillTests
 
             Assert.Equal("skill-" + name, prompt.Id);
             Assert.True(prompt.Version > 0);
+            var package = Assert.Single(packages, skill => skill.Name == name);
+            Assert.Equal(package.Icon, prompt.Metadata["icon"]);
+            Assert.Equal(package.Color, prompt.Metadata["color"]);
             Assert.Equal(SupportedLanguages.Codes.Order(StringComparer.Ordinal), prompt.Texts.Keys.Order(StringComparer.Ordinal));
             foreach (var language in SupportedLanguages.Codes)
             {

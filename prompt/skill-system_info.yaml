@@ -1,5 +1,8 @@
 id: skill-system_info
-version: 1
+version: 2
+metadata:
+  icon: "🖥️"
+  color: "#89DCEB"
 description: Guidance for bounded and privacy-conscious local system information
 tags: [experimental, skills, local]
 texts:

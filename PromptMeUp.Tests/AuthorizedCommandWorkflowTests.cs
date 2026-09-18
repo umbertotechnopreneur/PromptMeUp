@@ -452,6 +452,10 @@ public sealed class AuthorizedCommandWorkflowTests
         public void RenderNotice(string message) =>
             throw new InvalidOperationException("Notice rendering is outside this workflow.");
 
+        /// <summary>Rejects unexpected skill rendering in this focused workflow fixture.</summary>
+        public void RenderActiveSkills(IReadOnlyList<SkillDefinition> skills) =>
+            throw new InvalidOperationException("Skill rendering is outside this workflow.");
+
         /// <summary>Rejects unexpected success rendering in this focused workflow fixture.</summary>
         public void RenderSuccess(string message) =>
             throw new InvalidOperationException("Success rendering is outside this workflow.");

@@ -1,7 +1,9 @@
 ---
 name: http_request
 description: Request a public HTTPS URL with GET, HEAD, POST or PUT and inspect a bounded response.
-version: 1.0.0
+version: 1.0.1
+icon: "🔗"
+color: "#FAB387"
 metadata:
   openclaw:
     os: [win32, darwin, linux]

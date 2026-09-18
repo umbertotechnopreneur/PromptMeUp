@@ -1,7 +1,9 @@
 ---
 name: filesystem
 description: List directories, read bounded files and inspect file information.
-version: 1.0.0
+version: 1.0.1
+icon: "📂"
+color: "#F9E2AF"
 metadata:
   openclaw:
     os: [win32, darwin, linux]

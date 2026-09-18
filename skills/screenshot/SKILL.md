@@ -1,7 +1,9 @@
 ---
 name: screenshot
 description: Save an explicitly approved Windows screen capture to a new local PNG file.
-version: 1.0.0
+version: 1.0.1
+icon: "📸"
+color: "#F5C2E7"
 metadata:
   openclaw:
     os: [win32]

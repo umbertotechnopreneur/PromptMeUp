@@ -1,5 +1,8 @@
 id: skill-web_search
-version: 1
+version: 2
+metadata:
+  icon: "🔎"
+  color: "#89B4FA"
 description: Experimental DuckDuckGo instant-answer guidance
 tags: [experimental, skills]
 texts:

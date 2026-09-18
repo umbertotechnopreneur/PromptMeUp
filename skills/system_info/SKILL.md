@@ -1,7 +1,9 @@
 ---
 name: system_info
 description: Inspect bounded system information without environment values or network addresses.
-version: 1.0.0
+version: 1.0.1
+icon: "🖥️"
+color: "#89DCEB"
 metadata:
   openclaw:
     os: [win32, darwin, linux]

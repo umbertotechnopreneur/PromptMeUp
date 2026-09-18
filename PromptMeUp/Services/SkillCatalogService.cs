@@ -102,8 +102,18 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
         var name = Scalar(root, "name").ToLowerInvariant();
         var description = Scalar(root, "description");
         var version = Scalar(root, "version", "1.0.0");
+        var icon = Scalar(root, "icon", "🧩");
+        var color = Scalar(root, "color", "#89DCEB");
         if (!ValidName(name) || !ValidPathPart(name) || name == "metals-dev-monitor" || string.IsNullOrWhiteSpace(description) || description.Length > 500
             || version.Length is 0 or > 64 || version.Any(char.IsControl))
+        {
+            throw Invalid();
+        }
+        if (icon.Length is 0 or > 16 || icon.Any(character => char.IsControl(character) || char.IsWhiteSpace(character)
+                || char.GetUnicodeCategory(character) == UnicodeCategory.Format && character != '\u200D')
+            || StringInfo.ParseCombiningCharacters(icon).Length != 1
+            || color.Length != 7 || color[0] != '#' || !color.Skip(1).All(char.IsAsciiHexDigit)
+            || ThemeCatalogService.ContrastRatio(color, TerminalThemeDefinition.Default.Colors.Background) < 4.5d)
         {
             throw Invalid();
         }
@@ -162,7 +172,8 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
         }
         return new SkillDefinition(name, description, version, instructions,
             Path.GetFullPath(directory), origin, Convert.ToHexString(hash.GetHashAndReset()), reason,
-            scripts);
+            scripts)
+        { Icon = icon, Color = color.ToUpperInvariant() };
     }
 
     /// <summary>Records the exact inspected content as enabled, or removes its activation.</summary>

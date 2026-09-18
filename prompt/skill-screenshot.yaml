@@ -1,5 +1,8 @@
 id: skill-screenshot
-version: 1
+version: 2
+metadata:
+  icon: "📸"
+  color: "#F5C2E7"
 description: Guidance for explicitly approved local Windows PNG captures
 tags: [experimental, skills, local]
 texts:

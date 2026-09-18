@@ -1,7 +1,9 @@
 ---
 name: clipboard
 description: Read or write bounded clipboard text locally on Windows.
-version: 1.0.0
+version: 1.0.1
+icon: "📋"
+color: "#94E2D5"
 metadata:
   openclaw:
     os: [win32]

@@ -1,5 +1,8 @@
 id: skill-timezone_convert
-version: 1
+version: 2
+metadata:
+  icon: "🕒"
+  color: "#F2CDCD"
 description: Guidance for deterministic local time zone conversion
 tags: [experimental, skills, local]
 texts:

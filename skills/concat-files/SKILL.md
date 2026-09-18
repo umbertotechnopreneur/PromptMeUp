@@ -1,7 +1,9 @@
 ---
 name: concat-files
 description: Concatenate source files into bounded UTF-8 bundles for review.
-version: 1.0.0
+version: 1.0.1
+icon: "🧩"
+color: "#CBA6F7"
 metadata:
   openclaw:
     os: [win32, darwin, linux]

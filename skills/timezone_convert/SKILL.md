@@ -1,7 +1,9 @@
 ---
 name: timezone_convert
 description: Convert explicit dates or the current time using the operating system time zone database.
-version: 1.0.0
+version: 1.0.1
+icon: "🕒"
+color: "#F2CDCD"
 metadata:
   openclaw:
     os: [win32, darwin, linux]

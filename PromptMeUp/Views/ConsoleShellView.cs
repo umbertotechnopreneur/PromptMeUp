@@ -27,6 +27,8 @@ public interface IConsoleShellView
 
     void RenderNotice(string message);
 
+    void RenderActiveSkills(IReadOnlyList<SkillDefinition> skills);
+
     void RenderSuccess(string message);
 
     void RenderWarning(string message);
@@ -65,39 +67,31 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void RenderHeader(string command, AppSettings? settings, bool hasApiKey, string currentDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(currentDirectory);
-        var invocation = command.Equals("main", StringComparison.OrdinalIgnoreCase)
-            ? "hm"
-            : $"hm {command}";
-        RenderOpeningBanner(invocation);
-        RenderHeaderNavigation(command, currentDirectory);
+        RenderOpeningBanner();
+        RenderCurrentDirectory(currentDirectory);
         RenderHeaderContext(command, settings, hasApiKey);
     }
 
-    /// <summary>Renders the opening identity, product promise, and invocation as an unmistakable terminal banner.</summary>
-    private void RenderOpeningBanner(string invocation)
+    /// <summary>Renders the opening identity and product promise as an unmistakable terminal banner.</summary>
+    private void RenderOpeningBanner()
     {
         var icon = TerminalTheme.IconPrefix(Options, "✦", "*");
         TerminalTheme.WriteRule(_console, $"{icon}P R O M P T M E U P", TerminalTheme.Accent);
         _console.MarkupLine($"  [bold {TerminalTheme.Info}]{Markup.Escape(_text.Text("Shell.OpeningKicker"))}[/]");
         _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Tagline"))}[/]");
-        _console.MarkupLine(
-            $"  [bold {TerminalTheme.Accent}]›[/] [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Footer.Command"))}[/] [bold {TerminalTheme.Success}]{Markup.Escape(invocation)}[/]");
         _console.WriteLine();
     }
 
-    /// <summary>Places navigation and the current working directory directly under the opening banner.</summary>
-    private void RenderHeaderNavigation(string command, string currentDirectory)
+    /// <summary>Aligns the working directory with the tagline and leaves one blank line below it.</summary>
+    private void RenderCurrentDirectory(string currentDirectory)
     {
-        if (!Console.IsInputRedirected && !Console.IsOutputRedirected && IsInteractiveInvocation(command))
-        {
-            _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
-        }
-        _console.Write(TerminalTheme.PairGrid(
+        var grid = TerminalTheme.PairGrid(
             [TerminalTheme.CompactMetric(
                 TerminalTheme.IconPrefix(Options, "📂", ">") + _text.Text("Shell.CurrentDirectory"),
                 currentDirectory)],
             preferredPairs: 1,
-            width: _console.Profile.Width));
+            width: Math.Max(1, _console.Profile.Width - 2));
+        _console.Write(new Padder(grid, new Padding(2, 0, 0, 0)));
         _console.WriteLine();
     }
 
@@ -221,7 +215,28 @@ public sealed class ConsoleShellView : IConsoleShellView
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         _console.WriteLine();
         _console.MarkupLine(
-            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}INFO[/]  [{TerminalTheme.Primary}]{Markup.Escape(message)}[/]");
+            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}[/][{TerminalTheme.Primary}]{Markup.Escape(message)}[/]");
+        _console.WriteLine();
+    }
+
+    /// <summary>Identifies each selected skill with its package icon and a readable name color.</summary>
+    public void RenderActiveSkills(IReadOnlyList<SkillDefinition> skills)
+    {
+        ArgumentNullException.ThrowIfNull(skills);
+        if (skills.Count == 0)
+        {
+            return;
+        }
+        var names = skills.Select(skill =>
+        {
+            var color = ThemeCatalogService.ContrastRatio(skill.Color, TerminalTheme.Current.Colors.Background) >= 4.5d
+                ? skill.Color : TerminalTheme.Primary;
+            var label = TerminalTheme.IconPrefix(Options, skill.Icon, "*") + skill.Name;
+            return $"[bold {color}]{Markup.Escape(label)}[/]";
+        });
+        _console.WriteLine();
+        _console.MarkupLine(
+            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}[/][{TerminalTheme.Primary}]{_text.Text("Lab.Active", string.Join(", ", names))}[/]");
         _console.WriteLine();
     }
 
@@ -286,7 +301,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     /// <summary>Writes one layout separator line through the passive console boundary.</summary>
     public void WriteLine() => _console.WriteLine();
 
-    /// <summary>Shows a small settings dashboard and keyboard navigation under the invocation header.</summary>
+    /// <summary>Aligns startup settings beneath the working directory without a separate heading.</summary>
     private void RenderHeaderContext(string command, AppSettings? settings, bool hasApiKey)
     {
         if (settings is not null && IsAiInvocation(command))
@@ -300,25 +315,21 @@ public sealed class ConsoleShellView : IConsoleShellView
             var stateIcon = settings.AiEnabled && hasApiKey
                 ? TerminalTheme.Icon(Options, "●", "+")
                 : TerminalTheme.Icon(Options, "!", "!");
-            var dashboardIcon = TerminalTheme.IconPrefix(Options, "🪞", "=");
-            RenderSessionSnapshot(
-                $"{dashboardIcon}{_text.Text("Shell.Session")}",
+            var grid = TerminalTheme.PairGrid(
                 [
                     TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(Options, "🌐", "@") + _text.Text("Status.Language"), settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
                     TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🧠", "AI")}{_text.Text("Status.Model")}", settings.Model),
                     TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚙️", "~")}{_text.Text($"Shell.Thinking")}", _text.Text($"Reasoning.{settings.ReasoningEffort}"), TerminalTheme.Info),
                     TerminalTheme.CompactMetric($"{stateIcon}\u00A0AI", state, stateColor)
-                ]);
+                ],
+                preferredPairs: 3,
+                width: Math.Max(1, _console.Profile.Width - 2));
+            _console.Write(new Padder(grid, new Padding(2, 0, 0, 0)));
         }
-
     }
 
     /// <summary>Identifies invocations that benefit from showing the selected AI model before work begins.</summary>
     private static bool IsAiInvocation(string command) => command is "main" or "query" or "chat" or "test-ai";
-
-    /// <summary>Identifies commands that actively read navigation or confirmation keys.</summary>
-    private static bool IsInteractiveInvocation(string command) =>
-        command is "main" or "setup" or "chat" or "where" or "path" or "install-font";
 
     /// <summary>Renders compact metric rows that adapt to the available terminal width.</summary>
     private void RenderSessionSnapshot(string header, IReadOnlyList<CompactTerminalMetric> metrics, int preferredPairs = 4, int? firstLabelWidth = null)

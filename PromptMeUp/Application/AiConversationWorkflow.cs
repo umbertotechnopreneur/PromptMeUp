@@ -419,9 +419,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         }
         var envelope = await PrepareMemoryAsync(
             sessionId, memory, settings, promptId, userText, cancellationToken, pendingMessage: userText).ConfigureAwait(false);
-        if (envelope.SkillNames.Count > 0)
+        if (envelope.Skills.Count > 0)
         {
-            _shell.RenderNotice(_text.Text("Lab.Active", string.Join(", ", envelope.SkillNames)));
+            _shell.RenderActiveSkills(envelope.Skills);
         }
         foreach (var warning in envelope.SkillWarnings)
         {
@@ -761,7 +761,6 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         }
         var skillWarnings = new List<string>();
         var selectedSkills = _skills is null ? [] : await _skills.SelectAsync(query, cancellationToken, skillWarnings).ConfigureAwait(false);
-        var skillNames = selectedSkills.Select(skill => skill.Name).ToList();
         var combined = memoryText;
         if (selectedSkills.Count > 0)
         {
@@ -777,7 +776,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         {
             throw new ConversationLimitException(_text.Text("Chat.ContextLimit"));
         }
-        return new MemoryEnvelope(envelopeMessage, notes.Count, envelopeTokens) { SkillNames = skillNames, SkillWarnings = skillWarnings };
+        return new MemoryEnvelope(envelopeMessage, notes.Count, envelopeTokens) { Skills = selectedSkills, SkillWarnings = skillWarnings };
     }
 
     /// <summary>Reserves actual populated instructions and recalled notes before pruning the recent-turn window.</summary>
@@ -871,7 +870,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
 
     private sealed record MemoryEnvelope(ChatMessage? Message, int Count, long Tokens)
     {
-        public IReadOnlyList<string> SkillNames { get; init; } = [];
+        public IReadOnlyList<SkillDefinition> Skills { get; init; } = [];
         public IReadOnlyList<string> SkillWarnings { get; init; } = [];
     }
 

@@ -1,7 +1,9 @@
 ---
 name: web_search
 description: Find DuckDuckGo instant-answer summaries and related topics without an API key.
-version: 1.0.0
+version: 1.0.1
+icon: "🔎"
+color: "#89B4FA"
 metadata:
   openclaw:
     os: [win32, darwin, linux]

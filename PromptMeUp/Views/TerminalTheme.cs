@@ -15,6 +15,7 @@ internal static class TerminalTheme
     internal static string Info => Current.Colors.Info;
     internal static string Primary => Current.Colors.Primary;
     internal const string FieldValue = "#F5F5F5";
+    internal const string White = "#FFFFFF";
     internal static string Muted => Current.Colors.Muted;
     internal static string Divider => Current.Colors.Divider;
     internal static string Success => Current.Colors.Success;

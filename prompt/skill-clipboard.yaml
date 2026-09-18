@@ -1,5 +1,8 @@
 id: skill-clipboard
-version: 1
+version: 2
+metadata:
+  icon: "📋"
+  color: "#94E2D5"
 description: Guidance for explicitly approved local Windows clipboard actions
 tags: [experimental, skills, local]
 texts:

@@ -1,5 +1,8 @@
 id: skill-filesystem
-version: 1
+version: 2
+metadata:
+  icon: "📂"
+  color: "#F9E2AF"
 description: Experimental skill-filesystem guidance
 tags: [experimental, skills]
 texts:

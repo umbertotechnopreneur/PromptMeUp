@@ -2,6 +2,15 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Refine chat layout and identify active skills
+
+- Removed opening navigation, invocation, and startup snapshot headings. Aligned the current directory and startup settings with the tagline, with one blank line above and below the directory. Replaced the chat introduction with an indented, six-language command heading.
+- Added WhiteSmoke keyboard guidance using key symbols, localized text for `--no-emoji`, and a blank line before input. Kept the sender's icon and name beside the submitted message, and ended assistant responses with a localized white marker separated by blank lines.
+- Removed redundant INFO text. Added individual icons and readable colors to all ten bundled skill packages and their versioned prompt YAML metadata; active skill names use those identities. Older imports keep defaults, invalid display metadata is rejected, and theme contrast is preserved. Package changes still require fresh approval.
+- Extended package validation coverage for malformed display metadata, approval invalidation, and matching bundled prompt metadata. Documented the metadata contract.
+
+Validation: repository preflight, formatting verification, XML summaries, YAML syntax and metadata consistency for all ten skills, and Release compilation passed with zero warnings or errors. Automated tests and CLI smoke tests were not run. Cleaned Release build output; no package was rebuilt or installed.
+
 ## 2026-09-18 — Install the Settings and chat UI Debug update
 
 - Clarified the repository workflow: public release artifacts remain GitHub Actions-only, while an explicitly requested signed Debug MSIX may be built and installed locally from ignored `artifacts/msix` without publishing, tagging, or uploading it.

@@ -1,7 +1,9 @@
 ---
 name: set_reminder
 description: Create, list, and cancel project reminders shown at the next active chat prompt.
-version: 1
+version: 2
+icon: "⏰"
+color: "#F38BA8"
 os: any
 ---
 
