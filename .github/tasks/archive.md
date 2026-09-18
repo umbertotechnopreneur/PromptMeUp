@@ -10,7 +10,9 @@ This archive tracks completed development tasks for reference and review.
 - Preserved OpenAI, PromptMeUp views, all six interface/prompt languages, credential filtering, retention bounds, and revision guards against stale evidence or in-flight resurrection.
 - Recorded checkpoints in commits `1a0ae82`, `50ed970`, and `6a54bf7`; documented consent, permanent evidence purges, existing audit retention, supported import constraints, and the intentionally limited initial catalog.
 
-Validation: preflight, format verification, XML summaries, Release build (zero warnings/errors), YAML syntax/six-language fields, prompt context allowances, and PowerShell syntax passed. Added and compiled regression tests, but did not run automated tests or CLI smoke tests without explicit authorization. No live AI requests or skill scripts ran. Cleaned build output; no local release artifacts were produced.
+Validation: preflight, format verification, XML summaries, Release build (zero warnings/errors), YAML syntax/six-language fields, prompt context allowances, and PowerShell syntax passed. The initial checkpoints compiled tests without executing them; after the user explicitly authorized testing, all 660 local tests passed. No live AI requests or skill scripts ran. Cleaned build output; no local release artifacts were produced.
+
+CI follow-up: corrected macOS catalog and concat-files handling for only the verified `/var`, `/tmp`, and `/etc` system aliases, retaining arbitrary-link rejection. Added alias and linked-ancestor regression cases. Updated portable, installer, MSIX, and legacy staging scripts to include only the exact four bundled skill files. The first CI run had passed all 657 then-current tests on Windows and Linux; macOS alias handling and Windows installer payload validation identified these follow-up changes. Final packaging remains validated through GitHub Actions, not local release builds.
 
 ## 2026-09-18 — Reduce agent context and redundant verification
 

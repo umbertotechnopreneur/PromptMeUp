@@ -54,7 +54,8 @@ public sealed class SkillCatalogTests
 
         Assert.Throws<InvalidOperationException>(() => Catalog(fixture).StageZip(zip));
 
-        Assert.Empty(Directory.GetDirectories(Path.Combine(fixture.Paths.DataDirectory, "skill-staging")));
+        var staging = Path.Combine(fixture.Paths.DataDirectory, "skill-staging");
+        Assert.True(!Directory.Exists(staging) || !Directory.EnumerateFileSystemEntries(staging).Any());
         Assert.False(Directory.Exists(Path.Combine(fixture.Paths.DataDirectory, "skills")));
         Assert.True(File.Exists(zip));
     }
@@ -68,6 +69,63 @@ public sealed class SkillCatalogTests
             [("demo/SKILL.md", Definition("demo"), 0), ("demo/linked.txt", "../outside", unchecked((int)0xA1FF0000))]);
 
         Assert.Throws<InvalidOperationException>(() => Catalog(fixture).StageZip(zip));
+    }
+
+    /// <summary>Accepts verified macOS system aliases for staging, import, inspection, and generated staging cleanup.</summary>
+    [Theory]
+    [InlineData("/tmp")]
+    [InlineData("/var/tmp")]
+    public void Import_MacOsSystemAlias_PreservesPackageContainment(string temporaryRoot)
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            return;
+        }
+        using var fixture = new RegressionFixture();
+        var directory = Path.Combine(temporaryRoot, "PromptMeUp.SkillAlias." + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var paths = fixture.Paths with { DataDirectory = directory };
+            var text = new LocalizationService();
+            var catalog = new SkillCatalogService(paths, new ExperimentalStore(paths, new SensitiveDataRedactor(), text), text);
+            var zip = Archive(fixture, [("demo/SKILL.md", Definition("demo"), 0)]);
+            var staged = catalog.StageZip(zip);
+
+            catalog.Import(catalog.Inspect(staged));
+            catalog.DiscardStaging(staged);
+
+            var imported = Assert.Single(catalog.List(), skill => skill.Name == "demo");
+            Assert.Equal(Path.Combine(directory, "skills", "demo"), imported.Directory);
+            Assert.False(Directory.Exists(Path.GetDirectoryName(staged)));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    /// <summary>Keeps rejecting arbitrary package ancestors even when the operating system's temporary root is an allowed alias.</summary>
+    [Fact]
+    public void Inspect_UserCreatedAncestorLink_IsRejected()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+        using var fixture = new RegressionFixture();
+        var directory = Package(fixture, "demo", Definition("demo"));
+        var link = Path.Combine(fixture.Paths.DataDirectory, "linked-skills");
+        Directory.CreateSymbolicLink(link, Path.GetDirectoryName(directory)!);
+        try
+        {
+            Assert.Throws<InvalidOperationException>(() => Catalog(fixture).Inspect(Path.Combine(link, "demo")));
+            Assert.True(File.Exists(Path.Combine(directory, "SKILL.md")));
+        }
+        finally
+        {
+            Directory.Delete(link);
+        }
     }
 
     /// <summary>Rejects a file used as an implicit directory on all supported operating systems.</summary>

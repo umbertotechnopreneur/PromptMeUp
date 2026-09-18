@@ -58,7 +58,8 @@ function Get-PayloadFiles {
             }
             $relative = [IO.Path]::GetRelativePath($Directory, $item.FullName).Replace('\', '/')
             $allowed = $relative -match '^(?:[^/]+\.dll|(?:hm|createdump)\.exe|hm\.(?:deps|runtimeconfig)\.json|LICENSE|THIRD_PARTY_NOTICES\.md|THIRD_PARTY_INVENTORY\.json|BUILD_INFO\.txt|hm-path\.(?:ps1|sh))$' `
-                -or $relative -match '^(?:prompt/[^/]+\.yaml|themes/[^/]+\.json|LICENSES/.+|[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*/[^/]+\.resources\.dll)$'
+                -or $relative -match '^(?:prompt/[^/]+\.yaml|themes/[^/]+\.json|LICENSES/.+|[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*/[^/]+\.resources\.dll)$' `
+                -or $relative -cmatch '^skills/(?:(?:git|filesystem|concat-files)/SKILL\.md|concat-files/scripts/run\.ps1)$'
             if (-not $allowed) { throw "Unexpected publish content '$relative'. Use a clean Release publish folder with exported notices." }
             if ($item.Name -match '(?i)(?:^\.env(?:\.|$)|\.(?:db|sqlite|log|pfx|p12|pem|key)$)') {
                 throw "Local data or credential files cannot be packaged: $relative"
@@ -160,7 +161,8 @@ Assert-NoReparseAncestor $publishRoot
 Assert-NoReparseAncestor $outputRoot
 $files = @(Get-PayloadFiles $publishRoot)
 foreach ($name in @('hm.exe', 'hm.dll', 'hm.deps.json', 'hm.runtimeconfig.json', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll',
-        'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md')) {
+        'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md',
+        'skills/git/SKILL.md', 'skills/filesystem/SKILL.md', 'skills/concat-files/SKILL.md', 'skills/concat-files/scripts/run.ps1')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishRoot $name) -PathType Leaf)) { throw "Prepared publish folder is missing '$name'." }
 }
 Assert-PeArchitecture (Join-Path $publishRoot 'hm.exe')

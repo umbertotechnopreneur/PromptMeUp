@@ -371,16 +371,38 @@ public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store,
     /// <summary>Rejects symbolic links and redirected ancestors in a skill path.</summary>
     private void RejectLinks(string path)
     {
-        for (var current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
+        string? current = Path.GetFullPath(path);
+        while (current is not null)
         {
             if (File.Exists(current) || Directory.Exists(current))
             {
                 if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
                 {
-                    throw Invalid();
+                    current = MacOsSystemAliasTarget(current) ?? throw Invalid();
+                    continue;
                 }
             }
+            current = Path.GetDirectoryName(current);
         }
+    }
+
+    /// <summary>Recognizes only macOS's fixed root aliases and leaves their canonical ancestors subject to link rejection.</summary>
+    private static string? MacOsSystemAliasTarget(string path)
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            return null;
+        }
+        var expected = path switch
+        {
+            "/var" => "/private/var",
+            "/tmp" => "/private/tmp",
+            "/etc" => "/private/etc",
+            _ => null
+        };
+        return expected is not null && Directory.Exists(expected)
+            && string.Equals(Directory.ResolveLinkTarget(path, returnFinalTarget: false)?.FullName, expected, StringComparison.Ordinal)
+                ? expected : null;
     }
 
     /// <summary>Restricts identifiers to a portable filename-safe vocabulary.</summary>

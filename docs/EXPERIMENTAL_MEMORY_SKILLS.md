@@ -63,6 +63,8 @@ Context selection is deliberately small: explicit package selection takes preced
 
 This first port includes three reviewed skills, not the companion application's entire catalog or tool protocol. Other packages can be inspected and imported individually when they meet the supported layout and script constraints. `metals-dev-monitor` remains blocked. ZIP import is not a sandbox: an approved script has your account's permissions, so inspect its complete contents and command preview.
 
+Catalog and concat-files path checks reject arbitrary linked ancestors. On macOS, only the system aliases `/var`, `/tmp`, and `/etc` are accepted after checking that they resolve directly to their expected `/private` paths; those targets and their ancestors are checked too. Release packaging includes only the four files belonging to the three bundled skills, never local imports.
+
 ## Validation record
 
 Run the applicable repository non-test checks before code commits. Automated tests and CLI smoke tests require a separate explicit request. Portable releases remain exclusive to GitHub Actions.
@@ -70,5 +72,7 @@ Run the applicable repository non-test checks before code commits. Automated tes
 Skills checkpoint: preflight, dependency restore, Release build (zero warnings/errors), XML method summaries, and PowerShell syntax parsing passed. No automated tests, CLI smoke tests, or imported scripts were executed.
 
 Learning checkpoint: preflight, formatting verification, XML method summaries, Release build (zero warnings/errors), and syntax/six-language validation of all 24 runtime prompts passed. Guide text remains within its context allowance. Added regression coverage for catalog/import, scalar parameters, reflection parsing/batching, CLI selection, retention, stale evidence, and transactional approval. These tests were compiled but not run. Release build output was cleaned after the final build. No live OpenAI request or interactive CLI smoke run was performed.
+
+Final verification after explicit testing authorization: all 660 local tests passed. The macOS system-alias and Windows packaging follow-up passed formatting, XML summaries, a warning-free Release build, and syntax checks on all five changed PowerShell files. No release packaging or skill script was executed locally; packaging validation runs in GitHub Actions.
 
 The experiment is available for review in [draft PR #43](https://github.com/umbertotechnopreneur/PromptMeUp/pull/43), on `codex/experimental-memory-skills`. `main` and release versions are unchanged.

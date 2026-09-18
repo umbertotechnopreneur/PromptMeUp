@@ -167,6 +167,16 @@ function Copy-PackagePayload {
     if (-not (Test-Path -LiteralPath (Join-Path $StageDirectory 'themes/cyan.json') -PathType Leaf)) {
         throw 'The staged package must contain the default cyan theme resource.'
     }
+
+    foreach ($name in @('skills/git/SKILL.md', 'skills/filesystem/SKILL.md', 'skills/concat-files/SKILL.md', 'skills/concat-files/scripts/run.ps1')) {
+        $source = Join-Path $PublishDirectory $name
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Published payload is missing '$source'."
+        }
+        $target = Join-Path $StageDirectory $name
+        New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+        Copy-Item -LiteralPath $source -Destination $target
+    }
 }
 
 function New-DeterministicZip {

@@ -21,7 +21,22 @@ foreach ($root in @($inputRoot, $outputRoot)) {
     $ancestor = $root
     while ($ancestor) {
         if (Test-Path -LiteralPath $ancestor) {
-            if ((Get-Item -LiteralPath $ancestor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw $_ValidationError }
+            if ((Get-Item -LiteralPath $ancestor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                # macOS exposes these fixed system aliases; arbitrary links still fail, including redirected targets.
+                $expectedTarget = if ($IsMacOS) {
+                    switch -CaseSensitive -Exact ($ancestor) {
+                        '/var' { '/private/var' }
+                        '/tmp' { '/private/tmp' }
+                        '/etc' { '/private/etc' }
+                        default { $null }
+                    }
+                } else { $null }
+                if (-not $expectedTarget -or -not [IO.Directory]::Exists($expectedTarget)) { throw $_ValidationError }
+                $linkTarget = [IO.Directory]::ResolveLinkTarget($ancestor, $false)
+                if (-not $linkTarget -or -not [string]::Equals($linkTarget.FullName, $expectedTarget, [StringComparison]::Ordinal)) { throw $_ValidationError }
+                $ancestor = $expectedTarget
+                continue
+            }
         }
         $ancestor = [IO.Path]::GetDirectoryName($ancestor)
     }
