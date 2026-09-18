@@ -142,12 +142,13 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             _focus = Math.Clamp(_focus, 0, fields.Length + 1);
             void Paint() => Render(titleKey, visiblePages, fields);
             Paint();
-            var key = ReadKey(Paint, _pendingSectionDeadline);
-            if (key is null)
+            var readKey = ReadKey(Paint, _pendingSectionDeadline);
+            if (readKey is null)
             {
                 CompletePendingSectionNumber(visiblePages.Length);
                 continue;
             }
+            var key = readKey.Value;
             if (key.Key == ConsoleKey.Escape)
             {
                 throw new InteractiveFlowCanceledException();
