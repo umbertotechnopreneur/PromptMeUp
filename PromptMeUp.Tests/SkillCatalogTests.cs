@@ -232,7 +232,8 @@ public sealed class SkillCatalogTests
         await catalog.EnableAsync(second, true, default);
 
         Assert.Empty(await catalog.SelectAsync("example", default));
-        await Store(fixture).SaveSettingsAsync(new(Enabled: true, AutomaticSkills: true), default);
+        var store = Store(fixture);
+        await store.SaveSettingsAsync(new(Enabled: true, AutomaticSkills: true), await store.SettingsAsync(default), default);
         var selected = await catalog.SelectAsync("example", default);
 
         Assert.Single(selected);

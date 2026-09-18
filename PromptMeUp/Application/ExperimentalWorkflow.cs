@@ -61,7 +61,7 @@ public sealed partial class ExperimentalWorkflow(
                 {
                     return;
                 }
-                await store.SaveSettingsAsync(preferences with { Enabled = true }, ct).ConfigureAwait(false);
+                await store.SaveSettingsAsync(preferences with { Enabled = true }, preferences, ct).ConfigureAwait(false);
                 continue;
             }
             var catalog = skills.List();
@@ -84,14 +84,14 @@ public sealed partial class ExperimentalWorkflow(
                 case 1:
                     if (view.Confirm(text.Text("Lab.Disable")))
                     {
-                        await store.SaveSettingsAsync(new(), ct).ConfigureAwait(false);
+                        await store.SaveSettingsAsync(new(), preferences, ct).ConfigureAwait(false);
                     }
                     break;
                 case 2:
                     Import();
                     break;
                 case 3:
-                    await store.SaveSettingsAsync(preferences with { AutomaticSkills = !preferences.AutomaticSkills }, ct).ConfigureAwait(false);
+                    await store.SaveSettingsAsync(preferences with { AutomaticSkills = !preferences.AutomaticSkills }, preferences, ct).ConfigureAwait(false);
                     break;
                 case 4:
                     await store.SetAsync("selected-skill", string.Empty, ct).ConfigureAwait(false);

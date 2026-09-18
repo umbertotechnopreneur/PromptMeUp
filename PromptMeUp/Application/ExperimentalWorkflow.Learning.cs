@@ -17,7 +17,7 @@ public sealed partial class ExperimentalWorkflow
             {
                 return;
             }
-            await store.SaveSettingsAsync(initial with { Enabled = true }, ct).ConfigureAwait(false);
+            await store.SaveSettingsAsync(initial with { Enabled = true }, initial, ct).ConfigureAwait(false);
         }
         while (await LearningEnabledAsync(ct).ConfigureAwait(false))
         {
@@ -42,11 +42,11 @@ public sealed partial class ExperimentalWorkflow
                 case 1:
                     if (view.Confirm(text.Text(preferences.CaptureObservations ? "Lab.StopCapture" : "Lab.StartCapture")))
                     {
-                        await store.SaveSettingsAsync(preferences with { CaptureObservations = !preferences.CaptureObservations }, ct).ConfigureAwait(false);
+                        await store.SaveSettingsAsync(preferences with { CaptureObservations = !preferences.CaptureObservations }, preferences, ct).ConfigureAwait(false);
                     }
                     break;
                 case 2:
-                    await store.SaveSettingsAsync(preferences with { MaintenanceReminder = !preferences.MaintenanceReminder }, ct).ConfigureAwait(false);
+                    await store.SaveSettingsAsync(preferences with { MaintenanceReminder = !preferences.MaintenanceReminder }, preferences, ct).ConfigureAwait(false);
                     break;
                 case 3:
                     await ReviewObservationAsync(observations, ct).ConfigureAwait(false);

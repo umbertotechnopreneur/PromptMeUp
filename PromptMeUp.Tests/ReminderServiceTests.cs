@@ -75,9 +75,9 @@ public sealed class ReminderServiceTests
         Assert.Empty(await DeliverAsync(service));
         Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skill_reminders;"));
         await catalog.EnableAsync(skill, true, default);
-        await store.SaveSettingsAsync(new(), default);
+        await store.SaveSettingsAsync(new(), await store.SettingsAsync(default), default);
         Assert.Empty(await DeliverAsync(service));
-        await store.SaveSettingsAsync(new(Enabled: true), default);
+        await store.SaveSettingsAsync(new(Enabled: true), await store.SettingsAsync(default), default);
 
         Assert.Equal(reminder, Assert.Single(await DeliverAsync(service)));
         Assert.Empty(await DeliverAsync(service));
@@ -207,7 +207,7 @@ public sealed class ReminderServiceTests
         var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
         var catalog = new SkillCatalogService(fixture.Paths, store, text);
         var skill = Assert.Single(catalog.List(), item => item.Name == "set_reminder" && item.Origin == "bundled");
-        await store.SaveSettingsAsync(new(Enabled: true), default);
+        await store.SaveSettingsAsync(new(Enabled: true), await store.SettingsAsync(default), default);
         await catalog.EnableAsync(skill, true, default);
         return (store, catalog, skill);
     }

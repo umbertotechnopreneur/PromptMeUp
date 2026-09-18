@@ -8,6 +8,88 @@ namespace PromptMeUp.Tests;
 
 public sealed class ExperimentalStoreTests
 {
+    /// <summary>Another instance's revoked consent cannot be restored by either unrelated toggle from an older settings screen.</summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task SaveSettings_StaleUnrelatedToggle_DoesNotRestoreRevokedConsent(bool disableExperiment, bool automaticSkills)
+    {
+        using var fixture = new RegressionFixture();
+        var first = await PrepareAsync(fixture);
+        var second = CreateStore(fixture);
+        var stale = await first.SettingsAsync(default);
+        var proposal = await AddProposalAsync(first);
+        await first.SaveProposalsAsync([proposal], default);
+        var revoked = disableExperiment ? new ExperimentalSettings() : stale with { CaptureObservations = false };
+        await second.SaveSettingsAsync(revoked, await second.SettingsAsync(default), default);
+        var revision = await second.RevisionAsync(default);
+        var requested = automaticSkills ? stale with { AutomaticSkills = true } : stale with { MaintenanceReminder = true };
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => first.SaveSettingsAsync(requested, stale, default));
+
+        Assert.Equal(new LocalizationService().Text("Lab.Invalid"), error.Message);
+        Assert.Equal(revoked, await first.SettingsAsync(default));
+        Assert.Equal(revision, await first.RevisionAsync(default));
+        Assert.Empty(await first.ObservationsAsync(default));
+        Assert.Empty(await first.ProposalsAsync(default));
+        await first.CaptureAsync(Guid.NewGuid().ToString("N"), "Must remain uncaptured after consent was revoked.", default, revision);
+        Assert.Empty(await first.ObservationsAsync(default));
+    }
+
+    /// <summary>A rejected stale disable cannot erase observations or proposals retained by a newer settings snapshot.</summary>
+    [Fact]
+    public async Task SaveSettings_StaleDisable_PreservesSettingsRevisionAndEvidence()
+    {
+        using var fixture = new RegressionFixture();
+        var first = await PrepareAsync(fixture);
+        var second = CreateStore(fixture);
+        var stale = await first.SettingsAsync(default);
+        var proposal = await AddProposalAsync(first);
+        await first.SaveProposalsAsync([proposal], default);
+        var observations = await first.ObservationsAsync(default);
+        var current = stale with { AutomaticSkills = true };
+        await second.SaveSettingsAsync(current, await second.SettingsAsync(default), default);
+        var revision = await second.RevisionAsync(default);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => first.SaveSettingsAsync(new(), stale, default));
+
+        Assert.Equal(current, await first.SettingsAsync(default));
+        Assert.Equal(revision, await first.RevisionAsync(default));
+        Assert.Equal(observations, await first.ObservationsAsync(default));
+        Assert.Equal(proposal.Id, Assert.Single(await first.ProposalsAsync(default)).Id);
+    }
+
+    /// <summary>Enabling capture requires the fresh reviewed state, while a newly confirmed snapshot can still enable it normally.</summary>
+    [Fact]
+    public async Task SaveSettings_StaleCaptureApproval_RequiresFreshReviewedSnapshot()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var first = CreateStore(fixture);
+        var second = CreateStore(fixture);
+        await first.SaveSettingsAsync(new(Enabled: true), await first.SettingsAsync(default), default);
+        var stale = await first.SettingsAsync(default);
+        var current = stale with { MaintenanceReminder = true };
+        await second.SaveSettingsAsync(current, await second.SettingsAsync(default), default);
+        var revision = await second.RevisionAsync(default);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => first.SaveSettingsAsync(stale with { CaptureObservations = true }, stale, default));
+
+        Assert.Equal(current, await first.SettingsAsync(default));
+        Assert.Equal(revision, await first.RevisionAsync(default));
+        var reviewed = await first.SettingsAsync(default);
+        await first.SaveSettingsAsync(reviewed with { CaptureObservations = true }, reviewed, default);
+        var enabled = await second.SettingsAsync(default);
+        Assert.True(enabled.Enabled);
+        Assert.True(enabled.CaptureObservations);
+        Assert.True(enabled.MaintenanceReminder);
+        Assert.NotEqual(revision, await second.RevisionAsync(default));
+        await first.CaptureAsync(Guid.NewGuid().ToString("N"), "Explicitly enabled with a fresh reviewed snapshot.", default);
+        Assert.Single(await second.ObservationsAsync(default));
+    }
+
     /// <summary>Capture stays off by default and a revoked opt-in cannot be restored by an older in-flight turn.</summary>
     [Fact]
     public async Task Capture_RevokedRevision_DoesNotResurrectAfterReenable()
@@ -18,13 +100,13 @@ public sealed class ExperimentalStoreTests
         var session = Guid.NewGuid().ToString("N");
         await store.CaptureAsync(session, "A disabled observation.", default);
         Assert.Empty(await store.ObservationsAsync(default));
-        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: true), default);
+        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: true), await store.SettingsAsync(default), default);
         var revision = await store.RevisionAsync(default);
         await store.CaptureAsync(session, "A retained observation.", default, revision);
         Assert.Single(await store.ObservationsAsync(default));
 
-        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: false), default);
-        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: true), default);
+        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: false), await store.SettingsAsync(default), default);
+        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: true), await store.SettingsAsync(default), default);
         await store.CaptureAsync(session, "An old turn that finished late.", default, revision);
 
         Assert.Empty(await store.ObservationsAsync(default));
@@ -216,7 +298,7 @@ public sealed class ExperimentalStoreTests
     {
         await fixture.Database.InitializeAsync(default);
         var store = CreateStore(fixture);
-        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: true), default);
+        await store.SaveSettingsAsync(new(Enabled: true, CaptureObservations: true), await store.SettingsAsync(default), default);
         return store;
     }
 

@@ -19,14 +19,19 @@ public sealed partial class ExperimentalStore(AppPaths paths, ISensitiveDataReda
         return await ReadSettingsAsync(connection, null, PersistentMemoryService.ResolveProjectScope(), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Persists reviewed preferences and removes retained observations when capture is switched off.</summary>
-    public async Task SaveSettingsAsync(ExperimentalSettings settings, CancellationToken ct)
+    /// <summary>Persists preferences only if the reviewed snapshot is current, purging observations when capture is switched off.</summary>
+    public async Task SaveSettingsAsync(ExperimentalSettings settings, ExperimentalSettings expected, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(expected);
         var scope = PersistentMemoryService.ResolveProjectScope();
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         var previous = await ReadSettingsAsync(connection, transaction, scope, ct).ConfigureAwait(false);
+        if (previous != expected)
+        {
+            throw InvalidLearning();
+        }
         await WritePreferenceAsync(connection, transaction, scope, "settings", JsonSerializer.Serialize(settings, Json), ct).ConfigureAwait(false);
         if (previous.Enabled != settings.Enabled || previous.CaptureObservations != settings.CaptureObservations)
         {
