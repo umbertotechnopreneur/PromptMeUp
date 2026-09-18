@@ -393,17 +393,21 @@ public sealed class FullscreenSetupView
     private string? ValidateFeatures(SetupDraft draft) => draft.NeedsCaptureConsent && !draft.CaptureConsent
         || draft.NeedsClearConsent && !draft.ClearLearningConsent ? _text.Text("Settings.FeatureConsentRequired") : null;
 
-    /// <summary>Shows a short read-only privacy summary without duplicating preference controls.</summary>
+    /// <summary>Shows privacy facts as a readable guide that the form can scroll without exposing preference controls.</summary>
     private IRenderable CreatePrivacyOverview()
     {
-        var facts = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
+        var guide = new List<IRenderable>
+        {
+            new Text(_text.Text("Settings.PrivacyHelp"), Style.Parse(TerminalTheme.Muted)),
+            new Text(" ")
+        };
         foreach (var key in new[] { "Local", "Provider", "Learning", "Skills", "Control" })
         {
-            facts.AddRow(new Text(_text.Text("Settings.Privacy" + key), Style.Parse(TerminalTheme.Muted)),
-                new Text(_text.Text("Settings.Privacy" + key + "Info"), Style.Parse(TerminalTheme.Primary)));
-            facts.AddEmptyRow();
+            guide.Add(new Text(_text.Text("Settings.Privacy" + key), Style.Parse("bold " + TerminalTheme.Accent)));
+            guide.Add(new Text(_text.Text("Settings.Privacy" + key + "Info"), Style.Parse(TerminalTheme.Primary)));
+            guide.Add(new Text(" "));
         }
-        return facts;
+        return new Rows(guide);
     }
 
     /// <summary>Preserves the parent draft's display preferences around menus that save their own changes immediately.</summary>

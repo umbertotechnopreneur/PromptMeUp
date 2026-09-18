@@ -113,19 +113,19 @@ internal static partial class UiTextCatalog
             Spanish: "Secciones",
             Vietnamese: "Các mục"));
         entries.Add("Form.SectionsHelp", new(
-            English: "Choose a section with Up/Down, then press Enter to edit. F6 switches between sections and fields. Changes stay in the draft until you choose Save.",
-            Italian: "Scegli una sezione con Su/Giù, poi premi Invio per modificare. F6 passa tra sezioni e campi. Le modifiche restano nella bozza finché scegli Salva.",
-            French: "Choisissez une section avec Haut/Bas, puis appuyez sur Entrée pour modifier. F6 alterne entre sections et champs. Les modifications restent en brouillon jusqu'à Enregistrer.",
-            German: "Wählen Sie mit Auf/Ab einen Abschnitt und drücken Sie Enter zum Bearbeiten. F6 wechselt zwischen Abschnitten und Feldern. Änderungen bleiben bis zum Speichern im Entwurf.",
-            Spanish: "Elige una sección con Arriba/Abajo y pulsa Intro para editar. F6 alterna entre secciones y campos. Los cambios quedan en el borrador hasta elegir Guardar.",
-            Vietnamese: "Chọn mục bằng Lên/Xuống, rồi nhấn Enter để sửa. F6 chuyển giữa mục và trường. Thay đổi được giữ trong bản nháp đến khi bạn chọn Lưu."));
+            English: "Press a section number to switch without Enter, or use Up/Down. F6 switches between sections and fields. Changes stay in the draft until you choose Save.",
+            Italian: "Premi il numero di una sezione per passare senza Invio, oppure usa Su/Giù. F6 passa tra sezioni e campi. Le modifiche restano nella bozza finché scegli Salva.",
+            French: "Appuyez sur le numéro d'une section pour changer sans Entrée, ou utilisez Haut/Bas. F6 alterne entre sections et champs. Les modifications restent en brouillon jusqu'à Enregistrer.",
+            German: "Drücken Sie die Nummer eines Abschnitts, um ohne Enter zu wechseln, oder nutzen Sie Auf/Ab. F6 wechselt zwischen Abschnitten und Feldern. Änderungen bleiben bis zum Speichern im Entwurf.",
+            Spanish: "Pulsa el número de una sección para cambiar sin Intro, o usa Arriba/Abajo. F6 alterna entre secciones y campos. Los cambios quedan en el borrador hasta elegir Guardar.",
+            Vietnamese: "Nhấn số của một mục để chuyển mà không cần Enter, hoặc dùng Lên/Xuống. F6 chuyển giữa mục và trường. Thay đổi được giữ trong bản nháp đến khi bạn chọn Lưu."));
         entries.Add("Form.SectionsFooter", new(
-            English: "Up/Down: sections | Enter/Right/Tab: fields | F6: switch focus | Esc: cancel",
-            Italian: "Su/Giù: sezioni | Invio/Destra/Tab: campi | F6: cambia area | Esc: annulla",
-            French: "Haut/Bas : sections | Entrée/Droite/Tab : champs | F6 : changer de zone | Esc : annuler",
-            German: "Auf/Ab: Abschnitte | Enter/Rechts/Tab: Felder | F6: Fokus wechseln | Esc: abbrechen",
-            Spanish: "Arriba/Abajo: secciones | Intro/Derecha/Tab: campos | F6: cambiar foco | Esc: cancelar",
-            Vietnamese: "Lên/Xuống: mục | Enter/Phải/Tab: trường | F6: chuyển vùng | Esc: hủy"));
+            English: "1–12: sections | Enter/Right/Tab: fields | F6: switch focus | Esc: cancel",
+            Italian: "1–12: sezioni | Invio/Destra/Tab: campi | F6: cambia area | Esc: annulla",
+            French: "1–12 : sections | Entrée/Droite/Tab : champs | F6 : changer de zone | Esc : annuler",
+            German: "1–12: Abschnitte | Enter/Rechts/Tab: Felder | F6: Fokus wechseln | Esc: abbrechen",
+            Spanish: "1–12: secciones | Intro/Derecha/Tab: campos | F6: cambiar foco | Esc: cancelar",
+            Vietnamese: "1–12: mục | Enter/Phải/Tab: trường | F6: chuyển vùng | Esc: hủy"));
         entries.Add("Form.SectionsFooterCompact", new(
             English: "Up/Down: sections | Enter: fields | Esc: cancel",
             Italian: "Su/Giù: sezioni | Invio: campi | Esc: annulla",

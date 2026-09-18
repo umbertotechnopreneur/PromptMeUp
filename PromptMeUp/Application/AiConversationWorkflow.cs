@@ -170,7 +170,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                             .ToString("yyyy-MM-dd HH:mm zzz", System.Globalization.CultureInfo.InvariantCulture), reminder.Message)),
                         cancellationToken).ConfigureAwait(false);
                 }
-                var input = _chatView.ReadMessage(settings.MaxMessageCharacters).Trim();
+                var input = _chatView.ReadMessage(settings.MaxMessageCharacters, settings.PreferredName).Trim();
                 if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
                 {
                     _shell.RenderMuted(_text.Text("Chat.Exit"));

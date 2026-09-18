@@ -911,3 +911,12 @@ Validation: repository preflight, restore, format verification, XML comment chec
 - Added workflow coverage for the save, reopen, and cancel sequence.
 
 Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
+
+## 2026-09-18 — Improve settings and chat guidance
+
+- Reframed Privacy as a full-width guide with content scrolling and clear section headings.
+- Numbered settings sections and added direct no-Enter navigation for sections 1–12.
+- Rebuilt the opening header, moved navigation and the current directory before the session summary, and corrected the reasoning icon spacing.
+- Updated chat to use the configured preferred name and begin typing directly on the prompt line.
+
+Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.

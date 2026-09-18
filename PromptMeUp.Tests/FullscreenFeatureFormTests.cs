@@ -80,6 +80,25 @@ public sealed class FullscreenFeatureFormTests
         Assert.DoesNotContain(icon, FullscreenForm.SectionTitle(page, text, new(true, true)), StringComparison.Ordinal);
     }
 
+    /// <summary>Selects single- and double-digit sidebar sections without an Enter key.</summary>
+    [Fact]
+    public void SectionNumbers_SelectCorrespondingPageWithoutEnter()
+    {
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter())
+        });
+        var form = new FullscreenForm(console, new LocalizationService(), new(true, true));
+
+        Assert.True(SelectSectionNumber(form, '8', 12));
+        Assert.Equal(7, GetField<int>(form, "_page"));
+        Assert.True(SelectSectionNumber(form, '1', 12));
+        Assert.True(SelectSectionNumber(form, '2', 12));
+        Assert.Equal(11, GetField<int>(form, "_page"));
+    }
+
     /// <summary>Calls only the passive renderer with in-memory output, without opening a real terminal buffer.</summary>
     private static void Render(FullscreenForm form, IReadOnlyList<FormPage> pages, IReadOnlyList<FormField> fields) =>
         typeof(FullscreenForm).GetMethod("Render", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(form, ["Settings.Title", pages, fields]);
@@ -87,6 +106,15 @@ public sealed class FullscreenFeatureFormTests
     /// <summary>Positions the renderer's existing navigation state without adding production test hooks.</summary>
     private static void SetField(FullscreenForm form, string name, object value) =>
         typeof(FullscreenForm).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(form, value);
+
+    /// <summary>Invokes the internal shortcut handler with one ordinary top-row digit.</summary>
+    private static bool SelectSectionNumber(FullscreenForm form, char digit, int pageCount) =>
+        (bool)typeof(FullscreenForm).GetMethod("TrySelectSectionNumber", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(form, [new ConsoleKeyInfo(digit, (ConsoleKey)((int)ConsoleKey.D0 + (digit - '0')), false, false, false), pageCount])!;
+
+    /// <summary>Reads a private layout field without adding production-only test APIs.</summary>
+    private static T GetField<T>(FullscreenForm form, string name) =>
+        (T)typeof(FullscreenForm).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
 
     /// <summary>Checks that rendering never writes beyond its disposable viewport.</summary>
     private static void AssertViewport(string output, int width, int height)

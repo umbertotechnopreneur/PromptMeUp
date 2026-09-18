@@ -399,6 +399,13 @@ internal static partial class UiTextCatalog
             German: "Prompt-Engineering, Gespräche und Kostenkontrolle — lokal organisiert.",
             Spanish: "Ingeniería de prompts, conversación y control de costes — organizado localmente.",
             Vietnamese: "Kỹ thuật prompt, hội thoại và theo dõi chi phí — được tổ chức cục bộ."));
+        entries.Add("Shell.OpeningKicker", new(
+            English: "YOUR LOCAL AI COMMAND WORKSPACE",
+            Italian: "IL TUO SPAZIO DI LAVORO AI LOCALE",
+            French: "VOTRE ESPACE DE TRAVAIL IA LOCAL",
+            German: "DEIN LOKALER KI-ARBEITSBEREICH",
+            Spanish: "TU ESPACIO DE TRABAJO LOCAL CON IA",
+            Vietnamese: "KHÔNG GIAN LÀM VIỆC AI CỤC BỘ CỦA BẠN"));
         entries.Add("ThirdParty.FullNotices", new(
             English: "Full notices: THIRD_PARTY_NOTICES.md",
             Italian: "Note complete: THIRD_PARTY_NOTICES.md",

@@ -71,12 +71,12 @@ internal static partial class UiTextCatalog
             Spanish: "Elige el idioma de la interfaz y las conversaciones.",
             Vietnamese: "Chọn ngôn ngữ cho giao diện và các cuộc trò chuyện."));
         entries.Add("Settings.OverviewScroll", new(
-            English: "Ctrl+↑/↓: overview",
-            Italian: "Ctrl+↑/↓: specchietto",
-            French: "Ctrl+↑/↓: aperçu",
-            German: "Ctrl+↑/↓: Übersicht",
-            Spanish: "Ctrl+↑/↓: resumen",
-            Vietnamese: "Ctrl+↑/↓: tổng quan"));
+            English: "Ctrl+↑/↓: content",
+            Italian: "Ctrl+↑/↓: contenuto",
+            French: "Ctrl+↑/↓: contenu",
+            German: "Ctrl+↑/↓: Inhalt",
+            Spanish: "Ctrl+↑/↓: contenido",
+            Vietnamese: "Ctrl+↑/↓: nội dung"));
         entries.Add("Settings.AiHelp", new(
             English: "Enable AI and choose its model, responses, advisory command review, and caching.",
             Italian: "Abilita l'AI e scegli modello, risposte, revisione consultiva dei comandi e cache.",

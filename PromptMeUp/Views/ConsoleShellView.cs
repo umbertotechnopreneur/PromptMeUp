@@ -68,13 +68,30 @@ public sealed class ConsoleShellView : IConsoleShellView
         var invocation = command.Equals("main", StringComparison.OrdinalIgnoreCase)
             ? "hm"
             : $"hm {command}";
-        var icon = TerminalTheme.IconPrefix(Options, "✦", "*");
-        TerminalTheme.WriteRule(_console, $"{icon}PromptMeUp", TerminalTheme.Accent);
-        _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Tagline"))}[/]");
-        _console.MarkupLine(
-            $"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Footer.Command"))}:[/] [bold {TerminalTheme.Primary}]{Markup.Escape(invocation)}[/]");
-
+        RenderOpeningBanner(invocation);
+        RenderHeaderNavigation(command, currentDirectory);
         RenderHeaderContext(command, settings, hasApiKey);
+    }
+
+    /// <summary>Renders the opening identity, product promise, and invocation as an unmistakable terminal banner.</summary>
+    private void RenderOpeningBanner(string invocation)
+    {
+        var icon = TerminalTheme.IconPrefix(Options, "✦", "*");
+        TerminalTheme.WriteRule(_console, $"{icon}P R O M P T M E U P", TerminalTheme.Accent);
+        _console.MarkupLine($"  [bold {TerminalTheme.Info}]{Markup.Escape(_text.Text("Shell.OpeningKicker"))}[/]");
+        _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Tagline"))}[/]");
+        _console.MarkupLine(
+            $"  [bold {TerminalTheme.Accent}]›[/] [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Footer.Command"))}[/] [bold {TerminalTheme.Success}]{Markup.Escape(invocation)}[/]");
+        _console.WriteLine();
+    }
+
+    /// <summary>Places navigation and the current working directory directly under the opening banner.</summary>
+    private void RenderHeaderNavigation(string command, string currentDirectory)
+    {
+        if (!Console.IsInputRedirected && !Console.IsOutputRedirected && IsInteractiveInvocation(command))
+        {
+            _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
+        }
         _console.Write(TerminalTheme.PairGrid(
             [TerminalTheme.CompactMetric(
                 TerminalTheme.IconPrefix(Options, "📂", ">") + _text.Text("Shell.CurrentDirectory"),
@@ -289,15 +306,11 @@ public sealed class ConsoleShellView : IConsoleShellView
                 [
                     TerminalTheme.CompactMetric(TerminalTheme.IconPrefix(Options, "🌐", "@") + _text.Text("Status.Language"), settings.Language.ToUpperInvariant(), TerminalTheme.Accent),
                     TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🧠", "AI")}{_text.Text("Status.Model")}", settings.Model),
-                    TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚙", "~")}{_text.Text($"Shell.Thinking")}", _text.Text($"Reasoning.{settings.ReasoningEffort}"), TerminalTheme.Info),
+                    TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚙️", "~")}{_text.Text($"Shell.Thinking")}", _text.Text($"Reasoning.{settings.ReasoningEffort}"), TerminalTheme.Info),
                     TerminalTheme.CompactMetric($"{stateIcon}\u00A0AI", state, stateColor)
                 ]);
         }
 
-        if (!Console.IsInputRedirected && !Console.IsOutputRedirected && IsInteractiveInvocation(command))
-        {
-            _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Navigation.Shortcuts"))}[/]");
-        }
     }
 
     /// <summary>Identifies invocations that benefit from showing the selected AI model before work begins.</summary>

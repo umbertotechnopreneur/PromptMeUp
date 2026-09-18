@@ -38,6 +38,7 @@ internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields
 internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions? options = null)
 {
     private const int RowsPerField = 2;
+    private const int SectionNumberTimeoutMilliseconds = 350;
     // Shared chrome, section heading, and the reserved terminal row, excluding the variable notice height.
     private const int FixedBodyRows = FullscreenHeader.Height + FullscreenFooter.ActionsRows + FullscreenFooter.HintRows + 3;
     private readonly ConsoleRenderOptions _options = options ?? new(false, false);
@@ -54,6 +55,9 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private int _overviewMaximumOffset;
     private Func<IRenderable>? _overviewSource;
     private Action? _pendingOpen;
+    private Task<ConsoleKeyInfo?>? _pendingRead;
+    private int? _pendingSectionNumber;
+    private DateTimeOffset? _pendingSectionDeadline;
     private (int Width, int Height, string Theme)? _lastFrame;
 
     internal int SelectedPageIndex => _page;
@@ -116,6 +120,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         {
             _input = string.Empty;
             _editing = null;
+            _pendingSectionNumber = null;
+            _pendingSectionDeadline = null;
         }
         return saved;
     }
@@ -136,7 +142,12 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             _focus = Math.Clamp(_focus, 0, fields.Length + 1);
             void Paint() => Render(titleKey, visiblePages, fields);
             Paint();
-            var key = ReadKey(Paint);
+            var key = ReadKey(Paint, _pendingSectionDeadline);
+            if (key is null)
+            {
+                CompletePendingSectionNumber(visiblePages.Length);
+                continue;
+            }
             if (key.Key == ConsoleKey.Escape)
             {
                 throw new InteractiveFlowCanceledException();
@@ -151,6 +162,10 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 continue;
             }
             _error = null;
+            if (_allowSectionNavigation && visiblePages.Length > 1 && TrySelectSectionNumber(key, visiblePages.Length))
+            {
+                continue;
+            }
             if (_sectionsFocused && visiblePages[_page].Open is { } open
                 && key.Key is ConsoleKey.Enter or ConsoleKey.RightArrow)
             {
@@ -280,6 +295,65 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         _overviewOffset = 0;
     }
 
+    /// <summary>Switches directly to a numbered section, allowing 10–12 through a brief second-digit window without Enter.</summary>
+    private bool TrySelectSectionNumber(ConsoleKeyInfo key, int pageCount)
+    {
+        if (key.Modifiers != 0 || key.KeyChar is < '0' or > '9')
+        {
+            return false;
+        }
+        var digit = key.KeyChar - '0';
+        if (_pendingSectionNumber is { } firstDigit)
+        {
+            _pendingSectionNumber = null;
+            _pendingSectionDeadline = null;
+            var section = firstDigit * 10 + digit;
+            if (section <= pageCount)
+            {
+                SelectSection(section);
+                return true;
+            }
+            SelectSection(firstDigit);
+            return true;
+        }
+        if (digit == 1 && pageCount >= 10)
+        {
+            _pendingSectionNumber = digit;
+            _pendingSectionDeadline = DateTimeOffset.UtcNow.AddMilliseconds(SectionNumberTimeoutMilliseconds);
+            return true;
+        }
+        if (digit is > 0 && digit <= pageCount)
+        {
+            SelectSection(digit);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>Completes an unambiguous single-digit selection after waiting only for a possible 10–12 shortcut.</summary>
+    private void CompletePendingSectionNumber(int pageCount)
+    {
+        if (_pendingSectionNumber is not { } section)
+        {
+            return;
+        }
+        _pendingSectionNumber = null;
+        _pendingSectionDeadline = null;
+        if (section <= pageCount)
+        {
+            SelectSection(section);
+        }
+    }
+
+    /// <summary>Applies a one-based section number while restoring the sidebar focus and top-of-content position.</summary>
+    private void SelectSection(int section)
+    {
+        _page = section - 1;
+        _focus = 0;
+        _sectionsFocused = true;
+        _overviewOffset = 0;
+    }
+
     /// <summary>Applies one current choice without opening a separate sequential prompt.</summary>
     private void CycleChoice(FormField field, int delta)
     {
@@ -385,13 +459,18 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
 
     /// <summary>Waits for input while repainting only when the terminal changes size.</summary>
-    private ConsoleKeyInfo ReadKey(Action repaint)
+    private ConsoleKeyInfo? ReadKey(Action repaint, DateTimeOffset? deadline)
     {
-        var pending = ReadKeyAsync();
+        var pending = _pendingRead ??= ReadKeyAsync();
         var dimensions = (console.Profile.Width, console.Profile.Height);
         while (!pending.IsCompleted)
         {
-            Task.WhenAny(pending, Task.Delay(100)).GetAwaiter().GetResult();
+            var remaining = deadline is { } value ? value - DateTimeOffset.UtcNow : TimeSpan.FromMilliseconds(100);
+            if (remaining <= TimeSpan.Zero)
+            {
+                return null;
+            }
+            Task.WhenAny(pending, Task.Delay(TimeSpan.FromMilliseconds(Math.Min(100, remaining.TotalMilliseconds)))).GetAwaiter().GetResult();
             var current = (console.Profile.Width, console.Profile.Height);
             if (current != dimensions)
             {
@@ -399,8 +478,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 repaint();
             }
         }
-        return pending.GetAwaiter().GetResult()
-            ?? throw new IOException(text.Text("Form.EndOfInput"));
+        _pendingRead = null;
+        return pending.GetAwaiter().GetResult() ?? throw new IOException(text.Text("Form.EndOfInput"));
     }
 
     /// <summary>Uses the cancellation-aware console input provided by the application host.</summary>
@@ -502,7 +581,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             var active = index == _page;
             var selected = active && _sectionsFocused;
             var marker = active ? ">" : " ";
-            var label = marker + " " + SectionTitle(pages[index]);
+            var label = marker + " [" + (index + 1) + "] " + SectionTitle(pages[index]);
             rows.Add(Styled(label, selected ? TerminalTheme.SelectionForeground : active ? TerminalTheme.Accent : TerminalTheme.Primary,
                 selected ? TerminalTheme.SelectionBackground : null));
             if (spacing == 2)

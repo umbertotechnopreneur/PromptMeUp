@@ -13,6 +13,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
 {
     private int _paintedRows;
     private (int Width, int Height) _paintedSize;
+    private string _label = string.Empty;
 
     /// <summary>Collects bounded pasted or typed text, preserving line breaks until a separate Enter key submits it.</summary>
     internal string Read(string label, int maximumCharacters, bool showHint = true)
@@ -25,8 +26,8 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         }
         var buffer = new ChatInputBuffer(maximumCharacters);
         var reader = new TerminalInputReader(console.Input, maximumCharacters, win32Encoding: OperatingSystem.IsWindows());
+        _label = label;
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text(showHint ? "Chat.MultilineHint" : "Chat.InputShortHint"))}[/]");
-        console.MarkupLine($"[bold {TerminalTheme.Accent}]{Markup.Escape(label)}[/]");
         console.Cursor.Hide();
         try
         {
@@ -58,6 +59,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         finally
         {
             console.Cursor.Show();
+            _label = string.Empty;
         }
     }
 
@@ -85,11 +87,13 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         for (var offset = 0; offset < inputRows; offset++)
         {
             var index = first + offset;
-            var prefix = index == current ? "› " : "  ";
+            var active = index == current;
+            var prompt = active && index == 0 ? _label : active ? "›" : string.Empty;
+            var prefix = active ? "[bold " + TerminalTheme.Accent + "]" + Markup.Escape(prompt) + "[/] " : "  ";
             var line = index < lines.Length ? lines[index] : string.Empty;
-            var markup = $"[bold {TerminalTheme.Accent}]{prefix}[/]"
-                + FormatLine(line, index == current ? buffer.Cursor - lineStart : null, Math.Max(1, width - 2));
-            WriteRow(width >= 3 ? markup : FormatLine(line, null, width));
+            var prefixWidth = active ? new Segment(prompt + " ").CellCount() : 2;
+            var markup = prefix + FormatLine(line, active ? buffer.Cursor - lineStart : null, Math.Max(1, width - prefixWidth));
+            WriteRow(width > prefixWidth ? markup : FormatLine(line, null, width));
         }
         if (showStatus)
         {
