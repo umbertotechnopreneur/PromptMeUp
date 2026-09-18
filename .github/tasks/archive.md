@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-18 — Install the chat layout and skill identity Debug update
+
+- Built source commit `68142c7` for Windows x64 in Debug, packaged local MSIX `0.1.5.24` with the existing current-user certificate, and updated the installed app from `0.1.5.23`. Preserved application data, settings, certificate trust, and PATH.
+- Verified Debug assembly metadata and source revision, the package signature, healthy registration, all 321 installed payload file hashes, and the `hm.exe` execution alias pointing to the new version. No running app needed to be closed.
+- Preserved the signed package and installation verification record under ignored `artifacts/msix/chat-68142c7-debug`. Cleaned Debug/runtime output after restoring the test project's missing runtime assets. Recursive deletion of the temporary publish and payload directories was blocked by automatic approval review and remains tracked separately.
+
+Validation: Debug publication and signature verification succeeded; the installed payload matches the signed package. After installation, the user requested automated tests: all 933 tests passed against the same source in Release, with zero failures or skipped tests. The warning-free Release build and subsequent cleanup succeeded; all GitHub checks for source commit `68142c7` also passed. No application launch, live AI calls, public uploads, or release tags were made.
+
 ## 2026-09-18 — Refine chat layout and identify active skills
 
 - Removed opening navigation, invocation, and startup snapshot headings. Aligned the current directory and startup settings with the tagline, with one blank line above and below the directory. Replaced the chat introduction with an indented, six-language command heading.
