@@ -32,13 +32,18 @@ internal static class TerminalTheme
         Current = definition;
     }
 
-    /// <summary>Returns a visual icon when supported or an ASCII fallback for constrained terminals.</summary>
+    /// <summary>Returns an explicit emoji presentation for ambiguous icons or an ASCII fallback for constrained terminals.</summary>
     internal static string Icon(ConsoleRenderOptions options, string icon, string fallback)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(icon);
         ArgumentException.ThrowIfNullOrWhiteSpace(fallback);
-        return options.NoEmoji ? fallback : icon;
+        return options.NoEmoji ? fallback : icon switch
+        {
+            // Text-default symbols can occupy an emoji cell and visually consume the following space.
+            "ℹ" or "⚙" or "🛡" => icon + "\uFE0F",
+            _ => icon
+        };
     }
 
     /// <summary>Starts a label with an icon and one trailing space, leaving leading indentation to the layout.</summary>

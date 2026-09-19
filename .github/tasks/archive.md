@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-19 — Refine terminal emoji spacing and welcome/farewell banners
+
+- Explicitly select emoji presentation for the information, settings, and safety symbols in the shared icon helper, keeping the existing single trailing space and ASCII fallbacks. This covers notices, active-skill messages, and help navigation without changing translations.
+- Move the farewell wave from the product divider to the localized thank-you line.
+- Rewrite the opening headline and tagline in all six languages to introduce hm as help when a Git, Bash, or PowerShell command does not come to mind.
+
+Validation: repository preflight, formatting verification, XML summaries, and Release compilation passed with zero warnings or errors. Cleaned Release output. Local automated tests and CLI smoke tests were not run; no package was rebuilt or installed.
+
 ## 2026-09-18 — Install the chat layout and skill identity Debug update
 
 - Built source commit `68142c7` for Windows x64 in Debug, packaged local MSIX `0.1.5.24` with the existing current-user certificate, and updated the installed app from `0.1.5.23`. Preserved application data, settings, certificate trust, and PATH.
