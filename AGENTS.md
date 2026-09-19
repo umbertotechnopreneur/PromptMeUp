@@ -4,8 +4,8 @@ These instructions apply to every change in this repository.
 
 ## Shared delivery workflow
 
-- Keep `main` protected. Make changes on a focused branch, open a pull request, and use squash merge only after required checks and conversations are resolved.
-- Do not bypass branch protections, required checks, or review requirements. Delete the branch after a successful merge.
+- For documentation-only or repository-instruction-only changes, commit and push directly on the current branch, including `main`, without creating a branch or opening a pull request. The owner authorizes using existing administrator bypass rights for this exception; do not change repository protection settings. Include `[skip ci]` in the commit message unless the owner explicitly requests CI.
+- For all other changes, keep `main` protected. Make changes on a focused branch, open a pull request, and use squash merge only after required checks and conversations are resolved. Do not bypass branch protections, required checks, or review requirements for these changes. Delete the branch after a successful merge.
 - Create portable release artifacts only through GitHub Actions. For explicit local debug testing, a signed MSIX may be built and installed from an ignored `artifacts/msix` subdirectory using the existing current-user certificate; do not upload, publish, tag, or describe it as a release. Create an annotated `v<version>` tag only after the matching source version is on `main`.
 - Preserve unrelated working-tree changes. Never commit credentials, tokens, local data, logs, generated artifacts, or private machine paths.
 
