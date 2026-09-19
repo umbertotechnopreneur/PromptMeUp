@@ -393,19 +393,19 @@ internal static partial class UiTextCatalog
             Spanish: "Esc volver · Ctrl+C salir",
             Vietnamese: "Esc quay lại · Ctrl+C thoát"));
         entries.Add("Tagline", new(
-            English: "Prompt engineering, conversation, and cost insight — locally organized.",
-            Italian: "Prompt engineering, conversazioni e controllo costi — organizzati in locale.",
-            French: "Ingénierie de prompts, conversations et suivi des coûts — organisés localement.",
-            German: "Prompt-Engineering, Gespräche und Kostenkontrolle — lokal organisiert.",
-            Spanish: "Ingeniería de prompts, conversación y control de costes — organizado localmente.",
-            Vietnamese: "Kỹ thuật prompt, hội thoại và theo dõi chi phí — được tổ chức cục bộ."));
+            English: "Git, Bash, or PowerShell: describe what you want to do. hm is here to help.",
+            Italian: "Git, Bash o PowerShell: descrivi cosa vuoi fare. hm è qui per aiutarti.",
+            French: "Git, Bash ou PowerShell : décrivez ce que vous voulez faire. hm est là pour vous aider.",
+            German: "Git, Bash oder PowerShell: Beschreibe, was du tun möchtest. hm hilft dir dabei.",
+            Spanish: "Git, Bash o PowerShell: describe lo que quieres hacer. hm está aquí para ayudarte.",
+            Vietnamese: "Git, Bash hay PowerShell: hãy mô tả điều bạn muốn làm. hm luôn sẵn sàng giúp bạn."));
         entries.Add("Shell.OpeningKicker", new(
-            English: "YOUR LOCAL AI COMMAND WORKSPACE",
-            Italian: "IL TUO SPAZIO DI LAVORO AI LOCALE",
-            French: "VOTRE ESPACE DE TRAVAIL IA LOCAL",
-            German: "DEIN LOKALER KI-ARBEITSBEREICH",
-            Spanish: "TU ESPACIO DE TRABAJO LOCAL CON IA",
-            Vietnamese: "KHÔNG GIAN LÀM VIỆC AI CỤC BỘ CỦA BẠN"));
+            English: "CAN'T REMEMBER THAT COMMAND?",
+            Italian: "NON TI VIENE IN MENTE QUEL COMANDO?",
+            French: "VOUS NE VOUS SOUVENEZ PLUS DE CETTE COMMANDE ?",
+            German: "DIR FÄLLT DER BEFEHL NICHT EIN?",
+            Spanish: "¿NO RECUERDAS ESE COMANDO?",
+            Vietnamese: "BẠN KHÔNG NHỚ LỆNH ĐÓ?"));
         entries.Add("ThirdParty.FullNotices", new(
             English: "Full notices: THIRD_PARTY_NOTICES.md",
             Italian: "Note complete: THIRD_PARTY_NOTICES.md",

@@ -189,12 +189,12 @@ public sealed class ConsoleShellView : IConsoleShellView
         }
         var content = new Grid();
         content.AddColumn();
-        content.AddRow(new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(_text.Text("Footer.Thanks"))}[/]"));
+        content.AddRow(new Markup($"[bold {TerminalTheme.Primary}]{TerminalTheme.IconPrefix(Options, "👋", "*")}{Markup.Escape(_text.Text("Footer.Thanks"))}[/]"));
         content.AddRow(new Text(" "));
         content.AddRow(new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Footer.Support"))}[/]"));
         content.AddRow(new Markup($"[{TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"));
         content.AddRow(new Markup($"[{TerminalTheme.Muted}]Copyright (c) [link=https://umbertogiacobbi.biz]umbertogiacobbi.biz[/][/]"));
-        TerminalTheme.WriteRule(_console, TerminalTheme.IconPrefix(Options, "👋", "*") + "hm · help me", TerminalTheme.Accent);
+        TerminalTheme.WriteRule(_console, "hm · help me", TerminalTheme.Accent);
         _console.WriteLine();
         _console.Write(content);
         _console.WriteLine();
