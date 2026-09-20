@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 
 using PromptMeUp.Models;
 using PromptMeUp.Services;
@@ -48,6 +48,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
             TerminalTheme.Info);
         _console.MarkupLine(
             $"[bold {color}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/]");
+        _console.WriteLine();
         var reviewIcon = TerminalTheme.IconPrefix(_shell.Options, assessment.UsedAi ? "🤖" : "🛡", assessment.UsedAi ? "AI" : "!");
         _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(reviewIcon)}{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
         _console.WriteLine();

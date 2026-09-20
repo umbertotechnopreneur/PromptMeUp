@@ -24,4 +24,4 @@ The [printable manual](PromptMeUp-CLI-Manual.pdf) is an older edition. The guide
 - [Releasing](RELEASING.md) explains how to build portable packages and prepare a GitHub release.
 - [Windows packaging](WINDOWS_PACKAGING.md) covers optional MSI, MSIX, and WinGet packages.
 
-Use [`document.template.md`](../document.template.md) when adding a design note.
+Use [`document.template.md`](../document.template.md) for public technical documentation. Keep future product proposals in the owner's private MeUp notes.

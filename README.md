@@ -1,13 +1,6 @@
-<h1 align="center">PromptMeUp — Describe a task, get a terminal command, and choose whether to run it</h1>
+# PromptMeUp — Describe your task. Get the command.
 
-<p align="center">
-  <img src="docs/assets/promptmeup-banner.png" alt="PromptMeUp — Ask naturally. Understand first. You decide. A weekend idea. An everyday helper." width="100%" />
-</p>
-
-<p align="center">
-  Ask in plain language. Get PowerShell commands with an explanation before you run them.<br />
-  Available as <code>hm</code> on Windows, Linux, and macOS.
-</p>
+Get PowerShell commands with clear explanations. You choose what runs. Available as `hm` on Windows, Linux, and macOS, using your own OpenAI API account.
 
 <p align="center">
   <a href="#meet-hm"><strong>Meet hm</strong></a> ·
@@ -17,6 +10,48 @@
   <a href="https://github.com/umbertotechnopreneur/PromptMeUp/discussions"><strong>Join the conversation</strong></a>
 </p>
 
+[![PromptMeUp answering a Git question in Italian, with session usage and a choice to inspect a suggested command or run nothing](docs/assets/promptmeup-command-it-framed-v1.png)](docs/assets/promptmeup-command-it-framed-v1.png)
+
+*Actual app screenshot supplied by the author, shown in Italian. Cropped and framed; the personal path is hidden. Select it to view at full size.*
+
+## Get started
+
+There is no public download yet. To build locally, install the **.NET 10 SDK**, **Git**, and **PowerShell 7**. AI features use your own OpenAI API account.
+
+```powershell
+git clone https://github.com/umbertotechnopreneur/PromptMeUp.git
+cd PromptMeUp
+dotnet build PromptMeUp.slnx --configuration Release
+dotnet run --project PromptMeUp/PromptMeUp.csproj -- --setup
+dotnet run --project PromptMeUp/PromptMeUp.csproj -- "How do I list the largest files here?"
+```
+
+Setup walks you through your language, model, answer style, and command checks. Choose from English, Italian, French, German, Spanish, and Vietnamese. You don't need a special font. Add `--no-emoji` or `--no-animation` if you prefer simpler output.
+
+Enter your API key in setup or use your usual secret manager. Don't put it in a command. On Windows, setup can save the key for your user account. It works right away in the open `hm` session. Before starting `hm` again, fully close and reopen your terminal app — and your IDE too, if that's where the terminal runs. On Linux and macOS, a key entered in setup lasts only for that session; use your shell or secret manager to make it available next time.
+
+The other examples use the shorter `hm` command. When running from source, replace it with `dotnet run --project PromptMeUp/PromptMeUp.csproj --` and keep the same arguments. Ready-to-download builds will appear on [GitHub Releases](https://github.com/umbertotechnopreneur/PromptMeUp/releases).
+
+### Use a portable build
+
+You can make a portable build for Windows, Linux, or macOS on x64 or Arm64. Keep its files together. To use `hm` from any folder, run `hm --path install` from that copy and review the proposed PATH change. Use `hm --path status` to check it or `hm --path remove` to undo it. The [release guide](docs/RELEASING.md#rehearse-a-release) has the build commands.
+
+### Windows installers
+
+The release workflow also prepares EXE installers for Windows x64 and ARM64. They install for your user account and add `hm` to your PATH. PowerShell 7 is still required to execute commands. These installers are unsigned, so Windows may show an unknown-publisher warning. See the [Windows packaging guide](docs/WINDOWS_PACKAGING.md#unsigned-exe-installers-for-x64-and-arm64) for upgrades and other installation methods.
+
+## Before you run a command
+
+Direct mode is on by default for questions and chat. Before a command runs, `hm` shows its exact text, checks the risk locally and with AI, then counts down for five seconds. Press Enter to run now, or Esc or Ctrl+C to cancel. High or critical risk and failed AI reviews block execution. The result goes back to the AI for analysis before any next command is reviewed.
+
+For manual confirmation, open `hm --setup` and turn off **Direct execution (5-second countdown)** in **AI**. `hm --direct "Show the last ten commits"` enables it for one session without changing your saved preference. See the [direct-mode reference](docs/CLI_REFERENCE.md#use-direct-execution) for details. The session summary appears at exit, on `/status`, or when operating context reaches 80%.
+
+Approved commands run through PowerShell with your user account's permissions. They have a time limit and a limit on how much output `hm` captures, but they can still change your real files and system settings. They don't run in an isolated test environment.
+
+Your settings, notes, logs, and request history stay on your machine. To answer you, OpenAI receives your question, recent messages, selected notes, some details about your terminal, and any command output you share for a follow-up. `hm` removes secrets it recognizes, but it can't catch every private detail.
+
+See [what is saved and shared](docs/PRIVACY.md) for the details. The app is MIT-licensed; OpenAI's terms and API charges still apply.
+
 <p align="center">
   <a href="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml"><img src="https://github.com/umbertotechnopreneur/PromptMeUp/actions/workflows/quality.yml/badge.svg" alt="Quality gate" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22C55E" alt="MIT License" /></a>
@@ -24,13 +59,8 @@
   <img src="https://img.shields.io/badge/early%20preview-F59E0B" alt="Early preview" />
 </p>
 
-Forgot a command? Stuck on an error? Ask `hm` in your own words. It uses your OpenAI API account to explain what to try and suggest PowerShell commands. You read them and decide what to run.
-
 > [!NOTE]
-> PromptMeUp is still an early version. There are no ready-to-download releases yet, but you can [build it yourself](#get-started).
-
-> [!NOTE]
-> **Distributed MSIX installers are temporarily unavailable.** Portable downloads remain the supported option. Maintainers can still create self-signed MSIX packages locally for Windows testing; see the [Windows packaging guide](docs/WINDOWS_PACKAGING.md#install-with-the-hm-execution-alias).
+> **Distributed MSIX installers are temporarily unavailable.** Use a portable build for now. Maintainers can still create self-signed MSIX packages locally for Windows testing; see the [Windows packaging guide](docs/WINDOWS_PACKAGING.md#install-with-the-hm-execution-alias).
 
 ## Meet `hm`
 
@@ -48,26 +78,30 @@ Have a few questions? Start with `hm --chat`. Your earlier terminal output stays
 
 In chat and interactive diagnostics, pasted text keeps its line breaks and waits for you to press Enter before sending. Use the arrow keys to review or edit it first. This requires a terminal that supports bracketed paste, which marks pasted text separately from keyboard input; diagnostic files can also be supplied with `--input-file`.
 
-## A few moments with `hm`
+## See the command before you run it
 
-![Example of asking hm to find large files, reading its answer, and choosing not to run the command.](docs/assets/screen-ask-green.png)
+Select a suggested command to read its exact text and risk assessment. Approve it only when you're ready, or cancel and keep chatting.
+
+Run `hm` to browse help or `hm --setup` to open settings. Use the sidebar to change the model, API keys, chat limits, or colors.
 
 <table>
 <tr>
-<td width="50%" valign="top">
-<strong>Pause before you run</strong><br /><br />
-<img src="docs/assets/screen-review-amber.png" alt="Example of reviewing a command and its risks before choosing to run or cancel it." />
-<br />Review the exact command before approving it.
+<td width="33%" valign="top">
+<a href="docs/assets/promptmeup-help-it-framed-v1.png"><img src="docs/assets/promptmeup-help-it-framed-v1.png" alt="PromptMeUp help screen in Italian with command examples and section navigation" width="100%" /></a>
+<br /><strong>Find a starting point</strong><br />Browse command examples and help.
 </td>
-<td width="50%" valign="top">
-<strong>Your starting point</strong><br /><br />
-Run <code>hm</code> to browse help, or <code>hm --setup</code> to open settings.<br /><br />
-General shows your setup, usage, and estimated costs. Use the sidebar to change the model, API keys, chat limits, or colors.
+<td width="33%" valign="top">
+<a href="docs/assets/promptmeup-chat-it-framed-v1.png"><img src="docs/assets/promptmeup-chat-it-framed-v1.png" alt="PromptMeUp chat welcome screen in Italian with chat and saved-memory commands" width="100%" /></a>
+<br /><strong>Keep the conversation going</strong><br />Ask follow-up questions in chat.
+</td>
+<td width="33%" valign="top">
+<a href="docs/assets/promptmeup-about-it-framed-v1.png"><img src="docs/assets/promptmeup-about-it-framed-v1.png" alt="PromptMeUp About screen in Italian showing version 0.1.5, author, license, and project links" width="100%" /></a>
+<br /><strong>About the app</strong><br />Find the version, credits, and project links.
 </td>
 </tr>
 </table>
 
-*These are illustrations with sample content, not screenshots. The colors and layout in your terminal may look different.*
+*Real screenshots with matching frames. Personal identifiers are hidden; app text and numbers have not been redrawn. [Image credits](docs/assets/README.md).*
 
 ## Remember the details you keep repeating
 
@@ -115,32 +149,6 @@ Want less output? Say **“Hide the session summary and command previews”** in
 
 `/status` and `/context` still show the summary when you ask. Hiding command previews removes the suggested-command menu; commands may still appear in answers. Use `/run <command>` to review one: its exact preview, risk assessment, and approval remain required. Understanding these chat preferences uses an additional AI call, included in usage and cost totals.
 
-## Get started
-
-To build locally, install the **.NET 10 SDK**, **Git**, and **PowerShell 7**. AI features use your own OpenAI API account.
-
-```powershell
-git clone https://github.com/umbertotechnopreneur/PromptMeUp.git
-cd PromptMeUp
-dotnet build PromptMeUp.slnx --configuration Release
-dotnet run --project PromptMeUp/PromptMeUp.csproj -- --setup
-dotnet run --project PromptMeUp/PromptMeUp.csproj -- "How do I list the largest files here?"
-```
-
-Setup walks you through your language, model, answer style, and command checks. Choose from English, Italian, French, German, Spanish, and Vietnamese. You don't need a special font. Add `--no-emoji` or `--no-animation` if you prefer simpler output.
-
-Enter your API key in setup or use your usual secret manager. Don't put it in a command. On Windows, setup can save the key for your user account. It works right away in the open `hm` session. Before starting `hm` again, fully close and reopen your terminal app — and your IDE too, if that's where the terminal runs. On Linux and macOS, a key entered in setup lasts only for that session; use your shell or secret manager to make it available next time.
-
-The other examples use the shorter `hm` command. When running from source, replace it with `dotnet run --project PromptMeUp/PromptMeUp.csproj --` and keep the same arguments. Ready-to-download builds will appear on [GitHub Releases](https://github.com/umbertotechnopreneur/PromptMeUp/releases).
-
-### Use a portable build
-
-You can make a portable build for Windows, Linux, or macOS on x64 or Arm64. Keep its files together. To use `hm` from any folder, run `hm --path install` from that copy and review the proposed PATH change. Use `hm --path status` to check it or `hm --path remove` to undo it. The [release guide](docs/RELEASING.md#rehearse-a-release) has the build commands.
-
-### Windows installers
-
-The release workflow also prepares EXE installers for Windows x64 and ARM64. They install for your user account and add `hm` to your PATH. PowerShell 7 is still required to execute commands. These installers are unsigned, so Windows may show an unknown-publisher warning. See the [Windows packaging guide](docs/WINDOWS_PACKAGING.md#unsigned-exe-installers-for-x64-and-arm64) for upgrades and other installation methods.
-
 ## More than a single command
 
 You can give `hm` a build log, ask for a script, or work through a task step by step. Saving a script doesn't run it. Plans and saved routines ask you to approve each command. File previews show what would change and flag files that are already there.
@@ -171,18 +179,6 @@ The [command guide](docs/CLI_REFERENCE.md) has more examples and options. Prompt
 
 On the experimental branch, you can try [skills and reviewed learning](docs/EXPERIMENTAL_MEMORY_SKILLS.md). Start with `hm --skills` or `hm --learning`. Everything starts disabled; Dream and heartbeat suggest memory changes for you to review, and nothing runs in the background.
 
-## Before you run a command
-
-Direct mode is on by default for questions and chat. Before a command runs, `hm` shows its exact text, checks the risk locally and with AI, then counts down for five seconds. Press Enter to run now, or Esc or Ctrl+C to cancel. High or critical risk and failed AI reviews block execution. The result goes back to the AI for analysis before any next command is reviewed.
-
-For manual confirmation, open `hm --setup` and turn off **Direct execution (5-second countdown)** in **AI**. `hm --direct "Show the last ten commits"` enables it for one session without changing your saved preference. See the [direct-mode reference](docs/CLI_REFERENCE.md#use-direct-execution) for details. The session summary appears at exit, on `/status`, or when operating context reaches 80%.
-
-Approved commands run through PowerShell with your user account's permissions. They have a time limit and a limit on how much output `hm` captures, but they can still change your real files and system settings. They don't run in an isolated test environment.
-
-Your settings, notes, logs, and request history stay on your machine. To answer you, OpenAI receives your question, recent messages, selected notes, some details about your terminal, and any command output you share for a follow-up. `hm` removes secrets it recognizes, but it can't catch every private detail.
-
-See [what is saved and shared](docs/PRIVACY.md) for the details. The app is MIT-licensed; OpenAI's terms and API charges still apply.
-
 ## A weekend project that stayed
 
 I built PromptMeUp over a weekend and kept using it in my [daily work](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story), so I shared it. I maintain it with help from a few contributors. Tell me what works for you and what needs fixing.
@@ -208,26 +204,16 @@ PromptMeUp is released under the **[MIT License](LICENSE)**. Use it, adapt it, a
 
 Created by **Umberto Giacobbi**. Thanks to everyone who contributes and to the people behind the libraries I use. See the [library credits](THIRD_PARTY_NOTICES.md), [license texts](LICENSES/README.md), and [artwork credits](docs/assets/README.md).
 
----
+## More from MeUp
 
-<h2 align="center">More from the same workshop</h2>
+<p align="center">
+  <img src="docs/assets/meup/promptmeup-family-v1.png" alt="PromptMeUp concept illustration in the shared MeUp style" width="720" />
+</p>
 
-<table>
-<tr>
-<td width="33%" valign="top">
-<h3>TrackMeUp</h3>
-A Windows app that keeps a record of your work on your computer, so you can find where you left off.<br /><br />
-<a href="https://github.com/umbertotechnopreneur/TrackMeUp"><strong>Explore TrackMeUp →</strong></a>
-</td>
-<td width="33%" valign="top">
-<h3>viewsapp.ai</h3>
-Compare how different AI models answer the same question.<br /><br />
-<a href="https://www.viewsapp.ai/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_workshop_viewsapp"><strong>Discover viewsapp.ai →</strong></a>
-</td>
-<td width="33%" valign="top">
-<h3>Umberto Giacobbi</h3>
-More about me and the things I'm building. Come say hello.<br /><br />
-<a href="https://umbertogiacobbi.biz/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_workshop_creator"><strong>Visit my website →</strong></a>
-</td>
-</tr>
-</table>
+*Concept artwork, not an app screenshot. [Visual style and image credits](docs/assets/meup/README.md).*
+
+- **[MailMeUp](https://github.com/umbertotechnopreneur/MailMeUp)** — Connect your inboxes to your AI assistant.
+- **[PromptMeUp](https://github.com/umbertotechnopreneur/PromptMeUp)** — Describe your task. Get the command.
+- **[TrackMeUp](https://github.com/umbertotechnopreneur/TrackMeUp)** — Track your time. Find what you worked on.
+
+Built by [Umberto Giacobbi](https://umbertogiacobbi.biz/), with help from contributors.
