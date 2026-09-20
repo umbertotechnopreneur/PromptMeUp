@@ -1,5 +1,91 @@
 # Task Archive
 
+## 2026-09-21 — Repair direct-mode CI regressions and refresh README branding
+
+- Repair the cross-platform test regressions reported by PR #45: make the countdown testable without a physical terminal, establish the audit session before persisting command evidence, update schema-version expectations, and use strict structured-response fixtures with command text visible in the answer.
+- Run the 11 originally failing focused tests successfully. A full local test run did not produce a final result through the local process host; CI remains the authoritative complete-suite check.
+- Replace the dense MeUp footer with a compact visual mark and linked product summary. Clarify that `hm` means Help Me and is the entry point to PromptMeUp's features. Add the transparent, generated mark and its provenance.
+- Validation: preflight, scoped whitespace normalization, full formatting verification, and XML method comment checks passed. Release compilation passed with zero warnings and errors before test execution; standard Release cleanup completed.
+
+## 2026-09-21 — Refactor reviewed command and conversation workflows
+
+- Create owner-requested checkpoint `4186c22` before changes on `codex/direct-mode`.
+- Remove the unused setup wizard and forwarding adapter. Keep one `ISetupView` implementation with shared form pages for fullscreen and scrolling presentation; align its focused view tests.
+- Replace duplicate in-memory cost bookkeeping and separate usage/cost reads with one typed session accounting query. Attach command-risk review calls to the owning flow without closing it, and retain provider-confirmed usage independently of execution cancellation.
+- Build summaries from current retained context and recorded calls without mutating memory during rendering. Refresh final totals with an independent local-read cancellation budget; warn and mark unavailable totals if refresh fails while preserving the original flow error.
+- Prepare bounded redacted command evidence once after the exact local preview and result display. Reuse it for audit and downstream consumers; move result-analysis instructions into the six-language `command-result` YAML prompt.
+- Add regressions for interrupted turns, failed final reads, parent review accounting, cancellation during accounting/persistence, and shared sanitized evidence. Automated tests and CLI smoke tests were not executed because execution was not authorized.
+- Validation: preflight, full formatting verification, XML method comments, YAML locale/placeholder checks, and Release compilation passed with zero warnings or errors. Complete standard Release cleanup. No post-refactor package build or installation.
+- Prepare the owner-requested refactoring commit and branch delivery through a pull request to `main`, including the earlier direct-mode, documentation, artwork, and terminal-polish checkpoints. Keep local packages and installation records excluded from Git.
+
+## 2026-09-21 — Review direct execution and connected workflows
+
+- Review the direct countdown, command workflow, conversation accounting, and setup call sites through bounded source inspection. No automated tests or CLI smoke tests were executed for this review.
+- Identify an exit-snapshot cache that can omit later interrupted or failed calls, command-risk reviews recorded outside the conversation totals, an unused legacy setup wizard, and duplicated output preparation in command audit and AI follow-up.
+- Report these findings and targeted simplifications without applying refactors. Preserve the requested direct-mode checkpoint and capture the remaining documentation, artwork, and terminal polish in a separate owner-authorized checkpoint. No push or publication.
+
+## 2026-09-21 — Install the direct-mode Debug update
+
+- Build and install signed local Windows x64 Debug MSIX `0.1.5.28`, using the existing current-user certificate. Keep the package identity, application data, certificate trust, and `hm.exe` execution alias unchanged.
+- Verify the signature, SHA-256 hash, installed version, and registration status. Preserve the signed package and installation record under ignored `artifacts/msix/direct-20260921-debug`.
+- Complete standard Debug cleanup for the solution and the application's `win-x64` output. Record blocked publish/payload cleanup in the active task list.
+- No automated tests, CLI smoke tests, application launch, upload, release, push, or tag were performed.
+
+## 2026-09-21 — Add direct execution and quieter conversation views
+
+- Enable direct execution by default for questions and chat, with a saved toggle in setup and a per-session `--direct "request"` override. Schema version 5 stores the preference while preserving local settings and history.
+- Share command preview, deterministic and AI risk review, execution, audit, redaction, and output analysis. Direct mode blocks high, critical, unknown, or incomplete reviews and uses a five-second progress countdown: Enter runs now, Escape cancels the chain, and Ctrl+C cancels the application. Multiple alternatives still require selection; automatic chains stop after eight commands.
+- Keep session summaries hidden during ordinary work, force them at 80% of the effective context budget, and always show a final snapshot at conversation exit. Keep explicit status requests and visibility preferences available.
+- Compact chat input spacing and key hints, replace the textual end marker with a separator, and update the English reference guides and six-language runtime guidance. Record the pre-production/no-compatibility-wrapper policy in AGENTS.md.
+- Validation: preflight, formatting verification, XML comment checks, six-language YAML syntax checks, and Release compilation passed with zero warnings or errors. Added focused regression coverage but did not execute automated tests or CLI smoke tests. Cleaned generated Release output. No installation, branch, commit, push, or publishing was performed.
+
+## 2026-09-21 — Separate public documentation from internal planning
+
+- Archive the historical fullscreen UX proposal in the owner's private MeUp notes and repair its reference in this work record.
+- Document where internal planning belongs; retain current CLI, architecture, privacy and provider-cost guides publicly.
+- Inspect the documentation diff and moved-note links. No builds, tests, commits, pushes or branches were created.
+
+
+## 2026-09-20 — Normalize the real documentation screenshots
+
+- Use the four owner-supplied screenshots with deterministic Pillow crops, opaque privacy masks, and a shared 2944 × 1792 canvas. Keep retained app pixels at their original size; do not resample, regenerate, or rewrite the UI.
+- Put the real command-response example first and add help, chat, and About previews. Remove the superseded raw help asset and four earlier mockup/banner assets; retain the shared MeUp family artwork.
+- Visually inspect all four outputs. No application builds, tests, commits, pushes, or branches were created.
+
+## 2026-09-20 — Install the terminal-spacing Debug update
+
+- Built and installed signed local Windows x64 Debug MSIX `0.1.5.27`, including the command-review and farewell-link spacing changes. Package identity, application data, certificate trust, and the `hm.exe` execution alias remain unchanged.
+- Verified the package signature and registration status. Preserved the MSIX and installation record under ignored `artifacts/msix/spacing-20260920r2-debug`.
+- No automated tests, CLI smoke tests, application launch, public upload, release, commit, or tag were performed.
+
+## 2026-09-20 — Space the farewell project link
+
+- Add one blank row above and below the GitHub link in the farewell banner.
+- Validation: preflight, formatting verification, XML comments, and Release build passed with zero warnings or errors. Cleaned Release output. No automated tests or CLI smoke tests were run. Changes remain local.
+
+## 2026-09-20 — Space command risk and output icons
+
+- Add one blank line below the command risk score, before the AI or local review label.
+- Use explicit emoji presentation for warning, stopwatch, and scissors icons in the shared helper, retaining one trailing space so command-output labels remain separated.
+- Validation: preflight, formatting verification, XML comments, and Release build passed with zero warnings or errors. Cleaned Release output. Automated tests and CLI smoke tests were not run; terminal appearance has not been verified in the installed app. Changes remain local.
+
+## 2026-09-20 — Replace README mockups with a real screenshot
+
+- Use the owner's original Italian help-screen capture from PromptMeUp 0.1.5 as the opening product image, with a full-resolution link and an accurate caption. Copy the PNG unchanged and record its provenance.
+- Remove the generated command-review mockup from the README; retain earlier artwork files and credits. Close the pending real-screenshot task. Other supplied captures containing local machine or user context remain outside the repository.
+- Documentation and image copy only; no builds, tests, commits, pushes, or branches were created.
+
+## 2026-09-20 — Put setup before detailed feature guidance
+
+- Reorder the README around the product description, labeled visual example, setup, and command/privacy limits. Keep feature details and project history later.
+- A real screenshot remains pending in todo.md; existing generated illustrations stay explicitly labeled. No builds, tests, commits, pushes, or branches were created for this documentation update.
+
+## 2026-09-20 — Apply the shared MeUp presentation
+
+- Shorten the README headline, keep the product purpose first, and add the shared product links and author signature.
+- Add the coordinated concept illustration and its exact generation prompt, provenance, and visual style guide.
+- Changes remain local. No build, test, formatter, linter, commit, push, or branch creation was performed for this update.
+
 ## 2026-09-20 — Clarify product documentation and author voice
 
 - Put the app's purpose in the first README headline. Simplify contributor guidance and use the solo maintainer's voice in project, support, and security documentation.
@@ -572,7 +658,7 @@ Validation: preflight, restore, formatting verification, XML method-comment chec
 
 ## 2026-09-13 — Fullscreen terminal design census
 
-- Added [the fullscreen UX analysis](../../docs/FULLSCREEN_UX_ANALYSIS.md) with stable selection numbers for 12 functional pages and one optional navigation hub, source-backed interaction counts, and flows that should retain waterfall output.
+- Added a fullscreen UX analysis with stable selection numbers for 12 functional pages and one optional navigation hub, source-backed interaction counts, and flows that should retain waterfall output. The historical proposal is now archived in the owner's private MeUp notes.
 - Reviewed Spectre.Console feasibility, alternate-buffer history preservation, keyboard behavior, shared forms and individual command authorization.
 - Prepared and visually inspected three ImageGen concepts: cyan setup, green setup, and an amber plan workspace. Kept generated previews and prompts in the ignored local artifacts directory.
 - Completed analysis only; implementation scope remains for the user to select. Preserved unrelated work and created no branch or commit.

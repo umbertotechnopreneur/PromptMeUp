@@ -146,7 +146,7 @@ public sealed class AppGuideWorkflowTests
         using var http = new HttpClient(handler);
         var snapshots = new List<ShellRuntimeStatus>();
         var answers = new List<string>();
-        var inputs = new Queue<string>([question, "And how does that affect the next question?", "/clear", "/context", "Explain a terminal command.", "/exit"]);
+        var inputs = new Queue<string>([question, "/status", "And how does that affect the next question?", "/status", "/clear", "/context", "Explain a terminal command.", "/exit"]);
         var workflow = CreateWorkflow(fixture, http, inputs, snapshots, answers, language);
 
         await workflow.RunChatAsync(AppSettings.Default with { Language = language, PromptCachingEnabled = false }, default);
@@ -271,7 +271,7 @@ public sealed class AppGuideWorkflowTests
             }), text,
             new PersistentMemoryService(fixture.Paths, new SensitiveDataRedactor(), text, NullLogger<PersistentMemoryService>.Instance),
             TestProxy.Create<IMemoryView>((method, _) => throw new NotSupportedException(method.Name)), fixture.Database,
-            new AppGuideService(catalog, NullLogger<AppGuideService>.Instance), skills);
+            new AppGuideService(catalog, NullLogger<AppGuideService>.Instance), NullLogger<AiConversationWorkflow>.Instance, skills);
     }
 
     /// <summary>Creates a v2 provider reply with separate guide routing and final-answer forms plus observable accounting.</summary>

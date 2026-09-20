@@ -44,7 +44,7 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
         await service.InitializeAsync(CancellationToken.None);
 
         await using var connection = await OpenDatabaseAsync();
-        Assert.Equal(4, await ReadSchemaVersionAsync(connection));
+        Assert.Equal(5, await ReadSchemaVersionAsync(connection));
         Assert.Equal(1L, await ExecuteScalarInt64Async(connection, "SELECT COUNT(*) FROM app_settings WHERE id = 1;"));
     }
 
@@ -92,7 +92,7 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
         var settings = await service.LoadSettingsAsync(CancellationToken.None);
         Assert.Equal("fr", settings.Language);
         await using var verificationConnection = await OpenDatabaseAsync();
-        Assert.Equal(4, await ReadSchemaVersionAsync(verificationConnection));
+        Assert.Equal(5, await ReadSchemaVersionAsync(verificationConnection));
         Assert.Equal(
             1L,
             await ExecuteScalarInt64Async(
@@ -123,16 +123,16 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
         await using (var connection = await OpenDatabaseAsync())
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA user_version = 5;";
+            command.CommandText = "PRAGMA user_version = 6;";
             await command.ExecuteNonQueryAsync();
         }
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => CreateService().InitializeAsync(CancellationToken.None));
 
-        Assert.Contains("'5'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("'6'", exception.Message, StringComparison.Ordinal);
         await using var verificationConnection = await OpenDatabaseAsync();
-        Assert.Equal(5, await ReadSchemaVersionAsync(verificationConnection));
+        Assert.Equal(6, await ReadSchemaVersionAsync(verificationConnection));
         Assert.Equal(
             0L,
             await ExecuteScalarInt64Async(

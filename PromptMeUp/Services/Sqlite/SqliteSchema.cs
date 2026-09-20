@@ -6,7 +6,7 @@ namespace PromptMeUp.Services.Sqlite;
 internal static class SqliteSchema
 {
     /// <summary>Identifies the schema version supported by this application build.</summary>
-    internal const int Version = 4;
+    internal const int Version = 5;
 
     /// <summary>Enables the persistent write-ahead logging mode before schema creation starts.</summary>
     internal const string EnableWriteAheadLoggingSql = "PRAGMA journal_mode = WAL;";
@@ -26,6 +26,7 @@ internal static class SqliteSchema
             custom_instruction TEXT NOT NULL,
             include_windows_location INTEGER NOT NULL CHECK (include_windows_location IN (0, 1)),
             review_commands_with_ai INTEGER NOT NULL CHECK (review_commands_with_ai IN (0, 1)),
+            direct_mode_enabled INTEGER NOT NULL DEFAULT 1 CHECK (direct_mode_enabled IN (0, 1)),
             prompt_caching_enabled INTEGER NOT NULL CHECK (prompt_caching_enabled IN (0, 1)),
             max_conversation_turns INTEGER NOT NULL CHECK (max_conversation_turns BETWEEN 2 AND 50),
             max_message_characters INTEGER NOT NULL CHECK (max_message_characters BETWEEN 500 AND 100000),

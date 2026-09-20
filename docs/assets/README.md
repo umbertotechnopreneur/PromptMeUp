@@ -1,16 +1,37 @@
-# README artwork
+# README images
 
-These images were made for PromptMeUp on September 2, 2026 using OpenAI image generation, then reviewed for the project. No outside photos, logos, or font files were used as inputs or included.
+## Real app screenshots
 
-| File | Purpose |
-| --- | --- |
-| `promptmeup-banner.png` | Green-phosphor product banner: a weekend idea that became an everyday helper. |
-| `screen-ask-green.png` | Illustrative question-and-answer flow with a proposed command. |
-| `screen-review-amber.png` | Illustrative command review with explicit authorization and cancellation. |
-| `screen-center-violet.png` | Illustrative command center with sample navigation and settings. |
+The project owner supplied four Italian PromptMeUp screenshots on September 20, 2026. The help and About screens show version 0.1.5. These are captures of the application, not generated interfaces.
 
-The three screen images use made-up examples. They're illustrations, not screenshots of the app. The retro lines, colors, spacing, and shortened labels are part of the artwork. Your terminal may look different, and the app doesn't include a CRT mode matching these images.
+| Asset | Content | Privacy mask |
+| --- | --- | --- |
+| [promptmeup-command-it-framed-v1.png](promptmeup-command-it-framed-v1.png) | An answer, session usage, and command choices | Personal path in the example |
+| [promptmeup-help-it-framed-v1.png](promptmeup-help-it-framed-v1.png) | Help and command examples | None |
+| [promptmeup-chat-it-framed-v1.png](promptmeup-chat-it-framed-v1.png) | Chat welcome and available commands | Current directory and personal prompt name |
+| [promptmeup-about-it-framed-v1.png](promptmeup-about-it-framed-v1.png) | Version, credits, and project links | Build-machine name |
 
-On September 13, 2026, the banner was edited with OpenAI image generation to remove the underscore after `hm`. The existing banner was the only reference. The edit kept the block cursor, wording, green glow, scanlines, layout, and 3:1 proportions.
+## Presentation edits
 
-The project offers these assets under its root MIT license to the extent rights apply. Preserve the project attribution when redistributing them. The MIT license does not grant endorsement or rights to third-party trademarks. Keep these curated documentation assets in version control; temporary variants and build output remain excluded.
+At the owner's explicit request, Python/Pillow was used to crop the screenshots, hide personal identifiers with opaque rectangles, and center each on a 2944 × 1792 navy canvas with the same fine border. The crop removes terminal tabs, taskbar fragments, or unrelated shell decorations. Different aspect ratios are padded rather than stretched.
+
+Retained app pixels remain at their original size. No text, commands, numbers, colors, or interface elements were redrawn or resampled. The frame and privacy masks are presentation edits, not app features. The README links each preview to its full-size image.
+
+Crop rectangles use original-image coordinates, with right and bottom edges excluded:
+
+| Capture | Original size | Crop (left, top, right, bottom) |
+| --- | --- | --- |
+| Help | 2862 × 1720 | 1, 64, 2828, 1664 |
+| About | 2848 × 1718 | 8, 48, 2834, 1648 |
+| Chat | 2830 × 1450 | 0, 205, 2830, 1450 |
+| Command response | 2596 × 1708 | 0, 64, 2596, 1708 |
+
+All four final images were visually inspected. Earlier generative retouch attempts changed details and were rejected; they are not used in the repository. The supplied source files remain unchanged outside the repository.
+
+## Shared MeUp artwork
+
+The conceptual family illustration and its generation prompt are documented in [the MeUp visual guide](meup/README.md). It remains separate from app screenshots.
+
+The earlier generated terminal mockups, old banner, and unframed help copy were removed at the owner's request after their README references were replaced.
+
+The project offers its screenshot assets under the root MIT license to the extent rights apply. This does not grant endorsement or rights to third-party trademarks.

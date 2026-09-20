@@ -36,7 +36,7 @@ flowchart LR
 
 UI translations have one definition per key and language in the functionality-grouped `Services/Localization/UiTextCatalog.*.cs` files. Each entry names all six translations explicitly, and catalog assembly rejects duplicate keys. `LocalizationService` retains language selection and culture-aware formatting; runtime AI instructions remain in `/prompt`.
 
-`AdaptiveSetupView` selects the fullscreen workspace or a compatibility section menu.
+`FullscreenSetupView` implements `ISetupView` and presents the same form pages in a fullscreen workspace or a scrolling section menu. There is no separate legacy wizard or forwarding adapter.
 The fullscreen form owns keyboard focus and a temporary alternate terminal buffer;
 it returns a draft for `SetupWorkflow` to save. Theme preview changes are reverted
 when the view exits and applied after successful persistence. `ThemeCatalogService`
@@ -82,17 +82,21 @@ The system prompts constrain the assistant to Windows, macOS, and Linux console 
 
 1. `/run` captures the exact proposed PowerShell text.
 2. A conservative local rule produces a risk score and description.
-3. When enabled and available, a redacted command is sent for an advisory AI review; the higher local/AI score wins.
+3. A redacted command is sent for AI review when enabled, and always in direct mode. The higher local/AI score and severity win independently.
 4. The view renders the exact unredacted local command, score, Markdown explanation, and output-sharing notice.
-5. Only an affirmative interactive answer creates an `ApprovedCommand` capability.
+5. `AuthorizedCommandWorkflow` creates an `ApprovedCommand` only after the shared preview and the selected interaction gate: manual confirmation or the five-second direct countdown. Direct mode refuses high, critical, unknown, or incomplete reviews before opening the countdown.
 6. The execution service rejects missing or expired authorization, starts `pwsh -NoProfile -NonInteractive` as the current user, and applies timeout/output limits. PromptMeUp never requests elevation itself; an authorized command can still request it explicitly and is scored accordingly.
-7. The user sees local stdout/stderr. Recognizable credentials are redacted before audit persistence and before the bounded result becomes a follow-up prompt.
+7. The user sees local stdout/stderr. The workflow then prepares one bounded, redacted result for audit and downstream consumers. The versioned six-language `command-result` prompt formats the same evidence for AI follow-up; local previews retain their exact text.
 
-No AI response can create authorization and `--yes` never applies to `/run`. A model candidate first appears in a menu whose default is **Do not execute commands**, then must pass this same authorization flow.
+No AI response can create authorization and `--yes` never applies to `/run`. `CommandExecutionMode` is selected from local settings or the explicit CLI switch, never from model output. Direct mode is enabled by default and can be disabled in setup. A single suggestion goes to review automatically; multiple alternatives retain the selection menu. `CommandAuthorizationView` shares the full preview and output rendering, while `CommandCountdownView` owns only countdown rendering and keyboard decisions. Execution, audit, redaction, and the result-analysis loop remain shared. Each automatic chain stops after eight commands.
+
+Conversation summaries are hidden by default. Snapshot construction reads retained context without selecting notes again or pruning history. One ledger query returns session usage and cost together, including command-risk reviews under the owning session ID. Review calls never close the owning flow. Provider-confirmed usage is retained if cancellation arrives during pricing or persistence.
+
+At exit, including cancellation, the workflow refreshes the snapshot from current state and the ledger with a two-second local-read deadline independent of the canceled execution token. It makes no AI call. If that read fails, the UI explicitly marks totals unavailable and preserves the original flow error. Explicit status requests and usage at or above 80% of the effective context budget override hiding. A question that continues into chat shares its mode, history, and final summary.
 
 ## How data is saved
 
-SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `4`. Initialization upgrades older supported databases in a transaction, adding the saved context budget, note storage, and theme selection while retaining settings and history. Version 4 makes every saved note global, preserving IDs, text, timestamps, duplicates, and provenance. A database from a newer schema is rejected.
+SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and schema version `5`. Initialization upgrades older supported databases in a transaction, retaining settings and history. Version 5 adds the default-on `direct_mode_enabled` preference; version 4 made every saved note global. A database from a newer schema is rejected.
 
 | Table | Purpose |
 | --- | --- |

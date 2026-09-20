@@ -16,6 +16,64 @@ namespace PromptMeUp.Tests;
 
 public sealed class OpenAiServiceRegressionTests
 {
+    /// <summary>Keeps a completed priced request in the ledger when shutdown starts at the persistence boundary.</summary>
+    [Fact]
+    public async Task SendAsync_CancellationDuringPersistence_RetainsCompletedUsage()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        await fixture.Database.ReplaceModelPricesAsync("openai", [RegressionFixture.Price("short")], default);
+        using var cancellation = new CancellationTokenSource();
+        using var http = CreateHttp(new StringContent(RegressionFixture.ResponseJson()));
+        var database = TestProxy.Create<IDatabaseService>((method, args) =>
+        {
+            if (method.Name == "AppendAiRequestAsync")
+            {
+                cancellation.Cancel();
+                Assert.False(((CancellationToken)args[1]!).CanBeCanceled);
+            }
+            return method.Invoke(fixture.Database, args);
+        });
+
+        await fixture.CreateOpenAi(http, database: database).SendAsync("query-system", "completed-cancel",
+            [new ChatMessage("user", "Hello")], AppSettings.Default, "en", cancellation.Token);
+
+        Assert.True(cancellation.IsCancellationRequested);
+        var accounting = await fixture.Database.GetSessionAccountingAsync("completed-cancel", default);
+        Assert.Equal(20, accounting.Usage.InputTokens);
+        Assert.Equal(0.000020m, accounting.EstimatedCostUsd);
+        Assert.Equal(1L, await fixture.ScalarAsync("SELECT success FROM ai_requests WHERE conversation_id = 'completed-cancel';"));
+    }
+
+    /// <summary>Preserves provider-confirmed usage when cancellation arrives after receipt but before price lookup completes.</summary>
+    [Fact]
+    public async Task SendAsync_CancellationAfterAccounting_PersistsKnownUsageAsUnpriced()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        using var cancellation = new CancellationTokenSource();
+        using var http = CreateHttp(new StringContent(RegressionFixture.ResponseJson()));
+        var database = TestProxy.Create<IDatabaseService>((method, args) =>
+        {
+            if (method.Name == "FindModelPriceAsync")
+            {
+                cancellation.Cancel();
+                return Task.FromCanceled<AiModelPrice?>(cancellation.Token);
+            }
+            return method.Invoke(fixture.Database, args);
+        });
+        var provider = fixture.CreateOpenAi(http, database: database);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => provider.SendAsync("query-system", "charged-cancel",
+            [new ChatMessage("user", "Hello")], AppSettings.Default, "en", cancellation.Token));
+
+        var accounting = await fixture.Database.GetSessionAccountingAsync("charged-cancel", default);
+        Assert.Equal(20, accounting.Usage.InputTokens);
+        Assert.Equal(1, accounting.Usage.OutputTokens);
+        Assert.Null(accounting.EstimatedCostUsd);
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT success FROM ai_requests WHERE conversation_id = 'charged-cancel';"));
+    }
+
     /// <summary>Verifies that delayed body delivery shares the request deadline and records a stable failure.</summary>
     [Fact]
     public async Task SendAsync_SlowBody_TimesOutBeforeBodyArrives()
@@ -122,7 +180,7 @@ public sealed class OpenAiServiceRegressionTests
         var service = new CommandRiskAssessmentService(fixture.CreateOpenAi(http, loggers.CreateLogger<OpenAiService>()),
             fixture.Secrets, new SensitiveDataRedactor(), loggers.CreateLogger<CommandRiskAssessmentService>());
 
-        var assessment = await service.AssessAsync("Get-Date", true, AppSettings.Default, "en", default);
+        var assessment = await service.AssessAsync("review-session", "Get-Date", true, AppSettings.Default, "en", default);
 
         Assert.False(assessment.UsedAi);
         Assert.Contains(sink.Events, item => item.Level == LogEventLevel.Warning);

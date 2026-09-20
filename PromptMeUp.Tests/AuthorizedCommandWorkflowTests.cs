@@ -10,6 +10,57 @@ namespace PromptMeUp.Tests;
 
 public sealed class AuthorizedCommandWorkflowTests
 {
+    /// <summary>Returns exactly the same sanitized streams as the audit while leaving the local command and result intact.</summary>
+    [Fact]
+    public async Task RunForResultAsync_PreparesEvidenceOnceWithoutChangingLocalPreview()
+    {
+        using var persistence = new RegressionFixture();
+        await persistence.Database.InitializeAsync(default);
+        await persistence.Audit.StartSessionAsync("prepared-output", "test", AppSettings.Default, null, default);
+        const string command = "Write-Output 'password=synthetic-preview'";
+        var raw = new CommandExecutionResult(command, 0, "password=synthetic-output " + new string('x', 200),
+            "safe error", false, false, 5);
+        var fixture = new WorkflowFixture(true, raw, audit: persistence.Audit);
+
+        var prepared = await fixture.Workflow.RunForResultAsync("prepared-output", command,
+            AppSettings.Default with { MaxCommandOutputCharacters = 80 }, default);
+
+        Assert.NotNull(prepared);
+        Assert.Equal(command, fixture.CommandView.PreviewedCommand);
+        Assert.Same(raw, fixture.CommandView.RenderedResult);
+        Assert.DoesNotContain("synthetic-", prepared.Command);
+        Assert.DoesNotContain("synthetic-", prepared.StandardOutput);
+        Assert.True(prepared.OutputTruncated);
+        Assert.Equal(80, prepared.StandardOutput.Length);
+        using var stored = JsonDocument.Parse(Assert.IsType<string>(await persistence.ScalarAsync(
+            "SELECT payload_json FROM ai_session_events WHERE event_type = 'command_output';")));
+        Assert.Equal(prepared.Command, stored.RootElement.GetProperty("Command").GetString());
+        Assert.Equal(prepared.StandardOutput, stored.RootElement.GetProperty("standardOutput").GetString());
+        Assert.Equal(prepared.StandardError, stored.RootElement.GetProperty("standardError").GetString());
+        Assert.True(stored.RootElement.GetProperty("OutputTruncated").GetBoolean());
+    }
+
+    /// <summary>Loads every localized follow-up template and preserves literal braces in untrusted output values.</summary>
+    [Theory]
+    [InlineData("en")]
+    [InlineData("it")]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("vi")]
+    public async Task ResultPrompt_AllLanguages_FormatLiteralEvidence(string language)
+    {
+        var prompt = await RegressionFixture.CreatePackagedPrompts().GetAsync("command-result", default);
+        const string evidence = "literal {0} and {\"safe\":true}";
+        var formatted = string.Format(System.Globalization.CultureInfo.InvariantCulture, prompt.ResolveText(language),
+            "Get-Location", 0, evidence, "stderr", false, true);
+        Assert.Contains(evidence, formatted);
+        Assert.Contains("Get-Location", formatted);
+        Assert.Contains("stderr", formatted);
+        Assert.Contains("False", formatted);
+        Assert.Contains("True", formatted);
+    }
+
     /// <summary>Verifies reviewed credential formats are removed from persistence and AI evidence while local previews stay exact.</summary>
     [Theory]
     [InlineData("{\"accessToken\":\"synthetic-output-syntheticSuffixSentinel\",\"safe\":\"keep\",\"inputTokens\":23}", "{\"Credentials\":{\"SecretAccessKey\":\"synthetic-error-syntheticSuffixSentinel\",\"SessionToken\":\"synthetic-session-syntheticSuffixSentinel\"},\"safe\":\"error-keep\"}")]
@@ -281,7 +332,7 @@ public sealed class AuthorizedCommandWorkflowTests
                 new SensitiveDataRedactor(),
                 CommandView,
                 Shell,
-                new FakeLocalizationService());
+                new FakeLocalizationService(), RegressionFixture.CreatePackagedPrompts());
         }
 
         public AuthorizedCommandWorkflow Workflow { get; }
@@ -306,6 +357,7 @@ public sealed class AuthorizedCommandWorkflowTests
 
         /// <summary>Returns the configured assessment without making an AI request.</summary>
         public Task<CommandRiskAssessment> AssessAsync(
+            string sessionId,
             string command,
             bool useAi,
             AppSettings settings,
@@ -396,16 +448,18 @@ public sealed class AuthorizedCommandWorkflowTests
 
         public CommandExecutionResult? RenderedResult { get; private set; }
 
-        /// <summary>Returns an execution capability only when the fixture is configured to approve.</summary>
-        public ApprovedCommand? PreviewAndAuthorize(string command, CommandRiskAssessment assessment)
+        /// <summary>Records the unredacted command that precedes either authorization mode.</summary>
+        public void RenderPreview(string command, CommandRiskAssessment assessment) => PreviewedCommand = command;
+
+        /// <summary>Returns the configured authorization decision without terminal input.</summary>
+        public Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken)
         {
-            PreviewedCommand = command;
             if (_cancelAuthorization)
             {
                 throw new InteractiveFlowCanceledException();
             }
 
-            return _authorized ? ApprovedCommand.Create(command, assessment) : null;
+            return Task.FromResult(_authorized);
         }
 
         /// <summary>Records rendering of the fixed execution result.</summary>

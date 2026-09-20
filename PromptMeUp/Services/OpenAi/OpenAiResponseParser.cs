@@ -188,7 +188,11 @@ internal static partial class OpenAiResponseParser
         {
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
-            var score = Math.Clamp(root.GetProperty("score").GetInt32(), 0, 100);
+            var score = root.GetProperty("score").GetInt32();
+            if (score is < 0 or > 100)
+            {
+                throw new JsonException("Risk score is outside the supported range.");
+            }
             var levelText = root.GetProperty("level").GetString() ?? string.Empty;
             var description = root.GetProperty("description_markdown").GetString();
             if (string.IsNullOrWhiteSpace(description))
@@ -202,7 +206,7 @@ internal static partial class OpenAiResponseParser
                 "medium" => CommandRiskLevel.Medium,
                 "high" => CommandRiskLevel.High,
                 "critical" => CommandRiskLevel.Critical,
-                _ => ScoreToLevel(score)
+                _ => throw new JsonException("Risk level is invalid.")
             };
             return new CommandRiskAssessment(score, level, description.Trim(), true, null);
         }
@@ -316,15 +320,6 @@ internal static partial class OpenAiResponseParser
             : 0;
         return new AiUsageMetrics(input, cached, cacheWrite, output, reasoning, total == 0 ? input + output : total);
     }
-
-    /// <summary>Maps a numeric advisory score to its display level.</summary>
-    private static CommandRiskLevel ScoreToLevel(int score) => score switch
-    {
-        >= 85 => CommandRiskLevel.Critical,
-        >= 60 => CommandRiskLevel.High,
-        >= 30 => CommandRiskLevel.Medium,
-        _ => CommandRiskLevel.Low
-    };
 
     /// <summary>Removes an optional JSON code fence without interpreting other Markdown.</summary>
     private static string StripCodeFence(string value)

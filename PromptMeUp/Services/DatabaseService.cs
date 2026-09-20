@@ -32,9 +32,7 @@ public interface IDatabaseService
 
     Task<AiRequestSummary> GetAiRequestSummaryAsync(CancellationToken cancellationToken);
 
-    Task<AiUsageMetrics> GetSessionUsageAsync(string sessionId, CancellationToken cancellationToken);
-
-    Task<decimal?> GetSessionCostAsync(string sessionId, CancellationToken cancellationToken);
+    Task<AiSessionAccounting> GetSessionAccountingAsync(string sessionId, CancellationToken cancellationToken);
 
     Task<decimal?> GetOrganizationCostCurrentMonthAsync(CancellationToken cancellationToken);
 
@@ -125,7 +123,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                    custom_instruction, include_windows_location, review_commands_with_ai,
                    prompt_caching_enabled, max_conversation_turns, max_message_characters,
                    max_context_percent, max_command_output_characters, command_timeout_seconds,
-                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme, preferred_name
+                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme, preferred_name, direct_mode_enabled
             FROM app_settings
             WHERE id = 1;
             """;
@@ -158,7 +156,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
         {
             ContextTokenBudget = reader.GetInt32(19),
             Theme = reader.GetString(20),
-            PreferredName = PreferredNamePolicy.Normalize(reader.GetString(21), _redactor)
+            PreferredName = PreferredNamePolicy.Normalize(reader.GetString(21), _redactor),
+            DirectModeEnabled = reader.GetInt32(22) == 1
         };
         var normalizedPreamble = _promptProtection.Protect(settings.CustomInstruction).SanitizedText;
         var safePreamble = _redactor.Redact(normalizedPreamble);
@@ -200,6 +199,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                     custom_instruction = $customInstruction,
                     include_windows_location = $includeLocation,
                     review_commands_with_ai = $reviewCommandsWithAi,
+                    direct_mode_enabled = $directModeEnabled,
                     prompt_caching_enabled = $promptCachingEnabled,
                     max_conversation_turns = $maxConversationTurns,
                     max_message_characters = $maxMessageCharacters,
@@ -224,6 +224,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.Parameters.AddWithValue("$customInstruction", protectedPreamble.SanitizedText);
             command.Parameters.AddWithValue("$includeLocation", settings.IncludeWindowsLocation ? 1 : 0);
             command.Parameters.AddWithValue("$reviewCommandsWithAi", settings.ReviewCommandsWithAi ? 1 : 0);
+            command.Parameters.AddWithValue("$directModeEnabled", settings.DirectModeEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$promptCachingEnabled", settings.PromptCachingEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$maxConversationTurns", settings.MaxConversationTurns);
             command.Parameters.AddWithValue("$maxMessageCharacters", settings.MaxMessageCharacters);
@@ -514,8 +515,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
             reader.GetInt64(5));
     }
 
-    /// <summary>Totals recorded conversation usage including reported failures; standalone advisory sessions remain separate.</summary>
-    public async Task<AiUsageMetrics> GetSessionUsageAsync(string sessionId, CancellationToken cancellationToken)
+    /// <summary>Reads usage and cost together for every recorded call in the flow, including reviews and billed failures.</summary>
+    public async Task<AiSessionAccounting> GetSessionAccountingAsync(string sessionId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -523,24 +524,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
         command.CommandText = """
             SELECT COALESCE(SUM(input_tokens), 0), COALESCE(SUM(cached_input_tokens), 0),
                    COALESCE(SUM(cache_write_tokens), 0), COALESCE(SUM(output_tokens), 0),
-                   COALESCE(SUM(reasoning_tokens), 0), COALESCE(SUM(total_tokens), 0)
-            FROM ai_requests WHERE conversation_id = $session;
-            """;
-        command.Parameters.AddWithValue("$session", sessionId);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return new AiUsageMetrics(reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2),
-            reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(5));
-    }
-
-    /// <summary>Totals recorded session cost, including failures with usage, without hiding unpriced calls.</summary>
-    public async Task<decimal?> GetSessionCostAsync(string sessionId, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT COALESCE(SUM(estimated_cost_microusd), 0),
+                   COALESCE(SUM(reasoning_tokens), 0), COALESCE(SUM(total_tokens), 0),
+                   COALESCE(SUM(estimated_cost_microusd), 0),
                    COALESCE(SUM(CASE WHEN estimated_cost_microusd IS NULL AND (success = 1 OR total_tokens > 0)
                        THEN 1 ELSE 0 END), 0)
             FROM ai_requests WHERE conversation_id = $session;
@@ -548,7 +533,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
         command.Parameters.AddWithValue("$session", sessionId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return reader.GetInt64(1) == 0 ? FromMicroUsd(reader.GetInt64(0)) : null;
+        return new AiSessionAccounting(
+            new AiUsageMetrics(reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2),
+                reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(5)),
+            reader.GetInt64(7) == 0 ? FromMicroUsd(reader.GetInt64(6)) : null);
     }
 
     /// <summary>Aggregates downloaded organization cost buckets for the current local month.</summary>
@@ -737,6 +725,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 await MigrateGlobalMemoriesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
             await EnsurePreferredNameColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            if (currentVersion < 5)
+            {
+                await EnsureDirectModeColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
             {
@@ -817,6 +809,22 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 ALTER TABLE app_settings ADD COLUMN preferred_name TEXT NOT NULL DEFAULT ''
                     CHECK (length(preferred_name) <= 80);
                 """;
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Adds the owner's default-on direct preference atomically without replacing saved local data.</summary>
+    private static async Task EnsureDirectModeColumnAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'direct_mode_enabled';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            command.CommandText = "ALTER TABLE app_settings ADD COLUMN direct_mode_enabled INTEGER NOT NULL DEFAULT 1 CHECK (direct_mode_enabled IN (0, 1));";
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
     }

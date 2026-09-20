@@ -8,7 +8,7 @@ using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
-public sealed class FullscreenSetupView
+public sealed class FullscreenSetupView : ISetupView
 {
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
@@ -96,6 +96,7 @@ public sealed class FullscreenSetupView
             var saved = form.Run("Settings.Title", pages, () => ValidatePages(pages) ?? ValidateFeatures(draft), initialPage);
             return (saved, form.SelectedPageIndex);
         }
+        _shell.RenderNotice(_text.Text("Form.Unavailable"));
         var promptForm = new SettingsPromptForm(_console, _text, _shell.Options);
         var savedDraft = promptForm.Run(pages, initialPage, () => ValidatePages(pages) ?? ValidateFeatures(draft));
         return (savedDraft, promptForm.SelectedPageIndex);
@@ -117,6 +118,9 @@ public sealed class FullscreenSetupView
                 value => draft.Settings = draft.Settings with { AiEnabled = value })
         };
         ai.AddRange(CreateModelFields(draft));
+        ai.Add(Toggle("Direct.Setting", () => draft.Settings.DirectModeEnabled,
+            value => draft.Settings = draft.Settings with { DirectModeEnabled = value }) with
+        { HelpKey = "Direct.SettingHelp" });
         ai.Add(Toggle("Setup.CommandReview", () => draft.Settings.ReviewCommandsWithAi,
             value => draft.Settings = draft.Settings with { ReviewCommandsWithAi = value }));
         ai.Add(Toggle("Setup.PromptCaching", () => draft.Settings.PromptCachingEnabled,
@@ -132,7 +136,7 @@ public sealed class FullscreenSetupView
             [
                 new("language", "Setup.Language", () => draft.Settings.Language, value => SetLanguage(draft, value))
                 {
-                    Choices = () => SupportedLanguages.All.Select(item => new FormChoice(item.Code, LanguageLabel(item))).ToArray()
+                    Choices = () => SupportedLanguages.All.Select(item => new FormChoice(item.Code, LanguageLabel(item, _shell.Options))).ToArray()
                 }
             ]) { HelpKey = "Settings.GeneralHelp", Overview = () => CreateGeneralOverview(draft, state) },
             new("Settings.Ai", ai)
@@ -632,8 +636,8 @@ public sealed class FullscreenSetupView
     }
 
     /// <summary>Shows the same flag, native language name, and code in choices and the setup review.</summary>
-    private string LanguageLabel(SupportedLanguage language) =>
-        TerminalTheme.IconPrefix(_shell.Options, language.Flag, "@") + language.NativeName + " (" + language.Code + ")";
+    internal static string LanguageLabel(SupportedLanguage language, ConsoleRenderOptions options) =>
+        TerminalTheme.IconPrefix(options, language.Flag, "@") + language.NativeName + " (" + language.Code + ")";
 
     /// <summary>Resolves the three supported answer-detail labels without inventing an unknown choice.</summary>
     private string DetailName(string value) => _text.Text(value switch

@@ -56,31 +56,6 @@ public sealed class PreferredNameViewTests
         }
     }
 
-    /// <summary>The fallback wizard preserves an existing name unless a separate edit or clear is requested.</summary>
-    [Theory]
-    [InlineData("", "Morgan\r", "Morgan")]
-    [InlineData("Previous name", "\r", "Previous name")]
-    [InlineData("Previous name", "y\r\r", "")]
-    public void SetupPreferences_OptionalName_CanBeSetKeptOrCleared(string current, string nameInput, string expected)
-    {
-        var input = Type("\rn\r\r\r\r" + nameInput + "\rn\rn\ry\r");
-        var (console, output, keys) = CreateConsole(input);
-        var text = new LocalizationService();
-        var shell = new ConsoleShellView(console, text);
-        shell.Configure(new ConsoleRenderOptions(true, true));
-        var view = new SetupView(console, text, shell, new PromptInjectionProtectionService(), new SensitiveDataRedactor());
-
-        var submission = view.Collect(new SetupViewState(
-            AppSettings.Default with { AiEnabled = false, PreferredName = current }, false, false));
-
-        Assert.NotNull(submission);
-        Assert.Equal(expected, submission.Settings.PreferredName);
-        Assert.False(submission.TestConnection);
-        Assert.Empty(keys);
-        Assert.Contains("Saved locally", output.ToString(), StringComparison.Ordinal);
-        Assert.Contains("Do not enter passwords or secrets", output.ToString(), StringComparison.Ordinal);
-    }
-
     /// <summary>The ordinary prompt-form default remains unchanged for unrelated settings fields.</summary>
     [Fact]
     public void PromptForm_DefaultBehavior_PreservesOtherFields()

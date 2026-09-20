@@ -41,7 +41,7 @@ internal static class TerminalTheme
         return options.NoEmoji ? fallback : icon switch
         {
             // Text-default symbols can occupy an emoji cell and visually consume the following space.
-            "ℹ" or "⚙" or "🛡" => icon + "\uFE0F",
+            "ℹ" or "⚙" or "🛡" or "⚠" or "⏱" or "✂" => icon + "\uFE0F",
             _ => icon
         };
     }

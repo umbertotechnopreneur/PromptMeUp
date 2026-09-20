@@ -12,6 +12,8 @@ public sealed record AiUsageMetrics(
     long ReasoningTokens,
     long TotalTokens);
 
+public sealed record AiSessionAccounting(AiUsageMetrics Usage, decimal? EstimatedCostUsd);
+
 public sealed record ConversationContextLimits(int? MaxInputTokens)
 {
     public static ConversationContextLimits Default { get; } = new(MaxInputTokens: null);

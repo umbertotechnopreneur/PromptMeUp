@@ -4,17 +4,35 @@ These instructions apply to every change in this repository.
 
 ## Product writing and author voice
 
+- Keep MailMeUp, PromptMeUp, and TrackMeUp visually consistent using [the MeUp style guide](docs/assets/meup/README.md). Use a common README structure and author signature, with a distinct accent color and concrete benefit for each product. Keep the main product purpose ahead of optional extras.
+
 - Start each README with a headline that says what the app does and what the reader can use it for. Put the product benefit before architecture, branding, or project history.
 - Apply this style throughout repository documentation: plain English, short sentences, concrete actions, and useful examples. Cut filler, vague slogans, hype, corporate language, and formulaic AI-sounding prose.
 - Speak to the reader as "you". When speaking as the author, use "I", "me", and "my", never a company-style "we", "us", or "our". Umberto is the solo maintainer, with help from a few contributors; keep their credits accurate.
 - Keep technical detail in the relevant reference guides. Preserve exact commands, UI labels, privacy facts, limitations, and the distinction between implemented, tested, and planned features. Do not promise unlimited capacity or untested compatibility.
 - Preserve third-party quotations, license text, and historical records; these writing preferences apply to original project copy.
 
+## Distribution and build defaults
+
+- The commercial edition supports Windows 11 on x64 and ARM64 only. Distribute it only as MSIX.
+- Linux and macOS are source-only: users must compile and adapt the source themselves. Do not provide compiled binaries, installers, or commercial support for these platforms, and do not imply that every project can run there unchanged.
+- When a build is explicitly requested, default to a local development/debug build using the Debug configuration. A generic build or release request does not authorize a Microsoft Store package. Produce a Store version only when the owner explicitly asks for one; never upload or publish it without explicit authorization.
+- Keep development/debug artifacts separate from Store release artifacts. These rules do not authorize running builds, changing release pipelines, creating tags, or publishing on their own.
+- Windows distribution is MSIX-only. Do not propose or add portable ZIP, standalone EXE, or MSI distribution unless the owner explicitly changes this decision. This preference does not authorize packaging or workflow changes.
+
+## Private business notes
+
+- Keep pricing, commercial strategy, launch plans, future product proposals, OAuth verification preparation, Store account procedures and owner checkpoints in the owner's Obsidian vault under `40_Business/MeUp/`, organized by product. Do not create or mirror these notes in public repositories.
+- Keep current user and contributor documentation, public privacy policies and terms, licenses, attribution, build instructions, technical validation records and files required by code or CI in the repository. Split documents that mix public technical guidance with internal planning.
+- For publication or Store listing work, first read `40_Business/MeUp/Business decisions.md` and the relevant product notes. The owner-approved purchase notice is preserved there; proposals and approved wording are not evidence of implemented licensing.
+- Keep raw Store account exports outside Git. Do not add credentials, private data or machine-specific vault paths to repository files.
+
 ## Shared delivery workflow
 
-- For documentation-only or repository-instruction-only changes, commit and push directly on the current branch, including `main`, without creating a branch or opening a pull request. The owner authorizes using existing administrator bypass rights for this exception; do not change repository protection settings. Include `[skip ci]` in the commit message unless the owner explicitly requests CI.
+- Never create a branch, commit, or push on your own initiative. Each action requires an explicit request from the owner; a request to edit files does not authorize Git delivery.
+- For documentation-only or repository-instruction-only changes, keep edits local until the owner explicitly requests delivery. If authorized, use the current branch and include `[skip ci]` unless the owner requests CI. Do not treat this rule as permission to bypass repository protections.
 - For all other changes, keep `main` protected. Make changes on a focused branch, open a pull request, and use squash merge only after required checks and conversations are resolved. Do not bypass branch protections, required checks, or review requirements for these changes. Delete the branch after a successful merge.
-- Create portable release artifacts only through GitHub Actions. For explicit local debug testing, a signed MSIX may be built and installed from an ignored `artifacts/msix` subdirectory using the existing current-user certificate; do not upload, publish, tag, or describe it as a release. Create an annotated `v<version>` tag only after the matching source version is on `main`.
+- Create MSIX release artifacts only through GitHub Actions. For explicit local debug testing, a signed MSIX may be built and installed from an ignored `artifacts/msix` subdirectory using the existing current-user certificate; do not upload, publish, tag, or describe it as a release. Create an annotated `v<version>` tag only after the matching source version is on `main`.
 - Preserve unrelated working-tree changes. Never commit credentials, tokens, local data, logs, generated artifacts, or private machine paths.
 
 ## Context and token efficiency
@@ -33,7 +51,7 @@ These instructions apply to every change in this repository.
 ## Product boundaries
 
 - PromptMeUp is a lightweight .NET 10 console assistant whose public command is `hm`.
-- Keep it portable across Windows, Linux, and macOS. Portable archives remain canonical; release automation may also produce optional, versioned Windows installer artifacts. Do not introduce a background agent or platform-specific runtime dependency.
+- Keep the application code portable across Windows, Linux, and macOS. Windows distribution is MSIX-only. Do not introduce a background agent or platform-specific runtime dependency.
 - Keep GitHub as the project home and write public copy in product language before implementation detail.
 - Use plain, friendly English in documentation: speak directly to the reader, use short sentences and practical examples, and explain technical terms when needed. Keep factual credits and privacy details accurate.
 - Write repository documentation, README copy, contributor guidance, code comments, and project artwork text in English. Keep runtime UI and prompt translations in all six supported languages.
@@ -51,6 +69,9 @@ These instructions apply to every change in this repository.
 
 ## Code and documentation
 
+- PromptMeUp is in pre-production. Backward compatibility is not required: update affected callers and contracts directly instead of adding compatibility wrappers or legacy paths. Reuse shared workflows and helpers; keep differences between normal and direct command approval in their interaction views.
+- `--direct` requires local risk scoring and a successful AI review. High or critical risk must block execution. Preview each eligible command and use a five-second cancellable countdown instead of a confirmation prompt, then reuse the normal output-analysis and conversation flow.
+- Direct execution is enabled by default for questions and chat. Keep its persisted opt-out in `hm --setup`; `--direct` overrides that preference for the current session. Keep the session summary hidden by default during work, show it at exit, and override hiding when operating context reaches 80 percent. Explicit `/status` and `/context` requests must still show it.
 - Add a brief XML `<summary>` to every C# implementation method, including constructors, tests, and private helpers.
 - Add small inline comments only where a complex or non-obvious algorithm benefits from a logic hint.
 - Use `ILogger<T>` in application code; keep Serilog configuration in the composition root.

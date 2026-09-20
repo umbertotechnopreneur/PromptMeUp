@@ -10,6 +10,7 @@ namespace PromptMeUp.Services;
 public interface ICommandRiskAssessmentService
 {
     Task<CommandRiskAssessment> AssessAsync(
+        string sessionId,
         string command,
         bool useAi,
         AppSettings settings,
@@ -39,12 +40,14 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
 
     /// <summary>Returns a conservative local score, optionally enriched by an advisory AI review.</summary>
     public async Task<CommandRiskAssessment> AssessAsync(
+        string sessionId,
         string command,
         bool useAi,
         AppSettings settings,
         string language,
         CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(settings);
         var local = AssessLocally(command, language);
@@ -55,9 +58,10 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
 
         try
         {
-            var ai = await _openAi.AssessCommandAsync(_redactor.Redact(command), settings, language, cancellationToken).ConfigureAwait(false);
+            var ai = await _openAi.AssessCommandAsync(sessionId, _redactor.Redact(command), settings, language, cancellationToken).ConfigureAwait(false);
             var score = Math.Max(local.Score, ai.Score);
-            var level = ScoreToLevel(score);
+            // A high severity label must retain its veto even when the AI returns a lower numeric score.
+            var level = (CommandRiskLevel)Math.Max((int)ScoreToLevel(score), Math.Max((int)local.Level, (int)ai.Level));
             var advisory = local.Score > ai.Score
                 ? Translate(language, "Risk.LocalWins")
                 : Translate(language, "Risk.Advisory");

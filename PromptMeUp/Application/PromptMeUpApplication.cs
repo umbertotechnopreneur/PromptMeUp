@@ -249,12 +249,19 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 await RunStatusAsync(settings, promptCount, cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.Query:
+            case AppCommand.Direct:
+                if (options.Command == AppCommand.Direct || settings.DirectModeEnabled)
+                {
+                    EnsureInteractive();
+                }
                 EnsureAiReady(settings);
                 await _conversationWorkflow.RunQueryAsync(
                     options.Query!,
                     settings,
                     renderQuery: true,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    executionMode: options.Command == AppCommand.Direct || settings.DirectModeEnabled
+                        ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm).ConfigureAwait(false);
                 return 0;
             case AppCommand.Remember:
             case AppCommand.Forget:
@@ -420,7 +427,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
     /// <summary>Chooses commands where daily pricing is relevant and network access is expected.</summary>
     private static bool ShouldRefreshPricing(AppCommand command, AppSettings settings) =>
-        settings.SetupCompleted && command is (AppCommand.Status or AppCommand.Query or AppCommand.Chat or AppCommand.TestAi or AppCommand.Costs);
+        settings.SetupCompleted && command is (AppCommand.Status or AppCommand.Query or AppCommand.Direct or AppCommand.Chat or AppCommand.TestAi or AppCommand.Costs);
 
     /// <summary>Returns the stable status-bar name for a parsed command.</summary>
     private static string ToCommandName(AppCommand command) => command switch

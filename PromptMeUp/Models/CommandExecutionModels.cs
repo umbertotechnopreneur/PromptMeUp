@@ -2,6 +2,12 @@
 
 namespace PromptMeUp.Models;
 
+public enum CommandExecutionMode
+{
+    Confirm,
+    Direct
+}
+
 public enum CommandRiskLevel
 {
     Unknown,
@@ -16,11 +22,15 @@ public sealed record CommandRiskAssessment(
     CommandRiskLevel Level,
     string DescriptionMarkdown,
     bool UsedAi,
-    string? Advisory);
+    string? Advisory)
+{
+    public bool CanRunDirect => UsedAi && Score is >= 0 and < 60
+        && Level is CommandRiskLevel.Low or CommandRiskLevel.Medium;
+}
 
 public sealed class ApprovedCommand
 {
-    /// <summary>Creates the execution capability after the view has obtained explicit user authorization.</summary>
+    /// <summary>Creates the execution capability after the workflow completes the selected authorization gate.</summary>
     private ApprovedCommand(string text, CommandRiskAssessment assessment)
     {
         Text = text;
@@ -37,7 +47,7 @@ public sealed class ApprovedCommand
 
     internal string AuthorizationId { get; }
 
-    /// <summary>Creates the short-lived command capability after the user confirms the rendered preview.</summary>
+    /// <summary>Creates the short-lived capability after confirmation or an explicitly requested direct countdown.</summary>
     internal static ApprovedCommand Create(string text, CommandRiskAssessment assessment) => new(text, assessment);
 }
 
