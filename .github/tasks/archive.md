@@ -1,5 +1,12 @@
 # Task Archive
 
+## 2026-09-21 — Repair direct-mode CI regressions and refresh README branding
+
+- Repair the cross-platform test regressions reported by PR #45: make the countdown testable without a physical terminal, establish the audit session before persisting command evidence, update schema-version expectations, and use strict structured-response fixtures with command text visible in the answer.
+- Run the 11 originally failing focused tests successfully. A full local test run did not produce a final result through the local process host; CI remains the authoritative complete-suite check.
+- Replace the dense MeUp footer with a compact visual mark and linked product summary. Clarify that `hm` means Help Me and is the entry point to PromptMeUp's features. Add the transparent, generated mark and its provenance.
+- Validation: preflight, scoped whitespace normalization, full formatting verification, and XML method comment checks passed. Release compilation passed with zero warnings and errors before test execution; standard Release cleanup completed.
+
 ## 2026-09-21 — Refactor reviewed command and conversation workflows
 
 - Create owner-requested checkpoint `4186c22` before changes on `codex/direct-mode`.

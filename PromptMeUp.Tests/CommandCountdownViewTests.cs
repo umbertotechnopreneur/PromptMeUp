@@ -68,7 +68,7 @@ public sealed class CommandCountdownViewTests
         });
         var console = TestProxy.Create<IAnsiConsole>((method, args) =>
             method.Name == "get_Input" ? input : method.Invoke(rendering, args));
-        return new CommandCountdownView(console, new LocalizationService(), clock);
+        return new CommandCountdownView(console, new LocalizationService(), clock, isInteractive: true);
     }
 
     private sealed class AdvancingTimeProvider : TimeProvider

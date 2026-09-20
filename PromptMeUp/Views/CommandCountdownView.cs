@@ -5,7 +5,11 @@ using Spectre.Console;
 
 namespace PromptMeUp.Views;
 
-internal sealed class CommandCountdownView(IAnsiConsole console, ILocalizationService text, TimeProvider? timeProvider = null)
+internal sealed class CommandCountdownView(
+    IAnsiConsole console,
+    ILocalizationService text,
+    TimeProvider? timeProvider = null,
+    bool? isInteractive = null)
 {
     private static readonly TimeSpan Duration = TimeSpan.FromSeconds(5);
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
@@ -13,7 +17,7 @@ internal sealed class CommandCountdownView(IAnsiConsole console, ILocalizationSe
     /// <summary>Shows a five-second progress bar and returns early for Enter or cancellation without clearing scrollback.</summary>
     internal async Task<bool> WaitAsync(CancellationToken cancellationToken)
     {
-        if (!console.Profile.Capabilities.Interactive)
+        if (!(isInteractive ?? console.Profile.Capabilities.Interactive))
         {
             throw new InvalidOperationException(text.Text("Error.InteractiveRequired"));
         }

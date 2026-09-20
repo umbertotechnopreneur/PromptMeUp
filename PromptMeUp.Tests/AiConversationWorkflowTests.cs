@@ -85,12 +85,14 @@ public sealed class AiConversationWorkflowTests
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        using var handler = new RecordingConversationHandler(call => RegressionFixture.ResponseJson(call switch
+        using var handler = new RecordingConversationHandler(call => call switch
         {
-            1 => """{"answer_markdown":"Inspect the folder.","commands":[{"label":"Current folder","command":"Get-Location"}],"guide_topics":[]}""",
-            2 => """{"answer_markdown":"Check its contents.","commands":[{"label":"Contents","command":"Get-ChildItem"}],"guide_topics":[]}""",
-            _ => "The requested checks are complete."
-        }));
+            1 => RegressionFixture.StructuredResponseJson("Inspect the folder with `Get-Location`.",
+                [new SuggestedCommand("Current folder", "Get-Location")]),
+            2 => RegressionFixture.StructuredResponseJson("Check its contents with `Get-ChildItem`.",
+                [new SuggestedCommand("Contents", "Get-ChildItem")]),
+            _ => RegressionFixture.ResponseJson("The requested checks are complete.")
+        });
         using var http = new HttpClient(handler);
         var commands = new List<string>();
         var snapshots = new List<ShellRuntimeStatus>();
@@ -392,8 +394,8 @@ public sealed class AiConversationWorkflowTests
             Assert.Equal(new[] { 2, 4, 2, 3 }[index], messages.Length);
         }
         Assert.Equal(2, snapshots.Count);
-        Assert.Equal(1, snapshots[0].MemoryCount);
-        Assert.InRange(snapshots[0].MemoryTokens, 1, 800);
+        Assert.Equal(0, snapshots[0].MemoryCount);
+        Assert.Equal(0, snapshots[0].MemoryTokens);
         Assert.Equal(0, snapshots[^1].MemoryCount);
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories;"));
         Assert.Equal(8L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests;"));

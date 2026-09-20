@@ -16,6 +16,7 @@ public sealed class AuthorizedCommandWorkflowTests
     {
         using var persistence = new RegressionFixture();
         await persistence.Database.InitializeAsync(default);
+        await persistence.Audit.StartSessionAsync("prepared-output", "test", AppSettings.Default, null, default);
         const string command = "Write-Output 'password=synthetic-preview'";
         var raw = new CommandExecutionResult(command, 0, "password=synthetic-output " + new string('x', 200),
             "safe error", false, false, 5);

@@ -64,13 +64,13 @@ See [what is saved and shared](docs/PRIVACY.md) for the details. The app is MIT-
 
 ## Meet `hm`
 
-`hm` means **help me**. Start with a question:
+`hm` means **help me**. It is the front door to every PromptMeUp feature: start with a question, open a chat, manage memories, adjust setup, or ask for help with a command, tool, error, file, or script. Start with a question:
 
 ```powershell
 hm "How do I undo my last local commit without losing my changes?"
 ```
 
-Read the answer, ask a follow-up, or take a closer look at a suggested command. Nothing runs automatically. You can say no to a command and keep chatting.
+Read the answer, ask a follow-up, or take a closer look at a suggested command. In direct mode, an eligible command runs only after its five-second countdown; press Esc or Ctrl+C to cancel it. You can also turn direct mode off in setup and approve commands manually.
 
 Each menu choice has a number starting at **0**: with up to ten choices, press its digit to select it immediately; with more choices, type the number and press Enter. Selecting a command opens its exact preview and risk assessment, where you still decide whether to authorize it. If the AI suggests no commands, a single question offers **Finish here** or **Continue in chat**, while an ongoing chat goes straight back to the message prompt.
 
@@ -207,13 +207,15 @@ Created by **Umberto Giacobbi**. Thanks to everyone who contributes and to the p
 ## More from MeUp
 
 <p align="center">
-  <img src="docs/assets/meup/promptmeup-family-v1.png" alt="PromptMeUp concept illustration in the shared MeUp style" width="720" />
+  <img src="docs/assets/meup/promptmeup-mark-v1.png" alt="PromptMeUp brand mark: a terminal prompt and guiding spark" width="132" />
 </p>
 
-*Concept artwork, not an app screenshot. [Visual style and image credits](docs/assets/meup/README.md).*
+<p align="center">
+  <a href="https://github.com/umbertotechnopreneur/MailMeUp"><strong>MailMeUp</strong></a> · Connect your inboxes to your AI assistant.<br />
+  <a href="https://github.com/umbertotechnopreneur/PromptMeUp"><strong>PromptMeUp</strong></a> · Describe your task. Get the command.<br />
+  <a href="https://github.com/umbertotechnopreneur/TrackMeUp"><strong>TrackMeUp</strong></a> · Track your time. Find what you worked on.
+</p>
 
-- **[MailMeUp](https://github.com/umbertotechnopreneur/MailMeUp)** — Connect your inboxes to your AI assistant.
-- **[PromptMeUp](https://github.com/umbertotechnopreneur/PromptMeUp)** — Describe your task. Get the command.
-- **[TrackMeUp](https://github.com/umbertotechnopreneur/TrackMeUp)** — Track your time. Find what you worked on.
+<p align="center"><sub>Brand mark, not an app icon. <a href="docs/assets/meup/README.md">Visual style and image credits</a>.</sub></p>
 
-Built by [Umberto Giacobbi](https://umbertogiacobbi.biz/), with help from contributors.
+<p align="center">Built by <a href="https://umbertogiacobbi.biz/">Umberto Giacobbi</a>, with help from contributors.</p>

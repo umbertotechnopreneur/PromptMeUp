@@ -79,12 +79,38 @@ internal sealed class RegressionFixture : IDisposable
 
     /// <summary>Builds a local Responses envelope with usage and structured assistant content.</summary>
     internal static string ResponseJson(string text = "Answer", long inputTokens = 20, string model = "gpt-5.6-terra") =>
+        StructuredResponseJson(text, [], inputTokens, model);
+
+    /// <summary>Builds a local Responses envelope with strict command suggestions for workflow tests.</summary>
+    internal static string StructuredResponseJson(
+        string text,
+        IReadOnlyList<SuggestedCommand> commands,
+        long inputTokens = 20,
+        string model = "gpt-5.6-terra") =>
         JsonSerializer.Serialize(new
         {
             id = "synthetic-response",
             model,
             status = "completed",
-            output = new[] { new { type = "message", content = new[] { new { type = "output_text", text = JsonSerializer.Serialize(new { answer_markdown = text, commands = Array.Empty<object>() }) } } } },
+            output = new[]
+            {
+                new
+                {
+                    type = "message",
+                    content = new[]
+                    {
+                        new
+                        {
+                            type = "output_text",
+                            text = JsonSerializer.Serialize(new
+                            {
+                                answer_markdown = text,
+                                commands = commands.Select(command => new { label = command.Label, command = command.Command })
+                            })
+                        }
+                    }
+                }
+            },
             usage = new { input_tokens = inputTokens, output_tokens = 1, total_tokens = inputTokens + 1 }
         });
 
