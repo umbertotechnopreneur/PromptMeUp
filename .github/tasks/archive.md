@@ -2,6 +2,14 @@
 
 This archive tracks completed development tasks for reference and review.
 
+## 2026-09-20 — Install the emoji-spacing and banner Debug update
+
+- Published source commit `ef06355` for Windows x64 in Debug, including the emoji-spacing fixes and localized welcome/farewell copy. Signed local MSIX `0.1.5.25` with the existing current-user certificate and updated the installed app from `0.1.5.24`, preserving package identity, application data, settings, certificate trust, and PATH.
+- Verified Debug assembly metadata and source revision, a valid package signature, healthy registration, all 320 installed payload file hashes, and the `hm.exe` execution alias pointing to the new version. No running app needed to be closed.
+- Preserved the signed package and installation verification record under ignored `artifacts/msix/banner-ef06355-debug`. Cleaned matching Debug/runtime output; recursive deletion of temporary publish and payload directories was blocked by automatic approval review and remains tracked separately.
+
+Validation: Debug publication, package signing, installation, and payload verification passed. No automated tests, CLI smoke tests, application launch, live AI calls, public uploads, or release tags were requested or performed.
+
 ## 2026-09-19 — Refine terminal emoji spacing and welcome/farewell banners
 
 - Explicitly select emoji presentation for the information, settings, and safety symbols in the shared icon helper, keeping the existing single trailing space and ASCII fallbacks. This covers notices, active-skill messages, and help navigation without changing translations.
