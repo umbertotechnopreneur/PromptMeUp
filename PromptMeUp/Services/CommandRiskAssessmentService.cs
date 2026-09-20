@@ -57,7 +57,8 @@ public sealed partial class CommandRiskAssessmentService : ICommandRiskAssessmen
         {
             var ai = await _openAi.AssessCommandAsync(_redactor.Redact(command), settings, language, cancellationToken).ConfigureAwait(false);
             var score = Math.Max(local.Score, ai.Score);
-            var level = ScoreToLevel(score);
+            // A high severity label must retain its veto even when the AI returns a lower numeric score.
+            var level = (CommandRiskLevel)Math.Max((int)ScoreToLevel(score), Math.Max((int)local.Level, (int)ai.Level));
             var advisory = local.Score > ai.Score
                 ? Translate(language, "Risk.LocalWins")
                 : Translate(language, "Risk.Advisory");

@@ -76,6 +76,11 @@ public sealed class HelpView(
                     Example = $"hm --query \"{text.Text("Help.ExamplePrompt")}\"",
                     Arguments = [new($"\"{text.Text("Help.ExamplePrompt")}\"", text.Text("Help.Argument.Question"))]
                 },
+                new("--direct <request>", text.Text("Direct.Help"))
+                {
+                    Example = "hm --direct \"git status\"",
+                    Arguments = [new("\"git status\"", text.Text("Help.Argument.Question"))]
+                },
                 new("--diagnose [--file <path>]", text.Text("Diagnose.Help"))
                 {
                     Example = $"hm --diagnose \"{text.Text("Help.Browse.DiagnoseExample")}\"",

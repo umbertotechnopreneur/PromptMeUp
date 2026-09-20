@@ -117,6 +117,9 @@ public sealed class FullscreenSetupView
                 value => draft.Settings = draft.Settings with { AiEnabled = value })
         };
         ai.AddRange(CreateModelFields(draft));
+        ai.Add(Toggle("Direct.Setting", () => draft.Settings.DirectModeEnabled,
+            value => draft.Settings = draft.Settings with { DirectModeEnabled = value }) with
+        { HelpKey = "Direct.SettingHelp" });
         ai.Add(Toggle("Setup.CommandReview", () => draft.Settings.ReviewCommandsWithAi,
             value => draft.Settings = draft.Settings with { ReviewCommandsWithAi = value }));
         ai.Add(Toggle("Setup.PromptCaching", () => draft.Settings.PromptCachingEnabled,

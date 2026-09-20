@@ -1,5 +1,7 @@
 ## Task
 
+- [ ] Remove `artifacts/msix/direct-20260921-debug/publish` and `artifacts/msix/direct-20260921-debug/package/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.
+
 - [ ] Remove `artifacts/msix/banner-ef06355-debug-publish` and `artifacts/msix/banner-ef06355-debug/payload` while preserving the signed MSIX and installation verification record. Installation and standard .NET cleanup succeeded; automatic approval review blocked recursive directory deletion.
 
 - [ ] Remove `artifacts/msix/chat-68142c7-debug-publish` and `artifacts/msix/chat-68142c7-debug/payload` while preserving the signed MSIX and installation verification record. Installation and standard .NET cleanup succeeded; automatic approval review blocked recursive directory deletion.

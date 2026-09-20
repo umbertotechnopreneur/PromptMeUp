@@ -396,16 +396,18 @@ public sealed class AuthorizedCommandWorkflowTests
 
         public CommandExecutionResult? RenderedResult { get; private set; }
 
-        /// <summary>Returns an execution capability only when the fixture is configured to approve.</summary>
-        public ApprovedCommand? PreviewAndAuthorize(string command, CommandRiskAssessment assessment)
+        /// <summary>Records the unredacted command that precedes either authorization mode.</summary>
+        public void RenderPreview(string command, CommandRiskAssessment assessment) => PreviewedCommand = command;
+
+        /// <summary>Returns the configured authorization decision without terminal input.</summary>
+        public Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken)
         {
-            PreviewedCommand = command;
             if (_cancelAuthorization)
             {
                 throw new InteractiveFlowCanceledException();
             }
 
-            return _authorized ? ApprovedCommand.Create(command, assessment) : null;
+            return Task.FromResult(_authorized);
         }
 
         /// <summary>Records rendering of the fixed execution result.</summary>

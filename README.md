@@ -173,7 +173,9 @@ On the experimental branch, you can try [skills and reviewed learning](docs/EXPE
 
 ## Before you run a command
 
-Before anything runs, `hm` checks the command on your machine and shows you the exact text and possible risks. You can also turn on an extra AI review. You make the final decision, and each approval is for one command and lasts for a limited time.
+Direct mode is on by default for questions and chat. Before a command runs, `hm` shows its exact text, checks the risk locally and with AI, then counts down for five seconds. Press Enter to run now, or Esc or Ctrl+C to cancel. High or critical risk and failed AI reviews block execution. The result goes back to the AI for analysis before any next command is reviewed.
+
+For manual confirmation, open `hm --setup` and turn off **Direct execution (5-second countdown)** in **AI**. `hm --direct "Show the last ten commits"` enables it for one session without changing your saved preference. See the [direct-mode reference](docs/CLI_REFERENCE.md#use-direct-execution) for details. The session summary appears at exit, on `/status`, or when operating context reaches 80%.
 
 Approved commands run through PowerShell with your user account's permissions. They have a time limit and a limit on how much output `hm` captures, but they can still change your real files and system settings. They don't run in an isolated test environment.
 

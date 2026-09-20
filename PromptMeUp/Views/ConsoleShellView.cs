@@ -329,7 +329,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     }
 
     /// <summary>Identifies invocations that benefit from showing the selected AI model before work begins.</summary>
-    private static bool IsAiInvocation(string command) => command is "main" or "query" or "chat" or "test-ai";
+    private static bool IsAiInvocation(string command) => command is "main" or "query" or "direct" or "chat" or "test-ai";
 
     /// <summary>Renders compact metric rows that adapt to the available terminal width.</summary>
     private void RenderSessionSnapshot(string header, IReadOnlyList<CompactTerminalMetric> metrics, int preferredPairs = 4, int? firstLabelWidth = null)

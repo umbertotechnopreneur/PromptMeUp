@@ -12,6 +12,7 @@ public enum AppCommand
     Theme,
     Status,
     Query,
+    Direct,
     Diagnose,
     Script,
     Plan,

@@ -39,6 +39,7 @@ to a file, this follow-up menu doesn't open.
 | `--remember <text>` | `/remember <text>` | Saves a note for future conversations. |
 | `--forget <id or description>` | `/forget <id or description>` | Finds a saved note and asks before deleting it. Descriptions may use AI to find matches. |
 | `--memories` | — | Opens the local memory manager to view, create, edit, or delete saved notes. |
+| `--direct <request>` | — | Forces direct execution for this session: risk review, five-second countdown, execution, and result analysis. Enabled by default; can be disabled in setup. |
 | `--diagnose [text]` | `--file <log>` or stdin | Explains an error or log excerpt and suggests what to check next. |
 | `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a PowerShell script for you to review and save. |
 | `--plan <goal>` | `--plan --resume <id>` | Breaks a task into steps you can approve, check, and resume. |
@@ -364,12 +365,63 @@ PromptMeUp helps with terminal tasks. It doesn't generate images or write, edit,
 
 ## Keep a conversation moving
 
+Direct execution is enabled by default for questions and chat. To switch back to
+an approval prompt for each command, open `hm --setup`, select **AI**, turn off
+**Direct execution (5-second countdown)**, and save. The setting is also available
+in `hm --ai-settings`.
+
+### Use direct execution
+
+```powershell
+hm --direct "Show the last ten commits in this repository"
+```
+
+`--direct` forces direct execution for this invocation and any chat you continue
+from it, even when the saved setting is off. It does not change your saved preference.
+Use it with one non-empty request; do not combine it with another main command.
+
+Each proposed command goes through the same pipeline:
+
+1. Run the deterministic local risk check and an AI risk review. The AI review is
+   required in direct mode, even if optional command review is off in settings.
+2. Show the exact command, risk assessment, and output-sharing notice. High,
+   critical, or unknown risk blocks execution. An unavailable or invalid AI review
+   also blocks execution; a low score never overrides a high severity label.
+3. For an eligible command, show a progress bar counting down from five seconds.
+   **Enter** runs it immediately. **Esc** cancels the current command chain;
+   **Ctrl+C** cancels the application. The countdown remains active with `--no-animation`.
+4. Run the command with the existing timeout and output limits, then send bounded,
+   redacted output back to the AI to analyze the result in the same conversation.
+   Any next command must pass its own review and countdown.
+
+A single command proposal goes straight to review. If the AI offers multiple
+alternatives, choose one first; there is no extra execution confirmation afterward.
+When the answer needs clarification or has no command, the usual finish/continue
+choices remain available. A chain stops after eight executed commands and returns
+to chat so you can review the result before sending another request.
+
+Direct mode needs an interactive terminal. Turn it off in setup before redirecting
+ordinary question output. `--yes` does not authorize commands or bypass a risk block.
+Plans, recipes, and skill actions retain their existing individual approvals.
+
+### Session summary
+
+The session summary is hidden by default between answers and commands. It appears
+once when the question, command chain, or chat ends. `/status` and `/context` show it
+on demand. You can still ask to show it after each answer.
+
+At **80% of the operating context budget**, the summary appears even if you asked
+to hide it. The threshold uses the conversation's effective budget, not the model's
+maximum context window. Automatic warnings stop when usage falls below 80%.
+
+### Chat controls
+
 Opening chat or starting a question shows a compact reminder of the saved-memory
 commands. The reminder appears once, including when a question continues into chat.
 
 | Control | Behavior |
 | --- | --- |
-| `/run <command>` | Checks risks locally and, optionally, with AI. Shows the exact command and asks before running it. Captured output can be shared in a follow-up. |
+| `/run <command>` | Shows the exact command and checks risks. Uses the active session's direct countdown or manual approval. Captured output is analyzed in a follow-up. |
 | `/remember <text>` | Saves a note for future conversations. |
 | `/memories` | Lists saved notes and their IDs. |
 | `/forget <id>` | Deletes a saved note from future selection. |
@@ -380,7 +432,7 @@ commands. The reminder appears once, including when a question continues into ch
 | `Esc` | Closes help or cancels the current interactive command without saving unfinished settings. |
 | `Ctrl+C` | Cancels the whole application and returns exit code `130`. |
 
-You must answer the approval prompt in a live terminal for every `/run` command.
+Every `/run` command requires a live terminal and the active session's authorization gate.
 
 ### Remember something for next time
 

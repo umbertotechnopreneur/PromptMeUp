@@ -125,7 +125,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                    custom_instruction, include_windows_location, review_commands_with_ai,
                    prompt_caching_enabled, max_conversation_turns, max_message_characters,
                    max_context_percent, max_command_output_characters, command_timeout_seconds,
-                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme, preferred_name
+                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme, preferred_name, direct_mode_enabled
             FROM app_settings
             WHERE id = 1;
             """;
@@ -158,7 +158,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
         {
             ContextTokenBudget = reader.GetInt32(19),
             Theme = reader.GetString(20),
-            PreferredName = PreferredNamePolicy.Normalize(reader.GetString(21), _redactor)
+            PreferredName = PreferredNamePolicy.Normalize(reader.GetString(21), _redactor),
+            DirectModeEnabled = reader.GetInt32(22) == 1
         };
         var normalizedPreamble = _promptProtection.Protect(settings.CustomInstruction).SanitizedText;
         var safePreamble = _redactor.Redact(normalizedPreamble);
@@ -200,6 +201,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                     custom_instruction = $customInstruction,
                     include_windows_location = $includeLocation,
                     review_commands_with_ai = $reviewCommandsWithAi,
+                    direct_mode_enabled = $directModeEnabled,
                     prompt_caching_enabled = $promptCachingEnabled,
                     max_conversation_turns = $maxConversationTurns,
                     max_message_characters = $maxMessageCharacters,
@@ -224,6 +226,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.Parameters.AddWithValue("$customInstruction", protectedPreamble.SanitizedText);
             command.Parameters.AddWithValue("$includeLocation", settings.IncludeWindowsLocation ? 1 : 0);
             command.Parameters.AddWithValue("$reviewCommandsWithAi", settings.ReviewCommandsWithAi ? 1 : 0);
+            command.Parameters.AddWithValue("$directModeEnabled", settings.DirectModeEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$promptCachingEnabled", settings.PromptCachingEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$maxConversationTurns", settings.MaxConversationTurns);
             command.Parameters.AddWithValue("$maxMessageCharacters", settings.MaxMessageCharacters);
@@ -737,6 +740,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 await MigrateGlobalMemoriesAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
             await EnsurePreferredNameColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            if (currentVersion < 5)
+            {
+                await EnsureDirectModeColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
             {
@@ -817,6 +824,22 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 ALTER TABLE app_settings ADD COLUMN preferred_name TEXT NOT NULL DEFAULT ''
                     CHECK (length(preferred_name) <= 80);
                 """;
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Adds the owner's default-on direct preference atomically without replacing saved local data.</summary>
+    private static async Task EnsureDirectModeColumnAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'direct_mode_enabled';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            command.CommandText = "ALTER TABLE app_settings ADD COLUMN direct_mode_enabled INTEGER NOT NULL DEFAULT 1 CHECK (direct_mode_enabled IN (0, 1));";
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
     }

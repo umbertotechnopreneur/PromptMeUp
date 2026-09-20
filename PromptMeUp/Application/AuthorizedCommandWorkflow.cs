@@ -12,13 +12,15 @@ public interface IAuthorizedCommandWorkflow
         string sessionId,
         string command,
         AppSettings settings,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm);
 
     Task<string?> RunAsync(
         string sessionId,
         string command,
         AppSettings settings,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm);
 }
 
 public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
@@ -55,61 +57,80 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
         string sessionId,
         string command,
         AppSettings settings,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm)
     {
-        var result = await RunForResultAsync(sessionId, command, settings, cancellationToken).ConfigureAwait(false);
+        var result = await RunForResultAsync(sessionId, command, settings, cancellationToken, executionMode).ConfigureAwait(false);
         return result is null ? null : CreateFollowUp(result, settings);
     }
 
-    /// <summary>Returns the typed outcome only after the existing exact preview and individual authorization.</summary>
+    /// <summary>Shares assessment, preview, audit, execution and output handling across both authorization modes.</summary>
     public async Task<CommandExecutionResult?> RunForResultAsync(
         string sessionId,
         string command,
         AppSettings settings,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(settings);
+        if (!Enum.IsDefined(executionMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(executionMode));
+        }
+        cancellationToken.ThrowIfCancellationRequested();
         var assessment = await _riskAssessment.AssessAsync(
             command,
-            settings.ReviewCommandsWithAi,
+            executionMode == CommandExecutionMode.Direct || settings.ReviewCommandsWithAi,
             settings,
             _text.Language,
             cancellationToken).ConfigureAwait(false);
         await _audit.AppendSessionEventAsync(
             sessionId,
             "command_preview",
-            new { command, assessment },
+            new { command, assessment, executionMode },
             cancellationToken).ConfigureAwait(false);
-        ApprovedCommand? approved;
+        _commandView.RenderPreview(command, assessment);
+        if (executionMode == CommandExecutionMode.Direct && !assessment.CanRunDirect)
+        {
+            _shell.RenderWarning(_text.Text(assessment.UsedAi ? "Direct.Blocked" : "Direct.ReviewRequired"));
+            await _audit.RecordAsync("command_authorization", "blocked", sessionId,
+                new { command, assessment.Score, assessment.Level, executionMode }, cancellationToken).ConfigureAwait(false);
+            return null;
+        }
+
+        bool authorized;
         try
         {
-            approved = _commandView.PreviewAndAuthorize(command, assessment);
+            authorized = await _commandView.AuthorizeAsync(executionMode, cancellationToken).ConfigureAwait(false);
         }
         catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _shell.RenderWarning(_text.Text("Command.Cancelled"));
-            approved = null;
+            authorized = false;
         }
 
-        if (approved is null)
+        if (!authorized)
         {
             await _audit.RecordAsync(
                 "command_authorization",
                 "denied",
                 sessionId,
-                new { command, assessment.Score },
+                new { command, assessment.Score, executionMode },
                 cancellationToken).ConfigureAwait(false);
             return null;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         await _audit.RecordAsync(
             "command_authorization",
             "approved",
             sessionId,
-            new { command, assessment.Score },
+            new { command, assessment.Score, executionMode },
             cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var approved = ApprovedCommand.Create(command, assessment);
         var result = await _shell.RunWithStatusAsync(
             _text.Text("Command.Running"),
             () => _commandExecution.ExecuteAsync(

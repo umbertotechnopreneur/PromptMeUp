@@ -16,7 +16,8 @@ public interface IAiConversationWorkflow
         AppSettings settings,
         bool renderQuery,
         CancellationToken cancellationToken,
-        string promptId = "query-system");
+        string promptId = "query-system",
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm);
 
     Task RunChatAsync(AppSettings settings, CancellationToken cancellationToken);
 
@@ -98,35 +99,47 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         AppSettings settings,
         bool renderQuery,
         CancellationToken cancellationToken,
-        string promptId = "query-system")
+        string promptId = "query-system",
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         ArgumentNullException.ThrowIfNull(settings);
-        var memory = new ConversationState(_memoryService.Create(settings));
+        var memory = new ConversationState(_memoryService.Create(settings)) { ExecutionMode = executionMode };
         await using var session = await AuditSessionScope.StartAsync(
-            _audit, promptId, settings, new { invocation = promptId }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
-        if (renderQuery)
+            _audit, promptId, settings, new { invocation = promptId, executionMode }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
+        try
         {
-            _chatView.RenderMemoryHint();
-            _chatView.RenderUser(query);
+            if (executionMode == CommandExecutionMode.Direct)
+            {
+                _shell.RenderNotice(_text.Text("Direct.Active"));
+            }
+            if (renderQuery)
+            {
+                _chatView.RenderMemoryHint();
+                _chatView.RenderUser(query);
+            }
+            var action = await SendAndOfferActionsAsync(
+                session.Id,
+                query,
+                memory,
+                settings,
+                offerChatContinuation: IsInteractive,
+                promptId,
+                cancellationToken,
+                captureObservation: promptId == "query-system").ConfigureAwait(false);
+            if (action.StartChat)
+            {
+                _chatView.RenderIntro(includeMemoryHints: !renderQuery);
+                session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                session.Outcome = AuditSessionOutcome.Completed;
+            }
         }
-        var action = await SendAndOfferActionsAsync(
-            session.Id,
-            query,
-            memory,
-            settings,
-            offerChatContinuation: IsInteractive,
-            promptId,
-            cancellationToken,
-            captureObservation: promptId == "query-system").ConfigureAwait(false);
-        if (action.StartChat)
+        finally
         {
-            _chatView.RenderIntro(includeMemoryHints: !renderQuery);
-            session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            session.Outcome = AuditSessionOutcome.Completed;
+            RenderFinalSnapshot(memory, settings);
         }
     }
 
@@ -134,21 +147,35 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     public async Task RunChatAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        var memory = new ConversationState(_memoryService.Create(settings));
+        var memory = new ConversationState(_memoryService.Create(settings))
+        {
+            ExecutionMode = settings.DirectModeEnabled ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm
+        };
         await using var session = await AuditSessionScope.StartAsync(
             _audit, "chat", settings, new { invocation = "chat" }, AuditSessionOutcome.Cancelled, cancellationToken).ConfigureAwait(false);
-        _chatView.RenderIntro();
-        if (_experiments is not null)
+        try
         {
-            var experiments = await _experiments.SettingsAsync(cancellationToken).ConfigureAwait(false);
-            var lastRun = await _experiments.GetAsync("last-heartbeat", cancellationToken).ConfigureAwait(false);
-            if (experiments.Enabled && experiments.MaintenanceReminder
-                && (lastRun is null || !DateTimeOffset.TryParse(lastRun, out var last) || DateTimeOffset.UtcNow - last > TimeSpan.FromDays(7)))
+            _chatView.RenderIntro();
+            if (memory.ExecutionMode == CommandExecutionMode.Direct)
             {
-                _shell.RenderNotice(_text.Text("Lab.Due"));
+                _shell.RenderNotice(_text.Text("Direct.Active"));
             }
+            if (_experiments is not null)
+            {
+                var experiments = await _experiments.SettingsAsync(cancellationToken).ConfigureAwait(false);
+                var lastRun = await _experiments.GetAsync("last-heartbeat", cancellationToken).ConfigureAwait(false);
+                if (experiments.Enabled && experiments.MaintenanceReminder
+                    && (lastRun is null || !DateTimeOffset.TryParse(lastRun, out var last) || DateTimeOffset.UtcNow - last > TimeSpan.FromDays(7)))
+                {
+                    _shell.RenderNotice(_text.Text("Lab.Due"));
+                }
+            }
+            session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
         }
-        session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
+        finally
+        {
+            RenderFinalSnapshot(memory, settings);
+        }
     }
 
     /// <summary>Runs user chat turns until exit while keeping every command path behind the authorization workflow.</summary>
@@ -214,7 +241,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                         sessionId,
                         command,
                         settings,
-                        cancellationToken).ConfigureAwait(false);
+                        cancellationToken,
+                        memory.ExecutionMode).ConfigureAwait(false);
                     if (commandFollowUp is not null)
                     {
                         await SendAndOfferActionsAsync(
@@ -271,7 +299,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         return action;
     }
 
-    /// <summary>Presents model-suggested commands as inert choices and optionally converts a one-shot answer into chat.</summary>
+    /// <summary>Shares command selection, execution and result analysis while direct mode replaces single-command selection with a countdown.</summary>
     private async Task<PostResponseAction> OfferSuggestedActionsAsync(
         string sessionId,
         AiResponse response,
@@ -284,15 +312,18 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
-        if (!IsInteractive || ((!memory.ShowCommandSuggestions || response.SuggestedCommands.Count == 0) && !offerChatContinuation))
+        if ((!IsInteractive && memory.ExecutionMode != CommandExecutionMode.Direct)
+            || ((!memory.ShowCommandSuggestions || response.SuggestedCommands.Count == 0) && !offerChatContinuation))
         {
             return new PostResponseAction(false, runningCost);
         }
 
         var activeResponse = response;
         var canStartChat = offerChatContinuation;
+        var directCommands = 0;
         while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<SuggestedCommand> suggestions = memory.ShowCommandSuggestions ? activeResponse.SuggestedCommands : [];
             if (suggestions.Count == 0 && !canStartChat)
             {
@@ -304,7 +335,14 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 "command_suggestions_presented",
                 new { count = suggestions.Count, canStartChat },
                 cancellationToken).ConfigureAwait(false);
-            var selection = _suggestionView.Select(suggestions, canStartChat);
+            if (memory.ExecutionMode == CommandExecutionMode.Direct && suggestions.Count > 0 && directCommands >= 8)
+            {
+                _shell.RenderWarning(_text.Text("Direct.StepLimit"));
+                return new PostResponseAction(offerChatContinuation, runningCost);
+            }
+            var selection = memory.ExecutionMode == CommandExecutionMode.Direct && suggestions.Count == 1
+                ? new CommandSuggestionDecision(CommandSuggestionAction.SelectCommand, suggestions[0])
+                : _suggestionView.Select(suggestions, canStartChat);
             switch (selection.Action)
             {
                 case CommandSuggestionAction.DoNotExecute:
@@ -332,11 +370,13 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                         sessionId,
                         command.Command,
                         settings,
-                        cancellationToken).ConfigureAwait(false);
+                        cancellationToken,
+                        memory.ExecutionMode).ConfigureAwait(false);
                     if (followUp is null)
                     {
                         return new PostResponseAction(false, runningCost);
                     }
+                    directCommands++;
 
                     var nextTurn = await SendTurnAsync(
                         sessionId,
@@ -825,11 +865,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         var status = memory.LastResponse is null
             ? ShellRuntimeStatus.FromSettings(settings)
             : CreateTurnSnapshot(memory.LastResponse, settings, runningCost);
-        if (!memory.ShowSessionSummary && !force)
-        {
-            return;
-        }
-        _shell.RenderRuntimeStatus(status with
+        memory.Snapshot = status with
         {
             RunningCostUsd = recordedCost ?? runningCost,
             SessionCostKnown = recordedCost.HasValue,
@@ -846,8 +882,20 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             SessionInputTokens = usage.InputTokens,
             SessionOutputTokens = usage.OutputTokens,
             HasSessionUsage = true
-        });
+        };
+        if (memory.ShowSessionSummary || force || IsContextWarning(memory.Snapshot))
+        {
+            _shell.RenderRuntimeStatus(memory.Snapshot);
+        }
     }
+
+    /// <summary>Overrides hidden summaries at eighty percent of the effective operating context budget.</summary>
+    internal static bool IsContextWarning(ShellRuntimeStatus status) => status.ContextBudgetTokens > 0
+        && status.ActiveContextTokens is { } used && (decimal)used * 100 >= (decimal)status.ContextBudgetTokens * 80;
+
+    /// <summary>Shows the last complete local snapshot once at exit, including cancellation, without starting more work.</summary>
+    private void RenderFinalSnapshot(ConversationState memory, AppSettings settings) =>
+        _shell.RenderRuntimeStatus(memory.Snapshot ?? ShellRuntimeStatus.FromSettings(settings));
 
     /// <summary>Prepends recalled data exactly once while keeping the latest user message last for provider accounting.</summary>
     private static IReadOnlyList<ChatMessage> CombineMessages(MemoryEnvelope envelope, IReadOnlyList<ChatMessage> messages) =>
@@ -857,13 +905,17 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     {
         public ConversationMemory Memory { get; } = memory;
 
+        public CommandExecutionMode ExecutionMode { get; init; }
+
         public AiResponse? LastResponse { get; set; }
 
         public decimal RunningCost { get; set; }
 
         public AppGuideContext Guide { get; set; } = AppGuideContext.Empty;
 
-        public bool ShowSessionSummary { get; set; } = true;
+        public ShellRuntimeStatus? Snapshot { get; set; }
+
+        public bool ShowSessionSummary { get; set; }
 
         public bool ShowCommandSuggestions { get; set; } = true;
     }

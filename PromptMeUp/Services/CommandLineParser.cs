@@ -49,6 +49,16 @@ public sealed class CommandLineParser : ICommandLineParser
             var argument = args[index];
             switch (argument.ToLowerInvariant())
             {
+                case "--direct":
+                    if (command == AppCommand.Direct)
+                    {
+                        return Failure("Direct.Usage");
+                    }
+                    if (!TrySelect(AppCommand.Direct, ref command, ref commandWasSelected, out var directError))
+                    {
+                        return FailureMessage(directError);
+                    }
+                    break;
                 case "--skills" or "--learning" or "--proposals" or "--dream" or "--heartbeat":
                     var experimentalCommand = argument.ToLowerInvariant() switch
                     {
@@ -375,12 +385,12 @@ public sealed class CommandLineParser : ICommandLineParser
         string? query = null;
         if (queryParts.Count > 0)
         {
-            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan or AppCommand.Remember or AppCommand.Forget))
+            if (commandWasSelected && command is not (AppCommand.Query or AppCommand.Direct or AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan or AppCommand.Remember or AppCommand.Forget))
             {
                 return Failure("Cli.PositionalConflict");
             }
 
-            command = command is AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan or AppCommand.Remember or AppCommand.Forget ? command : AppCommand.Query;
+            command = command is AppCommand.Direct or AppCommand.Diagnose or AppCommand.Script or AppCommand.Plan or AppCommand.Remember or AppCommand.Forget ? command : AppCommand.Query;
             commandWasSelected = true;
             query = string.Join(' ', queryParts).Trim();
         }
@@ -388,6 +398,11 @@ public sealed class CommandLineParser : ICommandLineParser
         if (command == AppCommand.Query && string.IsNullOrWhiteSpace(query))
         {
             return Failure("Cli.QueryText");
+        }
+
+        if (command == AppCommand.Direct && string.IsNullOrWhiteSpace(query))
+        {
+            return Failure("Direct.Usage");
         }
 
         if (query is not null && !string.Equals(query, new SensitiveDataRedactor().Redact(query), StringComparison.Ordinal))

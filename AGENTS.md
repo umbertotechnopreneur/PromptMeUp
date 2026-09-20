@@ -51,6 +51,9 @@ These instructions apply to every change in this repository.
 
 ## Code and documentation
 
+- PromptMeUp is in pre-production. Backward compatibility is not required: update affected callers and contracts directly instead of adding compatibility wrappers or legacy paths. Reuse shared workflows and helpers; keep differences between normal and direct command approval in their interaction views.
+- `--direct` requires local risk scoring and a successful AI review. High or critical risk must block execution. Preview each eligible command and use a five-second cancellable countdown instead of a confirmation prompt, then reuse the normal output-analysis and conversation flow.
+- Direct execution is enabled by default for questions and chat. Keep its persisted opt-out in `hm --setup`; `--direct` overrides that preference for the current session. Keep the session summary hidden by default during work, show it at exit, and override hiding when operating context reaches 80 percent. Explicit `/status` and `/context` requests must still show it.
 - Add a brief XML `<summary>` to every C# implementation method, including constructors, tests, and private helpers.
 - Add small inline comments only where a complex or non-obvious algorithm benefits from a logic hint.
 - Use `ILogger<T>` in application code; keep Serilog configuration in the composition root.

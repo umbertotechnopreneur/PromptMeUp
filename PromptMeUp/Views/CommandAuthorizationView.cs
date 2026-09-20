@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 using PromptMeUp.Models;
 using PromptMeUp.Services;
@@ -8,7 +8,9 @@ namespace PromptMeUp.Views;
 
 public interface ICommandAuthorizationView
 {
-    ApprovedCommand? PreviewAndAuthorize(string command, CommandRiskAssessment assessment);
+    void RenderPreview(string command, CommandRiskAssessment assessment);
+
+    Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken);
 
     void RenderExecutionResult(CommandExecutionResult result);
 }
@@ -33,8 +35,8 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
     }
 
-    /// <summary>Renders exact command text, advisory risk, and data notice before asking for explicit authorization.</summary>
-    public ApprovedCommand? PreviewAndAuthorize(string command, CommandRiskAssessment assessment)
+    /// <summary>Renders the same exact command, risk assessment and output notice for both interaction views.</summary>
+    public void RenderPreview(string command, CommandRiskAssessment assessment)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(assessment);
@@ -58,6 +60,23 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
 
         _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.SendOutput"))}[/]");
         _console.WriteLine();
+    }
+
+    /// <summary>Chooses the normal confirmation or direct countdown without performing execution or risk review.</summary>
+    public Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return executionMode switch
+        {
+            CommandExecutionMode.Confirm => Task.FromResult(Confirm()),
+            CommandExecutionMode.Direct => new CommandCountdownView(_console, _text).WaitAsync(cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(executionMode))
+        };
+    }
+
+    /// <summary>Asks for explicit approval with a default-negative prompt in the normal view.</summary>
+    private bool Confirm()
+    {
         var authorized = _console.Prompt(new ConfirmationPrompt(
             Markup.Escape(_text.Text("Command.Authorize")))
         {
@@ -66,10 +85,9 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         if (!authorized)
         {
             _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.Cancelled"))}[/]");
-            return null;
         }
 
-        return ApprovedCommand.Create(command, assessment);
+        return authorized;
     }
 
     /// <summary>Shows bounded stdout, stderr, timeout, and exit metadata after an authorized command finishes.</summary>

@@ -152,14 +152,16 @@ public sealed class PlanWorkflowTests : IDisposable
         public List<string> Seen { get; } = [];
 
         /// <summary>Returns deterministic outcomes while recording the exact command order.</summary>
-        public Task<CommandExecutionResult?> RunForResultAsync(string sessionId, string command, AppSettings settings, CancellationToken cancellationToken)
+        public Task<CommandExecutionResult?> RunForResultAsync(string sessionId, string command, AppSettings settings, CancellationToken cancellationToken,
+            CommandExecutionMode executionMode = CommandExecutionMode.Confirm)
         {
             Seen.Add(command);
             return Task.FromResult(_outcomes.Dequeue());
         }
 
         /// <summary>The plan workflow does not use AI follow-up strings.</summary>
-        public Task<string?> RunAsync(string sessionId, string command, AppSettings settings, CancellationToken cancellationToken) =>
+        public Task<string?> RunAsync(string sessionId, string command, AppSettings settings, CancellationToken cancellationToken,
+            CommandExecutionMode executionMode = CommandExecutionMode.Confirm) =>
             throw new NotSupportedException();
     }
 

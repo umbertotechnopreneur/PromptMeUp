@@ -21,7 +21,6 @@ internal static partial class UiTextCatalog
             German: "Chat-Befehle:",
             Spanish: "Comandos del chat:",
             Vietnamese: "Lệnh trò chuyện:"));
-        entries.Add("Chat.EndMessage", new("-= end =-", "-= fine =-", "-= fin =-", "-= Ende =-", "-= fin =-", "-= hết =-"));
         entries.Add("Chat.Cleared", new(
             English: "Conversation cleared.",
             Italian: "Conversazione azzerata.",
@@ -30,12 +29,12 @@ internal static partial class UiTextCatalog
             Spanish: "Conversación borrada.",
             Vietnamese: "Đã xóa hội thoại."));
         entries.Add("Chat.DisplayHint", new(
-            English: "Ask naturally to hide or show the session summary and command previews.",
-            Italian: "Puoi chiedere di nascondere o mostrare lo specchietto sessione e le anteprime dei comandi.",
-            French: "Demandez simplement de masquer ou d'afficher le résumé de session et les aperçus des commandes.",
-            German: "Bitte einfach darum, die Sitzungsübersicht und Befehlsvorschauen auszublenden oder anzuzeigen.",
-            Spanish: "Pide con tus palabras ocultar o mostrar el resumen de sesión y las vistas previas de comandos.",
-            Vietnamese: "Bạn có thể yêu cầu ẩn hoặc hiện bảng tóm tắt phiên và phần xem trước lệnh bằng lời nói tự nhiên."));
+            English: "The session summary appears at exit. Use /status to see it now, or ask to show it after each answer.",
+            Italian: "Lo specchietto sessione compare alla chiusura. Usa /status per vederlo ora, o chiedi di mostrarlo dopo ogni risposta.",
+            French: "Le résumé apparaît à la fermeture. Utilisez /status pour le consulter ou demandez-le après chaque réponse.",
+            German: "Die Sitzungsübersicht erscheint beim Beenden. Mit /status sofort anzeigen oder nach jeder Antwort anfordern.",
+            Spanish: "El resumen aparece al salir. Usa /status para verlo ahora o pide que se muestre tras cada respuesta.",
+            Vietnamese: "Bảng tóm tắt xuất hiện khi thoát. Dùng /status để xem ngay hoặc yêu cầu hiện sau mỗi câu trả lời."));
         entries.Add("Chat.MultilineHint", new(
             English: "Paste keeps line breaks. {0}send · {1}new line · {2}edit · {3}cancel.",
             Italian: "L'incolla conserva gli a capo. {0}invia · {1}a capo · {2}modifica · {3}annulla.",
@@ -153,12 +152,12 @@ internal static partial class UiTextCatalog
             "/remember <texto>",
             "/remember <văn-bản>"));
         entries.Add("Chat.Command.Run", new(
-            English: "Preview a shell command, assess its risk, then request exact authorization.",
-            Italian: "Mostra l'anteprima di un comando, ne valuta il rischio e chiede l'autorizzazione esatta.",
-            French: "Prévisualise une commande, évalue son risque puis demande une autorisation exacte.",
-            German: "Zeigt eine Befehlsvorschau, bewertet das Risiko und fragt nach exakter Freigabe.",
-            Spanish: "Previsualiza un comando, evalúa su riesgo y solicita autorización exacta.",
-            Vietnamese: "Xem trước lệnh, đánh giá rủi ro rồi yêu cầu cấp quyền chính xác."));
+            English: "Preview and check a command, then use direct countdown or manual confirmation.",
+            Italian: "Mostra e verifica un comando, poi usa il countdown direct o la conferma manuale.",
+            French: "Affiche et vérifie une commande, puis utilise le délai direct ou la confirmation manuelle.",
+            German: "Zeigt und prüft einen Befehl, dann Direkt-Countdown oder manuelle Bestätigung.",
+            Spanish: "Muestra y verifica un comando, luego usa la cuenta atrás directa o la confirmación manual.",
+            Vietnamese: "Hiện và kiểm tra lệnh, rồi đếm ngược trực tiếp hoặc xác nhận thủ công."));
         entries.Add("Chat.Command.RunSyntax", new(
             English: "/run <command>",
             Italian: "/run <comando>",

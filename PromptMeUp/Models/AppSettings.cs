@@ -29,6 +29,8 @@ public sealed record AppSettings(
 
     public string PreferredName { get; init; } = string.Empty;
 
+    public bool DirectModeEnabled { get; init; } = true;
+
     public const string DefaultEndpoint = "https://api.openai.com/v1/responses";
     public const string DefaultApiKeyVariable = "OPENAI_API_KEY";
     public const string DefaultAdminKeyVariable = "OPENAI_ADMIN_KEY";

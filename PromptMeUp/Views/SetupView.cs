@@ -62,6 +62,7 @@ public sealed class SetupView : ISetupView
             DefaultValue = current.AiEnabled
         });
         var (model, reasoning, detail) = CollectModelSettings(current);
+        var directMode = CollectDirectMode(current);
         var reviewCommands = _console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Setup.CommandReview")))
         {
             DefaultValue = current.ReviewCommandsWithAi
@@ -83,6 +84,7 @@ public sealed class SetupView : ISetupView
             ReasoningEffort = reasoning,
             OutputDetail = detail,
             ReviewCommandsWithAi = reviewCommands,
+            DirectModeEnabled = directMode,
             PromptCachingEnabled = promptCaching,
             ContextTokenBudget = contextTokenBudget,
             MaxConversationTurns = maxTurns,
@@ -150,6 +152,7 @@ public sealed class SetupView : ISetupView
             DefaultValue = current.IncludeWindowsLocation
         });
         var reviewCommands = current.ReviewCommandsWithAi;
+        var directMode = CollectDirectMode(current);
         var promptCaching = current.PromptCachingEnabled;
         if (aiEnabled)
         {
@@ -210,6 +213,7 @@ public sealed class SetupView : ISetupView
             CustomInstruction = customInstruction,
             IncludeWindowsLocation = includeLocation,
             ReviewCommandsWithAi = reviewCommands,
+            DirectModeEnabled = directMode,
             PromptCachingEnabled = promptCaching,
             MaxConversationTurns = maxTurns,
             MaxMessageCharacters = maxMessageCharacters,
@@ -456,7 +460,7 @@ public sealed class SetupView : ISetupView
         AddSummaryRow(grid, _text.Text("Setup.Custom"), string.IsNullOrWhiteSpace(settings.CustomInstruction) ? no : yes);
         AddSummaryRow(grid, _text.Text("Setup.Location"), settings.IncludeWindowsLocation ? yes : no);
         AddAiSummaryRows(grid, aiValues,
-            "Setup.CommandReview", "Setup.PromptCaching", "Setup.MaxTurns", "Setup.MaxContext",
+            "Direct.Setting", "Setup.CommandReview", "Setup.PromptCaching", "Setup.MaxTurns", "Setup.MaxContext",
             "AiSettings.ContextBudget", "Setup.MaxMessage");
         AddSummaryRow(grid, _text.Text("Setup.MaxCommandOutput"), settings.MaxCommandOutputCharacters.ToString("N0", _text.Culture));
         AddSummaryRow(grid, _text.Text("Setup.CommandTimeout"), settings.CommandTimeoutSeconds.ToString("N0", _text.Culture));
@@ -471,10 +475,20 @@ public sealed class SetupView : ISetupView
         var grid = CreateSummaryGrid();
         AddAiSummaryRows(grid, CreateAiSummaryValues(settings),
             "Setup.AiEnabled", "Setup.Model", "Setup.Reasoning", "Setup.Detail",
-            "Setup.CommandReview", "Setup.PromptCaching", "AiSettings.ContextBudget",
+            "Direct.Setting", "Setup.CommandReview", "Setup.PromptCaching", "AiSettings.ContextBudget",
             "Setup.MaxTurns", "Setup.MaxMessage", "Setup.MaxContext");
         _console.Write(grid);
         _console.WriteLine();
+    }
+
+    /// <summary>Shares the direct-mode preference and its required-review explanation across both scrolling forms.</summary>
+    private bool CollectDirectMode(AppSettings settings)
+    {
+        _shell.RenderMuted(_text.Text("Direct.SettingHelp"));
+        return _console.Prompt(new ConfirmationPrompt(Markup.Escape(_text.Text("Direct.Setting")))
+        {
+            DefaultValue = settings.DirectModeEnabled
+        });
     }
 
     /// <summary>Creates the shared borderless label/value layout for both settings summaries.</summary>
@@ -503,6 +517,7 @@ public sealed class SetupView : ISetupView
                 _ => "Setup.Balanced"
             }),
             ["Setup.CommandReview"] = settings.ReviewCommandsWithAi ? yes : no,
+            ["Direct.Setting"] = settings.DirectModeEnabled ? yes : no,
             ["Setup.PromptCaching"] = settings.PromptCachingEnabled ? yes : no,
             ["AiSettings.ContextBudget"] = settings.ContextTokenBudget.ToString("N0", _text.Culture),
             ["Setup.MaxTurns"] = settings.MaxConversationTurns.ToString("N0", _text.Culture),

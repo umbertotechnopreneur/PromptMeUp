@@ -10,7 +10,7 @@ using Spectre.Console.Rendering;
 namespace PromptMeUp.Views;
 
 /// <summary>Edits a small scrolling input area with paste boundaries and an explicit keyboard submission.</summary>
-internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions options)
+internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationService text)
 {
     private int _paintedRows;
     private (int Width, int Height) _paintedSize;
@@ -30,9 +30,8 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         _label = label;
         var hint = text.Text(
             showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
-            KeyPrefix("⏎", "Enter"), KeyPrefix("⇧ + ⏎", "Newline"), KeyPrefix("← ↑ ↓ →", "Arrows"), KeyPrefix("⎋", "Escape"));
-        console.MarkupLine($"[{TerminalTheme.FieldValue}]{Markup.Escape(hint)}[/]");
-        console.WriteLine();
+            KeyPrefix("Enter"), KeyPrefix("Newline"), KeyPrefix("Arrows"), KeyPrefix("Escape"));
+        console.MarkupLine($"[{TerminalTheme.Muted}]{hint}[/]");
         console.Cursor.Hide();
         try
         {
@@ -71,9 +70,9 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         }
     }
 
-    /// <summary>Uses a spaced key symbol or its localized name in plain-text mode.</summary>
-    private string KeyPrefix(string symbol, string key) =>
-        TerminalTheme.IconPrefix(options, symbol, text.Text("Chat.Key." + key) + ":");
+    /// <summary>Highlights readable localized key names separately from their short action descriptions.</summary>
+    private string KeyPrefix(string key) =>
+        $"[bold {TerminalTheme.Info}]{Markup.Escape(text.Text("Chat.Key." + key))}[/] ";
 
     /// <summary>Redraws only owned input rows; resizing starts a fresh area without touching earlier scrollback.</summary>
     private void Paint(ChatInputBuffer buffer, string? error, int maximumCharacters)

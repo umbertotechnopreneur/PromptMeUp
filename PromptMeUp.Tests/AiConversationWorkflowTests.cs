@@ -12,6 +12,59 @@ namespace PromptMeUp.Tests;
 
 public sealed class AiConversationWorkflowTests
 {
+    /// <summary>Runs each direct suggestion through the shared gate and sends its output back before completing with one summary.</summary>
+    [Fact]
+    public async Task RunQueryAsync_Direct_AnalyzesEachResultWithoutExecutionMenus()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        using var handler = new RecordingConversationHandler(call => RegressionFixture.ResponseJson(call switch
+        {
+            1 => """{"answer_markdown":"Inspect the folder.","commands":[{"label":"Current folder","command":"Get-Location"}],"guide_topics":[]}""",
+            2 => """{"answer_markdown":"Check its contents.","commands":[{"label":"Contents","command":"Get-ChildItem"}],"guide_topics":[]}""",
+            _ => "The requested checks are complete."
+        }));
+        using var http = new HttpClient(handler);
+        var commands = new List<string>();
+        var snapshots = new List<ShellRuntimeStatus>();
+        var answers = new List<string>();
+        var workflow = CreateScriptedWorkflow(fixture, fixture.CreateOpenAi(http), () => "/exit", snapshots,
+            displayAnswer: answers.Add,
+            authorizedCommands: TestProxy.Create<IAuthorizedCommandWorkflow>((method, args) =>
+            {
+                Assert.Equal("RunAsync", method.Name);
+                Assert.Equal(CommandExecutionMode.Direct, args[4]);
+                commands.Add((string)args[1]!);
+                Assert.Empty(snapshots);
+                return Task.FromResult<string?>("Verified output for " + args[1]);
+            }));
+        await workflow.RunQueryAsync("Inspect this folder", AppSettings.Default, false, default,
+            executionMode: CommandExecutionMode.Direct);
+        Assert.Equal(new[] { "Get-Location", "Get-ChildItem" }, commands);
+        Assert.Equal(3, answers.Count);
+        Assert.Single(snapshots);
+        Assert.Contains("Verified output for Get-Location", handler.ConversationRequestBodies[1]);
+        Assert.Contains("Verified output for Get-ChildItem", handler.ConversationRequestBodies[2]);
+    }
+
+    /// <summary>Stops the automatic chain immediately when a reviewed command is blocked or cancelled.</summary>
+    [Fact]
+    public async Task RunQueryAsync_DirectRefusal_DoesNotSendAnInventedResult()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        using var handler = new RecordingConversationHandler(_ => RegressionFixture.ResponseJson(
+            """{"answer_markdown":"Inspect the folder.","commands":[{"label":"Current folder","command":"Get-Location"}],"guide_topics":[]}"""));
+        using var http = new HttpClient(handler);
+        var snapshots = new List<ShellRuntimeStatus>();
+        var workflow = CreateScriptedWorkflow(fixture, fixture.CreateOpenAi(http), () => "/exit", snapshots,
+            authorizedCommands: TestProxy.Create<IAuthorizedCommandWorkflow>((_, _) => Task.FromResult<string?>(null)));
+        await workflow.RunQueryAsync("Inspect this folder", AppSettings.Default, false, default,
+            executionMode: CommandExecutionMode.Direct);
+        Assert.Single(handler.ConversationRequestBodies);
+        Assert.Single(snapshots);
+    }
+
     /// <summary>Verifies an answer above the configured user-input limit is rendered completely and closes the query successfully.</summary>
     [Theory]
     [InlineData(false)]
@@ -128,15 +181,15 @@ public sealed class AiConversationWorkflowTests
         Assert.Empty(inputs);
         Assert.Equal(4, handler.RequestBodies.Count);
         Assert.Equal(2, handler.ConversationRequestBodies.Count);
-        Assert.Equal(7, snapshots.Count);
-        Assert.All(snapshots.Take(3), snapshot =>
+        Assert.Equal(5, snapshots.Count);
+        Assert.All(snapshots.Take(2), snapshot =>
         {
             Assert.Equal(1_000, snapshot.InputTokens);
             Assert.Equal(1, snapshot.OutputTokens);
             Assert.Equal(1_010, snapshot.SessionInputTokens);
             Assert.Equal(2, snapshot.SessionOutputTokens);
         });
-        Assert.All(snapshots.Skip(3), snapshot =>
+        Assert.All(snapshots.Skip(2), snapshot =>
         {
             Assert.Equal(2_000, snapshot.InputTokens);
             Assert.Equal(1, snapshot.OutputTokens);
@@ -150,11 +203,11 @@ public sealed class AiConversationWorkflowTests
             [new ChatMessage("user", firstQuestion), new ChatMessage("assistant", answer),
                 new ChatMessage("user", secondQuestion), new ChatMessage("assistant", answer)], settings, "en", default);
         var emptyContext = await openAi.EstimateContextAsync("chat-system", [], settings, "en", default);
-        Assert.All(snapshots.Take(3), snapshot => Assert.Equal(firstContext.InputTokens, snapshot.ActiveContextTokens));
-        Assert.All(snapshots.Skip(3).Take(2), snapshot => Assert.Equal(secondContext.InputTokens, snapshot.ActiveContextTokens));
-        Assert.All(snapshots.Skip(5), snapshot => Assert.Equal(emptyContext.InputTokens, snapshot.ActiveContextTokens));
-        Assert.True(snapshots[^1].ActiveContextTokens < snapshots[4].ActiveContextTokens);
-        Assert.NotEqual(snapshots[4].InputTokens + snapshots[4].OutputTokens, snapshots[4].ActiveContextTokens);
+        Assert.All(snapshots.Take(2), snapshot => Assert.Equal(firstContext.InputTokens, snapshot.ActiveContextTokens));
+        Assert.Equal(secondContext.InputTokens, snapshots[2].ActiveContextTokens);
+        Assert.All(snapshots.Skip(3), snapshot => Assert.Equal(emptyContext.InputTokens, snapshot.ActiveContextTokens));
+        Assert.True(snapshots[^1].ActiveContextTokens < snapshots[2].ActiveContextTokens);
+        Assert.NotEqual(snapshots[2].InputTokens + snapshots[2].OutputTokens, snapshots[2].ActiveContextTokens);
     }
 
     /// <summary>An oversized request leaves the chat and retained conversation available for a shorter follow-up.</summary>
@@ -177,8 +230,8 @@ public sealed class AiConversationWorkflowTests
         Assert.Single(errors);
         Assert.Equal(4, handler.RequestBodies.Count);
         Assert.Equal(2, handler.ConversationRequestBodies.Count);
-        Assert.Equal(3, snapshots.Count);
-        Assert.Equal(snapshots[0].ActiveContextTokens, snapshots[1].ActiveContextTokens);
+        Assert.Equal(2, snapshots.Count);
+        Assert.True(snapshots[0].ActiveContextTokens < snapshots[1].ActiveContextTokens);
         Assert.Contains("First question", handler.ConversationRequestBodies[1], StringComparison.Ordinal);
         Assert.DoesNotContain(new string('x', 100), handler.ConversationRequestBodies[1], StringComparison.Ordinal);
         Assert.Equal("completed", await fixture.ScalarAsync("SELECT status FROM ai_sessions;"));
@@ -271,13 +324,9 @@ public sealed class AiConversationWorkflowTests
             Assert.DoesNotContain(messages, message => message.GetProperty("content").GetString()!.StartsWith('/'));
             Assert.Equal(new[] { 2, 4, 2, 3 }[index], messages.Length);
         }
-        Assert.Equal(9, snapshots.Count);
-        Assert.All(snapshots.Skip(4).Take(2), snapshot =>
-        {
-            Assert.Equal(1, snapshot.MemoryCount);
-            Assert.InRange(snapshot.MemoryTokens, 1, 800);
-        });
-        Assert.True(snapshots[4].ActiveContextTokens < snapshots[3].ActiveContextTokens);
+        Assert.Equal(2, snapshots.Count);
+        Assert.Equal(1, snapshots[0].MemoryCount);
+        Assert.InRange(snapshots[0].MemoryTokens, 1, 800);
         Assert.Equal(0, snapshots[^1].MemoryCount);
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories;"));
         Assert.Equal(8L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests;"));
@@ -320,8 +369,8 @@ public sealed class AiConversationWorkflowTests
         Assert.Equal("Get-Location", Assert.Single(commands));
         Assert.Equal(5, handler.RequestBodies.Count);
         Assert.Equal(2, handler.ConversationRequestBodies.Count);
-        Assert.Equal(3, snapshots.Count);
-        Assert.Equal(new long[] { 10, 50, 70 }, snapshots.Select(snapshot => snapshot.SessionInputTokens));
+        Assert.Equal(4, snapshots.Count);
+        Assert.Equal(new long[] { 10, 50, 70, 70 }, snapshots.Select(snapshot => snapshot.SessionInputTokens));
         Assert.Equal(0.000070m, snapshots[^1].RunningCostUsd);
         Assert.Equal(4, answers.Count);
         var text = new LocalizationService();
@@ -376,7 +425,7 @@ public sealed class AiConversationWorkflowTests
             return method.Name switch
             {
                 "ReadMessage" => readMessage(),
-                "RenderIntro" or "RenderMemoryPruned" => null,
+                "RenderIntro" or "RenderMemoryHint" or "RenderUser" or "RenderMemoryPruned" => null,
                 _ => throw new NotSupportedException(method.Name)
             };
         }),
@@ -398,7 +447,7 @@ public sealed class AiConversationWorkflowTests
             {
                 "RunWithStatusAsync" => ((Delegate)args[1]!).DynamicInvoke(),
                 "get_Options" => new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false),
-                "RenderMuted" or "RenderSuccess" => null,
+                "RenderMuted" or "RenderSuccess" or "RenderNotice" or "RenderWarning" => null,
                 _ => throw new NotSupportedException(method.Name)
             };
         }),

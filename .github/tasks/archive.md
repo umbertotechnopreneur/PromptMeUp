@@ -1,5 +1,20 @@
 # Task Archive
 
+## 2026-09-21 — Install the direct-mode Debug update
+
+- Build and install signed local Windows x64 Debug MSIX `0.1.5.28`, using the existing current-user certificate. Keep the package identity, application data, certificate trust, and `hm.exe` execution alias unchanged.
+- Verify the signature, SHA-256 hash, installed version, and registration status. Preserve the signed package and installation record under ignored `artifacts/msix/direct-20260921-debug`.
+- Complete standard Debug cleanup for the solution and the application's `win-x64` output. Record blocked publish/payload cleanup in the active task list.
+- No automated tests, CLI smoke tests, application launch, upload, release, push, or tag were performed.
+
+## 2026-09-21 — Add direct execution and quieter conversation views
+
+- Enable direct execution by default for questions and chat, with a saved toggle in setup and a per-session `--direct "request"` override. Schema version 5 stores the preference while preserving local settings and history.
+- Share command preview, deterministic and AI risk review, execution, audit, redaction, and output analysis. Direct mode blocks high, critical, unknown, or incomplete reviews and uses a five-second progress countdown: Enter runs now, Escape cancels the chain, and Ctrl+C cancels the application. Multiple alternatives still require selection; automatic chains stop after eight commands.
+- Keep session summaries hidden during ordinary work, force them at 80% of the effective context budget, and always show a final snapshot at conversation exit. Keep explicit status requests and visibility preferences available.
+- Compact chat input spacing and key hints, replace the textual end marker with a separator, and update the English reference guides and six-language runtime guidance. Record the pre-production/no-compatibility-wrapper policy in AGENTS.md.
+- Validation: preflight, formatting verification, XML comment checks, six-language YAML syntax checks, and Release compilation passed with zero warnings or errors. Added focused regression coverage but did not execute automated tests or CLI smoke tests. Cleaned generated Release output. No installation, branch, commit, push, or publishing was performed.
+
 ## 2026-09-20 — Clarify product documentation and author voice
 
 - Put the app's purpose in the first README headline. Simplify contributor guidance and use the solo maintainer's voice in project, support, and security documentation.

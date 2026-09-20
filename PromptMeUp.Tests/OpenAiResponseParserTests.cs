@@ -241,16 +241,16 @@ public sealed class OpenAiResponseParserTests
         Assert.Equal(200, exception.StatusCode);
     }
 
-    /// <summary>Verifies fenced risk JSON, score clamping, and fallback level inference.</summary>
+    /// <summary>Preserves the explicit severity from fenced risk JSON without lowering it to match the score.</summary>
     [Fact]
-    public void ParseRiskAssessment_FencedUnknownLevel_ClampsAndInfersLevel()
+    public void ParseRiskAssessment_FencedHighLevel_PreservesVeto()
     {
-        const string response = "```json\n{\"score\":101,\"level\":\"unexpected\",\"description_markdown\":\"  destructive  \"}\n```";
+        const string response = "```json\n{\"score\":15,\"level\":\"high\",\"description_markdown\":\"  destructive  \"}\n```";
 
         var result = OpenAiResponseParser.ParseRiskAssessment(response);
 
-        Assert.Equal(100, result.Score);
-        Assert.Equal(CommandRiskLevel.Critical, result.Level);
+        Assert.Equal(15, result.Score);
+        Assert.Equal(CommandRiskLevel.High, result.Level);
         Assert.Equal("destructive", result.DescriptionMarkdown);
         Assert.True(result.UsedAi);
     }
