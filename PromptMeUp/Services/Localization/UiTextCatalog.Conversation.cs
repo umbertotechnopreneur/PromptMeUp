@@ -7,6 +7,13 @@ internal static partial class UiTextCatalog
     /// <summary>Adds the complete six-language conversation UI catalog.</summary>
     private static void AddConversationEntries(Dictionary<string, LocalizedText> entries)
     {
+        entries.Add("Chat.SessionSummaryUnavailable", new(
+            English: "The final session summary could not be refreshed. Totals are unavailable.",
+            Italian: "Impossibile aggiornare lo specchietto finale della sessione. I totali non sono disponibili.",
+            French: "Impossible d'actualiser le résumé final de la session. Les totaux sont indisponibles.",
+            German: "Die abschließende Sitzungsübersicht konnte nicht aktualisiert werden. Summen sind nicht verfügbar.",
+            Spanish: "No se pudo actualizar el resumen final de la sesión. Los totales no están disponibles.",
+            Vietnamese: "Không thể cập nhật bảng tóm tắt cuối phiên. Tổng số liệu không khả dụng."));
         entries.Add("Chat.Assistant", new(
             English: "PromptMeUp",
             Italian: "PromptMeUp",

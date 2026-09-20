@@ -32,6 +32,7 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
     private readonly ICommandAuthorizationView _commandView;
     private readonly IConsoleShellView _shell;
     private readonly ILocalizationService _text;
+    private readonly IPromptCatalogService _prompts;
 
     /// <summary>Creates the command workflow that preserves assessment, authorization, execution, and redaction boundaries.</summary>
     public AuthorizedCommandWorkflow(
@@ -41,7 +42,8 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
         ISensitiveDataRedactor redactor,
         ICommandAuthorizationView commandView,
         IConsoleShellView shell,
-        ILocalizationService text)
+        ILocalizationService text,
+        IPromptCatalogService prompts)
     {
         _riskAssessment = riskAssessment ?? throw new ArgumentNullException(nameof(riskAssessment));
         _commandExecution = commandExecution ?? throw new ArgumentNullException(nameof(commandExecution));
@@ -50,6 +52,7 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
         _commandView = commandView ?? throw new ArgumentNullException(nameof(commandView));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _text = text ?? throw new ArgumentNullException(nameof(text));
+        _prompts = prompts ?? throw new ArgumentNullException(nameof(prompts));
     }
 
     /// <summary>Assesses, previews, authorizes, executes, audits, and prepares bounded command output for the next AI turn.</summary>
@@ -60,11 +63,12 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
         CancellationToken cancellationToken,
         CommandExecutionMode executionMode = CommandExecutionMode.Confirm)
     {
+        var prompt = await _prompts.GetAsync("command-result", cancellationToken).ConfigureAwait(false);
         var result = await RunForResultAsync(sessionId, command, settings, cancellationToken, executionMode).ConfigureAwait(false);
-        return result is null ? null : CreateFollowUp(result, settings);
+        return result is null ? null : CreateFollowUp(result, settings, prompt.ResolveText(_text.Language));
     }
 
-    /// <summary>Shares assessment, preview, audit, execution and output handling across both authorization modes.</summary>
+    /// <summary>Shares execution gates, renders the local result, and returns bounded redacted evidence for downstream consumers.</summary>
     public async Task<CommandExecutionResult?> RunForResultAsync(
         string sessionId,
         string command,
@@ -81,6 +85,7 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
         }
         cancellationToken.ThrowIfCancellationRequested();
         var assessment = await _riskAssessment.AssessAsync(
+            sessionId,
             command,
             executionMode == CommandExecutionMode.Direct || settings.ReviewCommandsWithAi,
             settings,
@@ -138,44 +143,44 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
                 TimeSpan.FromSeconds(settings.CommandTimeoutSeconds),
                 cancellationToken)).ConfigureAwait(false);
         _commandView.RenderExecutionResult(result);
-        var boundedOutput = Limit(_redactor.Redact(result.StandardOutput), settings.MaxCommandOutputCharacters);
-        var boundedError = Limit(_redactor.Redact(result.StandardError), settings.MaxCommandOutputCharacters);
+        var prepared = PrepareResult(result, settings.MaxCommandOutputCharacters);
         await _audit.AppendSessionEventAsync(
             sessionId,
             "command_output",
             new
             {
-                result.Command,
-                result.ExitCode,
-                standardOutput = boundedOutput,
-                standardError = boundedError,
-                result.TimedOut,
-                result.OutputTruncated,
-                result.ElapsedMilliseconds
+                prepared.Command,
+                prepared.ExitCode,
+                standardOutput = prepared.StandardOutput,
+                standardError = prepared.StandardError,
+                prepared.TimedOut,
+                prepared.OutputTruncated,
+                prepared.ElapsedMilliseconds
             },
             cancellationToken).ConfigureAwait(false);
-        return result;
+        return prepared;
     }
 
-    /// <summary>Builds bounded, redacted evidence for a later AI turn without conveying authorization.</summary>
-    private string CreateFollowUp(CommandExecutionResult result, AppSettings settings)
+    /// <summary>Prepares evidence once after local rendering so audit and follow-up share identical privacy and size boundaries.</summary>
+    private CommandExecutionResult PrepareResult(CommandExecutionResult result, int streamLimit)
     {
-        var redactedCommand = _redactor.Redact(result.Command);
-        var boundedOutput = Limit(_redactor.Redact(result.StandardOutput), settings.MaxCommandOutputCharacters);
-        var boundedError = Limit(_redactor.Redact(result.StandardError), settings.MaxCommandOutputCharacters);
-        var followUp = $"""
-            I explicitly authorized and ran this PowerShell command:
-            {redactedCommand}
+        var output = _redactor.Redact(result.StandardOutput);
+        var error = _redactor.Redact(result.StandardError);
+        return result with
+        {
+            Command = _redactor.Redact(result.Command),
+            StandardOutput = Limit(output, streamLimit),
+            StandardError = Limit(error, streamLimit),
+            OutputTruncated = result.OutputTruncated || output.Length > streamLimit || error.Length > streamLimit
+        };
+    }
 
-            Exit code: {result.ExitCode?.ToString() ?? "timeout"}
-            Standard output:
-            {boundedOutput}
-
-            Standard error:
-            {boundedError}
-
-            Analyze this result and explain the next useful step. Do not imply that any additional command has run.
-            """;
+    /// <summary>Formats already prepared evidence with the versioned localized result-analysis prompt.</summary>
+    private static string CreateFollowUp(CommandExecutionResult result, AppSettings settings, string template)
+    {
+        var followUp = string.Format(System.Globalization.CultureInfo.InvariantCulture, template,
+            result.Command, result.ExitCode?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null",
+            result.StandardOutput, result.StandardError, result.TimedOut, result.OutputTruncated);
         return Limit(followUp, settings.MaxMessageCharacters);
     }
 

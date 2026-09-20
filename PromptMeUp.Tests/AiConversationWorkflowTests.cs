@@ -12,6 +12,73 @@ namespace PromptMeUp.Tests;
 
 public sealed class AiConversationWorkflowTests
 {
+    /// <summary>Includes a paid classifier in the final totals when the following answer fails or the user cancels.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RunChatAsync_InterruptedTurn_RefreshesFinalAccounting(bool cancel)
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        await fixture.Database.ReplaceModelPricesAsync("openai", [RegressionFixture.Price("short")], default);
+        using var cancellation = new CancellationTokenSource();
+        using var handler = new RecordingConversationHandler(call =>
+        {
+            if (call == 1) { return RegressionFixture.ResponseJson("First answer."); }
+            if (cancel)
+            {
+                cancellation.Cancel();
+                cancellation.Token.ThrowIfCancellationRequested();
+            }
+            throw new HttpRequestException("Synthetic response failure.");
+        });
+        using var http = new HttpClient(handler);
+        var inputs = new Queue<string>(["First question", "Second question"]);
+        var snapshots = new List<ShellRuntimeStatus>();
+        var workflow = CreateScriptedWorkflow(fixture, fixture.CreateOpenAi(http), inputs.Dequeue, snapshots);
+
+        if (cancel)
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => workflow.RunChatAsync(AppSettings.Default, cancellation.Token));
+        }
+        else
+        {
+            await Assert.ThrowsAsync<HttpRequestException>(() => workflow.RunChatAsync(AppSettings.Default, default));
+        }
+
+        var final = Assert.Single(snapshots);
+        Assert.True(final.HasSessionUsage);
+        Assert.True(final.SessionCostKnown);
+        Assert.Equal(40, final.SessionInputTokens);
+        Assert.Equal(3, final.SessionOutputTokens);
+        Assert.Equal(0.000040m, final.RunningCostUsd);
+        Assert.Equal(4, handler.RequestBodies.Count);
+    }
+
+    /// <summary>A failed final ledger read reports unavailable totals without replacing the original flow exception.</summary>
+    [Fact]
+    public async Task RunQueryAsync_SnapshotFailure_PreservesOriginalErrorAndMarksTotalsUnknown()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        using var handler = new RecordingConversationHandler(_ => RegressionFixture.ResponseJson());
+        using var http = new HttpClient(handler);
+        var failure = new InvalidOperationException("Synthetic ledger failure.");
+        var snapshots = new List<ShellRuntimeStatus>();
+        var warnings = new List<string>();
+        var workflow = CreateScriptedWorkflow(fixture, fixture.CreateOpenAi(http), () => "/exit", snapshots,
+            snapshotDatabase: TestProxy.Create<IDatabaseService>((_, _) => throw failure), displayWarning: warnings.Add);
+
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.RunQueryAsync("Hello", AppSettings.Default, false, default));
+
+        Assert.Same(failure, actual);
+        var final = Assert.Single(snapshots);
+        Assert.False(final.SessionCostKnown);
+        Assert.False(final.HasSessionUsage);
+        Assert.Contains(new LocalizationService().Text("Chat.SessionSummaryUnavailable"), warnings);
+        Assert.Single(handler.RequestBodies);
+    }
+
     /// <summary>Runs each direct suggestion through the shared gate and sends its output back before completing with one summary.</summary>
     [Fact]
     public async Task RunQueryAsync_Direct_AnalyzesEachResultWithoutExecutionMenus()
@@ -104,7 +171,7 @@ public sealed class AiConversationWorkflowTests
             }), new LocalizationService(),
             CreatePersistentMemory(fixture),
             TestProxy.Create<IMemoryView>((method, _) => throw new NotSupportedException(method.Name)),
-            fixture.Database, CreateAppGuide(fixture));
+            fixture.Database, CreateAppGuide(fixture), NullLogger<AiConversationWorkflow>.Instance);
 
         await workflow.RunQueryAsync("Hello", AppSettings.Default with { MaxMessageCharacters = 500 }, renderQuery, default);
 
@@ -408,7 +475,9 @@ public sealed class AiConversationWorkflowTests
         Action<IReadOnlyList<PersistentMemory>>? displayMemories = null,
         Action<string>? displayError = null,
         Action<string>? displayAnswer = null,
-        IAuthorizedCommandWorkflow? authorizedCommands = null) => new(
+        IAuthorizedCommandWorkflow? authorizedCommands = null,
+        IDatabaseService? snapshotDatabase = null,
+        Action<string>? displayWarning = null) => new(
         new ConversationMemoryService(),
         openAi,
         new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance),
@@ -443,6 +512,11 @@ public sealed class AiConversationWorkflowTests
                 displayError((string)args[0]!);
                 return null;
             }
+            if (method.Name == "RenderWarning")
+            {
+                displayWarning?.Invoke((string)args[0]!);
+                return null;
+            }
             return method.Name switch
             {
                 "RunWithStatusAsync" => ((Delegate)args[1]!).DynamicInvoke(),
@@ -459,7 +533,7 @@ public sealed class AiConversationWorkflowTests
             displayMemories?.Invoke((IReadOnlyList<PersistentMemory>)args[0]!);
             return null;
         }),
-        fixture.Database, CreateAppGuide(fixture));
+        snapshotDatabase ?? fixture.Database, CreateAppGuide(fixture), NullLogger<AiConversationWorkflow>.Instance);
 
     private sealed class RecordingConversationHandler : HttpMessageHandler
     {

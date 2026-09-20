@@ -26,7 +26,7 @@ public sealed class TerminalViewTests
 
         foreach (var language in SupportedLanguages.All)
         {
-            var rendered = SetupView.FormatLanguageChoice(language, options);
+            var rendered = FullscreenSetupView.LanguageLabel(language, options);
             Assert.StartsWith($"{language.Flag} {language.NativeName}", rendered, StringComparison.Ordinal);
         }
     }

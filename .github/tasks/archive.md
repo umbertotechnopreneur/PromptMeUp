@@ -1,5 +1,16 @@
 # Task Archive
 
+## 2026-09-21 — Refactor reviewed command and conversation workflows
+
+- Create owner-requested checkpoint `4186c22` before changes on `codex/direct-mode`.
+- Remove the unused setup wizard and forwarding adapter. Keep one `ISetupView` implementation with shared form pages for fullscreen and scrolling presentation; align its focused view tests.
+- Replace duplicate in-memory cost bookkeeping and separate usage/cost reads with one typed session accounting query. Attach command-risk review calls to the owning flow without closing it, and retain provider-confirmed usage independently of execution cancellation.
+- Build summaries from current retained context and recorded calls without mutating memory during rendering. Refresh final totals with an independent local-read cancellation budget; warn and mark unavailable totals if refresh fails while preserving the original flow error.
+- Prepare bounded redacted command evidence once after the exact local preview and result display. Reuse it for audit and downstream consumers; move result-analysis instructions into the six-language `command-result` YAML prompt.
+- Add regressions for interrupted turns, failed final reads, parent review accounting, cancellation during accounting/persistence, and shared sanitized evidence. Automated tests and CLI smoke tests were not executed because execution was not authorized.
+- Validation: preflight, full formatting verification, XML method comments, YAML locale/placeholder checks, and Release compilation passed with zero warnings or errors. Complete standard Release cleanup. No post-refactor package build or installation.
+- Prepare the owner-requested refactoring commit and branch delivery through a pull request to `main`, including the earlier direct-mode, documentation, artwork, and terminal-polish checkpoints. Keep local packages and installation records excluded from Git.
+
 ## 2026-09-21 — Review direct execution and connected workflows
 
 - Review the direct countdown, command workflow, conversation accounting, and setup call sites through bounded source inspection. No automated tests or CLI smoke tests were executed for this review.

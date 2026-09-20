@@ -539,7 +539,9 @@ Session usage keeps growing when the same history is sent again. It measures
 tokens used over time, not how much space the current conversation occupies.
 Refreshing status or using `/clear` keeps the last-request and session counters.
 Calls that fail but report usage count toward session totals. AI command reviews
-are recorded separately and appear in the overall `/costs` totals.
+belong to the same flow and contribute to its session totals as well as `/costs`.
+At exit, local totals are refreshed even after cancellation. If that refresh
+fails, the summary reports unavailable totals rather than showing an old total.
 
 For a guide-assisted answer, This turn includes both the guide-selection and
 answer calls. Last request still shows only the final call, while Session usage
@@ -560,7 +562,7 @@ query and chat; scripts, plans, and diagnostics have their own input budgets.
 
 See [memory, costs, and caching](OPENAI_COSTS_AND_CACHING.md) for more detail.
 
-When an answer suggests commands, the first and default menu choice is **Do not execute commands**. Picking a command opens its preview and approval prompt. It doesn't run it yet.
+In manual mode, **Do not execute commands** is the default menu choice. Picking a command opens its preview and approval prompt. In direct mode, a single suggestion proceeds to risk review and the cancellable countdown; multiple alternatives still require a selection.
 
 ## First run and redirected output
 

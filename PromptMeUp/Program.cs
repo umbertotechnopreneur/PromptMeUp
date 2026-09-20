@@ -156,9 +156,7 @@ internal static class Program
         services.AddSingleton<IConsoleShellView, ConsoleShellView>();
         services.AddSingleton<IPoorMarkdownRenderer, PoorMarkdownRenderer>();
         services.AddSingleton<IThemeView, ThemeView>();
-        services.AddSingleton<SetupView>();
-        services.AddSingleton<FullscreenSetupView>();
-        services.AddSingleton<ISetupView, AdaptiveSetupView>();
+        services.AddSingleton<ISetupView, FullscreenSetupView>();
         services.AddSingleton<IStatusView, StatusView>();
         services.AddSingleton<ICostsView, CostsView>();
         services.AddSingleton<IChatView, ChatView>();

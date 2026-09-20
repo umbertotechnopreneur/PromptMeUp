@@ -35,6 +35,7 @@ public interface IOpenAiService
         AppGuideContext? guide = null);
 
     Task<CommandRiskAssessment> AssessCommandAsync(
+        string sessionId,
         string command,
         AppSettings settings,
         string language,
@@ -195,35 +196,27 @@ public sealed class OpenAiService : IOpenAiService
         };
     }
 
-    /// <summary>Requests an advisory AI risk review for a command; final authorization remains local and manual.</summary>
+    /// <summary>Records command review in its owning flow without closing that flow or granting execution authority.</summary>
     public async Task<CommandRiskAssessment> AssessCommandAsync(
+        string sessionId,
         string command,
         AppSettings settings,
         string language,
         CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(settings);
         var prompt = await _prompts.GetAsync("command-risk", cancellationToken).ConfigureAwait(false);
-        var sessionId = Guid.NewGuid().ToString("N");
-        var status = "failed";
-        try
-        {
-            var response = await SendCoreAsync(
-                prompt,
-                sessionId,
-                [new ChatMessage("user", command)],
-                prompt.ResolveText(language),
-                settings,
-                500,
-                cancellationToken).ConfigureAwait(false);
-            status = "completed";
-            return OpenAiResponseParser.ParseRiskAssessment(response.Text);
-        }
-        finally
-        {
-            await TryCloseSessionAsync(sessionId, status).ConfigureAwait(false);
-        }
+        var response = await SendCoreAsync(
+            prompt,
+            sessionId,
+            [new ChatMessage("user", command)],
+            prompt.ResolveText(language),
+            settings,
+            500,
+            cancellationToken).ConfigureAwait(false);
+        return OpenAiResponseParser.ParseRiskAssessment(response.Text);
     }
 
     /// <summary>Performs one HTTP request, parses usage, estimates price, and records both success and failure.</summary>
@@ -370,8 +363,7 @@ public sealed class OpenAiService : IOpenAiService
                     final.Id,
                     final.ProviderRequestId,
                     true,
-                    null),
-                cancellationToken).ConfigureAwait(false);
+                    null)).ConfigureAwait(false);
             await TryAppendSessionEventAsync(
                 conversationId,
                 final.GuideTopics.Count > 0 ? "guide-request" : "response",
@@ -402,7 +394,7 @@ public sealed class OpenAiService : IOpenAiService
                 final.ProviderRequestId);
             return final;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested || accounting is not null)
         {
             stopwatch.Stop();
             var statusCode = exception is OpenAiRequestException openAiException
@@ -432,8 +424,7 @@ public sealed class OpenAiService : IOpenAiService
                     accounting?.Id,
                     providerRequestId,
                     false,
-                    failureCode),
-                CancellationToken.None).ConfigureAwait(false);
+                    failureCode)).ConfigureAwait(false);
             await TryAppendSessionEventAsync(
                 conversationId,
                 "error",
@@ -501,11 +492,12 @@ public sealed class OpenAiService : IOpenAiService
     }
 
     /// <summary>Persists telemetry without allowing a database error to conceal the provider result.</summary>
-    private async Task PersistAsync(AiRequestLog request, CancellationToken cancellationToken)
+    private async Task PersistAsync(AiRequestLog request)
     {
         try
         {
-            await _database.AppendAiRequestAsync(request, cancellationToken).ConfigureAwait(false);
+            // The provider has already reported this usage; stopping execution must not discard the ledger entry.
+            await _database.AppendAiRequestAsync(request, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception exception)
         {

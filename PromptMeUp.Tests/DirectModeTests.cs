@@ -107,7 +107,7 @@ public sealed class DirectModeTests
             TestProxy.Create<IOpenAiService>((_, _) => Task.FromResult(new CommandRiskAssessment(1, CommandRiskLevel.High, "Danger", true, null))),
             TestProxy.Create<IEnvironmentSecretService>((_, _) => true), new SensitiveDataRedactor(),
             NullLogger<CommandRiskAssessmentService>.Instance);
-        var assessment = await service.AssessAsync("Get-Location", true, AppSettings.Default, "en", default);
+        var assessment = await service.AssessAsync("risk-test", "Get-Location", true, AppSettings.Default, "en", default);
         Assert.Equal(15, assessment.Score);
         Assert.Equal(CommandRiskLevel.High, assessment.Level);
         Assert.False(assessment.CanRunDirect);
@@ -139,7 +139,8 @@ public sealed class DirectModeTests
     private static AuthorizedCommandWorkflow CreateWorkflow(CommandRiskAssessment assessment, List<string> calls, Action? onApproval = null) => new(
         TestProxy.Create<ICommandRiskAssessmentService>((_, args) =>
         {
-            calls.Add($"risk:{args[1]}");
+            Assert.Equal("direct-test", args[0]);
+            calls.Add($"risk:{args[2]}");
             return Task.FromResult(assessment);
         }),
         TestProxy.Create<ICommandExecutionService>((_, args) =>
@@ -173,5 +174,5 @@ public sealed class DirectModeTests
             calls.Add("warning");
             return null;
         }),
-        new LocalizationService());
+        new LocalizationService(), RegressionFixture.CreatePackagedPrompts());
 }

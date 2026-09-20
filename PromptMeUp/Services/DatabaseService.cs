@@ -32,9 +32,7 @@ public interface IDatabaseService
 
     Task<AiRequestSummary> GetAiRequestSummaryAsync(CancellationToken cancellationToken);
 
-    Task<AiUsageMetrics> GetSessionUsageAsync(string sessionId, CancellationToken cancellationToken);
-
-    Task<decimal?> GetSessionCostAsync(string sessionId, CancellationToken cancellationToken);
+    Task<AiSessionAccounting> GetSessionAccountingAsync(string sessionId, CancellationToken cancellationToken);
 
     Task<decimal?> GetOrganizationCostCurrentMonthAsync(CancellationToken cancellationToken);
 
@@ -517,8 +515,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
             reader.GetInt64(5));
     }
 
-    /// <summary>Totals recorded conversation usage including reported failures; standalone advisory sessions remain separate.</summary>
-    public async Task<AiUsageMetrics> GetSessionUsageAsync(string sessionId, CancellationToken cancellationToken)
+    /// <summary>Reads usage and cost together for every recorded call in the flow, including reviews and billed failures.</summary>
+    public async Task<AiSessionAccounting> GetSessionAccountingAsync(string sessionId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -526,24 +524,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
         command.CommandText = """
             SELECT COALESCE(SUM(input_tokens), 0), COALESCE(SUM(cached_input_tokens), 0),
                    COALESCE(SUM(cache_write_tokens), 0), COALESCE(SUM(output_tokens), 0),
-                   COALESCE(SUM(reasoning_tokens), 0), COALESCE(SUM(total_tokens), 0)
-            FROM ai_requests WHERE conversation_id = $session;
-            """;
-        command.Parameters.AddWithValue("$session", sessionId);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return new AiUsageMetrics(reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2),
-            reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(5));
-    }
-
-    /// <summary>Totals recorded session cost, including failures with usage, without hiding unpriced calls.</summary>
-    public async Task<decimal?> GetSessionCostAsync(string sessionId, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT COALESCE(SUM(estimated_cost_microusd), 0),
+                   COALESCE(SUM(reasoning_tokens), 0), COALESCE(SUM(total_tokens), 0),
+                   COALESCE(SUM(estimated_cost_microusd), 0),
                    COALESCE(SUM(CASE WHEN estimated_cost_microusd IS NULL AND (success = 1 OR total_tokens > 0)
                        THEN 1 ELSE 0 END), 0)
             FROM ai_requests WHERE conversation_id = $session;
@@ -551,7 +533,10 @@ public sealed class SqliteDatabaseService : IDatabaseService
         command.Parameters.AddWithValue("$session", sessionId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return reader.GetInt64(1) == 0 ? FromMicroUsd(reader.GetInt64(0)) : null;
+        return new AiSessionAccounting(
+            new AiUsageMetrics(reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2),
+                reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(5)),
+            reader.GetInt64(7) == 0 ? FromMicroUsd(reader.GetInt64(6)) : null);
     }
 
     /// <summary>Aggregates downloaded organization cost buckets for the current local month.</summary>

@@ -45,7 +45,9 @@ separate from this estimate.
 
 `/status`, `/context`, and `/clear` preserve the last-request and session counters.
 Session totals include failed calls when the provider reports usage. AI command
-reviews use separate audit sessions and appear in the overall `/costs` totals.
+reviews belong to the same flow and count toward both its session total and the
+overall `/costs` totals. At exit, the summary refreshes its local totals even if
+the flow was canceled; unavailable totals are marked explicitly.
 
 ## Save notes you want to reuse
 

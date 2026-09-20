@@ -38,6 +38,11 @@ internal sealed class RegressionFixture : IDisposable
         });
     }
 
+    /// <summary>Reads packaged prompts without creating data directories or accessing user settings.</summary>
+    internal static IPromptCatalogService CreatePackagedPrompts() => new YamlPromptCatalogService(
+        new AppPaths(AppContext.BaseDirectory, string.Empty, AppContext.BaseDirectory, string.Empty,
+            Path.Combine(AppContext.BaseDirectory, "prompt")), NullLogger<YamlPromptCatalogService>.Instance);
+
     /// <summary>Constructs the actual provider service with local HTTP responses and deterministic runtime facts.</summary>
     internal OpenAiService CreateOpenAi(HttpClient http, ILogger<OpenAiService>? logger = null, IDatabaseService? database = null,
         string promptId = "query-system", ArtifactLimits? limits = null) => new(
