@@ -6,7 +6,7 @@ You decide what runs. PromptMeUp shows the exact command, checks its risks on yo
 
 Please do not open a public issue for a vulnerability that could expose secrets, execute commands unexpectedly, corrupt local history, or bypass authorization.
 
-Use [GitHub's private security report](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new). Tell us which version or commit you used, your operating system, how to reproduce the problem, and what it could affect. Remove API keys, prompts, command output, usernames, and local paths from anything you attach.
+Use [GitHub's private security report](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new). Tell me which version or commit you used, your operating system, how to reproduce the problem, and what it could affect. Remove API keys, prompts, command output, usernames, and local paths from anything you attach.
 
 ## What the checks do — and their limits
 

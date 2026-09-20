@@ -1,5 +1,11 @@
 # Task Archive
 
+## 2026-09-20 — Clarify product documentation and author voice
+
+- Put the app's purpose in the first README headline. Simplify contributor guidance and use the solo maintainer's voice in project, support, and security documentation.
+- Save the product writing preferences in AGENTS.md, including plain English, concrete benefits, and first-person singular author wording.
+- Documentation changes only. No builds, tests, formatters, linters, or CI were run.
+
 This archive tracks completed development tasks for reference and review.
 
 ## 2026-09-20 — Install the emoji-spacing and banner Debug update

@@ -1,11 +1,11 @@
+<h1 align="center">PromptMeUp — Describe a task, get a terminal command, and choose whether to run it</h1>
+
 <p align="center">
   <img src="docs/assets/promptmeup-banner.png" alt="PromptMeUp — Ask naturally. Understand first. You decide. A weekend idea. An everyday helper." width="100%" />
 </p>
 
-<h1 align="center">PromptMeUp — help with your next terminal command</h1>
-
 <p align="center">
-  Ask a question, understand the answer, and decide what to run.<br />
+  Ask in plain language. Get PowerShell commands with an explanation before you run them.<br />
   Available as <code>hm</code> on Windows, Linux, and macOS.
 </p>
 
@@ -183,7 +183,7 @@ See [what is saved and shared](docs/PRIVACY.md) for the details. The app is MIT-
 
 ## A weekend project that stayed
 
-We built PromptMeUp over a weekend, then kept reaching for it at [UmbertoGiacobbiDotBiz](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story). So we decided to share it. It's a small project, and hearing how you use it helps us decide what to improve next.
+I built PromptMeUp over a weekend and kept using it in my [daily work](https://umbertogiacobbi.biz/promptmeup/?utm_source=github&utm_medium=referral&utm_campaign=promptmeup&utm_content=readme_origin_story), so I shared it. I maintain it with help from a few contributors. Tell me what works for you and what needs fixing.
 
 ## Get involved
 
@@ -198,13 +198,13 @@ Documentation and contributions are in English; the app supports all six interfa
 | [Costs and conversation memory](docs/OPENAI_COSTS_AND_CACHING.md) | [Release process](docs/RELEASING.md) |
 | [Support](SUPPORT.md) | [How the project is run](GOVERNANCE.md) |
 
-Security issue? [Report it privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new), following our [security policy](SECURITY.md).
+Security issue? [Report it privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new), following the [security policy](SECURITY.md).
 
 ## License and credits
 
 PromptMeUp is released under the **[MIT License](LICENSE)**. Use it, adapt it, and build on it while keeping the copyright and license notice.
 
-Created by **Umberto Giacobbi**. Thanks to everyone who contributes and to the people behind the libraries we use. See the [library credits](THIRD_PARTY_NOTICES.md), [license texts](LICENSES/README.md), and [artwork credits](docs/assets/README.md).
+Created by **Umberto Giacobbi**. Thanks to everyone who contributes and to the people behind the libraries I use. See the [library credits](THIRD_PARTY_NOTICES.md), [license texts](LICENSES/README.md), and [artwork credits](docs/assets/README.md).
 
 ---
 
@@ -219,7 +219,7 @@ A Windows app that keeps a record of your work on your computer, so you can find
 </td>
 <td width="33%" valign="top">
 <h3>viewsapp.ai</h3>
-Curious about what else we are building? Make this your next stop.<br /><br />
+Compare how different AI models answer the same question.<br /><br />
 <a href="https://www.viewsapp.ai/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_workshop_viewsapp"><strong>Discover viewsapp.ai →</strong></a>
 </td>
 <td width="33%" valign="top">

@@ -1,8 +1,8 @@
 # How PromptMeUp is run
 
-PromptMeUp is a personal open-source project maintained by [Umberto Giacobbi](https://github.com/umbertotechnopreneur). It began as a weekend experiment and found a practical place in the UmbertoGiacobbiDotBiz team's daily work.
+I'm [Umberto Giacobbi](https://github.com/umbertotechnopreneur), the maintainer of PromptMeUp. I built it over a weekend and kept using it for daily terminal work. A few contributors help with the project.
 
-Umberto decides what goes into the project and when to release it. Contributions are welcome: help make terminal work easier while keeping the app small, portable, and careful with commands and private data. For a big change, start a discussion before writing the code.
+I decide what goes into the project and when to release it. Contributions are welcome: help make terminal work easier while keeping the app small, portable, and careful with commands and private data. For a big change, start a discussion before writing the code.
 
 ## How changes land
 
@@ -18,7 +18,7 @@ Use English for repository writing. Runtime UI and prompt translations retain al
 
 The [release process](docs/RELEASING.md) checks the code, builds portable packages with their license notices, and prepares a draft. The maintainer reviews it before publishing. Optional Windows MSI and WinGet packages have a [separate guide](docs/WINDOWS_PACKAGING.md).
 
-Please [report security problems privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new). Use [Discussions](https://github.com/umbertotechnopreneur/PromptMeUp/discussions) for help and [issues](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose) for bugs or improvements. This is a small personal project, so replies may take a while; we can't promise a response time.
+Please [report security problems privately](https://github.com/umbertotechnopreneur/PromptMeUp/security/advisories/new). Use [Discussions](https://github.com/umbertotechnopreneur/PromptMeUp/discussions) for help and [issues](https://github.com/umbertotechnopreneur/PromptMeUp/issues/new/choose) for bugs or improvements. I maintain this in my own time, so I can't promise a response time.
 
 ## Contribution and attribution
 

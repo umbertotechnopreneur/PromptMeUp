@@ -12,7 +12,7 @@ Found a bug? Open an [issue](https://github.com/umbertotechnopreneur/PromptMeUp/
 
 - Your operating system and `hm` version.
 - What you expected and what happened instead.
-- A small example we can use to see the same problem.
+- A small example I can use to reproduce the problem.
 
 Use made-up filenames and sample content. Leave out API keys, saved notes, chat history, private paths, and personal data. Check any command output for private details before posting it.
 

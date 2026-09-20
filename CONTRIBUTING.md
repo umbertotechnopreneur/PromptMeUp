@@ -1,8 +1,8 @@
 # Contributing to PromptMeUp
 
-Thanks for helping with PromptMeUp. A clearer sentence, a bug fix, or a better example can all make someone's next terminal command easier.
+Help improve PromptMeUp with a bug fix, clearer instructions, or a useful command example.
 
-Keep changes small and explain who they help. Tell us what you checked so we can review the change without guessing.
+Keep changes small and explain who they help. Tell me what you checked so I can review the change.
 
 ## Before you start
 
