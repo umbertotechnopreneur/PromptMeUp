@@ -29,12 +29,12 @@ internal static partial class UiTextCatalog
             Spanish: "{0} debe ser un número entero de tokens entre 1 y 65.536.",
             Vietnamese: "{0} phải là số token nguyên từ 1 đến 65.536."));
         entries.Add("Artifact.PlanLimit", new(
-            English: "Plan/recipe limit",
-            Italian: "Limite piani/ricette",
-            French: "Limite plans/recettes",
-            German: "Plan-/Rezeptlimit",
-            Spanish: "Límite de planes/recetas",
-            Vietnamese: "Giới hạn kế hoạch/công thức"));
+            English: "Plan limit",
+            Italian: "Limite piani",
+            French: "Limite des plans",
+            German: "Planlimit",
+            Spanish: "Límite de planes",
+            Vietnamese: "Giới hạn kế hoạch"));
         entries.Add("Artifact.ScriptLimit", new(
             English: "Script limit",
             Italian: "Limite script",
@@ -350,111 +350,6 @@ internal static partial class UiTextCatalog
             German: "Nutzen Sie --preview copy|move|rename|delete --file <Quelle>; copy/move benötigen --output <vorhandenes-Verzeichnis>, rename benötigt --prefix <Text>. Optional: --pattern <glob>.",
             Spanish: "Usa --preview copy|move|rename|delete --file <origen>; copy/move requieren --output <directorio-existente>, rename requiere --prefix <texto>. Opcional: --pattern <glob>.",
             Vietnamese: "Dùng --preview copy|move|rename|delete --file <nguồn>; copy/move cần --output <thư-mục-có-sẵn>, rename cần --prefix <văn-bản>. Tùy chọn: --pattern <glob>."));
-        entries.Add("Recipe.ConfirmSave", new(
-            English: "Save the displayed recipe to {0}?",
-            Italian: "Salvare la ricetta mostrata in {0}?",
-            French: "Enregistrer la recette affichée dans {0} ?",
-            German: "Angezeigtes Rezept in {0} speichern?",
-            Spanish: "¿Guardar la receta mostrada en {0}?",
-            Vietnamese: "Lưu công thức đã hiển thị vào {0}?"));
-        entries.Add("Recipe.CurrentDirectory", new(
-            English: "Uses the current directory",
-            Italian: "Usa la cartella corrente",
-            French: "Utilise le dossier courant",
-            German: "Verwendet das aktuelle Verzeichnis",
-            Spanish: "Usa el directorio actual",
-            Vietnamese: "Dùng thư mục hiện tại"));
-        entries.Add("Recipe.Description", new(
-            English: "Description",
-            Italian: "Descrizione",
-            French: "Description",
-            German: "Beschreibung",
-            Spanish: "Descripción",
-            Vietnamese: "Mô tả"));
-        entries.Add("Recipe.Empty", new(
-            English: "No recipes yet. Save a completed plan or import a reviewed JSON definition.",
-            Italian: "Nessuna ricetta. Salva un piano completato o importa una definizione JSON revisionata.",
-            French: "Aucune recette. Enregistrez un plan terminé ou importez une définition JSON vérifiée.",
-            German: "Noch keine Rezepte. Abgeschlossenen Plan speichern oder geprüftes JSON importieren.",
-            Spanish: "Aún no hay recetas. Guarda un plan completado o importa una definición JSON revisada.",
-            Vietnamese: "Chưa có công thức. Lưu kế hoạch hoàn thành hoặc nhập định nghĩa JSON đã kiểm tra."));
-        entries.Add("Recipe.Help", new(
-            English: "Personal command recipes",
-            Italian: "Ricette personali di comandi",
-            French: "Recettes de commandes personnelles",
-            German: "Persönliche Befehlsrezepte",
-            Spanish: "Recetas personales de comandos",
-            Vietnamese: "Công thức lệnh cá nhân"));
-        entries.Add("Recipe.Incomplete", new(
-            English: "Only a fully completed and confirmed plan can be saved as a successful recipe.",
-            Italian: "Solo un piano completamente concluso e confermato può diventare una ricetta riuscita.",
-            French: "Seul un plan entièrement terminé et confirmé peut devenir une recette réussie.",
-            German: "Nur ein vollständig abgeschlossener und bestätigter Plan kann als erfolgreiches Rezept gespeichert werden.",
-            Spanish: "Solo un plan totalmente completado y confirmado puede guardarse como receta exitosa.",
-            Vietnamese: "Chỉ kế hoạch hoàn thành và xác nhận đầy đủ mới lưu được thành công thức thành công."));
-        entries.Add("Recipe.Invalid", new(
-            English: "Invalid or unsupported recipe. Check schema, names, bounds, prerequisites, and credential-free commands.",
-            Italian: "Ricetta non valida o non supportata. Controlla schema, nomi, limiti, prerequisiti e comandi privi di credenziali.",
-            French: "Recette invalide ou non prise en charge. Vérifiez schéma, noms, limites, prérequis et absence d'identifiants.",
-            German: "Ungültiges oder nicht unterstütztes Rezept. Schema, Namen, Grenzen, Voraussetzungen und zugangsdatenfreie Befehle prüfen.",
-            Spanish: "Receta inválida o no compatible. Revisa esquema, nombres, límites, requisitos y comandos sin credenciales.",
-            Vietnamese: "Công thức không hợp lệ hoặc không hỗ trợ. Kiểm tra lược đồ, tên, giới hạn, điều kiện và lệnh không chứa thông tin xác thực."));
-        entries.Add("Recipe.Limit", new(
-            English: "The local library supports up to 200 recipes.",
-            Italian: "La libreria locale supporta fino a 200 ricette.",
-            French: "La bibliothèque locale accepte jusqu'à 200 recettes.",
-            German: "Die lokale Bibliothek unterstützt bis zu 200 Rezepte.",
-            Spanish: "La biblioteca local admite hasta 200 recetas.",
-            Vietnamese: "Thư viện cục bộ hỗ trợ tối đa 200 công thức."));
-        entries.Add("Recipe.Name", new(
-            English: "Name",
-            Italian: "Nome",
-            French: "Nom",
-            German: "Name",
-            Spanish: "Nombre",
-            Vietnamese: "Tên"));
-        entries.Add("Recipe.Parameters", new(
-            English: "Provide every parameter once, up to 1024 characters each, without credentials.",
-            Italian: "Fornisci ogni parametro una volta, entro 1024 caratteri ciascuno, senza credenziali.",
-            French: "Fournissez chaque paramètre une fois, 1024 caractères maximum, sans identifiants.",
-            German: "Jeden Parameter einmal mit höchstens 1024 Zeichen ohne Zugangsdaten angeben.",
-            Spanish: "Proporciona cada parámetro una vez, hasta 1024 caracteres, sin credenciales.",
-            Vietnamese: "Nhập mỗi tham số một lần, tối đa 1024 ký tự, không có thông tin xác thực."));
-        entries.Add("Recipe.Prerequisites", new(
-            English: "Have you checked the displayed prerequisites and working directory?",
-            Italian: "Hai controllato i prerequisiti e la cartella di lavoro mostrati?",
-            French: "Avez-vous vérifié les prérequis et le dossier de travail affichés ?",
-            German: "Haben Sie Voraussetzungen und Arbeitsverzeichnis geprüft?",
-            Spanish: "¿Has comprobado los requisitos y el directorio de trabajo mostrados?",
-            Vietnamese: "Bạn đã kiểm tra điều kiện và thư mục làm việc được hiển thị chưa?"));
-        entries.Add("Recipe.ReadError", new(
-            English: "Cannot read this recipe JSON file.",
-            Italian: "Impossibile leggere questo file JSON di ricetta.",
-            French: "Impossible de lire ce fichier JSON de recette.",
-            German: "Diese Rezept-JSON-Datei kann nicht gelesen werden.",
-            Spanish: "No se puede leer este archivo JSON de receta.",
-            Vietnamese: "Không thể đọc tệp JSON công thức này."));
-        entries.Add("Recipe.SaveError", new(
-            English: "Choose a writable new JSON destination or an unused recipe name.",
-            Italian: "Scegli una nuova destinazione JSON scrivibile o un nome di ricetta inutilizzato.",
-            French: "Choisissez une nouvelle destination JSON accessible ou un nom de recette inutilisé.",
-            German: "Neues beschreibbares JSON-Ziel oder unbenutzten Rezeptnamen wählen.",
-            Spanish: "Elige un nuevo destino JSON escribible o un nombre de receta sin usar.",
-            Vietnamese: "Chọn đường dẫn JSON mới ghi được hoặc tên công thức chưa dùng."));
-        entries.Add("Recipe.Saved", new(
-            English: "Recipe saved: {0}",
-            Italian: "Ricetta salvata: {0}",
-            French: "Recette enregistrée : {0}",
-            German: "Rezept gespeichert: {0}",
-            Spanish: "Receta guardada: {0}",
-            Vietnamese: "Đã lưu công thức: {0}"));
-        entries.Add("Recipe.Usage", new(
-            English: "Use --recipes [list|show <name>|run <name>|save <name> --from-plan <id>|import --file <json>|export <name> --output <json>].",
-            Italian: "Usa --recipes [list|show <nome>|run <nome>|save <nome> --from-plan <id>|import --file <json>|export <nome> --output <json>].",
-            French: "Utilisez --recipes [list|show <nom>|run <nom>|save <nom> --from-plan <id>|import --file <json>|export <nom> --output <json>].",
-            German: "Nutzen Sie --recipes [list|show <Name>|run <Name>|save <Name> --from-plan <id>|import --file <json>|export <Name> --output <json>].",
-            Spanish: "Usa --recipes [list|show <nombre>|run <nombre>|save <nombre> --from-plan <id>|import --file <json>|export <nombre> --output <json>].",
-            Vietnamese: "Dùng --recipes [list|show <tên>|run <tên>|save <tên> --from-plan <id>|import --file <json>|export <tên> --output <json>]."));
         entries.Add("Script.Action", new(
             English: "Choose the next step",
             Italian: "Scegli il prossimo passo",

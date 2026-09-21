@@ -164,7 +164,6 @@ You can give `hm` a build log, ask for a script, or work through a task step by 
 | Draft or revise a PowerShell script | `hm --script "your request"` |
 | Work through a plan and resume it later | `hm --plan "your goal"` |
 | See what would happen to your files | `hm --preview copy --file report.txt --output backup` |
-| Save or reuse a personal routine | `hm --recipes` |
 | Open settings at AI preferences | `hm --ai-setup` or `hm --ai-settings` |
 | Open settings at general preferences | `hm --setup` |
 | Open settings at the theme preview | `hm --theme` |

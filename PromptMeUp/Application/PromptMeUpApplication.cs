@@ -27,7 +27,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly ScriptWorkflow _scripts;
     private readonly PlanWorkflow _plans;
     private readonly FilePreviewWorkflow _filePreview;
-    private readonly RecipeWorkflow _recipes;
     private readonly ApplicationActivityRecorder _activity;
     private readonly SetupWorkflow _setup;
     private readonly InstallationWorkflow _installation;
@@ -60,7 +59,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         ScriptWorkflow scripts,
         PlanWorkflow plans,
         FilePreviewWorkflow filePreview,
-        RecipeWorkflow recipes,
         ApplicationActivityRecorder activity,
         SetupWorkflow setup,
         InstallationWorkflow installation,
@@ -91,7 +89,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _scripts = scripts;
         _plans = plans;
         _filePreview = filePreview;
-        _recipes = recipes;
         _activity = activity;
         _setup = setup;
         _installation = installation;
@@ -207,12 +204,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 await (_experimental ?? throw new InvalidOperationException(_text.Text("Lab.Invalid")))
                     .RunAsync(options.Command, settings, cancellationToken).ConfigureAwait(false);
                 return 0;
-            case AppCommand.Recipes:
-                if (options.RecipeAction is not ("list" or "show"))
-                {
-                    EnsureInteractive();
-                }
-                return await _recipes.RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Preview:
                 return await _filePreview.RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
             case AppCommand.Plan:

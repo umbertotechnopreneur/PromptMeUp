@@ -109,11 +109,6 @@ public sealed class HelpView(
                         new("reviewed-", text.Text("Help.Argument.Prefix"))
                     ]
                 },
-                new("--recipes [list|show|save|import|export|run]", text.Text("Recipe.Help"))
-                {
-                    Example = "hm --recipes list",
-                    Arguments = [new("list", text.Text("Help.Argument.List"))]
-                },
                 new("--chat", text.Text("Help.Chat")),
                 new("--test-ai", text.Text("Help.Test"))
             ]),

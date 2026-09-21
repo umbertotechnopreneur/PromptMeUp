@@ -1055,6 +1055,13 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 
 Validation: formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
 
+## 2026-09-22 — Remove command recipes
+
+- Removed the `--recipes` command and its parser state, workflow, storage, view, model, service registrations, and dedicated tests.
+- Removed recipe-specific UI text, navigation, runtime prompt guidance, and public documentation while retaining the shared plan artifact limit.
+
+Validation: preflight, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests and CLI smoke tests were not run because they were not requested. Release build output was cleaned after validation.
+
 ## 2026-09-18 — Improve settings and chat guidance
 
 - Reframed Privacy as a full-width guide with content scrolling and clear section headings.
