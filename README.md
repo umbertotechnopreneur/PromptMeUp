@@ -1,6 +1,6 @@
-# PromptMeUp — Describe your task. Get the command.
+# PromptMeUp — Can't remember that command?
 
-Get PowerShell commands with clear explanations. You choose what runs. Available as `hm` on Windows, Linux, and macOS, using your own OpenAI API account.
+Git, Bash, or PowerShell: describe what you want to do. `hm` is here to help. Available on Windows, Linux, and macOS, using your own OpenAI API account.
 
 <p align="center">
   <a href="#meet-hm"><strong>Meet hm</strong></a> ·
@@ -212,7 +212,7 @@ Created by **Umberto Giacobbi**. Thanks to everyone who contributes and to the p
 
 <p align="center">
   <a href="https://github.com/umbertotechnopreneur/MailMeUp"><strong>MailMeUp</strong></a> · Connect your inboxes to your AI assistant.<br />
-  <a href="https://github.com/umbertotechnopreneur/PromptMeUp"><strong>PromptMeUp</strong></a> · Describe your task. Get the command.<br />
+  <a href="https://github.com/umbertotechnopreneur/PromptMeUp"><strong>PromptMeUp</strong></a> · Can't remember that command? Git, Bash, or PowerShell: hm is here to help.<br />
   <a href="https://github.com/umbertotechnopreneur/TrackMeUp"><strong>TrackMeUp</strong></a> · Track your time. Find what you worked on.
 </p>
 

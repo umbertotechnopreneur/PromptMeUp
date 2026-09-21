@@ -10,6 +10,8 @@ MailMeUp, PromptMeUp, and TrackMeUp share one presentation style. Keep their nam
 - Use plain English and the maintainer's first-person singular voice. Sign off with: "Built by Umberto Giacobbi, with help from contributors."
 - Link the three products under "More from MeUp" using the same descriptions in each repository.
 
+For PromptMeUp, use: "Can't remember that command? Git, Bash, or PowerShell: describe what you want to do. hm is here to help."
+
 ## Visual system
 
 Use an ink navy background (`#101526`), warm ivory objects, fine connecting lines, and restrained depth. Give illustrations generous margins. Keep words in Markdown so they stay readable and accessible; don't bake marketing copy into artwork.
