@@ -9,19 +9,24 @@ public static class ChatDisplayIntentParser
 {
     private const int MaximumResponseLength = 1_024;
 
-    /// <summary>Accepts only the bounded display contract and rejects malformed or contradictory routing decisions.</summary>
+    /// <summary>Accepts only the bounded chat-preference contract and rejects malformed or contradictory routing decisions.</summary>
     public static ChatDisplayIntent Parse(string text, int statusCode)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(text) || text.Length > MaximumResponseLength)
             {
-                throw new JsonException("The chat display intent is empty or exceeds its limit.");
+                throw new JsonException("The chat preference intent is empty or exceeds its limit.");
             }
 
             using var document = JsonDocument.Parse(text, new JsonDocumentOptions { MaxDepth = 2 });
             var root = document.RootElement;
-            var expected = new HashSet<string>(["session_summary", "command_suggestions", "continue_chat"], StringComparer.Ordinal);
+            var expected = new HashSet<string>([
+                "session_summary",
+                "command_suggestions",
+                "execution_confirmation",
+                "continue_chat"
+            ], StringComparer.Ordinal);
             if (root.ValueKind != JsonValueKind.Object
                 || root.EnumerateObject().Any(property => !expected.Remove(property.Name))
                 || expected.Count != 0)
@@ -32,6 +37,7 @@ public static class ChatDisplayIntentParser
             var intent = new ChatDisplayIntent(
                 ReadVisibility(root.GetProperty("session_summary")),
                 ReadVisibility(root.GetProperty("command_suggestions")),
+                ReadExecutionConfirmation(root.GetProperty("execution_confirmation")),
                 root.GetProperty("continue_chat").GetBoolean());
             if (!intent.HasChanges && !intent.ContinueChat)
             {
@@ -43,7 +49,7 @@ public static class ChatDisplayIntentParser
         catch (Exception exception) when (exception is JsonException or InvalidOperationException)
         {
             throw new OpenAiRequestException(
-                "The AI display response did not match the required structure.",
+                "The AI preference response did not match the required structure.",
                 "invalid_chat_display_intent",
                 statusCode,
                 exception);
@@ -57,5 +63,14 @@ public static class ChatDisplayIntentParser
         "show" => true,
         "hide" => false,
         _ => throw new JsonException("The chat visibility operation is invalid.")
+    };
+
+    /// <summary>Maps only the allowed global execution-preference operations to manual-confirmation state.</summary>
+    private static bool? ReadExecutionConfirmation(JsonElement value) => value.GetString() switch
+    {
+        "unchanged" => null,
+        "require" => true,
+        "direct" => false,
+        _ => throw new JsonException("The chat execution-confirmation operation is invalid.")
     };
 }

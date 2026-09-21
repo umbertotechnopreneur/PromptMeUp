@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 <#
 .SYNOPSIS
-  Package a prepared Windows publish folder as a signed MSIX with the hm execution alias.
+  Package a prepared Windows publish folder as a signed MSIX with a Start-menu help launcher and hm execution alias.
 .DESCRIPTION
   Requires a self-contained, non-single-file publish folder with exported notices,
   Windows SDK packaging tools, and an existing trusted code-signing certificate in
@@ -11,12 +11,12 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$PublishDirectory,
-    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$OutputDirectory,
-    [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{40}$')][string]$CertificateThumbprint,
-    [Parameter(Mandatory)][ValidateSet('x64', 'arm64')][string]$Architecture,
+    [string]$OutputDirectory,
+    [ValidatePattern('^[A-Fa-f0-9]{40}$')][string]$CertificateThumbprint,
+    [ValidateSet('x64', 'arm64')][string]$Architecture = 'x64',
+    [ValidateSet('Debug', 'Store')][string]$Channel = 'Debug',
     [ValidatePattern('^\d+\.\d+\.\d+\.\d+$')][string]$Version,
-    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9.-]{2,49}$')]
-    [string]$PackageName = 'UmbertoGiacobbi.PromptMeUp',
+    [switch]$Unsigned,
     [string]$SdkBinDirectory,
     [uri]$TimestampServer
 )
@@ -26,12 +26,23 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
 $bundledSkillFiles = @(Get-BundledSkillFiles)
 if (-not $IsWindows) { throw 'MSIX packaging and certificate-store signing require Windows.' }
+if ($Unsigned -and -not [string]::IsNullOrWhiteSpace($CertificateThumbprint)) {
+    throw 'Unsigned packaging cannot use CertificateThumbprint.'
+}
+if (-not $Unsigned -and [string]::IsNullOrWhiteSpace($CertificateThumbprint)) {
+    throw 'Signed MSIX packaging requires CertificateThumbprint.'
+}
+if ($Unsigned -and $null -ne $TimestampServer) {
+    throw 'Unsigned packaging cannot use TimestampServer.'
+}
 # This creates a local test package only. Distribution remains a GitHub Actions release concern.
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'artifacts'))
 $publishRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($PublishDirectory, $repositoryRoot))
-$outputRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($OutputDirectory, $repositoryRoot))
+$packageName = 'UmbertoGiacobbiDotBiz.PromptMeUp'
+$packagePublisher = 'CN=82BCDD1C-1D59-48A0-9BDF-6352BE319510'
+$packagePublisherDisplayName = 'UmbertoGiacobbiDotBiz'
 
 function Assert-NoReparseAncestor {
     param([Parameter(Mandatory)][string]$Path)
@@ -152,15 +163,7 @@ function New-PackageLogos {
 }
 
 if (-not (Test-Path -LiteralPath $publishRoot -PathType Container)) { throw 'PublishDirectory must be an existing prepared publish folder.' }
-if (-not $outputRoot.StartsWith($artifactsRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'OutputDirectory must be a new subdirectory of the ignored artifacts directory in this repository.'
-}
-if (Test-Path -LiteralPath $outputRoot) { throw 'OutputDirectory already exists. Choose a fresh directory; existing output is never overwritten.' }
-if ($outputRoot.StartsWith($publishRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'The output directory cannot be inside the publish folder.'
-}
 Assert-NoReparseAncestor $publishRoot
-Assert-NoReparseAncestor $outputRoot
 $files = @(Get-PayloadFiles $publishRoot)
 foreach ($name in @('hm.exe', 'hm.dll', 'hm.deps.json', 'hm.runtimeconfig.json', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll',
         'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md') + $bundledSkillFiles) {
@@ -180,22 +183,39 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = @($info.FileMajorPart, $info.FileMinorPart, $info.FileBuildPart, $info.FilePrivatePart) -join '.'
 }
 if (@($Version.Split('.') | Where-Object { [long]$_ -gt 65535 }).Count -gt 0) { throw 'Every MSIX version component must be between 0 and 65535.' }
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+    $OutputDirectory = Join-Path $artifactsRoot "msix\$($Channel.ToLowerInvariant())\$Version\$Architecture"
+}
+$outputRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($OutputDirectory, $repositoryRoot))
+if (-not $outputRoot.StartsWith($artifactsRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'OutputDirectory must be a new subdirectory of the ignored artifacts directory in this repository.'
+}
+if (Test-Path -LiteralPath $outputRoot) { throw 'OutputDirectory already exists. Choose a fresh directory; existing output is never overwritten.' }
+if ($outputRoot.StartsWith($publishRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'The output directory cannot be inside the publish folder.'
+}
+Assert-NoReparseAncestor $outputRoot
 
-$certificatePath = "Cert:\CurrentUser\My\$CertificateThumbprint"
-if (-not (Test-Path -LiteralPath $certificatePath)) { throw 'The requested certificate is not in CurrentUser\My.' }
-$certificate = Get-Item -LiteralPath $certificatePath
-if (-not $certificate.HasPrivateKey -or [DateTime]::Now -lt $certificate.NotBefore -or [DateTime]::Now -gt $certificate.NotAfter) {
-    throw 'The signing certificate must have an accessible private key and be within its validity period.'
+$certificate = $null
+if (-not $Unsigned) {
+    $certificatePath = "Cert:\CurrentUser\My\$CertificateThumbprint"
+    if (-not (Test-Path -LiteralPath $certificatePath)) { throw 'The requested certificate is not in CurrentUser\My.' }
+    $certificate = Get-Item -LiteralPath $certificatePath
+    if (-not $certificate.HasPrivateKey -or [DateTime]::Now -lt $certificate.NotBefore -or [DateTime]::Now -gt $certificate.NotAfter) {
+        throw 'The signing certificate must have an accessible private key and be within its validity period.'
+    }
+    $codeSigning = @($certificate.Extensions | Where-Object { $_ -is [Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension] } |
+        ForEach-Object { $_.EnhancedKeyUsages } | Where-Object { $_.Value -eq '1.3.6.1.5.5.7.3.3' })
+    if ($codeSigning.Count -eq 0) { throw 'The selected certificate must include the Code Signing enhanced key usage.' }
+    if (-not [string]::Equals($certificate.Subject, $packagePublisher, [StringComparison]::Ordinal)) {
+        throw "The signing certificate subject must match the Store package publisher '$packagePublisher'."
+    }
+    if ($null -ne $TimestampServer -and (-not $TimestampServer.IsAbsoluteUri -or $TimestampServer.Scheme -ne 'https' `
+            -or $TimestampServer.UserInfo -or $TimestampServer.Query -or $TimestampServer.Fragment)) {
+        throw 'TimestampServer must be an absolute HTTPS URL without credentials, a query, or a fragment.'
+    }
 }
-$codeSigning = @($certificate.Extensions | Where-Object { $_ -is [Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension] } |
-    ForEach-Object { $_.EnhancedKeyUsages } | Where-Object { $_.Value -eq '1.3.6.1.5.5.7.3.3' })
-if ($codeSigning.Count -eq 0) { throw 'The selected certificate must include the Code Signing enhanced key usage.' }
-$publisher = [Security.SecurityElement]::Escape($certificate.Subject)
-if ([string]::IsNullOrWhiteSpace($publisher)) { throw 'The signing certificate has no Publisher subject.' }
-if ($null -ne $TimestampServer -and (-not $TimestampServer.IsAbsoluteUri -or $TimestampServer.Scheme -ne 'https' `
-        -or $TimestampServer.UserInfo -or $TimestampServer.Query -or $TimestampServer.Fragment)) {
-    throw 'TimestampServer must be an absolute HTTPS URL without credentials, a query, or a fragment.'
-}
+$escapedPublisher = [Security.SecurityElement]::Escape($packagePublisher)
 
 if ([string]::IsNullOrWhiteSpace($SdkBinDirectory)) {
     $sdkRoot = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)) 'Windows Kits/10/bin'
@@ -210,8 +230,8 @@ if ([string]::IsNullOrWhiteSpace($SdkBinDirectory)) {
 }
 $SdkBinDirectory = [IO.Path]::GetFullPath($SdkBinDirectory, $repositoryRoot)
 $makeAppx = Join-Path $SdkBinDirectory 'MakeAppx.exe'
-$signTool = Join-Path $SdkBinDirectory 'SignTool.exe'
-foreach ($tool in @($makeAppx, $signTool)) {
+$signTool = if ($Unsigned) { $null } else { Join-Path $SdkBinDirectory 'SignTool.exe' }
+foreach ($tool in @($makeAppx) + @($signTool | Where-Object { $null -ne $_ })) {
     if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Required Windows SDK tool is missing: $tool" }
 }
 
@@ -231,10 +251,10 @@ $manifest = @"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap5 uap10 rescap">
-  <Identity Name="$PackageName" Publisher="$publisher" Version="$Version" ProcessorArchitecture="$Architecture" />
+  <Identity Name="$packageName" Publisher="$escapedPublisher" Version="$Version" ProcessorArchitecture="$Architecture" />
   <Properties>
     <DisplayName>PromptMeUp</DisplayName>
-    <PublisherDisplayName>PromptMeUp</PublisherDisplayName>
+    <PublisherDisplayName>$packagePublisherDisplayName</PublisherDisplayName>
     <Logo>Assets\Logo50.png</Logo>
     <Description>Help with your next terminal command.</Description>
   </Properties>
@@ -246,7 +266,14 @@ $manifest = @"
     <Resource Language="de-DE" /><Resource Language="es-ES" /><Resource Language="vi-VN" />
   </Resources>
   <Applications>
-    <Application Id="PromptMeUp" Executable="hm.exe" uap10:RuntimeBehavior="win32App"
+    <Application Id="PromptMeUp" Executable="hm.exe" uap10:Parameters="--help"
+      uap10:RuntimeBehavior="win32App" uap10:TrustLevel="mediumIL" uap10:Subsystem="console"
+      uap10:SupportsMultipleInstances="true">
+      <uap:VisualElements DisplayName="PromptMeUp" Description="Help with your next terminal command."
+        BackgroundColor="transparent" Square44x44Logo="Assets\Logo44.png"
+        Square150x150Logo="Assets\Logo150.png" AppListEntry="default" />
+    </Application>
+    <Application Id="PromptMeUpAlias" Executable="hm.exe" uap10:RuntimeBehavior="win32App"
       uap10:TrustLevel="mediumIL" uap10:Subsystem="console" uap10:SupportsMultipleInstances="true">
       <uap:VisualElements DisplayName="PromptMeUp" Description="Help with your next terminal command."
         BackgroundColor="transparent" Square44x44Logo="Assets\Logo44.png"
@@ -265,26 +292,32 @@ $manifest = @"
 "@
 $manifestPath = Join-Path $stage 'AppxManifest.xml'
 [IO.File]::WriteAllText($manifestPath, $manifest, [Text.UTF8Encoding]::new($false))
-$packagePath = Join-Path $outputRoot "PromptMeUp-$Version-win-$Architecture.msix"
+$packageFileName = if ($Unsigned) { "PromptMeUp-$Version-win-$Architecture.unsigned.msix" } else { "PromptMeUp-$Version-win-$Architecture.msix" }
+$packagePath = Join-Path $outputRoot $packageFileName
 Write-Host 'Validating and packing the prepared application.' -ForegroundColor Cyan
 Invoke-SdkCommand $makeAppx @('pack', '/d', $stage, '/p', $packagePath)
-$signArguments = @('sign', '/fd', 'SHA256', '/s', 'My', '/sha1', $CertificateThumbprint)
-if ($null -ne $TimestampServer) { $signArguments += @('/tr', $TimestampServer.AbsoluteUri, '/td', 'SHA256') }
-$signArguments += $packagePath
-Write-Host 'Signing with the selected current-user certificate and verifying the package.' -ForegroundColor Cyan
-Invoke-SdkCommand $signTool $signArguments
-Invoke-SdkCommand $signTool @('verify', '/pa', '/all', $packagePath)
+if (-not $Unsigned) {
+    $signArguments = @('sign', '/fd', 'SHA256', '/s', 'My', '/sha1', $CertificateThumbprint)
+    if ($null -ne $TimestampServer) { $signArguments += @('/tr', $TimestampServer.AbsoluteUri, '/td', 'SHA256') }
+    $signArguments += $packagePath
+    Write-Host 'Signing with the selected current-user certificate and verifying the package.' -ForegroundColor Cyan
+    Invoke-SdkCommand $signTool $signArguments
+    Invoke-SdkCommand $signTool @('verify', '/pa', '/all', $packagePath)
+}
 $hash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash
 "$hash  $([IO.Path]::GetFileName($packagePath))" | Set-Content -LiteralPath (Join-Path $outputRoot 'SHA256SUMS.txt') -Encoding utf8NoBOM
 [ordered]@{
-    packageName = $PackageName
+    packageName = $packageName
+    publisher = $packagePublisher
+    channel = $Channel
+    signed = -not $Unsigned
     version = $Version
     architecture = $Architecture
     executionAlias = 'hm.exe'
     minimumWindowsVersion = '10.0.19041.0'
-    certificateThumbprint = $CertificateThumbprint.ToUpperInvariant()
+    certificateThumbprint = if ($Unsigned) { $null } else { $CertificateThumbprint.ToUpperInvariant() }
     file = [IO.Path]::GetFileName($packagePath)
     sha256 = $hash
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $outputRoot 'package.json') -Encoding utf8NoBOM
 Write-Host "MSIX ready: $packagePath" -ForegroundColor Cyan
-[pscustomobject]@{ PackagePath = $packagePath; ManifestPath = $manifestPath; PackageName = $PackageName; Version = $Version; Sha256 = $hash }
+[pscustomobject]@{ PackagePath = $packagePath; ManifestPath = $manifestPath; PackageName = $packageName; Version = $Version; Sha256 = $hash }

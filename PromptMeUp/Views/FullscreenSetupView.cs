@@ -17,6 +17,7 @@ public sealed class FullscreenSetupView : ISetupView
     private readonly ISensitiveDataRedactor _redactor;
     private readonly IThemeCatalogService _themes;
     private readonly IAboutView _about;
+    private readonly IScriptLanguageCatalog _scriptLanguages;
 
     /// <summary>Creates settings forms that collect drafts without persisting preferences or credentials.</summary>
     public FullscreenSetupView(
@@ -26,7 +27,8 @@ public sealed class FullscreenSetupView : ISetupView
         IPromptInjectionProtectionService protection,
         ISensitiveDataRedactor redactor,
         IThemeCatalogService themes,
-        IAboutView about)
+        IAboutView about,
+        IScriptLanguageCatalog scriptLanguages)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
@@ -35,6 +37,7 @@ public sealed class FullscreenSetupView : ISetupView
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
         _themes = themes ?? throw new ArgumentNullException(nameof(themes));
         _about = about ?? throw new ArgumentNullException(nameof(about));
+        _scriptLanguages = scriptLanguages ?? throw new ArgumentNullException(nameof(scriptLanguages));
     }
 
     /// <summary>Collects the complete setup draft and restores the current language and palette on every exit.</summary>
@@ -118,13 +121,16 @@ public sealed class FullscreenSetupView : ISetupView
                 value => draft.Settings = draft.Settings with { AiEnabled = value })
         };
         ai.AddRange(CreateModelFields(draft));
-        ai.Add(Toggle("Direct.Setting", () => draft.Settings.DirectModeEnabled,
-            value => draft.Settings = draft.Settings with { DirectModeEnabled = value }) with
-        { HelpKey = "Direct.SettingHelp" });
+        ai.Add(Toggle("Direct.RequireConfirmation", () => !draft.Settings.DirectModeEnabled,
+            value => draft.Settings = draft.Settings with { DirectModeEnabled = !value }) with
+        { HelpKey = "Direct.RequireConfirmationHelp" });
         ai.Add(Toggle("Setup.CommandReview", () => draft.Settings.ReviewCommandsWithAi,
             value => draft.Settings = draft.Settings with { ReviewCommandsWithAi = value }));
         ai.Add(Toggle("Setup.PromptCaching", () => draft.Settings.PromptCachingEnabled,
             value => draft.Settings = draft.Settings with { PromptCachingEnabled = value }));
+        ai.Add(Toggle("Settings.SessionSummary", () => draft.Settings.ShowSessionSummaryDuringWork,
+            value => draft.Settings = draft.Settings with { ShowSessionSummaryDuringWork = value }) with
+        { HelpKey = "Settings.SessionSummaryHelp" });
         var context = CreateContextFields(draft).ToArray();
         if (state.ContextBudgetOverridden)
         {
@@ -164,6 +170,14 @@ public sealed class FullscreenSetupView : ISetupView
             new("Settings.Context", context) { HelpKey = "Settings.ContextHelp" },
             new("Settings.Commands",
             [
+                new("script-language", "Setup.ScriptLanguage", () => _scriptLanguages.Get(draft.Settings.ScriptLanguage).StorageValue,
+                    value => draft.Settings = draft.Settings with { ScriptLanguage = ScriptLanguageCatalog.ParseStorageValue(value) })
+                {
+                    Choices = () => _scriptLanguages.List()
+                        .Select(definition => new FormChoice(definition.StorageValue, _text.Text("Script.Language." + definition.Language)))
+                        .ToArray(),
+                    HelpKey = "Setup.ScriptLanguageHelp"
+                },
                 Integer("Setup.CommandTimeout", () => draft.Settings.CommandTimeoutSeconds,
                     value => draft.Settings = draft.Settings with { CommandTimeoutSeconds = value }, 5, 300),
                 Integer("Setup.MaxCommandOutput", () => draft.Settings.MaxCommandOutputCharacters,

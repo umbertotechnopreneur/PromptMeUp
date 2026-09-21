@@ -31,6 +31,10 @@ public sealed class PlanStore(AppPaths paths, ISensitiveDataRedactor redactor, I
             Validate(plan);
             return plan;
         }
+        catch (InvalidOperationException exception) when (exception.Message == text.Text("Plan.Depth"))
+        {
+            throw;
+        }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or ArgumentException or InvalidOperationException)
         {
             throw new InvalidOperationException(text.Text("Plan.Invalid"));
@@ -88,9 +92,13 @@ public sealed class PlanStore(AppPaths paths, ISensitiveDataRedactor redactor, I
     {
         if (plan is null || plan.Version != 1 || !Guid.TryParseExact(plan.Id, "N", out _)
             || !ValidText(plan.Goal, _limits.MaxPlanBytes) || !ValidText(plan.Directory, 4096)
-            || !Path.IsPathFullyQualified(plan.Directory) || plan.Steps is null || plan.Steps.Count is < 1 or > 8)
+            || !Path.IsPathFullyQualified(plan.Directory) || plan.Steps is null || plan.Steps.Count < 1)
         {
             throw new InvalidOperationException(text.Text("Plan.Invalid"));
+        }
+        if (plan.Steps.Count > 10)
+        {
+            throw new InvalidOperationException(text.Text("Plan.Depth"));
         }
         foreach (var step in plan.Steps)
         {

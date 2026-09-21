@@ -127,21 +127,27 @@ public sealed class OpenAiRequestBuilderTests
             result);
     }
 
-    /// <summary>Verifies that the single-query prompt receives the sanitized runtime facts and the approved custom instruction.</summary>
+    /// <summary>Verifies that the single-query prompt receives only the approved runtime facts and the approved custom instruction.</summary>
     [Fact]
     public void BuildInstructions_QueryPrompt_AppendsRuntimeContext()
     {
         var settings = AppSettings.Default with { CustomInstruction = "Prefer concise diagnostics." };
         var runtimeContext = new RuntimeContext(
-            "~/workspace",
-            "Windows 11",
-            "Windows console; prefer PowerShell 7 syntax and paths",
-            "16 logical processor(s), X64",
-            "32.0 GiB physical memory",
-            "NVIDIA RTX");
+            "Windows 11.0.22631",
+            "PowerShell 7 (pwsh -NoLogo -NoProfile -NonInteractive)",
+            "Python 3",
+            true,
+            "~/workspace");
 
+        var operationalPrompt = CreatePrompt("query-system") with
+        {
+            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["runtime-context"] = "sanitized"
+            }
+        };
         var result = OpenAiRequestBuilder.BuildInstructions(
-            CreatePrompt("query-system"),
+            operationalPrompt,
             settings,
             "en",
             runtimeContext);
@@ -150,8 +156,11 @@ public sealed class OpenAiRequestBuilderTests
         Assert.Contains("<user-configured-preamble>", result, StringComparison.Ordinal);
         Assert.Contains("</user-configured-preamble>", result, StringComparison.Ordinal);
         Assert.Contains("Runtime context supplied by PromptMeUp", result, StringComparison.Ordinal);
+        Assert.Contains("Operating system: Windows 11.0.22631", result, StringComparison.Ordinal);
+        Assert.Contains("Effective command shell for approved commands: PowerShell 7", result, StringComparison.Ordinal);
+        Assert.Contains("Preferred script interpreter: Python 3 (available locally)", result, StringComparison.Ordinal);
         Assert.Contains("Current working directory (sanitized): ~/workspace", result, StringComparison.Ordinal);
-        Assert.Contains("GPU: NVIDIA RTX", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("GPU:", result, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies that both user-facing assistant surfaces request the strict answer-and-command envelope.</summary>

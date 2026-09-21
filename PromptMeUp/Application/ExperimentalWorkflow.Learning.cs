@@ -157,6 +157,7 @@ public sealed partial class ExperimentalWorkflow
         var added = await store.SaveProposalsAsync(proposals, ct, revision).ConfigureAwait(false);
         await MarkReflectionAsync(dream, ct).ConfigureAwait(false);
         shell.RenderNotice(text.Text("Lab.ReviewCount", added));
+        assistant.RenderSummaryAtEnd(response, settings);
     }
 
     /// <summary>Reviews a retained observation in full and allows explicit removal with its derived suggestions.</summary>

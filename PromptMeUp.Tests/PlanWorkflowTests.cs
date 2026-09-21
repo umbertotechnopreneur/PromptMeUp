@@ -70,6 +70,37 @@ public sealed class PlanWorkflowTests : IDisposable
         Assert.Equal(["first"], fixture.Commands.Seen);
     }
 
+    /// <summary>Uses the saved direct preference for both the plan action and its independent verification command.</summary>
+    [Theory]
+    [InlineData(true, CommandExecutionMode.Direct)]
+    [InlineData(false, CommandExecutionMode.Confirm)]
+    public async Task RunStepsAsync_UsesGlobalExecutionPreference(bool directModeEnabled, CommandExecutionMode expectedMode)
+    {
+        var fixture = CreateFixture([Result("first", 0), Result("verify-first", 0)]);
+
+        await fixture.Workflow.RunStepsAsync(Plan("first"), false,
+            AppSettings.Default with { DirectModeEnabled = directModeEnabled }, CancellationToken.None);
+
+        Assert.Equal([expectedMode, expectedMode], fixture.Commands.Modes);
+    }
+
+    /// <summary>Shows the interim plan summary at eighty percent context usage even when the saved preference is off.</summary>
+    [Fact]
+    public async Task RunStepsAsync_ContextAtEightyPercent_RendersInterimSummaryWhenPreferenceIsOff()
+    {
+        var fixture = CreateFixture([Result("first", 0), Result("verify-first", 0), Result("second", 0), Result("verify-second", 0)]);
+        var status = ShellRuntimeStatus.FromSettings(AppSettings.Default) with
+        {
+            ActiveContextTokens = 80,
+            ContextBudgetTokens = 100
+        };
+
+        await fixture.Workflow.RunStepsAsync(Plan("first", "second"), false,
+            AppSettings.Default with { ShowSessionSummaryDuringWork = false }, CancellationToken.None, status);
+
+        Assert.Equal([status, status], fixture.Shell.Statuses);
+    }
+
     /// <summary>Prevents concurrent guidance for the same durable plan identifier.</summary>
     [Fact]
     public void Acquire_SamePlanTwice_RejectsSecondLease()
@@ -99,6 +130,23 @@ public sealed class PlanWorkflowTests : IDisposable
         Assert.False(parser.Parse(["--plan", "goal", "--resume", Guid.NewGuid().ToString("N")]).Succeeded);
     }
 
+    /// <summary>Accepts plans of up to ten ordered steps.</summary>
+    [Fact]
+    public void Validate_TenSteps_IsSupported()
+    {
+        CreateStore().Validate(Plan(Enumerable.Range(0, 10).Select(index => "step-" + index).ToArray()));
+    }
+
+    /// <summary>Explains that deeper plans are not supported yet.</summary>
+    [Fact]
+    public void Validate_EleventhStep_ExplainsDepthLimit()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            CreateStore().Validate(Plan(Enumerable.Range(0, 11).Select(index => "step-" + index).ToArray())));
+
+        Assert.Equal(_text.Text("Plan.Depth"), exception.Message);
+    }
+
     /// <summary>Deletes only this test's random temporary state directory.</summary>
     public void Dispose()
     {
@@ -114,9 +162,11 @@ public sealed class PlanWorkflowTests : IDisposable
     {
         var commands = new StubCommands(outcomes);
         var store = CreateStore();
+        var shell = DispatchProxy.Create<IConsoleShellView, RecordingShellProxy>();
+        var recorder = (RecordingShellProxy)(object)shell;
         var workflow = new PlanWorkflow(null!, store, null!, commands, Proxy<IActivityAuditService>(),
-            new StubPlanView(), Proxy<IConsoleShellView>(), _text);
-        return new Fixture(workflow, commands);
+            new StubPlanView(), shell, _text);
+        return new Fixture(workflow, commands, recorder);
     }
 
     /// <summary>Creates an isolated durable state service with no shared application files.</summary>
@@ -134,7 +184,7 @@ public sealed class PlanWorkflowTests : IDisposable
     /// <summary>Creates a passive interface proxy for collaborators outside the state-machine assertion.</summary>
     private static T Proxy<T>() where T : class => DispatchProxy.Create<T, NoOpProxy>();
 
-    private sealed record Fixture(PlanWorkflow Workflow, StubCommands Commands);
+    private sealed record Fixture(PlanWorkflow Workflow, StubCommands Commands, RecordingShellProxy Shell);
 
     private sealed class StubPlanView : IPlanView
     {
@@ -150,12 +200,14 @@ public sealed class PlanWorkflowTests : IDisposable
     {
         private readonly Queue<CommandExecutionResult?> _outcomes = new(outcomes);
         public List<string> Seen { get; } = [];
+        public List<CommandExecutionMode> Modes { get; } = [];
 
         /// <summary>Returns deterministic outcomes while recording the exact command order.</summary>
         public Task<CommandExecutionResult?> RunForResultAsync(string sessionId, string command, AppSettings settings, CancellationToken cancellationToken,
             CommandExecutionMode executionMode = CommandExecutionMode.Confirm)
         {
             Seen.Add(command);
+            Modes.Add(executionMode);
             return Task.FromResult(_outcomes.Dequeue());
         }
 
@@ -163,6 +215,22 @@ public sealed class PlanWorkflowTests : IDisposable
         public Task<string?> RunAsync(string sessionId, string command, AppSettings settings, CancellationToken cancellationToken,
             CommandExecutionMode executionMode = CommandExecutionMode.Confirm) =>
             throw new NotSupportedException();
+    }
+
+    public class RecordingShellProxy : NoOpProxy
+    {
+        public List<ShellRuntimeStatus> Statuses { get; } = [];
+
+        /// <summary>Captures rendered session summaries while leaving the remaining plan shell output passive.</summary>
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            if (targetMethod?.Name == "RenderRuntimeStatus")
+            {
+                Statuses.Add((ShellRuntimeStatus)args![0]!);
+                return null;
+            }
+            return base.Invoke(targetMethod, args);
+        }
     }
 
     public class NoOpProxy : DispatchProxy

@@ -59,11 +59,11 @@ internal static class FeatureResponseFormats
         }
     };
 
-    /// <summary>Limits display classification to two session preferences and whether the message also needs a chat answer.</summary>
+    /// <summary>Limits preference classification to session display, execution confirmation, and whether the message also needs a chat answer.</summary>
     internal static object ChatDisplayIntent() => new
     {
         type = "json_schema",
-        name = "promptmeup_chat_display_intent_v1",
+        name = "promptmeup_chat_display_intent_v2",
         strict = true,
         schema = new
         {
@@ -72,9 +72,10 @@ internal static class FeatureResponseFormats
             {
                 session_summary = new { type = "string", @enum = new[] { "unchanged", "show", "hide" } },
                 command_suggestions = new { type = "string", @enum = new[] { "unchanged", "show", "hide" } },
+                execution_confirmation = new { type = "string", @enum = new[] { "unchanged", "require", "direct" } },
                 continue_chat = new { type = "boolean" }
             },
-            required = new[] { "session_summary", "command_suggestions", "continue_chat" },
+            required = new[] { "session_summary", "command_suggestions", "execution_confirmation", "continue_chat" },
             additionalProperties = false
         }
     };

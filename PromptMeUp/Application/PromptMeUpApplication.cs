@@ -252,7 +252,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                     renderQuery: true,
                     cancellationToken,
                     executionMode: options.Command == AppCommand.Direct || settings.DirectModeEnabled
-                        ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm).ConfigureAwait(false);
+                        ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm,
+                    directModeOverride: options.Command == AppCommand.Direct).ConfigureAwait(false);
                 return 0;
             case AppCommand.Remember:
             case AppCommand.Forget:

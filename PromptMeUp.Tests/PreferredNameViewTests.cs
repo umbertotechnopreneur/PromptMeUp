@@ -35,7 +35,7 @@ public sealed class PreferredNameViewTests
         var about = TestProxy.Create<IAboutView>((method, _) => throw new NotSupportedException(method.Name));
         var original = AppSettings.Default with { AiEnabled = false, PreferredName = current };
         var view = new FullscreenSetupView(console, text, shell, new PromptInjectionProtectionService(),
-            new SensitiveDataRedactor(), themes, about);
+            new SensitiveDataRedactor(), themes, about, new ScriptLanguageCatalog());
 
         var submission = view.Collect(new SetupViewState(original, false, false)
         {

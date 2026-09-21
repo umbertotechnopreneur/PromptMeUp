@@ -57,48 +57,66 @@ public sealed partial class ExperimentalWorkflow(
             var preferences = await store.SettingsAsync(ct).ConfigureAwait(false);
             if (!preferences.Enabled)
             {
-                if (view.Choose(text.Text("Lab.Title"), text.Text("Lab.Back"), text.Text("Lab.Enable")) == 0)
+                var disabledSelection = view.ChooseSkills(text.Text("Lab.Skills"),
+                [
+                    new SkillMenuItem(SkillMenuAction.Back, text.Text("Lab.Back"), text.Text("Lab.Back"), Icon: "↩️"),
+                    new SkillMenuItem(SkillMenuAction.EnableProject, text.Text("Lab.Enable"), text.Text("Lab.Enable"), Icon: "🧩")
+                ]);
+                if (disabledSelection.Action == SkillMenuAction.Back)
                 {
                     return;
+                }
+                if (disabledSelection.Action != SkillMenuAction.EnableProject)
+                {
+                    throw new InvalidOperationException("Unsupported disabled skills menu action.");
                 }
                 await store.SaveSettingsAsync(preferences with { Enabled = true }, preferences, ct).ConfigureAwait(false);
                 continue;
             }
             var catalog = skills.List();
-            var choices = new List<string>
+            var choices = new List<SkillMenuItem>
             {
-                text.Text("Lab.Back"), text.Text("Lab.Disable"), text.Text("Lab.Import"),
-                text.Text("Lab.Automatic") + " — " + text.Text(preferences.AutomaticSkills ? "Lab.Enabled" : "Lab.Off"),
-                text.Text("Lab.ClearSelection")
+                new(SkillMenuAction.Back, text.Text("Lab.Back"), text.Text("Lab.Back"), Icon: "↩️"),
+                new(SkillMenuAction.DisableProject, text.Text("Lab.Disable"), text.Text("Lab.Disable"), Icon: "🧩"),
+                new(SkillMenuAction.Import, text.Text("Lab.Import"), text.Text("Lab.Import"), Icon: "📦"),
+                new(SkillMenuAction.ToggleAutomatic,
+                    text.Text("Lab.Automatic") + " — " + text.Text(preferences.AutomaticSkills ? "Lab.Enabled" : "Lab.Off"),
+                    text.Text("Lab.Automatic"), Icon: "⚡"),
+                new(SkillMenuAction.ClearSelection, text.Text("Lab.ClearSelection"), text.Text("Lab.ClearSelection"), Icon: "🧹")
             };
             foreach (var skill in catalog)
             {
                 var enabled = await skills.IsEnabledAsync(skill, ct).ConfigureAwait(false);
-                choices.Add(skill.Name + " — " + (skill.UnavailableReason ?? text.Text(enabled ? "Lab.Enabled" : "Lab.Off")));
+                var status = skill.UnavailableReason ?? text.Text(enabled ? "Lab.Enabled" : "Lab.Off");
+                choices.Add(new SkillMenuItem(SkillMenuAction.ManageSkill, skill.Name + " — " + status,
+                    status + ". " + skill.Description, skill, skill.Icon));
             }
-            var selected = view.Choose(text.Text("Lab.Skills"), choices.ToArray());
-            switch (selected)
+            var selected = view.ChooseSkills(text.Text("Lab.Skills"), choices);
+            switch (selected.Action)
             {
-                case 0:
+                case SkillMenuAction.Back:
                     return;
-                case 1:
+                case SkillMenuAction.DisableProject:
                     if (view.Confirm(text.Text("Lab.Disable")))
                     {
                         await store.SaveSettingsAsync(new(), preferences, ct).ConfigureAwait(false);
                     }
                     break;
-                case 2:
+                case SkillMenuAction.Import:
                     Import();
                     break;
-                case 3:
+                case SkillMenuAction.ToggleAutomatic:
                     await store.SaveSettingsAsync(preferences with { AutomaticSkills = !preferences.AutomaticSkills }, preferences, ct).ConfigureAwait(false);
                     break;
-                case 4:
+                case SkillMenuAction.ClearSelection:
                     await store.SetAsync("selected-skill", string.Empty, ct).ConfigureAwait(false);
                     break;
-                default:
-                    await ManageSkillAsync(catalog[selected - 5], settings, ct).ConfigureAwait(false);
+                case SkillMenuAction.ManageSkill:
+                    await ManageSkillAsync(selected.Skill
+                        ?? throw new InvalidOperationException("A skill menu action requires a skill."), settings, ct).ConfigureAwait(false);
                     break;
+                default:
+                    throw new InvalidOperationException("Unsupported skills menu action.");
             }
         }
     }
@@ -106,6 +124,7 @@ public sealed partial class ExperimentalWorkflow(
     /// <summary>Shows the exact inspected instructions and scripts before enabling or running a package.</summary>
     private async Task ManageSkillAsync(SkillDefinition skill, AppSettings settings, CancellationToken ct)
     {
+        var executionMode = settings.DirectModeEnabled ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm;
         view.Render(skill.Name + " " + skill.Version,
             [(text.Text("Lab.Source"), skill.Directory), (text.Text("Lab.Package"), skill.Description + "\n\n" + skill.Instructions),
                 .. skill.Scripts.Select(script => (script.Key + ".ps1", script.Value))]);
@@ -116,53 +135,68 @@ public sealed partial class ExperimentalWorkflow(
             return;
         }
         var enabled = await skills.IsEnabledAsync(skill, ct).ConfigureAwait(false);
-        var selected = view.Choose(text.Text("Lab.Skills"), text.Text("Lab.Back"),
-            text.Text(enabled ? "Lab.Deactivate" : "Lab.Activate"), text.Text("Lab.Select"), text.Text("Lab.Run"));
-        if (selected == 1)
+        var selected = view.Choose(text.Text("Lab.Skills"), new[]
         {
-            await skills.EnableAsync(skill, !enabled, ct).ConfigureAwait(false);
-        }
-        else if (selected is 2 or 3)
+            (Value: SkillMenuAction.Back, Label: text.Text("Lab.Back")),
+            (Value: SkillMenuAction.ToggleSkill, Label: text.Text(enabled ? "Lab.Deactivate" : "Lab.Activate")),
+            (Value: SkillMenuAction.SelectSkill, Label: text.Text("Lab.Select")),
+            (Value: SkillMenuAction.RunSkill, Label: text.Text("Lab.Run"))
+        });
+        switch (selected)
         {
-            if (!enabled)
-            {
-                throw new InvalidOperationException(text.Text("Lab.Activate"));
-            }
-            if (selected == 2)
-            {
-                await skills.SelectForQuestionsAsync(skill, ct).ConfigureAwait(false);
+            case SkillMenuAction.Back:
                 return;
-            }
-            var availableActions = actions.Actions(skill);
-            if (availableActions.Count == 0)
-            {
-                shell.RenderNotice(text.Text("Lab.None"));
+            case SkillMenuAction.ToggleSkill:
+                await skills.EnableAsync(skill, !enabled, ct).ConfigureAwait(false);
                 return;
-            }
-            var action = view.Choose(text.Text("Lab.Run"), [text.Text("Lab.Back"), .. availableActions]);
-            if (action == 0)
-            {
+            case SkillMenuAction.SelectSkill:
+            case SkillMenuAction.RunSkill:
+                if (!enabled)
+                {
+                    throw new InvalidOperationException(text.Text("Lab.Activate"));
+                }
+                if (selected == SkillMenuAction.SelectSkill)
+                {
+                    await skills.SelectForQuestionsAsync(skill, ct).ConfigureAwait(false);
+                    return;
+                }
+                var availableActions = actions.Actions(skill);
+                if (availableActions.Count == 0)
+                {
+                    shell.RenderNotice(text.Text("Lab.None"));
+                    return;
+                }
+                var action = view.Choose(text.Text("Lab.Run"),
+                    new[] { (Value: (string?)null, Label: text.Text("Lab.Back")) }
+                        .Concat(availableActions.Select(name => (Value: (string?)name, Label: name))).ToArray());
+                if (action is null)
+                {
+                    return;
+                }
+                if (skill.Origin == "bundled" && skill.Name == "set_reminder")
+                {
+                    await RunRemindersAsync(settings, ct).ConfigureAwait(false);
+                    return;
+                }
+                if (skill.Origin == "bundled" && skill.Name == "screenshot")
+                {
+                    shell.RenderWarning(text.Text("Lab.ScreenshotPrivacy"));
+                }
+                var native = skill.Origin == "bundled" && skill.Name is "git" or "filesystem";
+                var command = native
+                    ? actions.NativeCommand(skill, action, view.Read(text.Text("Lab.Path"), Environment.CurrentDirectory))
+                    : actions.ScriptCommand(skill, action, view.Read(text.Text("Lab.Arguments"), actions.DefaultParameters(skill)));
+                await using (var session = await AuditSessionScope.StartAsync(audit, "skill", settings,
+                    new { skill.Name, skill.Fingerprint }, AuditSessionOutcome.Failed, ct).ConfigureAwait(false))
+                {
+                    var result = await commands.RunForResultAsync(
+                        session.Id, command, settings, ct, executionMode).ConfigureAwait(false);
+                    session.Outcome = result is null ? AuditSessionOutcome.Cancelled
+                        : result.ExitCode == 0 && !result.TimedOut ? AuditSessionOutcome.Completed : AuditSessionOutcome.Failed;
+                }
                 return;
-            }
-            var name = availableActions[action - 1];
-            if (skill.Origin == "bundled" && skill.Name == "set_reminder")
-            {
-                await RunRemindersAsync(settings, ct).ConfigureAwait(false);
-                return;
-            }
-            if (skill.Origin == "bundled" && skill.Name == "screenshot")
-            {
-                shell.RenderWarning(text.Text("Lab.ScreenshotPrivacy"));
-            }
-            var native = skill.Origin == "bundled" && skill.Name is "git" or "filesystem";
-            var command = native
-                ? actions.NativeCommand(skill, name, view.Read(text.Text("Lab.Path"), Environment.CurrentDirectory))
-                : actions.ScriptCommand(skill, name, view.Read(text.Text("Lab.Arguments"), actions.DefaultParameters(skill)));
-            await using var session = await AuditSessionScope.StartAsync(audit, "skill", settings,
-                new { skill.Name, skill.Fingerprint }, AuditSessionOutcome.Failed, ct).ConfigureAwait(false);
-            var result = await commands.RunForResultAsync(session.Id, command, settings, ct).ConfigureAwait(false);
-            session.Outcome = result is null ? AuditSessionOutcome.Cancelled
-                : result.ExitCode == 0 && !result.TimedOut ? AuditSessionOutcome.Completed : AuditSessionOutcome.Failed;
+            default:
+                throw new InvalidOperationException("Unsupported skill management action.");
         }
     }
 

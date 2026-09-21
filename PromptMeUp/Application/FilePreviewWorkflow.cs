@@ -17,6 +17,7 @@ public sealed class FilePreviewWorkflow(
     /// <summary>Previews local effects and optionally offers each concrete operation through the existing authorization gate.</summary>
     public async Task<int> RunAsync(CommandLineOptions options, AppSettings settings, CancellationToken cancellationToken)
     {
+        var executionMode = settings.DirectModeEnabled ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm;
         var preview = service.Build(options);
         view.Render(preview);
         if (preview.Effects.Any(effect => effect.Collision))
@@ -34,7 +35,8 @@ public sealed class FilePreviewWorkflow(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var command = service.BuildCommand(preview, effect);
-            var result = await commands.RunForResultAsync(session.Id, command, settings, cancellationToken).ConfigureAwait(false);
+            var result = await commands.RunForResultAsync(
+                session.Id, command, settings, cancellationToken, executionMode).ConfigureAwait(false);
             if (result is null)
             {
                 return 0;

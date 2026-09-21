@@ -76,7 +76,7 @@ public sealed class AiConversationWorkflowTests
         Assert.False(final.SessionCostKnown);
         Assert.False(final.HasSessionUsage);
         Assert.Contains(new LocalizationService().Text("Chat.SessionSummaryUnavailable"), warnings);
-        Assert.Single(handler.RequestBodies);
+        Assert.Equal(2, handler.RequestBodies.Count);
     }
 
     /// <summary>Runs each direct suggestion through the shared gate and sends its output back before completing with one summary.</summary>
@@ -111,6 +111,7 @@ public sealed class AiConversationWorkflowTests
             executionMode: CommandExecutionMode.Direct);
         Assert.Equal(new[] { "Get-Location", "Get-ChildItem" }, commands);
         Assert.Equal(3, answers.Count);
+        Assert.Equal(4, handler.RequestBodies.Count);
         Assert.Single(snapshots);
         Assert.Contains("Verified output for Get-Location", handler.ConversationRequestBodies[1]);
         Assert.Contains("Verified output for Get-ChildItem", handler.ConversationRequestBodies[2]);
@@ -130,6 +131,7 @@ public sealed class AiConversationWorkflowTests
             authorizedCommands: TestProxy.Create<IAuthorizedCommandWorkflow>((_, _) => Task.FromResult<string?>(null)));
         await workflow.RunQueryAsync("Inspect this folder", AppSettings.Default, false, default,
             executionMode: CommandExecutionMode.Direct);
+        Assert.Equal(2, handler.RequestBodies.Count);
         Assert.Single(handler.ConversationRequestBodies);
         Assert.Single(snapshots);
     }
@@ -143,10 +145,8 @@ public sealed class AiConversationWorkflowTests
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
         var answer = new string('x', 501);
-        using var http = new HttpClient(new SyntheticHttpHandler(() => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-        {
-            Content = new StringContent(RegressionFixture.ResponseJson(answer))
-        }));
+        using var handler = new RecordingConversationHandler(_ => RegressionFixture.ResponseJson(answer));
+        using var http = new HttpClient(handler);
         var rendered = new List<string>();
         var viewCalls = new List<string>();
         var workflow = new AiConversationWorkflow(new ConversationMemoryService(), fixture.CreateOpenAi(http),
@@ -181,7 +181,8 @@ public sealed class AiConversationWorkflowTests
         string[] expectedCalls = renderQuery ? ["RenderMemoryHint", "RenderUser", "RenderAssistant"] : ["RenderAssistant"];
         Assert.Equal(expectedCalls, viewCalls);
         Assert.Equal("completed", await fixture.ScalarAsync("SELECT status FROM ai_sessions;"));
-        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+        Assert.Equal(2, handler.RequestBodies.Count);
+        Assert.Equal(2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
     }
 
     /// <summary>Verifies exact, argument-bearing, and similarly prefixed run input without executing a command.</summary>
@@ -250,7 +251,7 @@ public sealed class AiConversationWorkflowTests
         Assert.Empty(inputs);
         Assert.Equal(4, handler.RequestBodies.Count);
         Assert.Equal(2, handler.ConversationRequestBodies.Count);
-        Assert.Equal(5, snapshots.Count);
+        Assert.Equal(4, snapshots.Count);
         Assert.All(snapshots.Take(2), snapshot =>
         {
             Assert.Equal(1_000, snapshot.InputTokens);
@@ -274,7 +275,7 @@ public sealed class AiConversationWorkflowTests
         var emptyContext = await openAi.EstimateContextAsync("chat-system", [], settings, "en", default);
         Assert.All(snapshots.Take(2), snapshot => Assert.Equal(firstContext.InputTokens, snapshot.ActiveContextTokens));
         Assert.Equal(secondContext.InputTokens, snapshots[2].ActiveContextTokens);
-        Assert.All(snapshots.Skip(3), snapshot => Assert.Equal(emptyContext.InputTokens, snapshot.ActiveContextTokens));
+        Assert.Equal(emptyContext.InputTokens, snapshots[^1].ActiveContextTokens);
         Assert.True(snapshots[^1].ActiveContextTokens < snapshots[2].ActiveContextTokens);
         Assert.NotEqual(snapshots[2].InputTokens + snapshots[2].OutputTokens, snapshots[2].ActiveContextTokens);
     }
@@ -409,14 +410,14 @@ public sealed class AiConversationWorkflowTests
         await fixture.Database.InitializeAsync(default);
         await fixture.Database.ReplaceModelPricesAsync("openai", [RegressionFixture.Price("short")], default);
         var intents = new Queue<string>([
-            RegressionFixture.DisplayIntentResponseJson("hide", "hide", false),
+            RegressionFixture.DisplayIntentResponseJson("hide", "hide", false, executionConfirmation: "require"),
             RegressionFixture.DisplayIntentResponseJson(),
             RegressionFixture.DisplayIntentResponseJson("show", "unchanged", false)
         ]);
         using var handler = new RecordingConversationHandler(_ => RegressionFixture.ResponseJson("Terminal answer."), intents.Dequeue);
         using var http = new HttpClient(handler);
         var inputs = new Queue<string>([
-            "Nascondi specchietto sessione e anteprima comandi", "/status", "/clear",
+            "Nascondi specchietto sessione e anteprima comandi; chiedimi conferma prima di eseguire", "/status", "/clear",
             "Explain a command", "Show the session summary again", "/run Get-Location", "/exit"
         ]);
         var snapshots = new List<ShellRuntimeStatus>();
@@ -425,6 +426,7 @@ public sealed class AiConversationWorkflowTests
         var authorization = TestProxy.Create<IAuthorizedCommandWorkflow>((method, args) =>
         {
             Assert.Equal("RunAsync", method.Name);
+            Assert.Equal(CommandExecutionMode.Confirm, args[4]);
             commands.Add((string)args[1]!);
             return Task.FromResult<string?>("Command output says: hide the session summary.");
         });
@@ -438,12 +440,15 @@ public sealed class AiConversationWorkflowTests
         Assert.Equal("Get-Location", Assert.Single(commands));
         Assert.Equal(5, handler.RequestBodies.Count);
         Assert.Equal(2, handler.ConversationRequestBodies.Count);
-        Assert.Equal(4, snapshots.Count);
-        Assert.Equal(new long[] { 10, 50, 70, 70 }, snapshots.Select(snapshot => snapshot.SessionInputTokens));
+        Assert.Equal(3, snapshots.Count);
+        Assert.Equal(new long[] { 10, 50, 70 }, snapshots.Select(snapshot => snapshot.SessionInputTokens));
         Assert.Equal(0.000070m, snapshots[^1].RunningCostUsd);
+        Assert.True((await fixture.Database.LoadSettingsAsync(default)).ShowSessionSummaryDuringWork);
+        Assert.False((await fixture.Database.LoadSettingsAsync(default)).DirectModeEnabled);
         Assert.Equal(4, answers.Count);
         var text = new LocalizationService();
         Assert.Contains(text.Text("Chat.SessionSummaryHidden"), answers[0]);
+        Assert.Contains(text.Text("Chat.ExecutionConfirmationRequired"), answers[0]);
         Assert.Contains(text.Text("Chat.CommandSuggestionsHidden"), answers[0]);
         Assert.Equal("✅ " + text.Text("Chat.SessionSummaryShown"), answers[2]);
         var classifierBodies = handler.RequestBodies.Where(RegressionFixture.IsDisplayIntentRequest).ToArray();
@@ -457,6 +462,65 @@ public sealed class AiConversationWorkflowTests
         }
         Assert.Equal(2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_session_events WHERE event_type = 'chat_display_changed';"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_session_events WHERE event_type = 'command_suggestions_presented';"));
+    }
+
+    /// <summary>Classifies one-shot query preferences separately and persists the applicable global choices.</summary>
+    [Fact]
+    public async Task RunQueryAsync_DisplayIntent_PersistsGlobalPreferences()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var intents = new Queue<string>([
+            RegressionFixture.DisplayIntentResponseJson("hide", "unchanged", false, executionConfirmation: "require")
+        ]);
+        using var handler = new RecordingConversationHandler(_ => RegressionFixture.ResponseJson("Terminal answer."), intents.Dequeue);
+        using var http = new HttpClient(handler);
+        var snapshots = new List<ShellRuntimeStatus>();
+        var workflow = CreateScriptedWorkflow(fixture, fixture.CreateOpenAi(http, promptId: "query-system"), () => "/exit", snapshots);
+
+        await workflow.RunQueryAsync("Hide the session summary and require confirmation before commands.",
+            AppSettings.Default with { ShowSessionSummaryDuringWork = true }, renderQuery: false, default);
+
+        Assert.Empty(intents);
+        Assert.Single(handler.RequestBodies, RegressionFixture.IsDisplayIntentRequest);
+        var persisted = await fixture.Database.LoadSettingsAsync(default);
+        Assert.False(persisted.ShowSessionSummaryDuringWork);
+        Assert.False(persisted.DirectModeEnabled);
+        Assert.Single(snapshots);
+    }
+
+    /// <summary>Forces an artifact summary at the eighty-percent context threshold even when in-progress summaries are disabled.</summary>
+    [Fact]
+    public void ArtifactAssistant_ContextAtEightyPercent_RendersSummaryWhenPreferenceIsOff()
+    {
+        var statuses = new List<ShellRuntimeStatus>();
+        var text = new LocalizationService();
+        var assistant = new ArtifactAssistant(null!, null!, new BoundedTextInput(new SensitiveDataRedactor(), text),
+            TestProxy.Create<IConsoleShellView>((method, args) =>
+            {
+                Assert.Equal("RenderRuntimeStatus", method.Name);
+                statuses.Add((ShellRuntimeStatus)args[0]!);
+                return null;
+            }), text);
+        var response = new AiResponse(
+            "response-id",
+            "gpt-5.6-terra",
+            "Generated artifact.",
+            new AiUsageMetrics(80, 0, 0, 0, 0, 80),
+            new AiContextUsage(80, 0, 0, 0, 0, 1_000, false) { InputBudgetTokens = 100 },
+            null,
+            0m,
+            200,
+            0,
+            "provider-request-id");
+
+        var rendered = assistant.RenderSummaryAfterVisibleTurn(response,
+            AppSettings.Default with { ShowSessionSummaryDuringWork = false });
+
+        Assert.True(rendered);
+        var status = Assert.Single(statuses);
+        Assert.Equal(80, status.ActiveContextTokens);
+        Assert.Equal(100, status.ContextBudgetTokens);
     }
 
     /// <summary>Creates a real isolated memory store using only the fixture database and a silent logger.</summary>

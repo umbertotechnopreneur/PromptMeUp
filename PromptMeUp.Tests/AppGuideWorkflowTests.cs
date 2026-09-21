@@ -57,6 +57,7 @@ public sealed class AppGuideWorkflowTests
         await workflow.RunQueryAsync("Explain this XML example project.", AppSettings.Default with { Language = language }, renderQuery: true, default);
 
         Assert.Single(answers);
+        Assert.Equal(2, handler.RequestBodies.Count);
         using var request = JsonDocument.Parse(Assert.Single(handler.ConversationRequestBodies));
         var messages = request.RootElement.GetProperty("input").EnumerateArray().ToArray();
         var envelope = messages.First(message => message.GetProperty("role").GetString() == "user").GetProperty("content").GetString()!;
@@ -108,7 +109,7 @@ public sealed class AppGuideWorkflowTests
 
             Assert.Empty(inputs);
             Assert.Single(answers);
-            Assert.Equal(chat ? 3 : 2, handler.RequestBodies.Count);
+            Assert.Equal(3, handler.RequestBodies.Count);
             Assert.Equal(2, handler.ConversationRequestBodies.Count);
             using var first = JsonDocument.Parse(handler.ConversationRequestBodies[0]);
             using var guided = JsonDocument.Parse(handler.ConversationRequestBodies[1]);
@@ -127,7 +128,7 @@ public sealed class AppGuideWorkflowTests
             var input = Assert.Single(guided.RootElement.GetProperty("input").EnumerateArray());
             Assert.Equal(question, input.GetProperty("content").GetString());
             Assert.DoesNotContain("<app-guide>", input.GetProperty("content").GetString());
-            Assert.Equal(chat ? 3L : 2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
+            Assert.Equal(3L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
             Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_session_events WHERE event_type = 'app_guide_loaded';"));
             Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
         }
@@ -248,7 +249,7 @@ public sealed class AppGuideWorkflowTests
         text.SetLanguage(language);
         var catalog = new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance);
         var provider = new OpenAiService(http, fixture.Secrets, catalog,
-            TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("~", "test", "PowerShell 7", "test", "test", "test")),
+            TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("test", "PowerShell 7 (pwsh)", "PowerShell 7", true, "~")),
             fixture.Database, new AiCostCalculator(), fixture.Audit, new SensitiveDataRedactor(),
             new PromptInjectionProtectionService(), NullLogger<OpenAiService>.Instance);
         return new AiConversationWorkflow(new ConversationMemoryService(), provider, catalog,

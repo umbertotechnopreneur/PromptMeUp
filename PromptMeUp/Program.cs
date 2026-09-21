@@ -138,6 +138,7 @@ internal static class Program
         services.AddSingleton<ExperimentalWorkflow>();
         services.AddSingleton<ICommandRiskAssessmentService, CommandRiskAssessmentService>();
         services.AddSingleton<ICommandExecutionService, CommandExecutionService>();
+        services.AddSingleton<IScriptLanguageCatalog, ScriptLanguageCatalog>();
         services.AddSingleton<IPortablePathService, PortablePathService>();
         services.AddSingleton<IExecutableLocationService, ExecutableLocationService>();
         services.AddSingleton<INerdFontInstallerService, NerdFontInstallerService>();

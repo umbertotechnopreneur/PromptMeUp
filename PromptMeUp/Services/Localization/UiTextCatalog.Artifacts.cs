@@ -140,6 +140,13 @@ internal static partial class UiTextCatalog
             German: "Im ursprünglichen Verzeichnis fortsetzen: {0}",
             Spanish: "Reanuda desde el directorio original: {0}",
             Vietnamese: "Tiếp tục từ thư mục gốc: {0}"));
+        entries.Add("Plan.Depth", new(
+            English: "Plans deeper than ten steps are not supported yet.",
+            Italian: "I piani con più di dieci passi non sono ancora supportati.",
+            French: "Les plans de plus de dix étapes ne sont pas encore pris en charge.",
+            German: "Pläne mit mehr als zehn Schritten werden noch nicht unterstützt.",
+            Spanish: "Los planes de más de diez pasos aún no son compatibles.",
+            Vietnamese: "Kế hoạch có hơn mười bước hiện chưa được hỗ trợ."));
         entries.Add("Plan.Help", new(
             English: "Guide and resume a plan",
             Italian: "Guida e riprendi un piano",
@@ -148,12 +155,12 @@ internal static partial class UiTextCatalog
             Spanish: "Guiar y reanudar un plan",
             Vietnamese: "Hướng dẫn và tiếp tục kế hoạch"));
         entries.Add("Plan.Invalid", new(
-            English: "Invalid or unsupported plan. Require 1–8 bounded steps with commands and verification.",
-            Italian: "Piano non valido o non supportato. Servono 1–8 passi limitati con comandi e verifica.",
-            French: "Plan invalide ou non pris en charge. Il faut 1 à 8 étapes bornées avec commandes et vérification.",
-            German: "Ungültiger oder nicht unterstützter Plan. Erforderlich sind 1–8 begrenzte Schritte mit Befehlen und Prüfung.",
-            Spanish: "Plan inválido o no compatible. Se requieren 1–8 pasos acotados con comandos y verificación.",
-            Vietnamese: "Kế hoạch không hợp lệ hoặc không hỗ trợ. Cần 1–8 bước có giới hạn với lệnh và kiểm tra."));
+            English: "Invalid or unsupported plan. Require 1–10 bounded steps with commands and verification.",
+            Italian: "Piano non valido o non supportato. Servono 1–10 passi limitati con comandi e verifica.",
+            French: "Plan invalide ou non pris en charge. Il faut 1 à 10 étapes bornées avec commandes et vérification.",
+            German: "Ungültiger oder nicht unterstützter Plan. Erforderlich sind 1–10 begrenzte Schritte mit Befehlen und Prüfung.",
+            Spanish: "Plan inválido o no compatible. Se requieren 1–10 pasos acotados con comandos y verificación.",
+            Vietnamese: "Kế hoạch không hợp lệ hoặc không hỗ trợ. Cần 1–10 bước có giới hạn với lệnh và kiểm tra."));
         entries.Add("Plan.LoadError", new(
             English: "Cannot load this saved plan.",
             Italian: "Impossibile caricare questo piano salvato.",
@@ -189,6 +196,13 @@ internal static partial class UiTextCatalog
             German: "Prüfen Sie den aktuellen Zustand. Die ursprüngliche Aktion wird nicht wiederholt.",
             Spanish: "Verifica el estado actual antes de continuar. La acción original no se repetirá.",
             Vietnamese: "Kiểm tra trạng thái hiện tại trước khi tiếp tục. Thao tác gốc sẽ không lặp lại."));
+        entries.Add("Plan.Resume", new(
+            English: "To resume this plan, use this command:",
+            Italian: "Per riprendere questo piano, usa questo comando:",
+            French: "Pour reprendre ce plan, utilisez cette commande :",
+            German: "Diesen Plan mit diesem Befehl fortsetzen:",
+            Spanish: "Para reanudar este plan, usa este comando:",
+            Vietnamese: "Để tiếp tục kế hoạch này, dùng lệnh sau:"));
         entries.Add("Plan.Running", new(
             English: "Outcome unknown",
             Italian: "Esito sconosciuto",
@@ -197,12 +211,12 @@ internal static partial class UiTextCatalog
             Spanish: "Resultado desconocido",
             Vietnamese: "Kết quả chưa rõ"));
         entries.Add("Plan.Start", new(
-            English: "Start guidance? Each command needs separate approval.",
-            Italian: "Avviare la guida? Ogni comando richiede una conferma separata.",
-            French: "Démarrer le guide ? Chaque commande nécessite un accord distinct.",
-            German: "Anleitung starten? Jeder Befehl benötigt eine eigene Zustimmung.",
-            Spanish: "¿Iniciar la guía? Cada comando necesita aprobación separada.",
-            Vietnamese: "Bắt đầu hướng dẫn? Mỗi lệnh cần cấp quyền riêng."));
+            English: "Start guidance? Each command will be reviewed separately.",
+            Italian: "Avviare la guida? Ogni comando verrà valutato separatamente.",
+            French: "Démarrer le guide ? Chaque commande sera vérifiée séparément.",
+            German: "Anleitung starten? Jeder Befehl wird einzeln geprüft.",
+            Spanish: "¿Iniciar la guía? Cada comando se revisará por separado.",
+            Vietnamese: "Bắt đầu hướng dẫn? Mỗi lệnh sẽ được xem xét riêng."));
         entries.Add("Plan.Status", new(
             English: "Status",
             Italian: "Stato",
@@ -357,13 +371,13 @@ internal static partial class UiTextCatalog
             German: "Nächsten Schritt wählen",
             Spanish: "Elige el siguiente paso",
             Vietnamese: "Chọn bước tiếp theo"));
-        entries.Add("Script.Cancel", new(
-            English: "Finish without saving",
-            Italian: "Termina senza salvare",
-            French: "Terminer sans enregistrer",
-            German: "Ohne Speichern beenden",
-            Spanish: "Terminar sin guardar",
-            Vietnamese: "Kết thúc không lưu"));
+        entries.Add("Script.DoNothing", new(
+            English: "Do nothing",
+            Italian: "Non fare nulla",
+            French: "Ne rien faire",
+            German: "Nichts tun",
+            Spanish: "No hacer nada",
+            Vietnamese: "Không làm gì"));
         entries.Add("Script.Confirm", new(
             English: "Save the displayed source to {0}?",
             Italian: "Salvare il codice mostrato in {0}?",
@@ -371,20 +385,13 @@ internal static partial class UiTextCatalog
             German: "Angezeigten Quelltext in {0} speichern?",
             Spanish: "¿Guardar el código mostrado en {0}?",
             Vietnamese: "Lưu mã đã hiển thị vào {0}?"));
-        entries.Add("Script.Destination", new(
-            English: "New .ps1 destination",
-            Italian: "Nuova destinazione .ps1",
-            French: "Nouvelle destination .ps1",
-            German: "Neues .ps1-Ziel",
-            Spanish: "Nuevo destino .ps1",
-            Vietnamese: "Đường dẫn .ps1 mới"));
         entries.Add("Script.Help", new(
-            English: "Create or revise a PowerShell script",
-            Italian: "Crea o modifica uno script PowerShell",
-            French: "Créer ou modifier un script PowerShell",
-            German: "PowerShell-Skript erstellen oder überarbeiten",
-            Spanish: "Crear o modificar un script PowerShell",
-            Vietnamese: "Tạo hoặc sửa tập lệnh PowerShell"));
+            English: "Create or revise a {0} script",
+            Italian: "Crea o modifica uno script {0}",
+            French: "Créer ou modifier un script {0}",
+            German: "{0}-Skript erstellen oder überarbeiten",
+            Spanish: "Crear o modificar un script de {0}",
+            Vietnamese: "Tạo hoặc sửa tập lệnh {0}"));
         entries.Add("Script.Invalid", new(
             English: "Invalid script: require non-empty source up to 12000 characters without credentials or redaction markers.",
             Italian: "Script non valido: serve codice non vuoto, entro 12000 caratteri, senza credenziali o marcatori di redazione.",
@@ -393,12 +400,75 @@ internal static partial class UiTextCatalog
             Spanish: "Script inválido: código no vacío de hasta 12000 caracteres sin credenciales ni marcas de ocultación.",
             Vietnamese: "Tập lệnh không hợp lệ: cần mã không rỗng, tối đa 12000 ký tự, không chứa thông tin xác thực hay dấu đã lọc."));
         entries.Add("Script.OutputOption", new(
-            English: "--output requires one new .ps1 destination.",
-            Italian: "--output richiede una nuova destinazione .ps1.",
-            French: "--output exige une nouvelle destination .ps1.",
-            German: "--output benötigt ein neues .ps1-Ziel.",
-            Spanish: "--output requiere un destino .ps1 nuevo.",
-            Vietnamese: "--output cần đường dẫn .ps1 mới."));
+            English: "--output requires one new script destination with the selected language extension.",
+            Italian: "--output richiede una nuova destinazione script con l'estensione del linguaggio selezionato.",
+            French: "--output exige une nouvelle destination de script avec l'extension du langage choisi.",
+            German: "--output benötigt ein neues Skriptziel mit der Erweiterung der gewählten Sprache.",
+            Spanish: "--output requiere un destino de script nuevo con la extensión del lenguaje elegido.",
+            Vietnamese: "--output cần một đích tập lệnh mới với phần mở rộng của ngôn ngữ đã chọn."));
+        entries.Add("Script.OutputDestination", new(
+            English: "Requested save destination: {0}",
+            Italian: "Destinazione di salvataggio richiesta: {0}",
+            French: "Destination d'enregistrement demandée : {0}",
+            German: "Angefordertes Speicherziel: {0}",
+            Spanish: "Destino de guardado solicitado: {0}",
+            Vietnamese: "Đích lưu đã yêu cầu: {0}"));
+        entries.Add("Script.SuggestedDestination", new(
+            English: "Suggested new local file: {0}",
+            Italian: "Nuovo file locale suggerito: {0}",
+            French: "Nouveau fichier local suggéré : {0}",
+            German: "Vorgeschlagene neue lokale Datei: {0}",
+            Spanish: "Nuevo archivo local sugerido: {0}",
+            Vietnamese: "Tệp cục bộ mới được đề xuất: {0}"));
+        entries.Add("Script.RuntimeUnavailable", new(
+            English: "{0} is not available on this computer. You can still review or save the draft.",
+            Italian: "{0} non è disponibile su questo computer. Puoi comunque rivedere o salvare la bozza.",
+            French: "{0} n'est pas disponible sur cet ordinateur. Vous pouvez toujours relire ou enregistrer le brouillon.",
+            German: "{0} ist auf diesem Computer nicht verfügbar. Sie können den Entwurf trotzdem prüfen oder speichern.",
+            Spanish: "{0} no está disponible en este equipo. Aún puedes revisar o guardar el borrador.",
+            Vietnamese: "{0} không có trên máy tính này. Bạn vẫn có thể xem lại hoặc lưu bản nháp."));
+        entries.Add("Script.Execute", new(
+            English: "Run once from a temporary file",
+            Italian: "Esegui una volta da un file temporaneo",
+            French: "Exécuter une fois depuis un fichier temporaire",
+            German: "Einmal aus einer temporären Datei ausführen",
+            Spanish: "Ejecutar una vez desde un archivo temporal",
+            Vietnamese: "Chạy một lần từ tệp tạm thời"));
+        entries.Add("Script.Language.PowerShell", new(
+            English: "PowerShell 7",
+            Italian: "PowerShell 7",
+            French: "PowerShell 7",
+            German: "PowerShell 7",
+            Spanish: "PowerShell 7",
+            Vietnamese: "PowerShell 7"));
+        entries.Add("Script.Language.Batch", new(
+            English: "Batch / CMD",
+            Italian: "Batch / CMD",
+            French: "Batch / CMD",
+            German: "Batch / CMD",
+            Spanish: "Batch / CMD",
+            Vietnamese: "Batch / CMD"));
+        entries.Add("Script.Language.Bash", new(
+            English: "Bash",
+            Italian: "Bash",
+            French: "Bash",
+            German: "Bash",
+            Spanish: "Bash",
+            Vietnamese: "Bash"));
+        entries.Add("Script.Language.Python", new(
+            English: "Python 3",
+            Italian: "Python 3",
+            French: "Python 3",
+            German: "Python 3",
+            Spanish: "Python 3",
+            Vietnamese: "Python 3"));
+        entries.Add("Script.Language.JavaScript", new(
+            English: "JavaScript / Node.js",
+            Italian: "JavaScript / Node.js",
+            French: "JavaScript / Node.js",
+            German: "JavaScript / Node.js",
+            Spanish: "JavaScript / Node.js",
+            Vietnamese: "JavaScript / Node.js"));
         entries.Add("Script.Revise", new(
             English: "Request a revision",
             Italian: "Richiedi una modifica",
@@ -442,12 +512,12 @@ internal static partial class UiTextCatalog
             Spanish: "Código completo",
             Vietnamese: "Toàn bộ mã"));
         entries.Add("Script.Usage", new(
-            English: "Use --script <request> [--file <source>] [--output <new.ps1>].",
-            Italian: "Usa --script <richiesta> [--file <sorgente>] [--output <nuovo.ps1>].",
-            French: "Utilisez --script <demande> [--file <source>] [--output <nouveau.ps1>].",
-            German: "Verwenden Sie --script <Anfrage> [--file <Quelle>] [--output <neu.ps1>].",
-            Spanish: "Usa --script <petición> [--file <origen>] [--output <nuevo.ps1>].",
-            Vietnamese: "Dùng --script <yêu-cầu> [--file <nguồn>] [--output <mới.ps1>]."));
+            English: "Use --script <request> [--file <source>] [--output <new-script>]. Choose the preferred language in setup.",
+            Italian: "Usa --script <richiesta> [--file <sorgente>] [--output <nuovo-script>]. Scegli il linguaggio preferito nelle impostazioni.",
+            French: "Utilisez --script <demande> [--file <source>] [--output <nouveau-script>]. Choisissez le langage préféré dans les paramètres.",
+            German: "Verwenden Sie --script <Anfrage> [--file <Quelle>] [--output <neues-Skript>]. Wählen Sie die bevorzugte Sprache in den Einstellungen.",
+            Spanish: "Usa --script <petición> [--file <origen>] [--output <nuevo-script>]. Elige el lenguaje preferido en la configuración.",
+            Vietnamese: "Dùng --script <yêu-cầu> [--file <nguồn>] [--output <tập-lệnh-mới>]. Chọn ngôn ngữ ưu tiên trong phần cài đặt."));
         entries.Add("Script.Validate", new(
             English: "Review the syntax-check command",
             Italian: "Rivedi il comando di controllo sintassi",
@@ -456,11 +526,11 @@ internal static partial class UiTextCatalog
             Spanish: "Revisar el comando de validación sintáctica",
             Vietnamese: "Xem lệnh kiểm tra cú pháp"));
         entries.Add("Script.ValidationNote", new(
-            English: "Syntax checks do not prove correctness or safety. AnalyzerAvailable reports whether optional PSScriptAnalyzer was used.",
-            Italian: "La sintassi non dimostra correttezza o sicurezza. AnalyzerAvailable indica se è stato usato PSScriptAnalyzer opzionale.",
-            French: "La syntaxe ne prouve ni correction ni sécurité. AnalyzerAvailable indique l'utilisation du module facultatif PSScriptAnalyzer.",
-            German: "Syntaxprüfungen beweisen weder Korrektheit noch Sicherheit. AnalyzerAvailable zeigt die Nutzung des optionalen PSScriptAnalyzer.",
-            Spanish: "La sintaxis no garantiza corrección ni seguridad. AnalyzerAvailable indica si se usó PSScriptAnalyzer opcional.",
-            Vietnamese: "Kiểm tra cú pháp không chứng minh tính đúng đắn hay an toàn. AnalyzerAvailable cho biết có dùng PSScriptAnalyzer tùy chọn hay không."));
+            English: "Syntax checks do not prove correctness or safety. For PowerShell, AnalyzerAvailable reports whether optional PSScriptAnalyzer was used.",
+            Italian: "Il controllo sintattico non dimostra correttezza o sicurezza. Per PowerShell, AnalyzerAvailable indica se è stato usato PSScriptAnalyzer opzionale.",
+            French: "Les contrôles syntaxiques ne prouvent ni la correction ni la sécurité. Pour PowerShell, AnalyzerAvailable indique l'utilisation du module facultatif PSScriptAnalyzer.",
+            German: "Syntaxprüfungen beweisen weder Korrektheit noch Sicherheit. Bei PowerShell zeigt AnalyzerAvailable die Nutzung des optionalen PSScriptAnalyzer.",
+            Spanish: "Las comprobaciones de sintaxis no garantizan corrección ni seguridad. Para PowerShell, AnalyzerAvailable indica si se usó PSScriptAnalyzer opcional.",
+            Vietnamese: "Kiểm tra cú pháp không chứng minh tính đúng đắn hay an toàn. Với PowerShell, AnalyzerAvailable cho biết có dùng PSScriptAnalyzer tùy chọn hay không."));
     }
 }

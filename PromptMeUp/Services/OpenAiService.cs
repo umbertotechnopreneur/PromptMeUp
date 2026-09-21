@@ -109,11 +109,7 @@ public sealed class OpenAiService : IOpenAiService
         var prompt = await _prompts.GetAsync(promptId, cancellationToken).ConfigureAwait(false);
         settings = ProtectPreferences(settings);
         var preferredNamePrompt = await LoadPreferredNamePromptAsync(prompt, settings, cancellationToken).ConfigureAwait(false);
-        var instructions = OpenAiRequestBuilder.BuildInstructions(
-            prompt,
-            settings,
-            language,
-            _runtimeContext.GetCurrent(), _limits, guide, preferredNamePrompt);
+        var instructions = BuildInstructions(prompt, settings, language, guide, preferredNamePrompt);
         return await SendCoreAsync(
             prompt,
             conversationId,
@@ -132,6 +128,7 @@ public sealed class OpenAiService : IOpenAiService
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        settings = ProtectPreferences(settings);
         var prompt = await _prompts.GetAsync("connection-test", cancellationToken).ConfigureAwait(false);
         var expectedKey = $"expected.{SupportedLanguages.Normalize(language)}";
         var expected = prompt.Metadata.TryGetValue(expectedKey, out var localizedExpected)
@@ -145,7 +142,7 @@ public sealed class OpenAiService : IOpenAiService
                 prompt,
                 sessionId,
                 [new ChatMessage("user", prompt.ResolveText(language))],
-                prompt.ResolveText(language),
+                BuildInstructions(prompt, settings, language),
                 settings,
                 OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail),
                 cancellationToken).ConfigureAwait(false);
@@ -182,11 +179,7 @@ public sealed class OpenAiService : IOpenAiService
         var preferredNamePrompt = await LoadPreferredNamePromptAsync(prompt, settings, cancellationToken).ConfigureAwait(false);
         var maxOutputTokens = OpenAiRequestBuilder.ResolveMaxOutputTokens(prompt, settings.OutputDetail, _limits);
         return OpenAiRequestBuilder.EstimateContext(
-            OpenAiRequestBuilder.BuildInstructions(
-                prompt,
-                settings,
-                language,
-                _runtimeContext.GetCurrent(), _limits, guide, preferredNamePrompt),
+            BuildInstructions(prompt, settings, language, guide, preferredNamePrompt),
             messages.Select(message => message with { Content = _redactor.Redact(message.Content) }).ToArray(),
             settings.Model,
             guide) with
@@ -207,12 +200,13 @@ public sealed class OpenAiService : IOpenAiService
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(settings);
+        settings = ProtectPreferences(settings);
         var prompt = await _prompts.GetAsync("command-risk", cancellationToken).ConfigureAwait(false);
         var response = await SendCoreAsync(
             prompt,
             sessionId,
             [new ChatMessage("user", command)],
-            prompt.ResolveText(language),
+            BuildInstructions(prompt, settings, language),
             settings,
             500,
             cancellationToken).ConfigureAwait(false);
@@ -467,6 +461,22 @@ public sealed class OpenAiService : IOpenAiService
             return null;
         }
     }
+
+    /// <summary>Builds every provider instruction through one privacy-bounded runtime-context composition path.</summary>
+    private string BuildInstructions(
+        PromptDefinition prompt,
+        AppSettings settings,
+        string language,
+        AppGuideContext? guide = null,
+        PromptDefinition? preferredNamePrompt = null) =>
+        OpenAiRequestBuilder.BuildInstructions(
+            prompt,
+            settings,
+            language,
+            _runtimeContext.GetCurrent(settings.ScriptLanguage),
+            _limits,
+            guide,
+            preferredNamePrompt);
 
     /// <summary>Loads name guidance only for user-facing conversations with an explicitly configured name.</summary>
     private async Task<PromptDefinition?> LoadPreferredNamePromptAsync(PromptDefinition prompt, AppSettings settings, CancellationToken ct) =>

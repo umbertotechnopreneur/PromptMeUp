@@ -6,7 +6,11 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILocalizationService text, ArtifactLimits? limits = null)
+public sealed class ScriptArtifactService(
+    ISensitiveDataRedactor redactor,
+    ILocalizationService text,
+    IScriptLanguageCatalog languages,
+    ArtifactLimits? limits = null)
 {
     private readonly ArtifactLimits _limits = limits ?? ArtifactLimits.Default;
 
@@ -49,11 +53,12 @@ public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILoca
         }
     }
 
-    /// <summary>Writes a reviewed artifact to a new script file, never overwriting an existing file.</summary>
-    public async Task SaveAsync(string path, string source, CancellationToken cancellationToken)
+    /// <summary>Writes a reviewed artifact to a new language-matched script file and never overwrites an existing file.</summary>
+    public async Task SaveAsync(string path, string source, ScriptLanguage language, CancellationToken cancellationToken)
     {
         ValidateSource(source);
-        if (!string.Equals(Path.GetExtension(path), ".ps1", StringComparison.OrdinalIgnoreCase))
+        var definition = languages.Get(language);
+        if (!string.Equals(Path.GetExtension(path), definition.FileExtension, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(text.Text("Script.OutputOption"));
         }
@@ -69,21 +74,91 @@ public sealed class ScriptArtifactService(ISensitiveDataRedactor redactor, ILoca
         }
     }
 
-    /// <summary>Builds a visible PowerShell parser and optional built-in analyzer invocation that never evaluates the source.</summary>
-    public static string BuildValidationCommand(string source)
+    /// <summary>Suggests a new current-directory filename with a stable language extension and no existing collision.</summary>
+    public string SuggestOutputPath(string request, ScriptLanguage language)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(source);
-        return "$source = " + Quote(source) + "; $tokens = $null; $parseErrors = $null; " +
-            "$null = [System.Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$parseErrors); " +
-            "$diagnostics = @($parseErrors | ForEach-Object { [pscustomobject]@{ Line = $_.Extent.StartLineNumber; Message = $_.Message } }); " +
-            "$analyzerAvailable = [bool](Get-Module -ListAvailable PSScriptAnalyzer); " +
-            "if ($analyzerAvailable) { $diagnostics += @(PSScriptAnalyzer\\Invoke-ScriptAnalyzer -ScriptDefinition $source | Select-Object Line,Severity,Message) }; " +
-            "[pscustomobject]@{ SyntaxValid = ($parseErrors.Count -eq 0); AnalyzerAvailable = $analyzerAvailable; Diagnostics = $diagnostics } | ConvertTo-Json -Depth 5; " +
-            "if ($parseErrors.Count -gt 0) { exit 1 }";
+        ArgumentException.ThrowIfNullOrWhiteSpace(request);
+        var definition = languages.Get(language);
+        var directory = Path.GetFullPath(Environment.CurrentDirectory);
+        var stem = CreateSafeStem(request);
+        for (var suffix = 1; suffix <= 1_000; suffix++)
+        {
+            var fileName = suffix == 1
+                ? stem + definition.FileExtension
+                : stem + "-" + suffix.ToString(System.Globalization.CultureInfo.InvariantCulture) + definition.FileExtension;
+            var candidate = Path.Combine(directory, fileName);
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException(text.Text("Script.SaveError"));
     }
+
+    /// <summary>Retains the PowerShell parser helper for callers that only need the legacy language-specific check.</summary>
+    public static string BuildValidationCommand(string source) => ScriptLanguageCatalog.BuildPowerShellValidationCommand(source);
 
     /// <summary>Quotes literal data without permitting interpolation or evaluation by the runner.</summary>
     public static string Quote(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
+
+    /// <summary>Converts a natural-language request into a safe, readable file stem without path separators or reserved Windows names.</summary>
+    private static string CreateSafeStem(string request)
+    {
+        var normalized = request.Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(normalized.Length);
+        var separatorPending = false;
+        foreach (var character in normalized)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(character) == System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetterOrDigit(character))
+            {
+                if (separatorPending && builder.Length > 0)
+                {
+                    builder.Append('-');
+                }
+                builder.Append(char.ToLowerInvariant(character));
+                separatorPending = false;
+            }
+            else
+            {
+                separatorPending = builder.Length > 0;
+            }
+        }
+
+        var stem = builder.ToString().Trim('-', '.', ' ');
+        if (string.IsNullOrWhiteSpace(stem))
+        {
+            stem = "script";
+        }
+        if (stem.Length > 56)
+        {
+            stem = stem[..56].TrimEnd('-', '.', ' ');
+        }
+        if (IsReservedWindowsFileName(stem))
+        {
+            stem = "script-" + stem;
+        }
+
+        return stem;
+    }
+
+    /// <summary>Rejects the Windows device-name stems even when the current platform can create them.</summary>
+    private static bool IsReservedWindowsFileName(string value)
+    {
+        var normalized = value.TrimEnd('.', ' ');
+        if (normalized is "con" or "prn" or "aux" or "nul")
+        {
+            return true;
+        }
+        return normalized.Length == 4
+            && (normalized.StartsWith("com", StringComparison.Ordinal) || normalized.StartsWith("lpt", StringComparison.Ordinal))
+            && normalized[3] is >= '1' and <= '9';
+    }
 
     /// <summary>Rejects unsafe artifact shapes and recognizable credentials without concealing the reason in logs.</summary>
     private void ValidateSource(string source)

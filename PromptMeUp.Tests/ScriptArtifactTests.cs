@@ -9,6 +9,26 @@ namespace PromptMeUp.Tests;
 
 public sealed class ScriptArtifactTests
 {
+    /// <summary>Keeps persisted language identifiers, extensions, and validation support centralized and stable.</summary>
+    [Theory]
+    [InlineData(ScriptLanguage.PowerShell, "powershell", ".ps1", true)]
+    [InlineData(ScriptLanguage.Batch, "batch", ".cmd", false)]
+    [InlineData(ScriptLanguage.Bash, "bash", ".sh", true)]
+    [InlineData(ScriptLanguage.Python, "python", ".py", true)]
+    [InlineData(ScriptLanguage.JavaScript, "javascript", ".js", true)]
+    public void LanguageCatalog_MapsEachPersistedPreference(ScriptLanguage language, string stored, string extension, bool supportsValidation)
+    {
+        var catalog = new ScriptLanguageCatalog();
+
+        var definition = catalog.Get(language);
+
+        Assert.Equal(stored, definition.StorageValue);
+        Assert.Equal(extension, definition.FileExtension);
+        Assert.Equal(supportsValidation, definition.SupportsValidation);
+        Assert.Equal(language, ScriptLanguageCatalog.ParseStorageValue(stored));
+        Assert.Equal(stored, ScriptLanguageCatalog.ToStorageValue(language));
+    }
+
     /// <summary>Rejects invalid artifact shapes and accepts a complete source without extracting Markdown heuristically.</summary>
     [Fact]
     public void Parse_RequiresExactArtifactFields()
@@ -27,7 +47,7 @@ public sealed class ScriptArtifactTests
         try
         {
             await File.WriteAllTextAsync(path, "original");
-            await Assert.ThrowsAsync<InvalidOperationException>(() => Create().SaveAsync(path, "Get-Location", CancellationToken.None));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => Create().SaveAsync(path, "Get-Location", ScriptLanguage.PowerShell, CancellationToken.None));
             Assert.Equal("original", await File.ReadAllTextAsync(path));
         }
         finally
@@ -76,5 +96,5 @@ public sealed class ScriptArtifactTests
     }
 
     /// <summary>Creates a real artifact validator without provider or user data dependencies.</summary>
-    private static ScriptArtifactService Create() => new(new SensitiveDataRedactor(), new LocalizationService());
+    private static ScriptArtifactService Create() => new(new SensitiveDataRedactor(), new LocalizationService(), new ScriptLanguageCatalog());
 }

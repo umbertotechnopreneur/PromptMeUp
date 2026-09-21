@@ -31,6 +31,10 @@ public sealed record AppSettings(
 
     public bool DirectModeEnabled { get; init; } = true;
 
+    public bool ShowSessionSummaryDuringWork { get; init; }
+
+    public ScriptLanguage ScriptLanguage { get; init; } = ScriptLanguage.PowerShell;
+
     public const string DefaultEndpoint = "https://api.openai.com/v1/responses";
     public const string DefaultApiKeyVariable = "OPENAI_API_KEY";
     public const string DefaultAdminKeyVariable = "OPENAI_ADMIN_KEY";

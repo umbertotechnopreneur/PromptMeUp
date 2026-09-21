@@ -1,12 +1,13 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
 
 namespace PromptMeUp.Views;
 
 /// <summary>Displays open experimental workflows using the shared palette without owning I/O services.</summary>
-public sealed class ExperimentalView(IAnsiConsole console, ILocalizationService text)
+public sealed class ExperimentalView(IAnsiConsole console, ILocalizationService text, IConsoleShellView shell)
 {
     /// <summary>Shows right-aligned labels and left-aligned values with intentional whitespace.</summary>
     public void Render(string title, IEnumerable<(string Label, string Value)> fields)
@@ -29,6 +30,38 @@ public sealed class ExperimentalView(IAnsiConsole console, ILocalizationService 
         return console.Prompt(new SelectionPrompt<int>().PageSize(10)
             .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}")).UseConverter(index => Markup.Escape(Safe(choices[index])))
             .AddChoices(Enumerable.Range(0, choices.Length)));
+    }
+
+    /// <summary>Returns a typed choice so workflow decisions do not rely on a selection index.</summary>
+    internal T Choose<T>(string title, IReadOnlyList<(T Value, string Label)> choices)
+    {
+        ArgumentNullException.ThrowIfNull(choices);
+        if (choices.Count == 0)
+        {
+            throw new ArgumentException("A menu needs at least one choice.", nameof(choices));
+        }
+        return choices[Choose(title, choices.Select(choice => choice.Label).ToArray())].Value;
+    }
+
+    /// <summary>Uses the shared fullscreen workspace for the skills overview and preserves the scrolling prompt fallback.</summary>
+    internal SkillMenuItem ChooseSkills(string title, IReadOnlyList<SkillMenuItem> items)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentNullException.ThrowIfNull(items);
+        if (items.Count == 0)
+        {
+            throw new ArgumentException("The skills menu needs at least one item.", nameof(items));
+        }
+        var back = items.FirstOrDefault(item => item.Action == SkillMenuAction.Back)
+            ?? throw new ArgumentException("The skills menu needs a back action.", nameof(items));
+        if (!FullscreenViewport.CanUse(console))
+        {
+            return Choose(title, items.Select(item => (Value: item, Label: item.Label)).ToArray());
+        }
+
+        var selected = new FullscreenMenuView(console, text, shell.Options).Select(title,
+            items.Select(item => new FullscreenMenuItem(item.Icon, item.Label, item.Description)).ToArray(), text.Text("Lab.Back"));
+        return selected is { } index ? items[index] : back;
     }
 
     /// <summary>Reads one bounded text field without interpreting it as markup.</summary>

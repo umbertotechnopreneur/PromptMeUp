@@ -23,6 +23,7 @@ public sealed class MemoryCommandWorkflow(
     /// <summary>Saves literal notes locally or deletes a single identified note after a complete lookup.</summary>
     public async Task<int> RunAsync(CommandLineOptions options, AppSettings settings, CancellationToken cancellationToken)
     {
+        ShellRuntimeStatus? finalSummary = null;
         try
         {
             var request = input.Sanitize(options.Query ?? string.Empty, PersistentMemoryService.MaximumCharacters + 8, fromArgument: true).Trim();
@@ -56,7 +57,9 @@ public sealed class MemoryCommandWorkflow(
                 matches = available.Where(memory => memory.Text.Equals(request, StringComparison.Ordinal)).ToArray();
                 if (matches.Count == 0 && available.Count > 0)
                 {
-                    matches = await ResolveAsync(request, available, settings, cancellationToken).ConfigureAwait(false);
+                    var resolution = await ResolveAsync(request, available, settings, cancellationToken).ConfigureAwait(false);
+                    matches = resolution.Matches;
+                    finalSummary = resolution.Summary;
                 }
             }
             if (matches.Count == 0)
@@ -89,10 +92,17 @@ public sealed class MemoryCommandWorkflow(
             shell.RenderError(exception.Message);
             return 1;
         }
+        finally
+        {
+            if (finalSummary is not null)
+            {
+                shell.RenderRuntimeStatus(finalSummary);
+            }
+        }
     }
 
     /// <summary>Searches every accessible note in bounded batches before offering matches for explicit selection.</summary>
-    private async Task<IReadOnlyList<PersistentMemory>> ResolveAsync(
+    private async Task<MemoryResolution> ResolveAsync(
         string request,
         IReadOnlyList<PersistentMemory> available,
         AppSettings settings,
@@ -109,6 +119,7 @@ public sealed class MemoryCommandWorkflow(
         }
         var matches = new List<PersistentMemory>();
         var totalCost = 0m;
+        AiResponse? lastResponse = null;
         await using var session = await AuditSessionScope.StartAsync(
             audit, "memory-forget", settings, new { invocation = "forget" }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
         foreach (var batch in available.Chunk(8))
@@ -122,7 +133,7 @@ public sealed class MemoryCommandWorkflow(
                 () => openAi.SendAsync("memory-forget", session.Id, [new ChatMessage("user", payload)],
                     settings, settings.Language, cancellationToken)).ConfigureAwait(false);
             totalCost += response.EstimatedCostUsd ?? 0;
-            shell.RenderRuntimeStatus(AiConversationWorkflow.CreateTurnSnapshot(response, settings, totalCost));
+            lastResponse = response;
             try
             {
                 matches.AddRange(ParseMatches(response.Text, batch));
@@ -133,7 +144,8 @@ public sealed class MemoryCommandWorkflow(
             }
         }
         session.Outcome = AuditSessionOutcome.Completed;
-        return matches;
+        var finalResponse = lastResponse ?? throw new InvalidOperationException("The memory lookup did not return a provider response.");
+        return new MemoryResolution(matches, AiConversationWorkflow.CreateTurnSnapshot(finalResponse, settings, totalCost));
     }
 
     /// <summary>Accepts only distinct identifiers present in the exact batch shown to the provider.</summary>
@@ -160,4 +172,7 @@ public sealed class MemoryCommandWorkflow(
         }
         return matches;
     }
+
+    /// <summary>Returns AI-resolved candidates together with one final cumulative usage summary for the entire batch operation.</summary>
+    private sealed record MemoryResolution(IReadOnlyList<PersistentMemory> Matches, ShellRuntimeStatus Summary);
 }

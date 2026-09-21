@@ -41,7 +41,7 @@ to a file, this follow-up menu doesn't open.
 | `--memories` | — | Opens the local memory manager to view, create, edit, or delete saved notes. |
 | `--direct <request>` | — | Forces direct execution for this session: risk review, five-second countdown, execution, and result analysis. Enabled by default; can be disabled in setup. |
 | `--diagnose [text]` | `--file <log>` or stdin | Explains an error or log excerpt and suggests what to check next. |
-| `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a PowerShell script for you to review and save. |
+| `--script <request>` | `--file <source>`, `--output <new-script>` | Creates or revises a script in your selected language for you to review, save, validate, or run once from a temporary file. |
 | `--plan <goal>` | `--plan --resume <id>` | Breaks a task into steps you can approve, check, and resume. |
 | `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Shows which files a rename, copy, move, or deletion would affect. |
 | `--setup` | — | Opens Settings with General selected. |
@@ -235,7 +235,7 @@ stops the remaining operations.
 ## Follow a resumable plan
 
 Use `hm --plan "Build, test, and package this project"`. PromptMeUp creates one
-to eight ordered PowerShell steps, saves their pending state locally, and shows
+to ten ordered PowerShell steps, saves their pending state locally, and shows
 `hm --plan --resume <id>`. The plan must be resumed from its original directory.
 
 Starting a plan doesn't approve its steps. You review and approve each action
@@ -252,11 +252,17 @@ Plan content with recognizable secrets is rejected.
 ## Create or revise a script
 
 Use `hm --script "Archive old logs with a report" --output archive-logs.ps1`.
-To revise a script, add `--file existing.ps1` and choose a new output file. This
-interactive flow shows the complete source and a line-by-line replacement diff,
-then offers revision, validation, saving, or cancellation. Existing files are
-never overwritten. Script input/output supports up to 1 MiB of UTF-8 source by
-default. Embedded credentials and redaction placeholders are rejected.
+Choose PowerShell, Batch/CMD, Bash, Python, or JavaScript/Node in setup. On the
+first run, hm chooses a locally available shell and keeps that preference until
+you change it. The selected language determines the generated file extension.
+
+To revise a script, add `--file existing-script`. This interactive flow shows
+the complete source and a line-by-line replacement diff, then lets you save to
+a suggested new local filename, validate syntax when the language supports it,
+run the reviewed source once from a temporary file, request a revision, or do
+nothing. `--output` takes precedence over the suggested filename. Existing
+files are never overwritten. Script input/output supports up to 1 MiB of UTF-8
+source by default. Embedded credentials and redaction placeholders are rejected.
 
 The optional validation action asks you to approve a PowerShell syntax check.
 It reads the script without running it and also uses PSScriptAnalyzer if that's
