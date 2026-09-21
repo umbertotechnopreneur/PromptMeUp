@@ -168,39 +168,41 @@ msiexec.exe /x .\artifacts\release\0.1.5\packages\PromptMeUp-0.1.5-win-x64.msi
 
 The build never reads or packages `OPENAI_API_KEY`, `OPENAI_ADMIN_KEY`, settings, databases, logs, or the local application-data directory. Code signing is intentionally separate and must happen before final SHA-256 calculation and WinGet manifest generation.
 
-## Install with the `hm` execution alias
+## Install with the `hm` execution alias and Start-menu help
 
-The optional MSIX package registers `hm.exe` through Windows' app execution aliases. You can then type `hm` without adding the build or installation folder to `PATH`. Portable archives and the MSI remain available.
+The MSIX package registers `hm.exe` through Windows' app execution aliases. You can then type `hm` without adding the build or installation folder to `PATH`.
 
-Use Windows 10 version 2004 or later, PowerShell 7, a Windows SDK containing `MakeAppx.exe` and `SignTool.exe`, and an existing trusted code-signing certificate with its private key in `CurrentUser\My`. The signing certificate's subject becomes the package publisher. Keep that certificate and package name consistent for future updates.
+Use Windows 10 version 2004 or later, PowerShell 7, a Windows SDK containing `MakeAppx.exe` and `SignTool.exe`, and an existing trusted code-signing certificate with its private key in `CurrentUser\My`. Its subject must match the reserved Store publisher. Keep that certificate and package identity consistent for future updates.
 
 Prepare a fresh self-contained folder and its redistribution notices. This example uses x64; use `win-arm64` and `-Architecture arm64` for Arm64:
 
 ```powershell
-dotnet publish .\PromptMeUp\PromptMeUp.csproj --configuration Release `
+dotnet publish .\PromptMeUp\PromptMeUp.csproj --configuration Debug `
   --runtime win-x64 --self-contained true -p:PublishSingleFile=false `
-  -p:DebugType=None -p:DebugSymbols=false --output .\artifacts\msix\local\publish
+  --output .\artifacts\msix\debug\local\publish
 pwsh -NoProfile -File .\scripts\export-third-party-notices.ps1 `
-  -OutputDirectory .\artifacts\msix\local\publish -Runtime win-x64
+  -OutputDirectory .\artifacts\msix\debug\local\publish -Runtime win-x64
 
-pwsh -NoProfile -File .\scripts\build-msix.ps1 `
-  -PublishDirectory .\artifacts\msix\local\publish `
-  -OutputDirectory .\artifacts\msix\local\package `
-  -Architecture x64 -CertificateThumbprint '<your existing code-signing certificate thumbprint>'
+pwsh -NoProfile -File .\scripts\package-msix.ps1 `
+  -PublishDirectory .\artifacts\msix\debug\local\publish `
+  -Channel Debug -Architecture x64 `
+  -CertificateThumbprint '<Store publisher-matching certificate thumbprint>'
 ```
 
-The thumbprint identifies your public certificate; you don't pass a private key or exported certificate to the script. The script copies the prepared app, runtime DLLs, prompts, themes, and license files. It makes tile images from `assets/PromptMeUp.ico`, checks the manifest, signs the MSIX, and checks the signature.
+The thumbprint identifies your public certificate; you don't pass a private key or exported certificate to the script. The script rejects a certificate whose subject differs from PromptMeUp's Store publisher. It copies the prepared app, runtime DLLs, prompts, themes, and license files, makes tile images from `assets/PromptMeUp.ico`, checks the manifest, signs the MSIX, and checks the signature.
 
-Use a fresh output folder. The script rejects links and unexpected files such as databases, logs, or credentials. It only builds the package: it doesn't install or run the app, run tests, or change certificate trust or `PATH`.
+For a Debug package, the default output is `artifacts/msix/debug/<version>/<architecture>/`; use `-Channel Store` for Store-channel staging. Signed packaging requires the explicit matching certificate. Use `-Unsigned` only when an unsigned staging package is intentional. The script rejects links and unexpected files such as databases, logs, or credentials. It only builds the package: it doesn't install or run the app, run tests, or change certificate trust or `PATH`.
 
 The four-part package version defaults to the published executable's file version. Use `-Version 0.1.5.1` when a packaging revision needs a higher version. Use `-SdkBinDirectory` to select the directory containing the SDK tools. An optional `-TimestampServer https://...` adds an RFC 3161 timestamp from your chosen signing service; without one, the signature's validity is limited by the certificate's expiry.
 
-After reviewing the generated manifest under `package/payload`, install the signed package for the current user:
+After reviewing the generated manifest under `payload`, install the signed package for the current user:
 
 ```powershell
-Add-AppxPackage -Path .\artifacts\msix\local\package\PromptMeUp-0.1.5.0-win-x64.msix
+Add-AppxPackage -Path .\artifacts\msix\debug\<version>\x64\PromptMeUp-<version>-win-x64.msix
 Get-Command hm -CommandType Application
 ```
+
+PromptMeUp appears in Start. Clicking its icon launches the packaged console application with `hm --help`; Windows uses the user's configured default terminal host. The separate hidden package entry registers the `hm.exe` alias without `--help`, so normal calls such as `hm "show Git status"` retain their arguments.
 
 Windows exposes the alias through the user's `Microsoft\WindowsApps` directory. If another installation's `hm.exe` appears first, remove that installation's old `PATH` entry or uninstall it after checking which copy is active. Windows' **App execution aliases** settings let you enable or disable the MSIX alias. Do not run `hm --path install` for the MSIX copy.
 
@@ -209,7 +211,7 @@ The package uses the `win32App` runtime behavior and a normal console process. I
 To remove the default MSIX package and its alias:
 
 ```powershell
-Get-AppxPackage -Name UmbertoGiacobbi.PromptMeUp | Remove-AppxPackage
+Get-AppxPackage -Name UmbertoGiacobbiDotBiz.PromptMeUp | Remove-AppxPackage
 ```
 
 Your ordinary PromptMeUp data directory remains separate from the package. Removing the MSIX does not remove that saved history or your current-user API key environment variables.

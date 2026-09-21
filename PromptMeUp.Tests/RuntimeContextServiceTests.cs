@@ -1,100 +1,86 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
+using PromptMeUp.Models;
 using PromptMeUp.Services;
 
 namespace PromptMeUp.Tests;
 
 public sealed class RuntimeContextServiceTests
 {
-    /// <summary>Verifies Unix platform context describes the same PowerShell runner used after authorization.</summary>
+    /// <summary>Verifies every supported platform produces only a family, numeric version, and the fixed approved-command shell.</summary>
     [Theory]
-    [InlineData("Linux")]
-    [InlineData("MacOS")]
-    public void Build_UnixPlatform_RequestsPowerShellSyntax(string platformName)
+    [InlineData("Windows", "Windows 11.0.22631")]
+    [InlineData("Linux", "Linux 6.8.0")]
+    [InlineData("MacOS", "macOS 15.1.0")]
+    public void Build_SupportedPlatform_UsesFamilyVersionAndEffectiveShell(string platformName, string expectedOperatingSystem)
     {
         var platform = Enum.Parse<RuntimePlatform>(platformName);
-        var snapshot = new RuntimeContextSnapshot("/srv/work", null, platformName, platform, "Arm64", 4, null, null, []);
+        var snapshot = new RuntimeContextSnapshot(platform, new Version(platform == RuntimePlatform.Windows ? 11 : platform == RuntimePlatform.Linux ? 6 : 15, platform == RuntimePlatform.Windows ? 0 : platform == RuntimePlatform.Linux ? 8 : 1, platform == RuntimePlatform.Windows ? 22631 : 0), @"C:\Users\Ada\workspace", @"C:\Users\Ada");
 
-        var context = RuntimeContextService.Build(snapshot, new SensitiveDataRedactor());
+        var context = RuntimeContextService.Build(snapshot, "Bash", true, new SensitiveDataRedactor());
 
-        Assert.Contains("PowerShell 7 syntax", context.CommandEnvironment, StringComparison.Ordinal);
-        Assert.Contains("pwsh", context.CommandEnvironment, StringComparison.Ordinal);
-        Assert.DoesNotContain("POSIX", context.CommandEnvironment, StringComparison.Ordinal);
+        Assert.Equal(expectedOperatingSystem, context.OperatingSystem);
+        Assert.Equal("PowerShell 7 (pwsh -NoLogo -NoProfile -NonInteractive)", context.CommandShell);
+        Assert.Equal("Bash", context.PreferredScriptInterpreter);
+        Assert.True(context.IsPreferredScriptInterpreterAvailable);
+        Assert.Equal("~/workspace", context.WorkingDirectory);
     }
 
-    /// <summary>Verifies that a home-directory identity and credential-shaped folder name never reach provider context.</summary>
+    /// <summary>Verifies the explicit fallback does not fabricate an operating-system version or a local interpreter.</summary>
     [Fact]
-    public void Build_HomeDirectoryAndCredential_RedactsBothBeforePromptUse()
+    public void Build_UnknownPlatform_UsesExplicitNonIdentifyingFallbacks()
     {
-        var secret = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789";
-        var snapshot = new RuntimeContextSnapshot(
-            $@"C:\Users\Ada\workspace\{secret}",
-            @"C:\Users\Ada",
-            "Windows 11 Pro",
-            RuntimePlatform.Windows,
-            "X64",
-            16,
-            "AMD Ryzen 9",
-            34_359_738_368UL,
-            ["NVIDIA RTX"]);
+        var context = RuntimeContextService.Build(
+            new RuntimeContextSnapshot(RuntimePlatform.Other, null, null, null),
+            "Batch / CMD",
+            false,
+            new SensitiveDataRedactor());
 
-        var context = RuntimeContextService.Build(snapshot, new SensitiveDataRedactor());
-        var promptBlock = context.ToPromptBlock();
-
-        Assert.Equal("~/workspace/[redacted-openai-key]", context.WorkingDirectory);
-        Assert.Contains("Windows console; prefer PowerShell 7 syntax", context.CommandEnvironment, StringComparison.Ordinal);
-        Assert.Contains("AMD Ryzen 9; 16 logical processor(s), X64", context.Cpu, StringComparison.Ordinal);
-        Assert.Equal("32.0 GiB physical memory", context.Memory);
-        Assert.Equal("NVIDIA RTX", context.Gpu);
-        Assert.DoesNotContain("Ada", promptBlock, StringComparison.Ordinal);
-        Assert.DoesNotContain(secret, promptBlock, StringComparison.Ordinal);
-        Assert.Contains("Privacy boundary", promptBlock, StringComparison.Ordinal);
+        Assert.Equal("Unknown operating system", context.OperatingSystem);
+        Assert.Equal("Batch / CMD", context.PreferredScriptInterpreter);
+        Assert.False(context.IsPreferredScriptInterpreterAvailable);
     }
 
-    /// <summary>Verifies that unavailable probe data is explicit and does not cause fabricated platform details.</summary>
-    [Fact]
-    public void Build_UnavailableHardware_UsesExplicitFallbacks()
+    /// <summary>Verifies each supported provider language receives the same safe technical facts without path or hardware disclosure.</summary>
+    [Theory]
+    [InlineData("it")]
+    [InlineData("en")]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("vi")]
+    public void ToPromptBlock_SupportedLanguage_ContainsOnlySafeTechnicalFacts(string language)
     {
-        var snapshot = new RuntimeContextSnapshot(
-            "/srv/work",
-            null,
-            null,
-            RuntimePlatform.Other,
-            "Arm64",
-            4,
-            null,
-            null,
-            []);
+        var context = RuntimeContextService.Build(
+            new RuntimeContextSnapshot(RuntimePlatform.Windows, new Version(11, 0, 22631), @"C:\Users\Ada\workspace", @"C:\Users\Ada"),
+            "Python 3",
+            true,
+            new SensitiveDataRedactor());
 
-        var context = RuntimeContextService.Build(snapshot, new SensitiveDataRedactor());
+        var promptBlock = context.ToPromptBlock(language, includeWorkingDirectory: false);
 
-        Assert.Equal("/srv/work", context.WorkingDirectory);
-        Assert.Equal("unavailable", context.OperatingSystem);
-        Assert.Equal("operating-system family unavailable; approved commands run in PowerShell 7 (pwsh); ask before assuming paths", context.CommandEnvironment);
-        Assert.Equal("4 logical processor(s), Arm64", context.Cpu);
-        Assert.Equal("physical total unavailable to the portable runtime", context.Memory);
-        Assert.Equal("not exposed by the portable runtime", context.Gpu);
+        Assert.Contains("Windows 11.0.22631", promptBlock, StringComparison.Ordinal);
+        Assert.Contains("PowerShell 7 (pwsh -NoLogo -NoProfile -NonInteractive)", promptBlock, StringComparison.Ordinal);
+        Assert.Contains("Python 3", promptBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("CPU", promptBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("GPU", promptBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("Current working directory", promptBlock, StringComparison.Ordinal);
+        if (!string.Equals(language, "en", StringComparison.Ordinal))
+        {
+            Assert.NotEqual(context.ToPromptBlock("en", includeWorkingDirectory: false), promptBlock);
+        }
     }
 
-    /// <summary>Verifies that a network working directory with a server identity is withheld from the provider-bound context.</summary>
+    /// <summary>Verifies the provider context derives its selected interpreter and availability from the catalog without exposing its executable path.</summary>
     [Fact]
-    public void Build_NetworkWorkingDirectory_WithholdsServerIdentity()
+    public void GetCurrent_SelectedInterpreter_DoesNotExposeExecutablePath()
     {
-        var snapshot = new RuntimeContextSnapshot(
-            @"\\build-server\private-share\workspace",
-            @"C:\Users\Ada",
-            "Windows 11 Pro",
-            RuntimePlatform.Windows,
-            "X64",
-            8,
-            null,
-            null,
-            []);
+        var context = new RuntimeContextService(new ScriptLanguageCatalog(), new SensitiveDataRedactor()).GetCurrent(ScriptLanguage.PowerShell);
 
-        var context = RuntimeContextService.Build(snapshot, new SensitiveDataRedactor());
+        var promptBlock = context.ToPromptBlock("en", includeWorkingDirectory: true);
 
-        Assert.Equal("network working directory (path withheld)", context.WorkingDirectory);
-        Assert.DoesNotContain("build-server", context.ToPromptBlock(), StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("private-share", context.ToPromptBlock(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("PowerShell 7", context.PreferredScriptInterpreter);
+        Assert.DoesNotContain("\\Users\\", promptBlock, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Preferred script interpreter: PowerShell 7", promptBlock, StringComparison.Ordinal);
     }
 }

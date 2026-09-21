@@ -46,7 +46,7 @@ public sealed class ArtifactLimitTests
         { Content = new StringContent(body, Encoding.UTF8) }));
         var response = await fixture.CreateOpenAi(http, promptId: "script-system").SendAsync("script-system", "large-response",
             [new ChatMessage("user", "Generate source")], AppSettings.Default, "en", default);
-        Assert.Equal(source, new ScriptArtifactService(new SensitiveDataRedactor(), new LocalizationService()).Parse(response.Text).Source);
+        Assert.Equal(source, new ScriptArtifactService(new SensitiveDataRedactor(), new LocalizationService(), new ScriptLanguageCatalog()).Parse(response.Text).Source);
     }
 
     /// <summary>A complete one-MiB script round-trips through the same UTF-8 read and write limit.</summary>
@@ -54,14 +54,14 @@ public sealed class ArtifactLimitTests
     public async Task Script_OneMebibyte_RoundTrips()
     {
         using var fixture = new RegressionFixture();
-        var service = new ScriptArtifactService(new SensitiveDataRedactor(), new LocalizationService());
+        var service = new ScriptArtifactService(new SensitiveDataRedactor(), new LocalizationService(), new ScriptLanguageCatalog());
         var source = "#" + new string('x', ArtifactLimits.Mebibyte - 1);
         var path = Path.Combine(fixture.Paths.DataDirectory, "large.ps1");
-        await service.SaveAsync(path, source, default);
+        await service.SaveAsync(path, source, ScriptLanguage.PowerShell, default);
         Assert.Equal(ArtifactLimits.Mebibyte, new FileInfo(path).Length);
         Assert.Equal(source, await service.ReadAsync(path, default));
         Assert.Equal(source, service.Parse(JsonSerializer.Serialize(new { explanation = "Synthetic source", source })).Source);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveAsync(path + ".ps1", source + "x", default));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveAsync(path + ".ps1", source + "x", ScriptLanguage.PowerShell, default));
         Assert.False(File.Exists(path + ".ps1"));
     }
 
@@ -71,14 +71,14 @@ public sealed class ArtifactLimitTests
     {
         using var fixture = new RegressionFixture();
         var text = new LocalizationService();
-        var small = new ScriptArtifactService(new SensitiveDataRedactor(), text, new ArtifactLimits(maxScriptBytes: 8));
+        var small = new ScriptArtifactService(new SensitiveDataRedactor(), text, new ScriptLanguageCatalog(), new ArtifactLimits(maxScriptBytes: 8));
         var path = Path.Combine(fixture.Paths.DataDirectory, "unicode.ps1");
-        await small.SaveAsync(path, "éééé", default);
+        await small.SaveAsync(path, "éééé", ScriptLanguage.PowerShell, default);
         Assert.Equal("éééé", await small.ReadAsync(path, default));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => small.SaveAsync(path + ".ps1", "ééééx", default));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => small.SaveAsync(path + ".ps1", "ééééx", ScriptLanguage.PowerShell, default));
         await File.WriteAllTextAsync(path, "ééééx", new UTF8Encoding(false));
         await Assert.ThrowsAsync<InvalidOperationException>(() => small.ReadAsync(path, default));
-        var larger = new ScriptArtifactService(new SensitiveDataRedactor(), text, new ArtifactLimits(maxScriptBytes: 16));
+        var larger = new ScriptArtifactService(new SensitiveDataRedactor(), text, new ScriptLanguageCatalog(), new ArtifactLimits(maxScriptBytes: 16));
         Assert.Equal("ééééx", await larger.ReadAsync(path, default));
     }
 

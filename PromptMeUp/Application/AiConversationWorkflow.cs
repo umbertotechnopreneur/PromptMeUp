@@ -18,7 +18,8 @@ public interface IAiConversationWorkflow
         bool renderQuery,
         CancellationToken cancellationToken,
         string promptId = "query-system",
-        CommandExecutionMode executionMode = CommandExecutionMode.Confirm);
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm,
+        bool directModeOverride = false);
 
     Task RunChatAsync(AppSettings settings, CancellationToken cancellationToken);
 
@@ -104,11 +105,21 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         bool renderQuery,
         CancellationToken cancellationToken,
         string promptId = "query-system",
-        CommandExecutionMode executionMode = CommandExecutionMode.Confirm)
+        CommandExecutionMode executionMode = CommandExecutionMode.Confirm,
+        bool directModeOverride = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         ArgumentNullException.ThrowIfNull(settings);
-        var memory = new ConversationState(_memoryService.Create(settings), promptId) { ExecutionMode = executionMode };
+        if (directModeOverride && executionMode != CommandExecutionMode.Direct)
+        {
+            throw new ArgumentException("A direct-mode override requires direct execution.", nameof(directModeOverride));
+        }
+        var memory = new ConversationState(_memoryService.Create(settings), promptId)
+        {
+            ExecutionMode = executionMode,
+            DirectModeOverride = directModeOverride,
+            ShowSessionSummaryDuringWork = settings.ShowSessionSummaryDuringWork
+        };
         await using var session = await AuditSessionScope.StartAsync(
             _audit, promptId, settings, new { invocation = promptId, executionMode }, AuditSessionOutcome.Failed, cancellationToken).ConfigureAwait(false);
         try
@@ -130,6 +141,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 offerChatContinuation: IsInteractive,
                 promptId,
                 cancellationToken,
+                classifyDisplayIntent: true,
                 captureObservation: promptId == "query-system").ConfigureAwait(false);
             if (startChat)
             {
@@ -153,7 +165,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         ArgumentNullException.ThrowIfNull(settings);
         var memory = new ConversationState(_memoryService.Create(settings), "chat-system")
         {
-            ExecutionMode = settings.DirectModeEnabled ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm
+            ExecutionMode = settings.DirectModeEnabled ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm,
+            ShowSessionSummaryDuringWork = settings.ShowSessionSummaryDuringWork
         };
         await using var session = await AuditSessionScope.StartAsync(
             _audit, "chat", settings, new { invocation = "chat" }, AuditSessionOutcome.Cancelled, cancellationToken).ConfigureAwait(false);
@@ -212,9 +225,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                     memory.Memory.Clear();
                     memory.Guide = AppGuideContext.Empty;
                     memory.Envelope = new MemoryEnvelope(null, 0, 0);
+                    memory.SummaryRenderedSinceLastResult = false;
                     await _audit.AppendSessionEventAsync(sessionId, "memory_cleared", new { }, cancellationToken).ConfigureAwait(false);
                     _shell.RenderMuted(_text.Text("Chat.Cleared"));
-                    await RenderActiveSnapshotAsync(sessionId, memory, settings, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 if (input.Equals("/costs", StringComparison.OrdinalIgnoreCase))
@@ -231,7 +244,6 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 if (await HandleExperimentalCommandAsync(input, settings, cancellationToken).ConfigureAwait(false)
                     || await HandleMemoryCommandAsync(input, cancellationToken).ConfigureAwait(false))
                 {
-                    await RenderActiveSnapshotAsync(sessionId, memory, settings, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 if (TryParseRunCommand(input, out var command))
@@ -434,7 +446,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             () => _openAi.TestConnectionAsync(settings, _text.Language, cancellationToken)).ConfigureAwait(false);
         _chatView.RenderAssistant(result.Response.Text, animate: true, cancellationToken);
         _shell.RenderSuccess(_text.Text("Test.Success", result.Response.ElapsedMilliseconds));
-        RenderTurnSnapshot(result.Response, settings, result.Response.EstimatedCostUsd ?? 0m);
+        RenderTurnSnapshot(result.Response, settings, result.Response.EstimatedCostUsd ?? 0m, SessionSummaryTiming.WorkflowEnd);
     }
 
     /// <summary>Adds one bounded user turn, calls OpenAI, renders the parsed answer, and updates the session snapshot.</summary>
@@ -449,6 +461,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         bool captureObservation = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
+        memory.SummaryRenderedSinceLastResult = false;
         var captureRevision = captureObservation && _experiments is not null
             ? await _experiments.RevisionAsync(cancellationToken).ConfigureAwait(false) : null;
         if (userText.Length > settings.MaxMessageCharacters)
@@ -483,7 +496,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         return response;
     }
 
-    /// <summary>Classifies only directly typed chat requests and accounts for the bounded display call before any answer.</summary>
+    /// <summary>Classifies direct user requests before answering so supported global preferences persist only after a successful turn.</summary>
     private async Task<AiResponse> SendWithDisplayIntentAsync(
         string sessionId,
         ConversationState memory,
@@ -521,7 +534,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         }
 
         // Apply mixed requests only after the answer succeeds, so a failed turn cannot silently change visibility.
-        var confirmation = await ApplyDisplayIntentAsync(sessionId, memory, intent, cancellationToken).ConfigureAwait(false);
+        var confirmation = await ApplyDisplayIntentAsync(sessionId, memory, settings, intent, cancellationToken).ConfigureAwait(false);
         return response with
         {
             Text = !intent.ContinueChat ? confirmation
@@ -529,10 +542,11 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         };
     }
 
-    /// <summary>Applies validated session-only visibility changes and confirms them with local translated text.</summary>
+    /// <summary>Persists validated global preferences while retaining command-suggestion visibility for this chat only.</summary>
     private async Task<string> ApplyDisplayIntentAsync(
         string sessionId,
         ConversationState memory,
+        AppSettings settings,
         ChatDisplayIntent intent,
         CancellationToken cancellationToken)
     {
@@ -541,24 +555,70 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             return string.Empty;
         }
 
-        await _audit.AppendSessionEventAsync(sessionId, "chat_display_changed", new
-        {
-            showSessionSummary = intent.ShowSessionSummary ?? memory.ShowSessionSummary,
-            showCommandSuggestions = intent.ShowCommandSuggestions ?? memory.ShowCommandSuggestions
-        }, cancellationToken).ConfigureAwait(false);
         var confirmations = new List<string>();
         if (intent.ShowSessionSummary is { } showSummary)
         {
-            memory.ShowSessionSummary = showSummary;
+            await SaveSessionSummaryPreferenceAsync(settings, showSummary, cancellationToken).ConfigureAwait(false);
+            memory.ShowSessionSummaryDuringWork = showSummary;
             confirmations.Add(_text.Text(showSummary ? "Chat.SessionSummaryShown" : "Chat.SessionSummaryHidden"));
+        }
+        if (intent.RequireExecutionConfirmation is { } requireConfirmation)
+        {
+            await SaveDirectModePreferenceAsync(settings, !requireConfirmation, cancellationToken).ConfigureAwait(false);
+            if (!memory.DirectModeOverride)
+            {
+                memory.ExecutionMode = requireConfirmation ? CommandExecutionMode.Confirm : CommandExecutionMode.Direct;
+            }
+            confirmations.Add(_text.Text(requireConfirmation && memory.DirectModeOverride
+                ? "Chat.ExecutionConfirmationSavedForLater"
+                : requireConfirmation
+                    ? "Chat.ExecutionConfirmationRequired"
+                    : "Chat.DirectExecutionEnabled"));
         }
         if (intent.ShowCommandSuggestions is { } showCommands)
         {
             memory.ShowCommandSuggestions = showCommands;
             confirmations.Add(_text.Text(showCommands ? "Chat.CommandSuggestionsShown" : "Chat.CommandSuggestionsHidden"));
         }
+        await _audit.AppendSessionEventAsync(sessionId, "chat_display_changed", new
+        {
+            showSessionSummaryDuringWork = memory.ShowSessionSummaryDuringWork,
+            showCommandSuggestions = memory.ShowCommandSuggestions,
+            executionMode = memory.ExecutionMode.ToString(),
+            directModeOverride = memory.DirectModeOverride
+        }, cancellationToken).ConfigureAwait(false);
         var icon = TerminalTheme.IconPrefix(_shell.Options, "✅", "+");
         return string.Join("\n\n", confirmations.Select(confirmation => icon + confirmation));
+    }
+
+    /// <summary>Replaces only the persisted summary preference so unrelated settings saved by another flow remain intact.</summary>
+    private async Task SaveSessionSummaryPreferenceAsync(
+        AppSettings settings,
+        bool showDuringWork,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var persisted = await _database.LoadSettingsAsync(cancellationToken).ConfigureAwait(false);
+        await _database.SaveSettingsAsync(persisted with
+        {
+            ShowSessionSummaryDuringWork = showDuringWork,
+            UpdatedAt = DateTimeOffset.UtcNow
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Replaces only the persisted execution preference so unrelated settings saved by another flow remain intact.</summary>
+    private async Task SaveDirectModePreferenceAsync(
+        AppSettings settings,
+        bool directModeEnabled,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var persisted = await _database.LoadSettingsAsync(cancellationToken).ConfigureAwait(false);
+        await _database.SaveSettingsAsync(persisted with
+        {
+            DirectModeEnabled = directModeEnabled,
+            UpdatedAt = DateTimeOffset.UtcNow
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Resolves at most one bounded guide request per turn and retains each completed call's cost immediately.</summary>
@@ -625,10 +685,13 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         return completed;
     }
 
-    /// <summary>Renders provider-confirmed context, input, output, costs, and cache counters after every completed AI response.</summary>
-    private void RenderTurnSnapshot(AiResponse response, AppSettings settings, decimal runningCost)
+    /// <summary>Renders provider-confirmed context, input, output, costs, and cache counters at an allowed workflow point.</summary>
+    private void RenderTurnSnapshot(AiResponse response, AppSettings settings, decimal runningCost, SessionSummaryTiming timing)
     {
-        _shell.RenderRuntimeStatus(CreateTurnSnapshot(response, settings, runningCost));
+        if (SessionSummaryPolicy.ShouldRender(settings, timing))
+        {
+            _shell.RenderRuntimeStatus(CreateTurnSnapshot(response, settings, runningCost));
+        }
     }
 
     /// <summary>Builds the immutable provider-confirmed session snapshot shown after a query, chat turn, or connection test.</summary>
@@ -654,6 +717,13 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             response.Usage.CachedInputTokens,
             response.Usage.CacheWriteTokens)
         {
+            ActiveContextTokens = response.ContextUsage.InputTokens,
+            ContextBudgetTokens = response.ContextUsage.InputBudgetTokens,
+            SystemInstructionTokens = response.ContextUsage.SystemInstructionTokens,
+            GuideTokens = response.ContextUsage.GuideTokens,
+            UserMessageTokens = response.ContextUsage.UserMessageTokens,
+            AssistantMessageTokens = response.ContextUsage.AssistantMessageTokens,
+            HasContextBreakdown = response.ContextUsage.InputBudgetTokens > 0,
             TurnCostUsd = response.RequestCount > 1 ? response.TurnCostUsd : response.EstimatedCostUsd,
             HasTurnCost = true
         };
@@ -848,9 +918,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         bool force = false)
     {
         var snapshot = await CreateSessionSnapshotAsync(sessionId, memory, settings, cancellationToken).ConfigureAwait(false);
-        if (memory.ShowSessionSummary || force || IsContextWarning(snapshot))
+        if (memory.ShowSessionSummaryDuringWork || force || IsContextWarning(snapshot))
         {
             _shell.RenderRuntimeStatus(snapshot);
+            memory.SummaryRenderedSinceLastResult = true;
         }
     }
 
@@ -892,6 +963,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     /// <summary>Refreshes local totals at exit with a bounded shutdown-independent read and never hides the original flow failure.</summary>
     private async Task RenderFinalSnapshotAsync(string sessionId, ConversationState memory, AppSettings settings)
     {
+        if (memory.SummaryRenderedSinceLastResult)
+        {
+            return;
+        }
         ShellRuntimeStatus snapshot;
         using var finalRead = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         try
@@ -915,7 +990,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     {
         public ConversationMemory Memory { get; } = memory;
 
-        public CommandExecutionMode ExecutionMode { get; init; }
+        public CommandExecutionMode ExecutionMode { get; set; }
+
+        public bool DirectModeOverride { get; init; }
 
         public AiResponse? LastResponse { get; set; }
 
@@ -925,7 +1002,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
 
         public MemoryEnvelope Envelope { get; set; } = new(null, 0, 0);
 
-        public bool ShowSessionSummary { get; set; }
+        public bool ShowSessionSummaryDuringWork { get; set; }
+
+        public bool SummaryRenderedSinceLastResult { get; set; }
 
         public bool ShowCommandSuggestions { get; set; } = true;
     }

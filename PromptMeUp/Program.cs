@@ -138,6 +138,7 @@ internal static class Program
         services.AddSingleton<ExperimentalWorkflow>();
         services.AddSingleton<ICommandRiskAssessmentService, CommandRiskAssessmentService>();
         services.AddSingleton<ICommandExecutionService, CommandExecutionService>();
+        services.AddSingleton<IScriptLanguageCatalog, ScriptLanguageCatalog>();
         services.AddSingleton<IPortablePathService, PortablePathService>();
         services.AddSingleton<IExecutableLocationService, ExecutableLocationService>();
         services.AddSingleton<INerdFontInstallerService, NerdFontInstallerService>();
@@ -187,9 +188,6 @@ internal static class Program
         services.AddSingleton<FilePreviewService>();
         services.AddSingleton<IFilePreviewView, FilePreviewView>();
         services.AddSingleton<FilePreviewWorkflow>();
-        services.AddSingleton<RecipeStore>();
-        services.AddSingleton<IRecipeView, RecipeView>();
-        services.AddSingleton<RecipeWorkflow>();
         services.AddSingleton<ApplicationActivityRecorder>();
         services.AddSingleton<SetupWorkflow>();
         services.AddSingleton<MemoryManagerWorkflow>();

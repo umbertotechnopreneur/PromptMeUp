@@ -28,19 +28,17 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
 {
     private const int HeadingRows = 2;
     private readonly ConsoleRenderOptions _options = options ?? new(false, false);
+    private readonly FullscreenSectionNavigator _sectionNavigator = new();
+    private readonly FullscreenInput _input = new(console, text);
     private int _section;
     private int _offset;
     private int _lineCount;
     private int _visibleRows;
     private HelpFocus _focus = HelpFocus.Sections;
-    private (int Width, int Height, string Theme)? _lastFrame;
+    private FullscreenFrame? _lastFrame;
 
     /// <summary>Uses fullscreen help only when both terminal input and the alternate buffer are available.</summary>
-    internal static bool CanUse(IAnsiConsole console) =>
-        console.Profile.Capabilities.Ansi && console.Profile.Capabilities.AlternateBuffer
-        && console.Profile.Capabilities.Interactive && console.Profile.Out.IsTerminal
-        && !Console.IsInputRedirected && !Console.IsOutputRedirected
-        && console.Profile.Width >= 60 && console.Profile.Height >= 20;
+    internal static bool CanUse(IAnsiConsole console) => FullscreenViewport.CanUse(console);
 
     /// <summary>Restores the main screen and cursor on close, cancellation, or a rendering error.</summary>
     internal void Render(IReadOnlyList<HelpSection> sections)
@@ -52,8 +50,10 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         }
         _focus = HelpFocus.Sections;
         _section = Math.Clamp(_section, 0, sections.Count - 1);
+        _sectionNavigator.Reset(_section, sections.Count, focused: true);
         _offset = 0;
         _lastFrame = null;
+        _input.Reset();
         try
         {
             Action? open;
@@ -61,19 +61,7 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             {
                 open = null;
                 _lastFrame = null;
-                console.AlternateScreen(() =>
-                {
-                    console.Cursor.Hide();
-                    try
-                    {
-                        open = RunLoop(sections);
-                    }
-                    finally
-                    {
-                        console.WriteAnsi(writer => writer.ResetStyle());
-                        console.Cursor.Show();
-                    }
-                });
+                FullscreenViewport.Run(console, () => open = RunLoop(sections));
                 // Each screen owns its alternate buffer; the help selection survives the round trip.
                 open?.Invoke();
             }
@@ -82,6 +70,10 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         catch (InteractiveFlowCanceledException)
         {
             // Escape is a normal close action for this read-only browser.
+        }
+        finally
+        {
+            _input.Reset();
         }
     }
 
@@ -92,7 +84,13 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         {
             void Paint() => PaintScreen(sections);
             Paint();
-            var key = ReadKey(Paint);
+            var readKey = _input.ReadKey(Paint, _sectionNavigator.PendingSelectionDeadline);
+            if (readKey is null)
+            {
+                CompletePendingSectionNumber(sections.Count);
+                continue;
+            }
+            var key = readKey.Value;
             if (key.Key is ConsoleKey.Escape or ConsoleKey.Q)
             {
                 return null;
@@ -104,6 +102,10 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             if (key.Key == ConsoleKey.LeftArrow && (key.Modifiers & ConsoleModifiers.Control) != 0)
             {
                 _focus = HelpFocus.Sections;
+                continue;
+            }
+            if (_focus != HelpFocus.Close && TrySelectSectionNumber(key, sections.Count))
+            {
                 continue;
             }
             switch (key.Key)
@@ -186,6 +188,7 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
                     if (_focus == HelpFocus.Sections)
                     {
                         _section = 0;
+                        _sectionNavigator.Select(_section, sections.Count);
                     }
                     _offset = 0;
                     break;
@@ -193,6 +196,7 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
                     if (_focus == HelpFocus.Sections)
                     {
                         _section = sections.Count - 1;
+                        _sectionNavigator.Select(_section, sections.Count);
                         _offset = 0;
                     }
                     else
@@ -207,54 +211,56 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
     /// <summary>Starts each newly selected section at its first command.</summary>
     private void ChangeSection(int delta, int count)
     {
-        _section = Math.Clamp(_section + delta, 0, count - 1);
+        _sectionNavigator.Move(delta, count);
+        _section = _sectionNavigator.SelectedIndex;
         _offset = 0;
+    }
+
+    /// <summary>Delegates numeric help-section shortcuts to the same sidebar navigator used by settings and skills.</summary>
+    private bool TrySelectSectionNumber(ConsoleKeyInfo key, int count)
+    {
+        var previous = _section;
+        if (!_sectionNavigator.TrySelectNumber(key, count))
+        {
+            return false;
+        }
+        if (_sectionNavigator.SelectedIndex != previous)
+        {
+            ApplySelectedSection();
+        }
+        _focus = HelpFocus.Sections;
+        return true;
+    }
+
+    /// <summary>Completes a pending first digit after the shared two-digit shortcut window expires.</summary>
+    private void CompletePendingSectionNumber(int count)
+    {
+        var previous = _section;
+        if (_sectionNavigator.CompletePendingNumber(count) && _sectionNavigator.SelectedIndex != previous)
+        {
+            ApplySelectedSection();
+        }
+    }
+
+    /// <summary>Moves help content to the selected sidebar section and returns its command list to the top.</summary>
+    private void ApplySelectedSection()
+    {
+        _section = _sectionNavigator.SelectedIndex;
+        _offset = 0;
+        _focus = HelpFocus.Sections;
     }
 
     /// <summary>Moves through already wrapped command lines without passing the visible range.</summary>
     private void Scroll(int delta) => _offset = Math.Clamp(_offset + delta, 0, Math.Max(0, _lineCount - _visibleRows));
 
-    /// <summary>Waits for one cancellable key and repaints only when the terminal size changes.</summary>
-    private ConsoleKeyInfo ReadKey(Action repaint)
-    {
-        var pending = ReadKeyAsync();
-        var dimensions = (console.Profile.Width, console.Profile.Height);
-        while (!pending.IsCompleted)
-        {
-            Task.WhenAny(pending, Task.Delay(100)).GetAwaiter().GetResult();
-            var current = (console.Profile.Width, console.Profile.Height);
-            if (current != dimensions)
-            {
-                dimensions = current;
-                repaint();
-            }
-        }
-        return pending.GetAwaiter().GetResult()
-            ?? throw new IOException(text.Text("Form.EndOfInput"));
-    }
-
-    /// <summary>Uses the host input wrapper so application shutdown still interrupts the help browser.</summary>
-    private async Task<ConsoleKeyInfo?> ReadKeyAsync() =>
-        await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
-
     /// <summary>Uses the setup viewport's margins, sidebar, action bar, and shared header around colored command examples.</summary>
     private void PaintScreen(IReadOnlyList<HelpSection> sections)
     {
-        var frame = (console.Profile.Width, console.Profile.Height, TerminalTheme.Current.Id);
-        console.WriteAnsi(writer =>
-        {
-            if (_lastFrame != frame)
-            {
-                // Only the disposable alternate buffer is erased, never the user's main screen or history.
-                writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
-                writer.EraseInDisplay(2);
-            }
-            writer.CursorHome();
-        });
+        var frame = FullscreenViewport.BeginFrame(console, _lastFrame);
         _lastFrame = frame;
-        var width = Math.Max(1, console.Profile.Width - 1);
-        var height = Math.Max(1, console.Profile.Height - 1);
-        if (console.Profile.Width < 60 || console.Profile.Height < 20)
+        var width = Math.Max(1, frame.Width - 1);
+        var height = Math.Max(1, frame.Height - 1);
+        if (frame.Width < 60 || frame.Height < 20)
         {
             var small = new Layout("help", Inset(new Text(text.Text("Help.Browse.TooSmall"), Style.Parse(TerminalTheme.Warning))));
             console.Write(new FormSurface(small));
@@ -310,30 +316,12 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             content, SectionNavigation(sections, bodyHeight), footer, FullscreenFooter.NoticeRows));
     }
 
-    /// <summary>Shows contiguous icon labels and keeps the selected section visible without number prefixes.</summary>
+    /// <summary>Renders the selected help section through the shared dot-numbered fullscreen sidebar.</summary>
     private IRenderable SectionNavigation(IReadOnlyList<HelpSection> sections, int bodyHeight)
     {
-        var availableRows = bodyHeight - HeadingRows;
-        var spacing = availableRows >= sections.Count * 2 ? 2 : 1;
-        var capacity = Math.Max(1, availableRows / spacing);
-        var offset = Math.Clamp(_section - capacity + 1, 0, Math.Max(0, sections.Count - capacity));
-        var navigation = new List<IRenderable>
-        {
-            Line(text.Text("Form.Sections"), TerminalTheme.Accent), new Text(" ")
-        };
-        for (var index = offset; index < Math.Min(sections.Count, offset + capacity); index++)
-        {
-            var active = index == _section;
-            var selected = active && _focus == HelpFocus.Sections;
-            navigation.Add(Line($"{(active ? ">" : " ")} {SectionTitle(sections[index], compact: true)}",
-                selected ? TerminalTheme.SelectionForeground : active ? TerminalTheme.Accent : TerminalTheme.Primary,
-                selected ? TerminalTheme.SelectionBackground : null));
-            if (spacing == 2)
-            {
-                navigation.Add(new Text(" "));
-            }
-        }
-        return Inset(new Rows(navigation));
+        _sectionNavigator.IsFocused = _focus == HelpFocus.Sections;
+        return _sectionNavigator.Render(sections, section => SectionTitle(section, compact: true), bodyHeight,
+            text.Text("Help.Browse.Sections"), console.Profile.Capabilities.Unicode);
     }
 
     /// <summary>Uses the same spaced semantic icons and plain-text fallback as setup sections.</summary>

@@ -41,10 +41,9 @@ to a file, this follow-up menu doesn't open.
 | `--memories` | — | Opens the local memory manager to view, create, edit, or delete saved notes. |
 | `--direct <request>` | — | Forces direct execution for this session: risk review, five-second countdown, execution, and result analysis. Enabled by default; can be disabled in setup. |
 | `--diagnose [text]` | `--file <log>` or stdin | Explains an error or log excerpt and suggests what to check next. |
-| `--script <request>` | `--file <source>`, `--output <new.ps1>` | Creates or revises a PowerShell script for you to review and save. |
+| `--script <request>` | `--file <source>`, `--output <new-script>` | Creates or revises a script in your selected language for you to review, save, validate, or run once from a temporary file. |
 | `--plan <goal>` | `--plan --resume <id>` | Breaks a task into steps you can approve, check, and resume. |
 | `--preview <operation>` | `--file`, `--output`, `--prefix`, `--pattern` | Shows which files a rename, copy, move, or deletion would affect. |
-| `--recipes [action]` | — | Lists, saves, imports, exports, or reuses personal command recipes. |
 | `--setup` | — | Opens Settings with General selected. |
 | `--ai-setup` | `--ai-settings` | Opens the same Settings screen with AI selected. |
 | `--theme` | — | Opens the same Settings screen with Theme selected and a live palette preview. |
@@ -209,54 +208,6 @@ environment variable is set. It does not change the saved value. The settings
 form shows a notice when an override is present. See
 [context and usage](#read-context-and-usage) for how the limits work together.
 
-## Reuse personal recipes
-
-```powershell
-hm --recipes
-hm --recipes save project-check --from-plan <completed-plan-id>
-hm --recipes show project-check
-hm --recipes run project-check
-hm --recipes export project-check --output project-check.json
-hm --recipes import --file inspect-folder.json
-```
-
-Recipes are saved routines you can run again. Make one from a plan you've
-completed and confirmed, or import a JSON recipe you've reviewed. Saving and
-exporting ask for confirmation and won't overwrite a recipe or file. Names
-start with a letter and use 1–40 ASCII letters, digits, hyphens, or underscores.
-You can keep up to 200 recipes.
-
-Each run shows what you'll need and asks for any values, such as a folder name.
-It creates a new plan you can pause and resume, with a fresh approval for every
-command. Values go into `$hmParameters` as literal data, so they aren't pasted
-into the script source. Recipe files keep parameter descriptions, not the values
-you entered. The resulting plan and local history do keep the commands with
-those values. Recognizable secrets are rejected. Each value can use up to
-1,024 characters; the whole command must fit within 4,096 characters.
-
-Recipes saved from completed plans retain the original working directory and
-literal commands. To add parameters, export a definition, choose a new name,
-declare its parameters, and reference them as `$hmParameters['name']` in commands
-and checks before importing it. Set `directory` to `null` for an explicitly
-portable recipe that uses the current directory. A minimal import example:
-
-```json
-{
-  "version": 1,
-  "name": "inspect-folder",
-  "description": "Inspect a chosen folder.",
-  "directory": null,
-  "prerequisites": ["PowerShell 7 is available."],
-  "parameters": [{ "name": "folder", "description": "Folder to inspect." }],
-  "steps": [{
-    "label": "List files",
-    "command": "Get-ChildItem -LiteralPath $hmParameters['folder'] -ErrorAction Stop",
-    "verification": "if (-not (Test-Path -LiteralPath $hmParameters['folder'] -PathType Container)) { exit 1 }",
-    "expected": "The chosen folder exists and its listing is visible."
-  }]
-}
-```
-
 ## Preview concrete file effects
 
 ```powershell
@@ -284,7 +235,7 @@ stops the remaining operations.
 ## Follow a resumable plan
 
 Use `hm --plan "Build, test, and package this project"`. PromptMeUp creates one
-to eight ordered PowerShell steps, saves their pending state locally, and shows
+to ten ordered PowerShell steps, saves their pending state locally, and shows
 `hm --plan --resume <id>`. The plan must be resumed from its original directory.
 
 Starting a plan doesn't approve its steps. You review and approve each action
@@ -301,11 +252,17 @@ Plan content with recognizable secrets is rejected.
 ## Create or revise a script
 
 Use `hm --script "Archive old logs with a report" --output archive-logs.ps1`.
-To revise a script, add `--file existing.ps1` and choose a new output file. This
-interactive flow shows the complete source and a line-by-line replacement diff,
-then offers revision, validation, saving, or cancellation. Existing files are
-never overwritten. Script input/output supports up to 1 MiB of UTF-8 source by
-default. Embedded credentials and redaction placeholders are rejected.
+Choose PowerShell, Batch/CMD, Bash, Python, or JavaScript/Node in setup. On the
+first run, hm chooses a locally available shell and keeps that preference until
+you change it. The selected language determines the generated file extension.
+
+To revise a script, add `--file existing-script`. This interactive flow shows
+the complete source and a line-by-line replacement diff, then lets you save to
+a suggested new local filename, validate syntax when the language supports it,
+run the reviewed source once from a temporary file, request a revision, or do
+nothing. `--output` takes precedence over the suggested filename. Existing
+files are never overwritten. Script input/output supports up to 1 MiB of UTF-8
+source by default. Embedded credentials and redaction placeholders are rejected.
 
 The optional validation action asks you to approve a PowerShell syntax check.
 It reads the script without running it and also uses PSScriptAnalyzer if that's
@@ -321,7 +278,7 @@ Set these environment variables before starting `hm`. Check their values with
 | Variable | Default | Accepted values | Scope |
 | --- | --- | --- | --- |
 | `PROMPTMEUP_MAX_SCRIPT_MIB` | `1` | Integer `1`–`64` | UTF-8 script source, for both reading and saving. |
-| `PROMPTMEUP_MAX_PLAN_MIB` | `8` | Integer `1`–`64` | Complete serialized UTF-8 JSON for plans and recipes. |
+| `PROMPTMEUP_MAX_PLAN_MIB` | `8` | Integer `1`–`64` | Complete serialized UTF-8 JSON for plans. |
 | `PROMPTMEUP_MAX_ARTIFACT_OUTPUT_TOKENS` | `16384` | Integer `1`–`65536` | Provider output budget for script and plan generation. |
 
 ```powershell
@@ -402,7 +359,7 @@ to chat so you can review the result before sending another request.
 
 Direct mode needs an interactive terminal. Turn it off in setup before redirecting
 ordinary question output. `--yes` does not authorize commands or bypass a risk block.
-Plans, recipes, and skill actions retain their existing individual approvals.
+Plans and skill actions retain their existing individual approvals.
 
 ### Session summary
 

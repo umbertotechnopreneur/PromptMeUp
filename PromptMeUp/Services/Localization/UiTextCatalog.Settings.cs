@@ -98,6 +98,20 @@ internal static partial class UiTextCatalog
             German: "Legen Sie fest, wie viel Gespräch jede Anfrage behalten darf.",
             Spanish: "Define cuánta conversación puede conservar cada solicitud.",
             Vietnamese: "Đặt lượng nội dung trò chuyện mỗi yêu cầu có thể giữ lại."));
+        entries.Add("Settings.SessionSummary", new(
+            English: "Show session summary during work",
+            Italian: "Mostra lo specchietto sessione durante il lavoro",
+            French: "Afficher le résumé de session pendant le travail",
+            German: "Sitzungsübersicht während der Arbeit anzeigen",
+            Spanish: "Mostrar el resumen de sesión durante el trabajo",
+            Vietnamese: "Hiện bảng tóm tắt phiên khi đang làm việc"));
+        entries.Add("Settings.SessionSummaryHelp", new(
+            English: "When off, the summary appears only when a workflow ends. /status, /context, and an 80% context warning always show it.",
+            Italian: "Se disattivo, lo specchietto compare solo al termine del flusso. /status, /context e un avviso al 80% del contesto lo mostrano sempre.",
+            French: "Lorsqu'il est désactivé, le résumé apparaît seulement à la fin d'un flux. /status, /context et un avertissement à 80 % du contexte l'affichent toujours.",
+            German: "Wenn ausgeschaltet, erscheint die Übersicht nur am Ende eines Ablaufs. /status, /context und eine Kontextwarnung bei 80 % zeigen sie immer.",
+            Spanish: "Al desactivarlo, el resumen aparece solo al terminar un flujo. /status, /context y un aviso al 80 % del contexto siempre lo muestran.",
+            Vietnamese: "Khi tắt, bảng tóm tắt chỉ hiện khi quy trình kết thúc. /status, /context và cảnh báo ngữ cảnh 80% luôn hiển thị nó."));
         entries.Add("Settings.CommandsHelp", new(
             English: "Set the command timeout and how much output to retain.",
             Italian: "Imposta il timeout dei comandi e quanto output conservare.",

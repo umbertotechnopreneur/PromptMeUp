@@ -50,7 +50,7 @@ internal sealed class RegressionFixture : IDisposable
         TestProxy.Create<IPromptCatalogService>((_, args) => Task.FromResult(new PromptDefinition(
             args[0] is "chat-display-intent" ? "chat-display-intent" : promptId, 1, "Synthetic regression prompt", [],
             new Dictionary<string, string> { ["en"] = "Answer the user's question." }, new Dictionary<string, string>()))),
-        TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("~", "test", "PowerShell 7", "test", "test", "test")),
+        TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("test", "PowerShell 7 (pwsh)", "PowerShell 7", true, "~")),
         database ?? Database, new AiCostCalculator(), Audit, new SensitiveDataRedactor(), new PromptInjectionProtectionService(),
         logger ?? NullLogger<OpenAiService>.Instance, limits);
 
@@ -127,7 +127,8 @@ internal sealed class RegressionFixture : IDisposable
         string sessionSummary = "unchanged",
         string commandSuggestions = "unchanged",
         bool continueChat = true,
-        long inputTokens = 10) => JsonSerializer.Serialize(new
+        long inputTokens = 10,
+        string executionConfirmation = "unchanged") => JsonSerializer.Serialize(new
         {
             id = "synthetic-display-response",
             model = "gpt-5.6-terra",
@@ -146,6 +147,7 @@ internal sealed class RegressionFixture : IDisposable
                             {
                                 session_summary = sessionSummary,
                                 command_suggestions = commandSuggestions,
+                                execution_confirmation = executionConfirmation,
                                 continue_chat = continueChat
                             })
                         }

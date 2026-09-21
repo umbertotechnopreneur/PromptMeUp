@@ -112,13 +112,13 @@ SQLite uses WAL mode, foreign keys, integer microdollars, UTC timestamps, and sc
 
 JSON is checked before saving, and recognizable secrets are removed from fields and strings. SQLite errors are logged. A failure to record activity doesn't replace an answer already received from OpenAI.
 
-## Scripts, plans, recipes, and helpers
+## Scripts, plans, and helpers
 
-Scripts, plans, and recipes use the same size limit for reading and writing,
+Scripts and plans use the same size limit for reading and writing,
 with a separate AI output limit; see
 [configuration](CLI_REFERENCE.md#configure-artifact-limits).
 
-Plans, recipes, and scripts share `AtomicFileWriter` for temporary-file publication and cleanup. Callers retain validation and localized errors and explicitly select overwrite behavior: plans replace progress files, while recipes and scripts require a new destination.
+Plans and scripts share `AtomicFileWriter` for temporary-file publication and cleanup. Callers retain validation and localized errors and explicitly select overwrite behavior: plans replace progress files, while scripts require a new destination.
 
 Commands and font helpers share bounded process I/O and cancellation cleanup.
 Large approved commands travel over standard input. Font checks time out after

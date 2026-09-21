@@ -1055,6 +1055,34 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 
 Validation: formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
 
+## 2026-09-22 — Remove command recipes
+
+- Removed the `--recipes` command and its parser state, workflow, storage, view, model, service registrations, and dedicated tests.
+- Removed recipe-specific UI text, navigation, runtime prompt guidance, and public documentation while retaining the shared plan artifact limit.
+
+Validation: preflight, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests and CLI smoke tests were not run because they were not requested. Release build output was cleaned after validation.
+
+## 2026-09-22 — Consolidate console workflow controls
+
+- Made execution confirmation and the in-work session summary persisted global preferences, editable in setup and through natural-language conversation; `--direct` remains a temporary override.
+- Added the operating system, effective PowerShell execution shell, selected script runtime, and current working directory to provider-bound operational prompts.
+- Reused the fullscreen viewport, navigation, and menu components across Help, Setup, and Skills; menus now use plain numbered choices.
+- Added a persisted script-language preference with first-run detection, reviewable save/temporary execution choices, and language-specific validation.
+- Aligned the separate PromptMeUp, MailMeUp, and WorkTrail MSIX scripts around Debug and Store channels, canonical artifact paths, and certificate-to-publisher validation.
+- Added a visible PromptMeUp Start-menu entry that launches the packaged console application with `hm --help`, while retaining a separate hidden `hm.exe` alias entry for normal commands.
+- Produced and installed the signed local Debug MSIX `0.0.1.2210` for owner testing; no Store upload or publication was performed.
+
+Validation: PromptMeUp preflight, scoped formatting verification, XML comment check, Release build with warnings treated as errors, 988/988 automated tests, PowerShell package-script syntax check, `git diff --check`, MSIX packaging/signature verification, and current-user installation passed. CLI smoke tests and publication were not run. Debug and Release build outputs were cleaned after validation.
+
+## 2026-09-22 — Refine guided plan steps
+
+- Deferred the session summary produced while generating a plan and render it after every completed guided step instead.
+- Numbered plan rows from zero with keycap emoji, while retaining text-only numbers when emoji are disabled.
+- Raised the plan limit to ten steps and added a localized message for plans that exceed that depth.
+- Added a spaced, localized resume instruction above the full plan command and its identifier.
+
+Validation: preflight, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests and CLI smoke tests were not run because they were not requested. Release build output was cleaned after validation.
+
 ## 2026-09-18 — Improve settings and chat guidance
 
 - Reframed Privacy as a full-width guide with content scrolling and clear section headings.

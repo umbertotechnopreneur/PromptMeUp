@@ -11,6 +11,29 @@ public sealed record SkillDefinition(string Name, string Description, string Ver
     public string Color { get; init; } = "#89DCEB";
 }
 
+/// <summary>Identifies a workflow-owned skill menu action without coupling a view to menu positions.</summary>
+internal enum SkillMenuAction
+{
+    Back,
+    EnableProject,
+    DisableProject,
+    Import,
+    ToggleAutomatic,
+    ClearSelection,
+    ManageSkill,
+    ToggleSkill,
+    SelectSkill,
+    RunSkill
+}
+
+/// <summary>Supplies one passive skill menu row and its workflow payload to the interactive view.</summary>
+internal sealed record SkillMenuItem(
+    SkillMenuAction Action,
+    string Label,
+    string Description,
+    SkillDefinition? Skill = null,
+    string Icon = "🧩");
+
 /// <summary>Contains only explicitly enabled experimental behavior in the current project.</summary>
 public sealed record ExperimentalSettings(bool Enabled = false, bool AutomaticSkills = false,
     bool CaptureObservations = false, bool MaintenanceReminder = false);

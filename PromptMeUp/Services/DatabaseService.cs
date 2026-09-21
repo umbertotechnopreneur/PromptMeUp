@@ -123,7 +123,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
                    custom_instruction, include_windows_location, review_commands_with_ai,
                    prompt_caching_enabled, max_conversation_turns, max_message_characters,
                    max_context_percent, max_command_output_characters, command_timeout_seconds,
-                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme, preferred_name, direct_mode_enabled
+                   endpoint, api_key_variable, admin_key_variable, updated_unix, context_token_budget, theme, preferred_name, direct_mode_enabled,
+                   show_session_summary_during_work, script_language
             FROM app_settings
             WHERE id = 1;
             """;
@@ -157,7 +158,9 @@ public sealed class SqliteDatabaseService : IDatabaseService
             ContextTokenBudget = reader.GetInt32(19),
             Theme = reader.GetString(20),
             PreferredName = PreferredNamePolicy.Normalize(reader.GetString(21), _redactor),
-            DirectModeEnabled = reader.GetInt32(22) == 1
+            DirectModeEnabled = reader.GetInt32(22) == 1,
+            ShowSessionSummaryDuringWork = reader.GetInt32(23) == 1,
+            ScriptLanguage = ScriptLanguageCatalog.ParseStorageValue(reader.GetString(24))
         };
         var normalizedPreamble = _promptProtection.Protect(settings.CustomInstruction).SanitizedText;
         var safePreamble = _redactor.Redact(normalizedPreamble);
@@ -200,6 +203,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
                     include_windows_location = $includeLocation,
                     review_commands_with_ai = $reviewCommandsWithAi,
                     direct_mode_enabled = $directModeEnabled,
+                    show_session_summary_during_work = $showSessionSummaryDuringWork,
+                    script_language = $scriptLanguage,
                     prompt_caching_enabled = $promptCachingEnabled,
                     max_conversation_turns = $maxConversationTurns,
                     max_message_characters = $maxMessageCharacters,
@@ -225,6 +230,8 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.Parameters.AddWithValue("$includeLocation", settings.IncludeWindowsLocation ? 1 : 0);
             command.Parameters.AddWithValue("$reviewCommandsWithAi", settings.ReviewCommandsWithAi ? 1 : 0);
             command.Parameters.AddWithValue("$directModeEnabled", settings.DirectModeEnabled ? 1 : 0);
+            command.Parameters.AddWithValue("$showSessionSummaryDuringWork", settings.ShowSessionSummaryDuringWork ? 1 : 0);
+            command.Parameters.AddWithValue("$scriptLanguage", ScriptLanguageCatalog.ToStorageValue(settings.ScriptLanguage));
             command.Parameters.AddWithValue("$promptCachingEnabled", settings.PromptCachingEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$maxConversationTurns", settings.MaxConversationTurns);
             command.Parameters.AddWithValue("$maxMessageCharacters", settings.MaxMessageCharacters);
@@ -729,6 +736,14 @@ public sealed class SqliteDatabaseService : IDatabaseService
             {
                 await EnsureDirectModeColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
+            if (currentVersion < 6)
+            {
+                await EnsureSessionSummaryColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
+            if (currentVersion < 7)
+            {
+                await EnsureScriptLanguageColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            }
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
             {
@@ -829,6 +844,41 @@ public sealed class SqliteDatabaseService : IDatabaseService
         }
     }
 
+    /// <summary>Adds the default-off during-work session-summary preference without changing any existing setting.</summary>
+    private static async Task EnsureSessionSummaryColumnAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'show_session_summary_during_work';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            command.CommandText = "ALTER TABLE app_settings ADD COLUMN show_session_summary_during_work INTEGER NOT NULL DEFAULT 0 CHECK (show_session_summary_during_work IN (0, 1));";
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Adds the selected script language and chooses the current shell only when this preference is first created.</summary>
+    private static async Task EnsureScriptLanguageColumnAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'script_language';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            command.CommandText = "ALTER TABLE app_settings ADD COLUMN script_language TEXT NOT NULL DEFAULT 'powershell' CHECK (script_language IN ('powershell', 'batch', 'bash', 'python', 'javascript'));";
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            command.CommandText = "UPDATE app_settings SET script_language = $scriptLanguage WHERE id = 1;";
+            command.Parameters.AddWithValue("$scriptLanguage", DetectDefaultScriptLanguage());
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>Creates all tables and indexes for a previously unversioned database.</summary>
     private static async Task CreateSchemaAsync(
         SqliteConnection connection,
@@ -868,12 +918,12 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 output_detail, custom_instruction, include_windows_location, review_commands_with_ai,
                 prompt_caching_enabled, max_conversation_turns, max_message_characters,
                 max_context_percent, max_command_output_characters, command_timeout_seconds, endpoint,
-                api_key_variable, admin_key_variable, updated_unix)
+                api_key_variable, admin_key_variable, updated_unix, script_language)
             VALUES (
                 1, 0, $language, 1, $model, $reasoning, $detail, '', 0, 1,
                 1, $maxConversationTurns, $maxMessageCharacters, $maxContextPercent,
                 $maxCommandOutputCharacters, $commandTimeoutSeconds, $endpoint,
-                $apiKeyVariable, $adminKeyVariable, $updated);
+                $apiKeyVariable, $adminKeyVariable, $updated, $scriptLanguage);
             """;
         command.Parameters.AddWithValue("$language", SupportedLanguages.ResolveSystemLanguage());
         command.Parameters.AddWithValue("$model", settings.Model);
@@ -888,8 +938,12 @@ public sealed class SqliteDatabaseService : IDatabaseService
         command.Parameters.AddWithValue("$apiKeyVariable", settings.ApiKeyVariable);
         command.Parameters.AddWithValue("$adminKeyVariable", settings.AdminKeyVariable);
         command.Parameters.AddWithValue("$updated", settings.UpdatedAt.ToUnixTimeSeconds());
+        command.Parameters.AddWithValue("$scriptLanguage", DetectDefaultScriptLanguage());
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Resolves the one-time default language without accepting user source or altering an existing preference.</summary>
+    private static string DetectDefaultScriptLanguage() => ScriptLanguageCatalog.ToStorageValue(new ScriptLanguageCatalog().DetectPreferredLanguage());
 
     /// <summary>Upserts one named synchronization timestamp inside the caller transaction.</summary>
     private static async Task SetSyncStateAsync(
@@ -944,6 +998,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             || string.IsNullOrWhiteSpace(settings.AdminKeyVariable)
             || !protectedPreamble.IsSafe
             || !protectedPreamble.IsWithinWordLimit
+            || !Enum.IsDefined<ScriptLanguage>(settings.ScriptLanguage)
             || settings.MaxConversationTurns is < 2 or > 50
             || settings.MaxMessageCharacters is < 500 or > 100_000
             || settings.MaxContextPercent is < 10 or > 95

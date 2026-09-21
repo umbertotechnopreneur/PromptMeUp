@@ -63,7 +63,6 @@ public sealed class ApplicationErrorTests
             scripts: null!,
             plans: null!,
             filePreview: null!,
-            recipes: null!,
             activity: null!,
             setup: null!,
             installation: null!,

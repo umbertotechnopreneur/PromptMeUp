@@ -20,6 +20,7 @@ public sealed class PlanWorkflow(
     public async Task<int> RunAsync(CommandLineOptions options, AppSettings settings, CancellationToken cancellationToken)
     {
         ExecutionPlan plan;
+        var runtimeStatus = ShellRuntimeStatus.FromSettings(settings);
         IDisposable lease;
         if (options.ResumeId is not null)
         {
@@ -38,6 +39,7 @@ public sealed class PlanWorkflow(
         {
             var goal = input.Sanitize(options.Query!, settings.MaxMessageCharacters, fromArgument: true);
             var response = await assistant.SendAsync("plan-system", goal, settings, cancellationToken).ConfigureAwait(false);
+            runtimeStatus = AiConversationWorkflow.CreateTurnSnapshot(response, settings, response.EstimatedCostUsd ?? 0);
             plan = store.Parse(response.Text, goal, Environment.CurrentDirectory);
             lease = store.Acquire(plan.Id);
         }
@@ -53,58 +55,78 @@ public sealed class PlanWorkflow(
             {
                 return 0;
             }
-            return await RunStepsAsync(plan, options.ResumeId is not null, settings, cancellationToken).ConfigureAwait(false);
+            return await RunStepsAsync(plan, options.ResumeId is not null, settings, cancellationToken, runtimeStatus).ConfigureAwait(false);
         }
     }
 
     /// <summary>Runs pending commands once and verifies interrupted or completed steps before resuming.</summary>
-    internal async Task<int> RunStepsAsync(ExecutionPlan plan, bool resuming, AppSettings settings, CancellationToken cancellationToken)
+    internal async Task<int> RunStepsAsync(
+        ExecutionPlan plan,
+        bool resuming,
+        AppSettings settings,
+        CancellationToken cancellationToken,
+        ShellRuntimeStatus? runtimeStatus = null)
     {
         await using var session = await AuditSessionScope.StartAsync(
             audit, "plan", settings, new { plan.Id }, AuditSessionOutcome.Paused, cancellationToken).ConfigureAwait(false);
-        for (var index = 0; index < plan.Steps.Count; index++)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var step = plan.Steps[index];
-            if (step.Status == PlanStepStatus.Completed && !resuming)
+            var executionMode = settings.DirectModeEnabled ? CommandExecutionMode.Direct : CommandExecutionMode.Confirm;
+            for (var index = 0; index < plan.Steps.Count; index++)
             {
-                continue;
-            }
-            shell.RenderSectionTitle(step.Label);
-            if (step.Status == PlanStepStatus.Pending)
-            {
-                plan.Steps[index] = step with { Status = PlanStepStatus.Running };
-                await store.SaveAsync(plan, cancellationToken).ConfigureAwait(false);
-                var result = await commands.RunForResultAsync(session.Id, step.Command, settings, cancellationToken).ConfigureAwait(false);
-                if (result is null)
+                cancellationToken.ThrowIfCancellationRequested();
+                var step = plan.Steps[index];
+                if (step.Status == PlanStepStatus.Completed && !resuming)
                 {
-                    plan.Steps[index] = step;
-                    await store.SaveAsync(plan, cancellationToken).ConfigureAwait(false);
-                    return 0;
+                    continue;
                 }
-                if (result.TimedOut || result.ExitCode != 0)
+                shell.RenderSectionTitle(step.Label);
+                if (step.Status == PlanStepStatus.Pending)
+                {
+                    plan.Steps[index] = step with { Status = PlanStepStatus.Running };
+                    await store.SaveAsync(plan, cancellationToken).ConfigureAwait(false);
+                    var result = await commands.RunForResultAsync(session.Id, step.Command, settings, cancellationToken, executionMode).ConfigureAwait(false);
+                    if (result is null)
+                    {
+                        plan.Steps[index] = step;
+                        await store.SaveAsync(plan, cancellationToken).ConfigureAwait(false);
+                        return 0;
+                    }
+                    if (result.TimedOut || result.ExitCode != 0)
+                    {
+                        await StopAsync(plan, index, cancellationToken).ConfigureAwait(false);
+                        return 1;
+                    }
+                }
+                else
+                {
+                    shell.RenderNotice(text.Text("Plan.Recheck"));
+                }
+                var check = await commands.RunForResultAsync(session.Id, step.Verification, settings, cancellationToken, executionMode).ConfigureAwait(false);
+                if (check is null || check.TimedOut || check.OutputTruncated || check.ExitCode != 0 || !view.ConfirmOutcome(step))
                 {
                     await StopAsync(plan, index, cancellationToken).ConfigureAwait(false);
-                    return 1;
+                    return check is null ? 0 : 1;
+                }
+                plan.Steps[index] = step with { Status = PlanStepStatus.Completed };
+                await store.SaveAsync(plan, cancellationToken).ConfigureAwait(false);
+                view.Render(plan);
+                var currentStatus = runtimeStatus ?? ShellRuntimeStatus.FromSettings(settings);
+                if (index < plan.Steps.Count - 1
+                    && (SessionSummaryPolicy.ShouldRender(settings, SessionSummaryTiming.AfterVisibleTurn)
+                        || AiConversationWorkflow.IsContextWarning(currentStatus)))
+                {
+                    shell.RenderRuntimeStatus(currentStatus);
                 }
             }
-            else
-            {
-                shell.RenderNotice(text.Text("Plan.Recheck"));
-            }
-            var check = await commands.RunForResultAsync(session.Id, step.Verification, settings, cancellationToken).ConfigureAwait(false);
-            if (check is null || check.TimedOut || check.OutputTruncated || check.ExitCode != 0 || !view.ConfirmOutcome(step))
-            {
-                await StopAsync(plan, index, cancellationToken).ConfigureAwait(false);
-                return check is null ? 0 : 1;
-            }
-            plan.Steps[index] = step with { Status = PlanStepStatus.Completed };
-            await store.SaveAsync(plan, cancellationToken).ConfigureAwait(false);
-            view.Render(plan);
+            session.Outcome = AuditSessionOutcome.Completed;
+            shell.RenderSuccess(text.Text("Plan.Completed"));
+            return 0;
         }
-        session.Outcome = AuditSessionOutcome.Completed;
-        shell.RenderSuccess(text.Text("Plan.Completed"));
-        return 0;
+        finally
+        {
+            shell.RenderRuntimeStatus(runtimeStatus ?? ShellRuntimeStatus.FromSettings(settings));
+        }
     }
 
     /// <summary>Stops on uncertain evidence while retaining later checkpoints so completed commands cannot be replayed.</summary>

@@ -98,13 +98,6 @@ internal static partial class UiTextCatalog
             German: "Diesen Text vor jeden passenden Dateinamen setzen.",
             Spanish: "Añade este texto delante del nombre de cada archivo seleccionado.",
             Vietnamese: "Thêm phần văn bản này trước tên của mỗi tệp khớp."));
-        entries.Add("Help.Argument.List", new(
-            English: "List saved recipes without running them.",
-            Italian: "Elenca le ricette salvate senza eseguirle.",
-            French: "Lister les recettes enregistrées sans les exécuter.",
-            German: "Gespeicherte Rezepte auflisten, ohne sie auszuführen.",
-            Spanish: "Lista las recetas guardadas sin ejecutarlas.",
-            Vietnamese: "Liệt kê các công thức đã lưu mà không chạy chúng."));
         entries.Add("Help.Argument.PathStatus", new(
             English: "Check PATH registration without changing it.",
             Italian: "Controlla la registrazione nel PATH senza modificarla.",

@@ -17,7 +17,6 @@ public enum AppCommand
     Script,
     Plan,
     Preview,
-    Recipes,
     Chat,
     Memories,
     Skills,
@@ -51,10 +50,7 @@ public sealed record CommandLineOptions(
     string? ResumeId = null,
     string? PreviewAction = null,
     string? Prefix = null,
-    string? Pattern = null,
-    string? RecipeAction = null,
-    string? RecipeName = null,
-    string? SourcePlan = null);
+    string? Pattern = null);
 
 public sealed record CommandLineParseResult(CommandLineOptions? Options, string? Error)
 {

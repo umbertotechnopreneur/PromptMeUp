@@ -1,11 +1,12 @@
 id: command-risk
-version: 1
+version: 2
 description: Reviews a user-proposed PowerShell command before the mandatory local authorization gate.
 tags:
   - safety
   - command
 metadata:
   response-format: json
+  runtime-context: sanitized
   score-min: "0"
   score-max: "100"
 texts:

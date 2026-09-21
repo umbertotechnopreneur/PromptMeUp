@@ -53,7 +53,63 @@ public sealed class DirectModeTests
         await fixture.ScalarAsync("ALTER TABLE app_settings DROP COLUMN direct_mode_enabled; PRAGMA user_version = 4;");
         await fixture.Database.InitializeAsync(default);
         Assert.Equal(original, await fixture.Database.LoadSettingsAsync(default));
-        Assert.Equal(5L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+    }
+
+    /// <summary>Persists the default-off session-summary preference and adds it safely to a version-five database.</summary>
+    [Fact]
+    public async Task Settings_VersionFive_AddsSessionSummaryWithoutReplacingPreferences()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var original = (await fixture.Database.LoadSettingsAsync(default)) with { Language = "it", Theme = "green" };
+        Assert.False(original.ShowSessionSummaryDuringWork);
+        await fixture.Database.SaveSettingsAsync(original, default);
+        await fixture.ScalarAsync("ALTER TABLE app_settings DROP COLUMN show_session_summary_during_work; PRAGMA user_version = 5;");
+
+        await fixture.Database.InitializeAsync(default);
+
+        Assert.Equal(original, await fixture.Database.LoadSettingsAsync(default));
+        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+    }
+
+    /// <summary>Retains an explicitly enabled during-work summary preference across database reinitialization.</summary>
+    [Fact]
+    public async Task Settings_SessionSummaryDuringWork_RoundTrips()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var configured = (await fixture.Database.LoadSettingsAsync(default)) with { ShowSessionSummaryDuringWork = true };
+
+        await fixture.Database.SaveSettingsAsync(configured, default);
+        await fixture.Database.InitializeAsync(default);
+
+        Assert.Equal(configured, await fixture.Database.LoadSettingsAsync(default));
+    }
+
+    /// <summary>Adds the first-run script language safely to version-six settings while preserving every pre-existing preference.</summary>
+    [Fact]
+    public async Task Settings_VersionSix_AddsScriptLanguageWithoutReplacingPreferences()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var original = (await fixture.Database.LoadSettingsAsync(default)) with
+        {
+            Language = "it",
+            Theme = "green",
+            ShowSessionSummaryDuringWork = true
+        };
+        await fixture.Database.SaveSettingsAsync(original, default);
+        await fixture.ScalarAsync("ALTER TABLE app_settings DROP COLUMN script_language; PRAGMA user_version = 6;");
+
+        await fixture.Database.InitializeAsync(default);
+
+        var migrated = await fixture.Database.LoadSettingsAsync(default);
+        Assert.Equal(original.Language, migrated.Language);
+        Assert.Equal(original.Theme, migrated.Theme);
+        Assert.Equal(original.ShowSessionSummaryDuringWork, migrated.ShowSessionSummaryDuringWork);
+        Assert.True(Enum.IsDefined<ScriptLanguage>(migrated.ScriptLanguage));
+        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Prevents countdown and execution for vetoed or incomplete reviews, including inconsistent score and severity.</summary>

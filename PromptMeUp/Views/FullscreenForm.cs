@@ -38,14 +38,14 @@ internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields
 internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService text, ConsoleRenderOptions? options = null)
 {
     private const int RowsPerField = 2;
-    private const int SectionNumberTimeoutMilliseconds = 1_000;
     // Shared chrome, section heading, and the reserved terminal row, excluding the variable notice height.
     private const int FixedBodyRows = FullscreenHeader.Height + FullscreenFooter.ActionsRows + FullscreenFooter.HintRows + 3;
     private readonly ConsoleRenderOptions _options = options ?? new(false, false);
+    private readonly FullscreenSectionNavigator _sectionNavigator = new();
+    private readonly FullscreenInput _inputReader = new(console, text);
     private int _page;
     private int _focus;
     private bool _allowSectionNavigation;
-    private bool _sectionsFocused;
     private string? _error;
     private FormField? _editing;
     private string _input = string.Empty;
@@ -55,19 +55,12 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private int _overviewMaximumOffset;
     private Func<IRenderable>? _overviewSource;
     private Action? _pendingOpen;
-    private Task<ConsoleKeyInfo?>? _pendingRead;
-    private int? _pendingSectionNumber;
-    private DateTimeOffset? _pendingSectionDeadline;
-    private (int Width, int Height, string Theme)? _lastFrame;
+    private FullscreenFrame? _lastFrame;
 
     internal int SelectedPageIndex => _page;
 
     /// <summary>Checks terminal capabilities before opting into a fullscreen form.</summary>
-    internal static bool CanUse(IAnsiConsole console) =>
-        console.Profile.Capabilities.Ansi && console.Profile.Capabilities.AlternateBuffer
-        && console.Profile.Capabilities.Interactive && console.Profile.Out.IsTerminal
-        && !Console.IsInputRedirected && !Console.IsOutputRedirected
-        && console.Profile.Width >= 60 && console.Profile.Height >= 20;
+    internal static bool CanUse(IAnsiConsole console) => FullscreenViewport.CanUse(console);
 
     /// <summary>Returns an explicitly saved draft while always restoring the original terminal buffer.</summary>
     internal bool Run(
@@ -89,8 +82,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
 
         _page = initialPage;
+        _sectionNavigator.Reset(_page, pages.Count, focused: pages.Count > 1);
         _allowSectionNavigation = pages.Count > 1;
-        _sectionsFocused = _allowSectionNavigation;
         var saved = false;
         try
         {
@@ -98,19 +91,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             {
                 _pendingOpen = null;
                 _lastFrame = null;
-                console.AlternateScreen(() =>
-                {
-                    console.Cursor.Hide();
-                    try
-                    {
-                        saved = RunLoop(titleKey, pages, validate);
-                    }
-                    finally
-                    {
-                        console.WriteAnsi(writer => writer.ResetStyle());
-                        console.Cursor.Show();
-                    }
-                });
+                FullscreenViewport.Run(console, () => saved = RunLoop(titleKey, pages, validate));
                 // Child pages own their alternate buffer after this form restores the main buffer.
                 _pendingOpen?.Invoke();
             }
@@ -120,8 +101,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         {
             _input = string.Empty;
             _editing = null;
-            _pendingSectionNumber = null;
-            _pendingSectionDeadline = null;
+            _inputReader.Reset();
         }
         return saved;
     }
@@ -138,11 +118,12 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 throw new InvalidOperationException("The form has no visible pages.");
             }
             _page = Math.Clamp(_page, 0, visiblePages.Length - 1);
+            _sectionNavigator.Select(_page, visiblePages.Length);
             var fields = visiblePages[_page].Fields.Where(IsVisible).ToArray();
             _focus = Math.Clamp(_focus, 0, fields.Length + 1);
             void Paint() => Render(titleKey, visiblePages, fields);
             Paint();
-            var readKey = ReadKey(Paint, _pendingSectionDeadline);
+            var readKey = _inputReader.ReadKey(Paint, _sectionNavigator.PendingSelectionDeadline);
             if (readKey is null)
             {
                 CompletePendingSectionNumber(visiblePages.Length);
@@ -167,13 +148,13 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             {
                 continue;
             }
-            if (_sectionsFocused && visiblePages[_page].Open is { } open
+            if (_sectionNavigator.IsFocused && visiblePages[_page].Open is { } open
                 && key.Key is ConsoleKey.Enter or ConsoleKey.RightArrow)
             {
                 _pendingOpen = open;
                 return false;
             }
-            if ((visiblePages[_page].Overview is not null || (!_sectionsFocused && _focus < fields.Length && fields[_focus].Overview is not null))
+            if ((visiblePages[_page].Overview is not null || (!_sectionNavigator.IsFocused && _focus < fields.Length && fields[_focus].Overview is not null))
                 && (key.Modifiers & ConsoleModifiers.Control) != 0
                 && key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow)
             {
@@ -239,7 +220,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private bool HandleSectionNavigation(ConsoleKeyInfo key, int fieldCount, int pageCount)
     {
         var backwards = (key.Modifiers & ConsoleModifiers.Shift) != 0;
-        if (_sectionsFocused)
+        if (_sectionNavigator.IsFocused)
         {
             switch (key.Key)
             {
@@ -260,11 +241,11 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 case ConsoleKey.Enter:
                 case ConsoleKey.RightArrow:
                 case ConsoleKey.F6:
-                    _sectionsFocused = false;
+                    _sectionNavigator.IsFocused = false;
                     _focus = 0;
                     break;
                 case ConsoleKey.Tab:
-                    _sectionsFocused = false;
+                    _sectionNavigator.IsFocused = false;
                     _focus = backwards ? fieldCount + 1 : 0;
                     break;
             }
@@ -275,7 +256,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             || key.Key == ConsoleKey.LeftArrow && (key.Modifiers & ConsoleModifiers.Control) != 0
             || key.Key == ConsoleKey.Tab && (backwards ? _focus == 0 : _focus == fieldCount + 1))
         {
-            _sectionsFocused = true;
+            _sectionNavigator.IsFocused = true;
             return true;
         }
         return false;
@@ -292,66 +273,42 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private void ChangePage(int delta, int count)
     {
         _page = Math.Clamp(_page + delta, 0, count - 1);
+        _sectionNavigator.Select(_page, count);
         _focus = 0;
         _overviewOffset = 0;
     }
 
-    /// <summary>Switches directly to a numbered section, allowing 10–12 through a brief second-digit window without Enter.</summary>
+    /// <summary>Delegates one- and two-digit section shortcuts to the shared sidebar navigator.</summary>
     private bool TrySelectSectionNumber(ConsoleKeyInfo key, int pageCount)
     {
-        if (key.Modifiers != 0 || key.KeyChar is < '0' or > '9')
+        var previous = _page;
+        if (!_sectionNavigator.TrySelectNumber(key, pageCount))
         {
             return false;
         }
-        var digit = key.KeyChar - '0';
-        if (_pendingSectionNumber is { } firstDigit)
+        if (_sectionNavigator.SelectedIndex != previous)
         {
-            _pendingSectionNumber = null;
-            _pendingSectionDeadline = null;
-            var section = firstDigit * 10 + digit;
-            if (section <= pageCount)
-            {
-                SelectSection(section);
-                return true;
-            }
-            SelectSection(firstDigit);
-            return true;
+            ApplySelectedSection();
         }
-        if (digit == 1 && pageCount >= 10)
-        {
-            _pendingSectionNumber = digit;
-            _pendingSectionDeadline = DateTimeOffset.UtcNow.AddMilliseconds(SectionNumberTimeoutMilliseconds);
-            return true;
-        }
-        if (digit is > 0 && digit <= pageCount)
-        {
-            SelectSection(digit);
-            return true;
-        }
-        return false;
+        return true;
     }
 
-    /// <summary>Completes an unambiguous single-digit selection after waiting only for a possible 10–12 shortcut.</summary>
+    /// <summary>Applies an expired first digit when it represented an unambiguous section shortcut.</summary>
     private void CompletePendingSectionNumber(int pageCount)
     {
-        if (_pendingSectionNumber is not { } section)
+        var previous = _page;
+        if (!_sectionNavigator.CompletePendingNumber(pageCount) || _sectionNavigator.SelectedIndex == previous)
         {
             return;
         }
-        _pendingSectionNumber = null;
-        _pendingSectionDeadline = null;
-        if (section <= pageCount)
-        {
-            SelectSection(section);
-        }
+        ApplySelectedSection();
     }
 
-    /// <summary>Applies a one-based section number while restoring the sidebar focus and top-of-content position.</summary>
-    private void SelectSection(int section)
+    /// <summary>Synchronizes form content with the shared sidebar selection and restores its starting position.</summary>
+    private void ApplySelectedSection()
     {
-        _page = section - 1;
+        _page = _sectionNavigator.SelectedIndex;
         _focus = 0;
-        _sectionsFocused = true;
         _overviewOffset = 0;
     }
 
@@ -459,52 +416,14 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private static int NextElement(string value, int index) =>
         StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
 
-    /// <summary>Waits for input while repainting only when the terminal changes size.</summary>
-    private ConsoleKeyInfo? ReadKey(Action repaint, DateTimeOffset? deadline)
-    {
-        var pending = _pendingRead ??= ReadKeyAsync();
-        var dimensions = (console.Profile.Width, console.Profile.Height);
-        while (!pending.IsCompleted)
-        {
-            var remaining = deadline is { } value ? value - DateTimeOffset.UtcNow : TimeSpan.FromMilliseconds(100);
-            if (remaining <= TimeSpan.Zero)
-            {
-                return null;
-            }
-            Task.WhenAny(pending, Task.Delay(TimeSpan.FromMilliseconds(Math.Min(100, remaining.TotalMilliseconds)))).GetAwaiter().GetResult();
-            var current = (console.Profile.Width, console.Profile.Height);
-            if (current != dimensions)
-            {
-                dimensions = current;
-                repaint();
-            }
-        }
-        _pendingRead = null;
-        return pending.GetAwaiter().GetResult() ?? throw new IOException(text.Text("Form.EndOfInput"));
-    }
-
-    /// <summary>Uses the cancellation-aware console input provided by the application host.</summary>
-    private async Task<ConsoleKeyInfo?> ReadKeyAsync() =>
-        await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
-
     /// <summary>Draws a fixed viewport with sections, focus, contextual guidance and persistent actions.</summary>
     private void Render(string titleKey, IReadOnlyList<FormPage> pages, IReadOnlyList<FormField> fields)
     {
-        var frame = (console.Profile.Width, console.Profile.Height, TerminalTheme.Current.Id);
-        if (_lastFrame.HasValue && _lastFrame.Value.Theme != frame.Id)
+        var frame = FullscreenViewport.BeginFrame(console, _lastFrame);
+        if (_lastFrame.HasValue && _lastFrame.Value.Theme != frame.Theme)
         {
             _overviewOffset = 0;
         }
-        console.WriteAnsi(writer =>
-        {
-            if (_lastFrame != frame)
-            {
-                // Only the disposable alternate buffer is erased, never the main screen or its history.
-                writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
-                writer.EraseInDisplay(2);
-            }
-            writer.CursorHome();
-        });
         _lastFrame = frame;
         if (frame.Width < 60 || frame.Height < 20)
         {
@@ -513,14 +432,14 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
 
         var sectionNavigation = _allowSectionNavigation && pages.Count > 1;
-        var focused = !_sectionsFocused && _focus < fields.Count ? fields[_focus] : null;
+        var focused = !_sectionNavigator.IsFocused && _focus < fields.Count ? fields[_focus] : null;
         var overview = focused?.Overview ?? pages[_page].Overview;
         if (!ReferenceEquals(overview, _overviewSource))
         {
             _overviewOffset = 0;
             _overviewSource = overview;
         }
-        var helpKey = pages[_page].Open is not null && !_sectionsFocused
+        var helpKey = pages[_page].Open is not null && !_sectionNavigator.IsFocused
             ? "Form.NavigationHelp"
             : pages[_page].HelpKey ?? (sectionNavigation ? "Form.NavigationHelp" : "Form.Help");
         var guidance = focused?.Help?.Invoke() ?? text.Text(focused?.HelpKey ?? helpKey);
@@ -556,7 +475,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         var content = Inset(new Rows(Styled(section, "bold " + TerminalTheme.Accent), new Text(" "), fieldBody));
         var footerKey = _editing is not null ? "Form.EditFooter"
             : pages[_page].Open is not null ? "Form.OpenFooter"
-            : _sectionsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";
+            : _sectionNavigator.IsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";
         if (Segment.CellCount([new Segment(text.Text(footerKey))]) > frame.Width - 5)
         {
             footerKey += "Compact";
@@ -570,33 +489,11 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             sectionNavigation ? SectionNavigation(pages) : null, footer, _messageHeight));
     }
 
-    /// <summary>Shows the current section and keeps the focused item visible in both wide and compact layouts.</summary>
+    /// <summary>Renders the current section through the shared dot-numbered sidebar component.</summary>
     private IRenderable SectionNavigation(IReadOnlyList<FormPage> pages)
     {
-        var spacing = BodyRows() >= pages.Count * 2 ? 2 : 1;
-        var capacity = Math.Max(1, (BodyRows() - (pages.Count * spacing > BodyRows() ? 1 : 0)) / spacing);
-        var offset = Math.Clamp(_page - capacity + 1, 0, Math.Max(0, pages.Count - capacity));
-        var rows = new List<IRenderable>();
-        for (var index = offset; index < Math.Min(pages.Count, offset + capacity); index++)
-        {
-            var active = index == _page;
-            var selected = active && _sectionsFocused;
-            var marker = active ? ">" : " ";
-            var label = marker + " [" + (index + 1) + "] " + SectionTitle(pages[index]);
-            rows.Add(Styled(label, selected ? TerminalTheme.SelectionForeground : active ? TerminalTheme.Accent : TerminalTheme.Primary,
-                selected ? TerminalTheme.SelectionBackground : null));
-            if (spacing == 2)
-            {
-                rows.Add(new Text(" "));
-            }
-        }
-        if (pages.Count > capacity)
-        {
-            var above = offset > 0 ? console.Profile.Capabilities.Unicode ? "↑ " : "^ " : string.Empty;
-            var below = offset + capacity < pages.Count ? console.Profile.Capabilities.Unicode ? " ↓" : " v" : string.Empty;
-            rows.Add(Styled(above + "..." + below, TerminalTheme.Info));
-        }
-        return Inset(new Rows(Styled(text.Text("Form.Sections"), TerminalTheme.Accent), new Text(" "), new Rows(rows)));
+        return _sectionNavigator.Render(pages, SectionTitle, BodyRows(), text.Text("Form.Sections"),
+            console.Profile.Capabilities.Unicode);
     }
 
     /// <summary>Adds meaningful setup section icons through the shared emoji and ASCII fallback helper.</summary>
@@ -642,7 +539,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         for (var index = offset; index < Math.Min(fields.Count, offset + capacity); index++)
         {
             var field = fields[index];
-            var selected = !_sectionsFocused && index == _focus;
+            var selected = !_sectionNavigator.IsFocused && index == _focus;
             rows.Add(FieldBlock(
                 Styled($"{(selected ? ">" : " ")} {FieldLabel(field, text)}", selected ? TerminalTheme.Accent : TerminalTheme.Primary),
                 width => Styled($"[ {FieldValue(field, width - 4)} ]",
@@ -756,7 +653,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
         row.AddRow(labels.Select((label, index) =>
         {
-            var selected = !_sectionsFocused && _focus == fieldCount + index;
+            var selected = !_sectionNavigator.IsFocused && _focus == fieldCount + index;
             var icon = label == "Form.Save"
                 ? TerminalTheme.IconPrefix(_options, "💾", "+")
                 : TerminalTheme.IconPrefix(_options, "↩️", "x");

@@ -21,6 +21,20 @@ internal static partial class UiTextCatalog
             German: "Standardmäßig für Fragen und Chat aktiv. Lokale und KI-Risikoprüfung erforderlich. Ausschalten für manuelle Bestätigung; --direct aktiviert sie für eine Sitzung.",
             Spanish: "Activa por defecto para preguntas y chat. Requiere controles locales y de IA. Desactívala para confirmar cada comando; --direct la activa para una sesión.",
             Vietnamese: "Mặc định bật cho câu hỏi và trò chuyện. Cần kiểm tra rủi ro cục bộ và AI. Tắt để xác nhận từng lệnh; --direct bật lại cho một phiên."));
+        entries.Add("Direct.RequireConfirmation", new(
+            English: "Require confirmation before executing commands",
+            Italian: "Richiedi conferma prima di eseguire i comandi",
+            French: "Demander confirmation avant d'exécuter les commandes",
+            German: "Bestätigung vor dem Ausführen von Befehlen verlangen",
+            Spanish: "Solicitar confirmación antes de ejecutar comandos",
+            Vietnamese: "Yêu cầu xác nhận trước khi chạy lệnh"));
+        entries.Add("Direct.RequireConfirmationHelp", new(
+            English: "When on, each eligible command asks for manual confirmation. Turn it off to use the five-second direct countdown; --direct overrides this setting for one session.",
+            Italian: "Se attivo, ogni comando idoneo richiede una conferma manuale. Disattivalo per usare il countdown direct di cinque secondi; --direct lo sovrascrive per una sessione.",
+            French: "Lorsqu'il est activé, chaque commande admissible demande une confirmation manuelle. Désactivez-le pour utiliser le délai direct de cinq secondes ; --direct le remplace pour une session.",
+            German: "Wenn aktiviert, verlangt jeder zulässige Befehl eine manuelle Bestätigung. Ausschalten aktiviert den direkten Fünf-Sekunden-Countdown; --direct überschreibt dies für eine Sitzung.",
+            Spanish: "Cuando está activado, cada comando apto solicita confirmación manual. Desactívalo para usar la cuenta atrás directa de cinco segundos; --direct lo anula durante una sesión.",
+            Vietnamese: "Khi bật, mỗi lệnh hợp lệ đều yêu cầu xác nhận thủ công. Tắt để dùng đếm ngược trực tiếp năm giây; --direct ghi đè cho một phiên."));
         entries.Add("Direct.Usage", new(
             English: "Use hm --direct \"request\". Specify --direct only once, with a non-empty request.",
             Italian: "Usa hm --direct \"richiesta\". Specifica --direct una sola volta, con una richiesta non vuota.",

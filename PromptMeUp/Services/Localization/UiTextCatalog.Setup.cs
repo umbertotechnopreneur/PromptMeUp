@@ -189,6 +189,20 @@ internal static partial class UiTextCatalog
             German: "Befehlszeitlimit in Sekunden",
             Spanish: "Tiempo de espera del comando en segundos",
             Vietnamese: "Thời gian chờ lệnh tính bằng giây"));
+        entries.Add("Setup.ScriptLanguage", new(
+            English: "Preferred script language",
+            Italian: "Linguaggio script preferito",
+            French: "Langage de script préféré",
+            German: "Bevorzugte Skriptsprache",
+            Spanish: "Lenguaje de script preferido",
+            Vietnamese: "Ngôn ngữ tập lệnh ưu tiên"));
+        entries.Add("Setup.ScriptLanguageHelp", new(
+            English: "Used by --script. PromptMeUp detects a suitable local shell on the first run; you can change this choice at any time.",
+            Italian: "Usato da --script. PromptMeUp rileva una shell locale adatta al primo avvio; puoi cambiare questa scelta in qualsiasi momento.",
+            French: "Utilisé par --script. PromptMeUp détecte un shell local adapté au premier lancement ; vous pouvez modifier ce choix à tout moment.",
+            German: "Wird von --script verwendet. PromptMeUp erkennt beim ersten Start eine passende lokale Shell; Sie können diese Auswahl jederzeit ändern.",
+            Spanish: "Lo usa --script. PromptMeUp detecta un intérprete local adecuado en el primer inicio; puedes cambiar esta elección en cualquier momento.",
+            Vietnamese: "Được --script sử dụng. PromptMeUp phát hiện một shell cục bộ phù hợp trong lần chạy đầu tiên; bạn có thể thay đổi lựa chọn này bất cứ lúc nào."));
         entries.Add("Setup.Compact", new(
             English: "Compact · lowest usage",
             Italian: "Compatto · consumo minimo",

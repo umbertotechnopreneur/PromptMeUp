@@ -354,7 +354,8 @@ public sealed class SettingsFeatureViewTests
             _ => throw new NotSupportedException(method.Name)
         });
         var about = TestProxy.Create<IAboutView>((method, _) => throw new NotSupportedException(method.Name));
-        var view = new FullscreenSetupView(console, text, shell, new PromptInjectionProtectionService(), new SensitiveDataRedactor(), themes, about);
+        var view = new FullscreenSetupView(console, text, shell, new PromptInjectionProtectionService(), new SensitiveDataRedactor(), themes, about,
+            new ScriptLanguageCatalog());
         return new Harness(view, text, output, keys);
     }
 

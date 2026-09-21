@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using PromptMeUp.Infrastructure;
 using PromptMeUp.Services;
+using PromptMeUp.Services.Sqlite;
 
 namespace PromptMeUp.Tests;
 
@@ -44,7 +45,7 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
         await service.InitializeAsync(CancellationToken.None);
 
         await using var connection = await OpenDatabaseAsync();
-        Assert.Equal(5, await ReadSchemaVersionAsync(connection));
+        Assert.Equal(7, await ReadSchemaVersionAsync(connection));
         Assert.Equal(1L, await ExecuteScalarInt64Async(connection, "SELECT COUNT(*) FROM app_settings WHERE id = 1;"));
     }
 
@@ -92,7 +93,7 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
         var settings = await service.LoadSettingsAsync(CancellationToken.None);
         Assert.Equal("fr", settings.Language);
         await using var verificationConnection = await OpenDatabaseAsync();
-        Assert.Equal(5, await ReadSchemaVersionAsync(verificationConnection));
+        Assert.Equal(7, await ReadSchemaVersionAsync(verificationConnection));
         Assert.Equal(
             1L,
             await ExecuteScalarInt64Async(
@@ -120,19 +121,20 @@ public sealed class SqliteDatabaseServiceTests : IDisposable
     [Fact]
     public async Task InitializeAsync_FutureDatabase_RejectsWithoutApplyingDdl()
     {
+        var futureVersion = SqliteSchema.Version + 1;
         await using (var connection = await OpenDatabaseAsync())
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA user_version = 6;";
+            command.CommandText = $"PRAGMA user_version = {futureVersion};";
             await command.ExecuteNonQueryAsync();
         }
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => CreateService().InitializeAsync(CancellationToken.None));
 
-        Assert.Contains("'6'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains($"'{futureVersion}'", exception.Message, StringComparison.Ordinal);
         await using var verificationConnection = await OpenDatabaseAsync();
-        Assert.Equal(6, await ReadSchemaVersionAsync(verificationConnection));
+        Assert.Equal(futureVersion, await ReadSchemaVersionAsync(verificationConnection));
         Assert.Equal(
             0L,
             await ExecuteScalarInt64Async(

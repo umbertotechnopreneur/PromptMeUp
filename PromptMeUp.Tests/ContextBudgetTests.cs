@@ -160,7 +160,7 @@ public sealed class ContextBudgetTests
         Assert.Equal(9, migrated.MaxConversationTurns);
         Assert.Equal("Prefer concise answers.", migrated.CustomInstruction);
         Assert.Equal("Preserve this explicit note.", await fixture.ScalarAsync("SELECT body FROM persistent_memories;"));
-        Assert.Equal(5L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Valid budgets round-trip through settings while invalid values leave the saved budget unchanged.</summary>

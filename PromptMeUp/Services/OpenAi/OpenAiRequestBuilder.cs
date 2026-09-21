@@ -91,7 +91,7 @@ internal static class OpenAiRequestBuilder
         return body;
     }
 
-    /// <summary>Combines immutable YAML, approved preferences, optional locale, and sanitized runtime context for assistant prompts.</summary>
+    /// <summary>Combines immutable YAML, scoped preferences, optional locale, and the required privacy-bounded runtime context.</summary>
     internal static string BuildInstructions(
         PromptDefinition prompt,
         AppSettings settings,
@@ -128,12 +128,13 @@ internal static class OpenAiRequestBuilder
                     .Append('.');
             }
 
-            if (runtimeContext is not null)
-            {
-                builder.AppendLine()
-                    .AppendLine()
-                    .Append(runtimeContext.ToPromptBlock());
-            }
+        }
+
+        if (runtimeContext is not null)
+        {
+            builder.AppendLine()
+                .AppendLine()
+                .Append(runtimeContext.ToPromptBlock(language, UsesOperationalRuntimeContext(prompt)));
         }
 
         if (SupportsPreferredName(prompt) && !string.IsNullOrWhiteSpace(settings.PreferredName))
@@ -161,6 +162,10 @@ internal static class OpenAiRequestBuilder
 
     /// <summary>Shares the optional name only with conversational replies, never with internal classifiers or maintenance tasks.</summary>
     internal static bool SupportsPreferredName(PromptDefinition prompt) => prompt.Id is "chat-system" or "query-system";
+
+    /// <summary>Allows a versioned prompt contract to request the sanitized working directory without coupling that decision to a workflow.</summary>
+    internal static bool UsesOperationalRuntimeContext(PromptDefinition prompt) =>
+        string.Equals(prompt.Metadata.GetValueOrDefault("runtime-context"), "sanitized", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Builds a lightweight preflight estimate from the populated instruction and bounded message list.</summary>
     internal static AiContextUsage EstimateContext(

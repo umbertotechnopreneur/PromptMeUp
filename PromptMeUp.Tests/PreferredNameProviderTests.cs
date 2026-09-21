@@ -167,7 +167,7 @@ public sealed class PreferredNameProviderTests
     /// <summary>Creates the real provider service with synthetic credentials, runtime facts, and a local HTTP handler.</summary>
     private static OpenAiService Provider(RegressionFixture fixture, HttpClient http, IPromptCatalogService prompts) =>
         new(http, fixture.Secrets, prompts,
-            TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("~", "test", "PowerShell 7", "test", "test", "test")),
+            TestProxy.Create<IRuntimeContextService>((_, _) => new RuntimeContext("test", "PowerShell 7 (pwsh)", "PowerShell 7", true, "~")),
             fixture.Database, new AiCostCalculator(), fixture.Audit, new SensitiveDataRedactor(),
             new PromptInjectionProtectionService(), NullLogger<OpenAiService>.Instance);
 
