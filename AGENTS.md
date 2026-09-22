@@ -53,6 +53,7 @@ These instructions apply to every change in this repository.
 ## Product boundaries
 
 - PromptMeUp is a lightweight .NET 10 console assistant whose public command is `hm`.
+- Skills, memory collection, proposals, and reminders are global. Do not introduce project-scoped labels, groups, availability, configuration, storage, or retention in `hm --skills`, `hm --learning`, or their Setup controls.
 - Keep the application code portable across Windows, Linux, and macOS. Windows distribution is MSIX-only. Do not introduce a background agent or platform-specific runtime dependency.
 - Keep GitHub as the project home and write public copy in product language before implementation detail.
 - Use plain, friendly English in documentation: speak directly to the reader, use short sentences and practical examples, and explain technical terms when needed. Keep factual credits and privacy details accurate.

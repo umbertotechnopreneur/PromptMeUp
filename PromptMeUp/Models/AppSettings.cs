@@ -23,6 +23,9 @@ public sealed record AppSettings(
     string AdminKeyVariable,
     DateTimeOffset UpdatedAt)
 {
+    /// <summary>Indicates that setup has never been saved successfully on this installation.</summary>
+    public bool IsFirstRun => !SetupCompleted;
+
     public int ContextTokenBudget { get; init; } = 16_000;
 
     public string Theme { get; init; } = "cyan";

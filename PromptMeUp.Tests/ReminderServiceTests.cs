@@ -84,9 +84,9 @@ public sealed class ReminderServiceTests
         Assert.Empty(await DeliverAsync(service));
     }
 
-    /// <summary>Pending reminders survive service restarts and are consumed exactly once without touching another project.</summary>
+    /// <summary>Global pending reminders survive service restarts and are consumed exactly once.</summary>
     [Fact]
-    public async Task DeliverDue_RestartedService_ConsumesOnlyCurrentProjectOnce()
+    public async Task DeliverDue_RestartedService_ConsumesGlobalReminderOnce()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
@@ -95,17 +95,13 @@ public sealed class ReminderServiceTests
         var service = Create(fixture, clock);
         var due = await service.CreateAsync(clock.Now.AddMinutes(1), "Read the local result.", default);
         var future = await service.CreateAsync(clock.Now.AddHours(1), "Review later.", default);
-        await fixture.ScalarAsync("""
-            INSERT INTO skill_reminders(id, scope_key, message, due_unix_ms, offset_minutes)
-            VALUES($id, $scope, 'Another project.', $due, 0);
-            """, ("$id", Guid.NewGuid().ToString("N")), ("$scope", new string('F', 64)), ("$due", due.DueAt.ToUnixTimeMilliseconds()));
         clock.Now = clock.Now.AddMinutes(2);
 
         var reopened = Create(fixture, clock);
         Assert.Equal(due, Assert.Single(await DeliverAsync(reopened)));
         Assert.Empty(await DeliverAsync(reopened));
         Assert.Equal(future, Assert.Single(await reopened.ListAsync(default)));
-        Assert.Equal(2L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skill_reminders;"));
+        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skill_reminders;"));
     }
 
     /// <summary>Stored reminders are bounded, credential-free, and deleted only with the exact reviewed snapshot.</summary>

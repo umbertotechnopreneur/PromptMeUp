@@ -43,7 +43,7 @@ public sealed partial class SkillsAndMemoryStore
     internal async Task SaveFeatureChangesAsync(SettingsFeatureChanges changes, CancellationToken ct)
     {
         ValidateFeatureChanges(changes);
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         var previous = await ReadSettingsAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -86,7 +86,7 @@ public sealed partial class SkillsAndMemoryStore
         await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
-    /// <summary>Identifies a reviewed transition that discards project learning evidence without normalizing unrelated flags.</summary>
+    /// <summary>Identifies a reviewed transition that discards global learning evidence without normalizing unrelated flags.</summary>
     private static bool ClearsLearning(SettingsFeatureChanges changes) =>
         (changes.Expected.Enabled && !changes.Settings.Enabled)
         || (changes.Expected.CaptureObservations && !changes.Settings.CaptureObservations);

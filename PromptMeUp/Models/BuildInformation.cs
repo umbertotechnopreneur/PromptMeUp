@@ -2,5 +2,5 @@
 
 namespace PromptMeUp.Models;
 
-/// <summary>Describes the application version and the machine and UTC instant captured during compilation.</summary>
-public sealed record BuildInformation(string Version, string MachineName, DateTimeOffset BuiltAtUtc);
+/// <summary>Describes the application version and provenance captured during compilation.</summary>
+public sealed record BuildInformation(string Version, string MachineName, DateTimeOffset BuiltAtLocal, string TimeZone, string GitCommit);

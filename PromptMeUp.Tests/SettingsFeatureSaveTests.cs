@@ -149,7 +149,7 @@ public sealed class SettingsFeatureSaveTests
         await fixture.ScalarAsync("""
             INSERT INTO learning_observations(id, scope_key, session_id, body, created_unix)
             VALUES($id, $scope, $session, 'Synthetic retained row.', $now);
-            """, ("$id", Guid.NewGuid().ToString("N")), ("$scope", PersistentMemoryService.ResolveProjectScope()),
+            """, ("$id", Guid.NewGuid().ToString("N")), ("$scope", PersistentMemoryService.GlobalScope),
             ("$session", Guid.NewGuid().ToString("N")), ("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         var serialized = await store.GetAsync("settings", default);
         var revision = await store.RevisionAsync(default);

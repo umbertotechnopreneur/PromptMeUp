@@ -10,60 +10,89 @@ public sealed partial class SkillsAndMemoryWorkflow
     /// <summary>Manages explicit observation consent, retained evidence, reminders, and manually invoked reflection.</summary>
     public async Task RunLearningAsync(AppSettings settings, CancellationToken ct)
     {
-        var initial = await store.SettingsAsync(ct).ConfigureAwait(false);
-        if (!initial.Enabled)
-        {
-            if (view.Choose(text.Text("Lab.Learning"), text.Text("Lab.Back"), text.Text("Lab.Enable")) == 0)
-            {
-                return;
-            }
-            await store.SaveSettingsAsync(initial with { Enabled = true }, initial, ct).ConfigureAwait(false);
-        }
-        while (await LearningEnabledAsync(ct).ConfigureAwait(false))
+        while (true)
         {
             ct.ThrowIfCancellationRequested();
             var preferences = await store.SettingsAsync(ct).ConfigureAwait(false);
             var observations = await store.ObservationsAsync(ct).ConfigureAwait(false);
-            shell.RenderNotice(text.Text("Lab.CaptureNotice"));
-            shell.RenderNotice(text.Text("Lab.Retention"));
-            view.Render(text.Text("Lab.Learning"),
-                [(text.Text("Lab.Capture"), text.Text(preferences.CaptureObservations ? "Lab.Enabled" : "Lab.Off")),
-                 (text.Text("Lab.Reminder"), text.Text(preferences.MaintenanceReminder ? "Lab.Enabled" : "Lab.Off")),
-                 (text.Text("Lab.Observations"), observations.Count.ToString(CultureInfo.InvariantCulture)),
-                 (text.Text("Lab.Dream") + " / " + text.Text("Lab.LastRun"), await LastReflectionAsync(true, ct).ConfigureAwait(false)),
-                 (text.Text("Lab.Heartbeat") + " / " + text.Text("Lab.LastRun"), await LastReflectionAsync(false, ct).ConfigureAwait(false))]);
-            var selected = view.Choose(text.Text("Lab.Learning"), text.Text("Lab.Back"), text.Text("Lab.Capture"),
-                text.Text("Lab.Reminder"), text.Text("Lab.Observations"), text.Text("Lab.Clear"),
-                text.Text("Lab.Dream"), text.Text("Lab.Heartbeat"));
-            switch (selected)
+            var groups = await BuildLearningGroups(preferences, observations, ct).ConfigureAwait(false);
+            var selected = view.ChooseSkills(text.Text("Lab.Learning"), groups);
+            if (selected is null)
             {
-                case 0:
-                    return;
-                case 1:
-                    if (view.Confirm(text.Text(preferences.CaptureObservations ? "Lab.StopCapture" : "Lab.StartCapture")))
+                return;
+            }
+
+            switch (selected.Item.Action)
+            {
+                case SkillMenuAction.EnableSkillsAndMemory:
+                    await store.SaveSettingsAsync(preferences with { Enabled = true }, preferences, ct).ConfigureAwait(false);
+                    break;
+                case SkillMenuAction.ToggleCapture:
+                    if (ConfirmLearningAction(text.Text(preferences.CaptureObservations ? "Lab.StopCapture" : "Lab.StartCapture"),
+                        text.Text("Lab.CaptureNotice")))
                     {
                         await store.SaveSettingsAsync(preferences with { CaptureObservations = !preferences.CaptureObservations }, preferences, ct).ConfigureAwait(false);
                     }
                     break;
-                case 2:
+                case SkillMenuAction.ToggleReminder:
                     await store.SaveSettingsAsync(preferences with { MaintenanceReminder = !preferences.MaintenanceReminder }, preferences, ct).ConfigureAwait(false);
                     break;
-                case 3:
+                case SkillMenuAction.ReviewObservations:
                     await ReviewObservationAsync(observations, ct).ConfigureAwait(false);
                     break;
-                case 4:
-                    if (view.Confirm(text.Text("Lab.Clear")))
+                case SkillMenuAction.ClearObservations:
+                    if (ConfirmLearningAction(text.Text("Lab.Clear"), text.Text("Lab.Clear")))
                     {
                         await store.ClearObservationsAsync(ct).ConfigureAwait(false);
                         shell.RenderSuccess(text.Text("Lab.Saved"));
                     }
                     break;
-                case 5:
-                case 6:
-                    await RunReflectionAsync(selected == 5, settings, ct).ConfigureAwait(false);
+                case SkillMenuAction.Dream:
+                case SkillMenuAction.Heartbeat:
+                    await RunReflectionAsync(selected.Item.Action == SkillMenuAction.Dream, settings, ct).ConfigureAwait(false);
                     break;
+                default:
+                    throw new InvalidOperationException("Unsupported memory menu action.");
             }
         }
+    }
+
+    /// <summary>Builds one compact Memory workspace that uses the shared skills navigation and footer conventions.</summary>
+    private async Task<IReadOnlyList<SkillMenuGroup>> BuildLearningGroups(SkillsAndMemorySettings preferences,
+        IReadOnlyList<LearningObservation> observations, CancellationToken ct)
+    {
+        if (!preferences.Enabled)
+        {
+            return
+            [
+                new SkillMenuGroup(text.Text("Lab.Learning"), text.Text("Lab.Disabled"),
+                [new SkillMenuItem(SkillMenuAction.EnableSkillsAndMemory, text.Text("Lab.Enable"), text.Text("Lab.Enable"),
+                    Icon: "⏻")], "🧠")
+            ];
+        }
+
+        var captureState = text.Text(preferences.CaptureObservations ? "Lab.Enabled" : "Lab.Off");
+        var reminderState = text.Text(preferences.MaintenanceReminder ? "Lab.Enabled" : "Lab.Off");
+        var commands = new List<SkillMenuItem>
+        {
+            new(SkillMenuAction.ToggleCapture,
+                text.Text("Lab.Capture") + " — " + captureState,
+                text.Text("Lab.CaptureNotice"), Icon: "📝"),
+            new(SkillMenuAction.ToggleReminder,
+                text.Text("Lab.Reminder") + " — " + reminderState,
+                text.Text("Lab.Reminder"), Icon: "⏰"),
+            new(SkillMenuAction.ReviewObservations,
+                text.Text("Lab.Observations") + " — " + observations.Count.ToString(CultureInfo.InvariantCulture),
+                text.Text("Lab.Observations"), Icon: "📋"),
+            new(SkillMenuAction.ClearObservations, text.Text("Lab.Clear"), text.Text("Lab.Clear"), Icon: "🧹"),
+            new(SkillMenuAction.Dream,
+                text.Text("Lab.Dream") + " — " + await LastReflectionAsync(true, ct).ConfigureAwait(false),
+                text.Text("Lab.Dream"), Icon: "💭"),
+            new(SkillMenuAction.Heartbeat,
+                text.Text("Lab.Heartbeat") + " — " + await LastReflectionAsync(false, ct).ConfigureAwait(false),
+                text.Text("Lab.Heartbeat"), Icon: "💓")
+        };
+        return [new SkillMenuGroup(text.Text("Lab.Learning"), text.Text("Lab.Retention"), commands, "🧠")];
     }
 
     /// <summary>Loads current suggestions and exact evidence for the shared inline memory editor.</summary>
@@ -144,12 +173,7 @@ public sealed partial class SkillsAndMemoryWorkflow
             shell.RenderNotice(text.Text("Lab.ReviewCount", count));
             batch = reflection.HeartbeatBatch(saved, settings.MaxMessageCharacters);
         }
-        view.Render(text.Text(dream ? "Lab.Dream" : "Lab.Heartbeat"), [(text.Text("Lab.Sources"), batch.Request)]);
-        if (batch.OmittedCount > 0)
-        {
-            shell.RenderNotice(text.Text("Lab.BoundedEvidence", batch.OmittedCount));
-        }
-        if (!view.Confirm(text.Text("Lab.Share")))
+        if (!ConfirmReflection(dream, batch))
         {
             return;
         }
@@ -185,15 +209,19 @@ public sealed partial class SkillsAndMemoryWorkflow
             shell.RenderNotice(text.Text("Lab.None"));
             return;
         }
-        var selected = view.Choose(text.Text("Lab.Observations"), [text.Text("Lab.Back"),
-            .. observations.Select(item => item.CreatedAt.ToString("u", CultureInfo.InvariantCulture) + " — " + ProposalLabel(item.Text))]);
-        if (selected == 0)
+        var selected = view.ChooseSkills(text.Text("Lab.Observations"),
+        [
+            new SkillMenuGroup(text.Text("Lab.Observations"), text.Text("Lab.Retention"),
+                observations.Select(item => new SkillMenuItem(SkillMenuAction.ReviewObservations,
+                    item.CreatedAt.ToString("u", CultureInfo.InvariantCulture) + " — " + ProposalLabel(item.Text),
+                    ObservationText(item), Icon: "📋", ActionName: item.Id)).ToArray(), "🧠")
+        ]);
+        if (selected?.Item.ActionName is not { } id)
         {
             return;
         }
-        var observation = observations[selected - 1];
-        view.Render(text.Text("Lab.Observations"), [(text.Text("Lab.Sources"), ObservationText(observation))]);
-        if (view.Confirm(text.Text("Lab.ForgetObservation")))
+        var observation = observations.Single(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+        if (ConfirmLearningAction(text.Text("Lab.ForgetObservation"), ObservationText(observation)))
         {
             if (!await store.ForgetObservationAsync(observation.Id, ct).ConfigureAwait(false))
             {
@@ -203,7 +231,7 @@ public sealed partial class SkillsAndMemoryWorkflow
         }
     }
 
-    /// <summary>Checks the project skills and memory gate before displaying or changing learning state.</summary>
+    /// <summary>Checks the global skills and memory gate before displaying or changing learning state.</summary>
     private async Task<bool> LearningEnabledAsync(CancellationToken ct)
     {
         if ((await store.SettingsAsync(ct).ConfigureAwait(false)).Enabled)
@@ -212,6 +240,26 @@ public sealed partial class SkillsAndMemoryWorkflow
         }
         shell.RenderNotice(text.Text("Lab.Disabled"));
         return false;
+    }
+
+    /// <summary>Shows a shared fullscreen confirmation instead of writing a second scrolling prompt below the workspace.</summary>
+    private bool ConfirmLearningAction(string title, string description) =>
+        view.ChooseSkills(title,
+        [
+            new SkillMenuGroup(text.Text("Lab.Learning"), description,
+            [
+                new SkillMenuItem(SkillMenuAction.Cancel, text.Text("Lab.Cancel"), description, Icon: "↩"),
+                new SkillMenuItem(SkillMenuAction.Confirm, text.Text("Lab.Confirm"), description, Icon: "✓")
+            ], "🧠")
+        ])?.Item.Action == SkillMenuAction.Confirm;
+
+    /// <summary>Summarizes the reviewed evidence without rendering its provider JSON in the terminal.</summary>
+    private bool ConfirmReflection(bool dream, MemoryReflectionBatch batch)
+    {
+        var count = dream ? batch.Observations.Count : batch.Memories.Count;
+        var description = text.Text("Lab.EvidenceSummary", count, batch.OmittedCount);
+        return ConfirmLearningAction(text.Text(dream ? "Lab.Dream" : "Lab.Heartbeat"),
+            description + " " + text.Text("Lab.Share"));
     }
 
     /// <summary>Records a successful validated analysis separately from failed provider or persistence attempts.</summary>

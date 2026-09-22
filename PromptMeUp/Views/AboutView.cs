@@ -72,8 +72,9 @@ public sealed class AboutView(
         var narrowDetails = new List<IRenderable>();
         AddDetail(details, narrowDetails, "Footer.Version", buildInformation.Version);
         AddDetail(details, narrowDetails, "About.BuildDate",
-            buildInformation.BuiltAtUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture));
+            $"{buildInformation.BuiltAtLocal.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)} ({buildInformation.TimeZone})");
         AddDetail(details, narrowDetails, "About.BuildMachine", buildInformation.MachineName);
+        AddDetail(details, narrowDetails, "About.GitCommit", buildInformation.GitCommit);
         AddDetail(details, narrowDetails, "About.Author", "Umberto Giacobbi");
         AddDetail(details, narrowDetails, "About.License", "MIT");
         AddDetail(details, narrowDetails, "About.Platforms", "Windows / Linux / macOS");

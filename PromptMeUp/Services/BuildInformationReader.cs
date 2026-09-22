@@ -17,13 +17,18 @@ public static class BuildInformationReader
             ?? throw new InvalidOperationException("The application version is missing.");
         var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToArray();
         var machineName = GetRequiredValue(metadata, "BuildMachine");
-        var timestamp = GetRequiredValue(metadata, "BuildDateUtc");
+        var timestamp = GetRequiredValue(metadata, "BuildDateLocal");
         if (!DateTimeOffset.TryParseExact(timestamp, "O", CultureInfo.InvariantCulture, DateTimeStyles.None,
-                out var builtAtUtc) || builtAtUtc.Offset != TimeSpan.Zero)
+                out var builtAtLocal))
         {
-            throw new InvalidOperationException("The application build timestamp must be an ISO 8601 UTC value.");
+            throw new InvalidOperationException("The application build timestamp must be an ISO 8601 local value.");
         }
-        return new BuildInformation(version, machineName, builtAtUtc);
+        return new BuildInformation(
+            version,
+            machineName,
+            builtAtLocal,
+            GetRequiredValue(metadata, "BuildTimeZone"),
+            GetRequiredValue(metadata, "BuildGitCommit"));
     }
 
     /// <summary>Rejects missing, empty, or duplicate metadata rather than substituting runtime information.</summary>

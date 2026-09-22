@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Reflection;
 using Microsoft.Extensions.Logging;
 using PromptMeUp.Infrastructure;
 using PromptMeUp.Models;
@@ -36,6 +35,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly ICostsView _costsView;
     private readonly IHelpView _helpView;
     private readonly IThirdPartyView _thirdPartyView;
+    private readonly IFirstRunView? _firstRunView;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
     private readonly ArtifactLimits _artifactLimits;
@@ -76,7 +76,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         AboutWorkflow? about = null,
         MemoryManagerWorkflow? memories = null,
         MemoryCommandWorkflow? memoryCommands = null,
-        SkillsAndMemoryWorkflow? skillsAndMemory = null)
+        SkillsAndMemoryWorkflow? skillsAndMemory = null,
+        IFirstRunView? firstRunView = null)
     {
         _parser = parser;
         _database = database;
@@ -107,6 +108,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _memories = memories;
         _memoryCommands = memoryCommands;
         _skillsAndMemory = skillsAndMemory;
+        _firstRunView = firstRunView;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -124,16 +126,6 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
 
         var options = parse.Options!;
-        if (options.Command == AppCommand.Lenna)
-        {
-            return (_lenna ?? throw new InvalidOperationException(_text.Text("Lenna.LoadError")))
-                .Run(options, cancellationToken);
-        }
-        if (options.Command == AppCommand.About)
-        {
-            return (_about ?? throw new InvalidOperationException(_text.Text("About.Unavailable")))
-                .Run(options, cancellationToken);
-        }
         _shell.Configure(new ConsoleRenderOptions(options.NoAnimation, options.NoEmoji));
         await _database.InitializeAsync(cancellationToken).ConfigureAwait(false);
         var promptCount = (await _prompts.ListAsync(cancellationToken).ConfigureAwait(false)).Count;
@@ -153,6 +145,19 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
         try
         {
+            if (settings.IsFirstRun)
+            {
+                var firstRunView = _firstRunView
+                    ?? throw new InvalidOperationException("The first-run view is unavailable.");
+                EnsureInteractive();
+                if (!firstRunView.ConfirmSetup())
+                {
+                    return 0;
+                }
+
+                return await RunSetupAsync(settings, cancellationToken).ConfigureAwait(false);
+            }
+
             if (ShouldRefreshPricing(options.Command, settings))
             {
                 await TryRefreshPricingAsync(settings, force: options.Command == AppCommand.Costs, cancellationToken).ConfigureAwait(false);
@@ -195,6 +200,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         switch (options.Command)
         {
+            case AppCommand.Lenna:
+                return (_lenna ?? throw new InvalidOperationException(_text.Text("Lenna.LoadError")))
+                    .Run(options, cancellationToken);
+            case AppCommand.About:
+                return (_about ?? throw new InvalidOperationException(_text.Text("About.Unavailable")))
+                    .Run(options, cancellationToken);
             case AppCommand.Skills:
             case AppCommand.Learning:
             case AppCommand.Dream:
@@ -411,12 +422,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
     }
 
-    /// <summary>Renders the semantic product and runtime version.</summary>
+    /// <summary>Renders the product version and immutable compilation provenance.</summary>
     private void RenderVersion()
     {
-        var assembly = Assembly.GetExecutingAssembly().GetName();
         _shell.RenderVersion(
-            assembly.Version?.ToString(3) ?? "0.1.5",
+            BuildInformationReader.Read(),
             Environment.Version.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
     }

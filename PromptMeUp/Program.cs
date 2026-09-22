@@ -48,21 +48,6 @@ internal static class Program
             ConfigureServices(services, paths, shutdown.Token);
             await using var provider = services.BuildServiceProvider();
             shell = provider.GetRequiredService<IConsoleShellView>();
-            var text = provider.GetRequiredService<ILocalizationService>();
-            text.SetLanguage(SupportedLanguages.ResolveSystemLanguage());
-            var parse = provider.GetRequiredService<ICommandLineParser>().Parse(args);
-            if (parse.Succeeded && parse.Options!.Command == AppCommand.Lenna)
-            {
-                return provider.GetRequiredService<LennaWorkflow>().Run(parse.Options, shutdown.Token);
-            }
-            if (parse.Succeeded && parse.Options!.Command == AppCommand.Help)
-            {
-                return provider.GetRequiredService<HelpWorkflow>().Run(parse.Options, shutdown.Token);
-            }
-            if (parse.Succeeded && parse.Options!.Command == AppCommand.About)
-            {
-                return provider.GetRequiredService<AboutWorkflow>().Run(parse.Options, shutdown.Token);
-            }
             return await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
@@ -170,6 +155,7 @@ internal static class Program
         services.AddSingleton<ILennaView, LennaView>();
         services.AddSingleton<ICommandAuthorizationView, CommandAuthorizationView>();
         services.AddSingleton<IThirdPartyView, ThirdPartyView>();
+        services.AddSingleton<IFirstRunView, FirstRunView>();
         services.AddSingleton<IPortablePathView, PortablePathView>();
         services.AddSingleton<IExecutableLocationView, ExecutableLocationView>();
         services.AddSingleton<INerdFontView, NerdFontView>();

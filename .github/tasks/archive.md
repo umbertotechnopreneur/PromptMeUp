@@ -1,5 +1,57 @@
 # Task Archive
 
+## 2026-09-22 — Require setup on first run
+
+- Added an `IsFirstRun` settings flag derived from the successfully saved setup state, without redundant persisted state or legacy migration code.
+- Routed every valid command through the common startup path and added a localized first-run prompt that opens Setup on OK or returns to the shell on Cancel.
+
+Validation: preflight, scoped formatting verification, XML method-comment check, and warning-free Release build passed. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
+
+## 2026-09-22 — Fix global activation in the installed app
+
+- Corrected the SQLite schema so skills, learning evidence, proposals, revisions, reminders, and saved memories accept only the global scope used by the application.
+- Removed the obsolete project-to-global memory migration and project-scoped regression fixtures.
+- Built, signed, installed, and interactively verified Debug MSIX `0.0.1.2222`; activation now succeeds from both `hm --skills` and `hm --learning` without terminating the app.
+
+Validation: preflight, XML method-comment check, warning-free Release build, 108 focused storage and settings tests, signed-package verification, and installed interactive smoke checks passed.
+
+## 2026-09-22 — Install global Learning Debug MSIX
+
+- Built, signed, verified, and installed local x64 Debug MSIX `0.0.1.2221` containing the global Skills and Memory changes.
+- Preserved the signed package and SHA-256 record under ignored `artifacts/msix/learning-global-20260922-debug-v2`.
+
+Validation: package signature verification and installed package status passed. Automated tests were not run.
+
+## 2026-09-22 — Make Learning and Skills global
+
+- Rebuilt `hm --learning` on the shared fullscreen workspace used by Skills: action descriptions stay in the footer and confirmation remains in the same visual flow.
+- Replaced the Dream JSON dump with a bounded evidence count and an explicit fullscreen confirmation.
+- Made skills, memory collection, proposals, and reminders use one application-wide scope; updated the six runtime translations and Setup labels to say global.
+
+Validation: preflight, restore, XML method-comment check, diff inspection, and warning-free Release build passed; the repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run.
+
+## 2026-09-22 — Refine the Skills command list
+
+- Removed the redundant command metadata column from `hm --skills`; package details remain available below the selected command.
+- Added green and red status indicators. Toggling a skill now refreshes the active fullscreen menu in place instead of leaving and reopening the page.
+- Moved the selected command description into the footer notice, replacing the fixed navigation sentence.
+
+Validation: preflight, restore, XML method-comment check, diff inspection, and warning-free Release build passed; Release output was cleaned. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run.
+
+## 2026-09-22 — Build and install global Skills Debug MSIX
+
+- Built, signed, verified, and installed local x64 Debug MSIX `0.0.1.2220` for `UmbertoGiacobbiDotBiz.PromptMeUp`.
+- Preserved the signed package and SHA-256 record under ignored `artifacts/msix/global-skills-20260922-debug`.
+
+Validation: package signature verification and installed package status passed. The application Debug output was cleaned. Solution cleanup reported pre-existing test restore assets without a `win-x64` target; the package and its generated intermediates remain under ignored artifacts.
+
+## 2026-09-22 — Keep the Skills screen global
+
+- Replaced the Project group in `hm --skills` with General, including its six localized descriptions and activation message.
+- Renamed the menu actions and added a repository rule that prevents project-scoped labels, groups, availability, or configuration from returning to `hm --skills`.
+
+Validation: preflight, restore, XML method-comment check, scoped source search, diff inspection, and warning-free Release build passed; Release output was cleaned. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run.
+
 ## 2026-09-22 — Unify skills and memory editing
 
 - Reworked Skills into a numbered category sidebar with inline commands, package review, textboxes, and textareas in the central panel.

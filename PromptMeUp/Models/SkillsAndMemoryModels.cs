@@ -14,14 +14,22 @@ public sealed record SkillDefinition(string Name, string Description, string Ver
 /// <summary>Identifies a workflow-owned skill menu action without coupling a view to menu positions.</summary>
 internal enum SkillMenuAction
 {
-    EnableProject,
-    DisableProject,
+    EnableSkillsAndMemory,
+    DisableSkillsAndMemory,
     Import,
     ToggleAutomatic,
     ClearSelection,
     ToggleSkill,
     SelectSkill,
-    RunSkill
+    RunSkill,
+    ToggleCapture,
+    ToggleReminder,
+    ReviewObservations,
+    ClearObservations,
+    Dream,
+    Heartbeat,
+    Confirm,
+    Cancel
 }
 
 /// <summary>Groups related skill commands in the compact sidebar without coupling the view to workflow behavior.</summary>
@@ -47,7 +55,7 @@ internal sealed record SkillMenuItem(
 /// <summary>Returns one central skill action together with its reviewed inline field value.</summary>
 internal sealed record SkillMenuSelection(SkillMenuItem Item, string? Input);
 
-/// <summary>Contains only explicitly enabled skills and memory behavior in the current project.</summary>
+/// <summary>Contains only explicitly enabled skills and memory behavior for the user.</summary>
 public sealed record SkillsAndMemorySettings(bool Enabled = false, bool AutomaticSkills = false,
     bool CaptureObservations = false, bool MaintenanceReminder = false);
 
