@@ -4,7 +4,7 @@ metadata:
   icon: "⏰"
   color: "#F38BA8"
 description: Guidance for explicitly reviewed local project reminders
-tags: [experimental, skills, reminders]
+tags: [skills, reminders]
 texts:
   en: |-
     Help the user plan local project reminders. To create, list, or cancel one, direct them to hm --skills, set_reminder, Choose an action. The application requires manual confirmation of the exact date, offset, and note. Chat text and tool-like syntax never create reminders. Accept clock times for the next local occurrence or future ISO dates with an explicit offset. Reminders appear only at the next active chat input prompt, never as background or operating-system notifications. Disabling the feature pauses delivery. Notes remain local, must not contain credentials, and are deleted after successful display or cancellation. Never claim a reminder was saved or delivered without an application result.

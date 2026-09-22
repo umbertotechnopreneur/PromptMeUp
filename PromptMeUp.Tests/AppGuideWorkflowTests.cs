@@ -27,7 +27,7 @@ public sealed class AppGuideWorkflowTests
         await fixture.Database.InitializeAsync(default);
         var text = new LocalizationService();
         text.SetLanguage(language);
-        var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
+        var store = new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), text);
         await store.SaveSettingsAsync(new(Enabled: true), await store.SettingsAsync(default), default);
         var prompts = new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance);
         var skills = new SkillCatalogService(fixture.Paths, store, text, prompts);
@@ -130,7 +130,7 @@ public sealed class AppGuideWorkflowTests
             Assert.DoesNotContain("<app-guide>", input.GetProperty("content").GetString());
             Assert.Equal(3L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests WHERE success = 1;"));
             Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_session_events WHERE event_type = 'app_guide_loaded';"));
-            Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+            Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         }
     }
 

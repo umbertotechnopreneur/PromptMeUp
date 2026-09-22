@@ -3,7 +3,7 @@
 namespace PromptMeUp.Models;
 
 /// <summary>Reports project preferences, effectively enabled usable skills, and all inspected catalog packages.</summary>
-public sealed record SettingsFeatureOverview(ExperimentalSettings Settings, int EnabledSkillCount, int SkillCount)
+public sealed record SettingsFeatureOverview(SkillsAndMemorySettings Settings, int EnabledSkillCount, int SkillCount)
 {
     /// <summary>Contains each inspected package and its stored approval independently of the project master switch.</summary>
     public IReadOnlyList<SettingsSkillState> Skills { get; init; } = [];

@@ -107,7 +107,7 @@ public sealed class PreferredNameSettingsTests
         Assert.Equal(string.Empty, await fixture.ScalarAsync("SELECT preferred_name FROM app_settings;"));
         Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM pragma_table_info('app_settings') WHERE name = 'preferred_name';"));
         Assert.Equal("Keep this saved note.", await fixture.ScalarAsync("SELECT body FROM persistent_memories;"));
-        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(8L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Persists only the normalized name, survives reinitialization, and clears it without altering other settings.</summary>

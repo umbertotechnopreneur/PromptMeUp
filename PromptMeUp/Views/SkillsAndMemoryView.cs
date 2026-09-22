@@ -6,9 +6,11 @@ using Spectre.Console;
 
 namespace PromptMeUp.Views;
 
-/// <summary>Displays open experimental workflows using the shared palette without owning I/O services.</summary>
-public sealed class ExperimentalView(IAnsiConsole console, ILocalizationService text, IConsoleShellView shell)
+/// <summary>Displays skills and memory workflows using the shared palette without owning I/O services.</summary>
+public sealed class SkillsAndMemoryView(IAnsiConsole console, ILocalizationService text, IConsoleShellView shell)
 {
+    private readonly FullscreenMenuView _skillsMenu = new(console, text, shell.Options);
+
     /// <summary>Shows right-aligned labels and left-aligned values with intentional whitespace.</summary>
     public void Render(string title, IEnumerable<(string Label, string Value)> fields)
     {
@@ -43,25 +45,58 @@ public sealed class ExperimentalView(IAnsiConsole console, ILocalizationService 
         return choices[Choose(title, choices.Select(choice => choice.Label).ToArray())].Value;
     }
 
-    /// <summary>Uses the shared fullscreen workspace for the skills overview and preserves the scrolling prompt fallback.</summary>
-    internal SkillMenuItem ChooseSkills(string title, IReadOnlyList<SkillMenuItem> items)
+    /// <summary>Uses the shared fullscreen workspace for grouped skill commands and preserves the scrolling prompt fallback.</summary>
+    internal SkillMenuSelection? ChooseSkills(string title, IReadOnlyList<SkillMenuGroup> groups)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        ArgumentNullException.ThrowIfNull(items);
-        if (items.Count == 0)
+        ArgumentNullException.ThrowIfNull(groups);
+        if (groups.Count == 0)
         {
-            throw new ArgumentException("The skills menu needs at least one item.", nameof(items));
+            throw new ArgumentException("The skills menu needs at least one group.", nameof(groups));
         }
-        var back = items.FirstOrDefault(item => item.Action == SkillMenuAction.Back)
-            ?? throw new ArgumentException("The skills menu needs a back action.", nameof(items));
         if (!FullscreenViewport.CanUse(console))
         {
-            return Choose(title, items.Select(item => (Value: item, Label: item.Label)).ToArray());
+            var choices = new[] { (Value: (SkillMenuItem?)null, Label: text.Text("Lab.Back")) }
+                .Concat(groups.SelectMany(group => group.Items.Select(item =>
+                    (Value: (SkillMenuItem?)item, Label: group.Label + " — " + item.Label))))
+                .ToArray();
+            var item = Choose(title, choices);
+            return item is null ? null : new SkillMenuSelection(item,
+                item.InputLabel is null ? null : Read(item.InputLabel, item.InitialInput));
         }
 
-        var selected = new FullscreenMenuView(console, text, shell.Options).Select(title,
-            items.Select(item => new FullscreenMenuItem(item.Icon, item.Label, item.Description)).ToArray(), text.Text("Lab.Back"));
-        return selected is { } index ? items[index] : back;
+        var selected = _skillsMenu.Select(title,
+            groups.Select(group => new FullscreenMenuGroup(group.Icon, group.Label, group.Description,
+                group.Items.Select(item => new FullscreenMenuItem(item.Icon, item.Label, item.Description,
+                    PackageDetails(item.Skill), item.CanExecute, item.InputLabel, item.InitialInput,
+                    item.MultilineInput)).ToArray()))
+                .ToArray(), text.Text("Lab.Back"));
+        return selected is { } value
+            ? new SkillMenuSelection(groups[value.GroupIndex].Items[value.ItemIndex], value.Input)
+            : null;
+    }
+
+    /// <summary>Builds the complete package review shown beside each installed-skill action.</summary>
+    private string? PackageDetails(SkillDefinition? skill)
+    {
+        if (skill is null)
+        {
+            return null;
+        }
+        var lines = new List<string>
+        {
+            text.Text("Lab.Source") + ": " + skill.Directory,
+            text.Text("Lab.Package") + ": " + skill.Description,
+            string.Empty,
+            skill.Instructions
+        };
+        foreach (var script in skill.Scripts)
+        {
+            lines.Add(string.Empty);
+            lines.Add(script.Key + ".ps1");
+            lines.Add(script.Value);
+        }
+        return string.Join('\n', lines);
     }
 
     /// <summary>Reads one bounded text field without interpreting it as markup.</summary>

@@ -5,7 +5,7 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Application;
 
-public sealed partial class ExperimentalWorkflow
+public sealed partial class SkillsAndMemoryWorkflow
 {
     /// <summary>Manages explicit observation consent, retained evidence, reminders, and manually invoked reflection.</summary>
     public async Task RunLearningAsync(AppSettings settings, CancellationToken ct)
@@ -34,7 +34,7 @@ public sealed partial class ExperimentalWorkflow
                  (text.Text("Lab.Heartbeat") + " / " + text.Text("Lab.LastRun"), await LastReflectionAsync(false, ct).ConfigureAwait(false))]);
             var selected = view.Choose(text.Text("Lab.Learning"), text.Text("Lab.Back"), text.Text("Lab.Capture"),
                 text.Text("Lab.Reminder"), text.Text("Lab.Observations"), text.Text("Lab.Clear"),
-                text.Text("Lab.Proposals"), text.Text("Lab.Dream"), text.Text("Lab.Heartbeat"));
+                text.Text("Lab.Dream"), text.Text("Lab.Heartbeat"));
             switch (selected)
             {
                 case 0:
@@ -59,37 +59,54 @@ public sealed partial class ExperimentalWorkflow
                     }
                     break;
                 case 5:
-                    await RunProposalsAsync(settings, ct).ConfigureAwait(false);
-                    break;
                 case 6:
-                case 7:
-                    await RunReflectionAsync(selected == 6, settings, ct).ConfigureAwait(false);
+                    await RunReflectionAsync(selected == 5, settings, ct).ConfigureAwait(false);
                     break;
             }
         }
     }
 
-    /// <summary>Lists current-project suggestions and applies only explicitly reviewed, still-valid proposals.</summary>
-    public async Task RunProposalsAsync(AppSettings settings, CancellationToken ct)
+    /// <summary>Loads current suggestions and exact evidence for the shared inline memory editor.</summary>
+    public async Task<MemoryProposalWorkspace> LoadProposalWorkspaceAsync(CancellationToken ct)
     {
-        _ = settings;
-        while (await LearningEnabledAsync(ct).ConfigureAwait(false))
+        if (!(await store.SettingsAsync(ct).ConfigureAwait(false)).Enabled)
         {
-            ct.ThrowIfCancellationRequested();
-            var proposals = await store.ProposalsAsync(ct).ConfigureAwait(false);
-            if (proposals.Count == 0)
-            {
-                shell.RenderNotice(text.Text("Lab.None"));
-                return;
-            }
-            var index = view.Choose(text.Text("Lab.Proposals"), [text.Text("Lab.Back"),
-                .. proposals.Select(proposal => text.Text("Lab.Operation." + proposal.Operation) + " — " + ProposalLabel(proposal.Text))]);
-            if (index == 0)
-            {
-                return;
-            }
-            await ReviewProposalAsync(proposals[index - 1], ct).ConfigureAwait(false);
+            return MemoryProposalWorkspace.Disabled;
         }
+        return new(true,
+            await store.ProposalsAsync(ct).ConfigureAwait(false),
+            await store.ObservationsAsync(ct).ConfigureAwait(false));
+    }
+
+    /// <summary>Applies one explicitly confirmed inline proposal decision after refreshing all validity checks.</summary>
+    public async Task ApplyProposalReviewAsync(string proposalId, string? reviewed, bool approve, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(proposalId);
+        if (!(await store.SettingsAsync(ct).ConfigureAwait(false)).Enabled)
+        {
+            throw new InvalidOperationException(text.Text("Lab.Disabled"));
+        }
+        var proposal = (await store.ProposalsAsync(ct).ConfigureAwait(false))
+            .SingleOrDefault(item => string.Equals(item.Id, proposalId, StringComparison.Ordinal))
+            ?? throw new InvalidOperationException(text.Text("Lab.Invalid"));
+        var evidence = await store.ObservationsAsync(ct).ConfigureAwait(false);
+        if (proposal.SourceIds.Any(id => !evidence.Any(item => string.Equals(item.Id, id, StringComparison.Ordinal))))
+        {
+            throw new InvalidOperationException(text.Text("Lab.Invalid"));
+        }
+        if (!approve)
+        {
+            await store.RejectAsync(proposal, ct).ConfigureAwait(false);
+            return;
+        }
+        if (proposal.Operation == "flag")
+        {
+            throw new InvalidOperationException(text.Text("Lab.Invalid"));
+        }
+        var finalText = reflection.ValidateReviewedText(proposal.Operation is "add" or "merge"
+            ? reviewed ?? string.Empty
+            : proposal.Text);
+        await store.ApproveAsync(proposal, finalText, true, ct).ConfigureAwait(false);
     }
 
     /// <summary>Runs local duplicate discovery or shares only a displayed complete evidence batch for advisory OpenAI analysis.</summary>
@@ -186,87 +203,7 @@ public sealed partial class ExperimentalWorkflow
         }
     }
 
-    /// <summary>Shows exact target snapshots, full source observations, and edited text before final confirmation.</summary>
-    private async Task ReviewProposalAsync(MemoryProposal proposal, CancellationToken ct)
-    {
-        var evidence = await store.ObservationsAsync(ct).ConfigureAwait(false);
-        if (proposal.SourceIds.Any(id => !evidence.Any(item => item.Id == id)))
-        {
-            throw new InvalidOperationException(text.Text("Lab.Invalid"));
-        }
-        var sources = proposal.SourceIds.Select(id => evidence.Single(item => item.Id == id)).ToArray();
-        var reviewed = proposal.Text;
-        while (true)
-        {
-            ct.ThrowIfCancellationRequested();
-            RenderProposal(proposal, reviewed, sources);
-            var choices = new List<(string Key, string Action)>
-            {
-                ("Lab.Cancel", "cancel"), ("Lab.Reject", "reject")
-            };
-            if (proposal.Operation == "flag")
-            {
-                shell.RenderNotice(text.Text("Lab.FlagNotice"));
-            }
-            else
-            {
-                if (proposal.Operation is "add" or "merge")
-                {
-                    choices.Add(("Lab.Edit", "edit"));
-                }
-                choices.Add(("Lab.Approve", "approve"));
-            }
-            var selected = choices[view.Choose(text.Text("Lab.Proposals"), choices.Select(choice => text.Text(choice.Key)).ToArray())].Action;
-            if (selected == "cancel")
-            {
-                return;
-            }
-            if (selected == "reject" && view.Confirm(text.Text("Lab.Reject")))
-            {
-                await store.RejectAsync(proposal, ct).ConfigureAwait(false);
-                shell.RenderSuccess(text.Text("Lab.Saved"));
-                return;
-            }
-            if (selected == "edit")
-            {
-                reviewed = reflection.ValidateReviewedText(view.Read(text.Text("Lab.Edit"), reviewed));
-            }
-            if (selected == "approve")
-            {
-                reviewed = reflection.ValidateReviewedText(reviewed);
-                RenderProposal(proposal, reviewed, sources);
-                if (view.Confirm(text.Text("Lab.Approve")))
-                {
-                    await store.ApproveAsync(proposal, reviewed, true, ct).ConfigureAwait(false);
-                    shell.RenderSuccess(text.Text("Lab.Saved"));
-                    return;
-                }
-            }
-        }
-    }
-
-    /// <summary>Displays unabridged before/after content and evidence without changing any stored memory.</summary>
-    private void RenderProposal(MemoryProposal proposal, string reviewed, IReadOnlyList<LearningObservation> sources)
-    {
-        var before = proposal.Targets.Count == 0 ? text.Text("Lab.NoPrevious")
-            : string.Join("\n\n", proposal.Targets.Select(target => target.Id + " · " + target.UpdatedAt.ToString("u", CultureInfo.InvariantCulture) + "\n" + target.Text));
-        var after = proposal.Operation == "archive" ? text.Text("Lab.Archived")
-            : proposal.Operation == "flag" ? text.Text("Lab.Unchanged") : reviewed;
-        var sourceText = sources.Count > 0 ? string.Join("\n\n", sources.Select(ObservationText))
-            : string.Join("\n", proposal.Targets.Select(target => target.Id));
-        view.Render(text.Text("Lab.Proposals"),
-            [(text.Text("Lab.Operation"), text.Text("Lab.Operation." + proposal.Operation)),
-             (text.Text("Lab.Kind"), text.Text("Lab.Kind." + proposal.Kind)),
-             (text.Text("Lab.Before"), before), (text.Text("Lab.After"), after),
-             (text.Text("Lab.Reason"), proposal.Operation is "archive" or "flag" ? proposal.Text + "\n\n" + proposal.Rationale : proposal.Rationale),
-             (text.Text("Lab.Sources"), sourceText)]);
-        if (proposal.Operation is "merge" or "archive")
-        {
-            shell.RenderWarning(text.Text("Lab.ForgetNotice"));
-        }
-    }
-
-    /// <summary>Checks the project experiment gate before displaying or changing learning state.</summary>
+    /// <summary>Checks the project skills and memory gate before displaying or changing learning state.</summary>
     private async Task<bool> LearningEnabledAsync(CancellationToken ct)
     {
         if ((await store.SettingsAsync(ct).ConfigureAwait(false)).Enabled)

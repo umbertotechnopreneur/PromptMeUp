@@ -65,7 +65,7 @@ With observation capture enabled, completed, directly entered user messages of u
 
 Suggestions stay separate from saved memories until you approve a displayed change. Turning off message collection or Skills and memory clears collected messages and suggestions after your confirmation. Forgetting, merging, or removing any saved memory clears all collected messages and suggestions. This prevents collected messages from immediately recreating removed text. Other saved memories, older request history, backups, and text already sent to OpenAI are not erased. Confirmed reflection requests and responses use the ordinary filtered AI history; the collection's 30-day limit does not expire that history. Expired messages are removed when collected data is accessed, not by a background timer.
 
-See the [skills and memory guide](EXPERIMENTAL_MEMORY_SKILLS.md) for limits and review controls. Secret filtering is not a guarantee: do not capture or import confidential material you cannot share.
+See the [skills and memory guide](SKILLS_AND_MEMORY.md) for limits and review controls. Secret filtering is not a guarantee: do not capture or import confidential material you cannot share.
 
 ## Data sent to OpenAI
 

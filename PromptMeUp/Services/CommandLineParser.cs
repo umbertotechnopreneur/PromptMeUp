@@ -57,7 +57,7 @@ public sealed class CommandLineParser : ICommandLineParser
                     }
                     break;
                 case "--skills" or "--learning" or "--proposals" or "--dream" or "--heartbeat":
-                    var experimentalCommand = argument.ToLowerInvariant() switch
+                    var skillsAndMemoryCommand = argument.ToLowerInvariant() switch
                     {
                         "--skills" => AppCommand.Skills,
                         "--learning" => AppCommand.Learning,
@@ -65,7 +65,7 @@ public sealed class CommandLineParser : ICommandLineParser
                         "--dream" => AppCommand.Dream,
                         _ => AppCommand.Heartbeat
                     };
-                    if (!TrySelect(experimentalCommand, ref command, ref commandWasSelected, out var skillsError))
+                    if (!TrySelect(skillsAndMemoryCommand, ref command, ref commandWasSelected, out var skillsError))
                     {
                         return FailureMessage(skillsError);
                     }

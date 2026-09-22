@@ -20,8 +20,8 @@ public sealed class SettingsFeatureSaveTests
         var discarded = new SettingsFeatureChanges(overview.Settings, new(Enabled: true, AutomaticSkills: true), [Change(state, true)]);
 
         Assert.True(discarded.Settings.Enabled);
-        Assert.Equal(new ExperimentalSettings(), (await service.ReadAsync(default)).Settings);
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(new SkillsAndMemorySettings(), (await service.ReadAsync(default)).Settings);
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
     }
 
@@ -34,7 +34,7 @@ public sealed class SettingsFeatureSaveTests
         var first = Package(fixture, catalog, "save-first");
         var second = Package(fixture, catalog, "save-second");
         var overview = await service.ReadAsync(default);
-        var next = new ExperimentalSettings(Enabled: true, AutomaticSkills: true, MaintenanceReminder: true);
+        var next = new SkillsAndMemorySettings(Enabled: true, AutomaticSkills: true, MaintenanceReminder: true);
         var changes = overview.Skills.Where(state => state.Skill.Name == first.Name || state.Skill.Name == second.Name)
             .Select(state => Change(state, true)).ToArray();
 
@@ -69,7 +69,7 @@ public sealed class SettingsFeatureSaveTests
         Assert.Null(await store.GetAsync("skill:" + first.Name, default));
         Assert.Equal(string.Empty, await store.GetAsync("skill:" + second.Name, default));
         Assert.Equal(revision, await store.RevisionAsync(default));
-        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
     }
 
     /// <summary>A stale settings screen cannot restore capture consent that another instance has revoked.</summary>
@@ -100,7 +100,7 @@ public sealed class SettingsFeatureSaveTests
     {
         using var fixture = new RegressionFixture();
         var (store, _, service) = await PrepareAsync(fixture);
-        var previous = new ExperimentalSettings(CaptureObservations: latentCapture, AutomaticSkills: true);
+        var previous = new SkillsAndMemorySettings(CaptureObservations: latentCapture, AutomaticSkills: true);
         await store.SaveSettingsAsync(previous, new(), default);
         var next = previous with { Enabled = true, CaptureObservations = true };
         var revision = await store.RevisionAsync(default);
@@ -121,7 +121,7 @@ public sealed class SettingsFeatureSaveTests
     {
         using var fixture = new RegressionFixture();
         var (store, _, service) = await PrepareAsync(fixture);
-        var previous = new ExperimentalSettings(Enabled: true, CaptureObservations: true, MaintenanceReminder: true);
+        var previous = new SkillsAndMemorySettings(Enabled: true, CaptureObservations: true, MaintenanceReminder: true);
         await store.SaveSettingsAsync(previous, new(), default);
         await store.CaptureAsync(Guid.NewGuid().ToString("N"), "A retained user preference.", default);
         var next = disableMaster ? previous with { Enabled = false } : previous with { CaptureObservations = false };
@@ -144,7 +144,7 @@ public sealed class SettingsFeatureSaveTests
     {
         using var fixture = new RegressionFixture();
         var (store, _, service) = await PrepareAsync(fixture);
-        var settings = new ExperimentalSettings(AutomaticSkills: true, CaptureObservations: true, MaintenanceReminder: true);
+        var settings = new SkillsAndMemorySettings(AutomaticSkills: true, CaptureObservations: true, MaintenanceReminder: true);
         await store.SaveSettingsAsync(settings, new(), default);
         await fixture.ScalarAsync("""
             INSERT INTO learning_observations(id, scope_key, session_id, body, created_unix)
@@ -276,7 +276,7 @@ public sealed class SettingsFeatureSaveTests
             new(overview.Settings, new(Enabled: true), []), default));
 
         Assert.Equal(overview.Settings, await store.SettingsAsync(default));
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
     }
 
@@ -286,7 +286,7 @@ public sealed class SettingsFeatureSaveTests
     {
         using var fixture = new RegressionFixture();
         var (store, catalog, service) = await PrepareAsync(fixture);
-        var previous = new ExperimentalSettings(Enabled: true, CaptureObservations: true);
+        var previous = new SkillsAndMemorySettings(Enabled: true, CaptureObservations: true);
         await store.SaveSettingsAsync(previous, new(), default);
         await store.CaptureAsync(Guid.NewGuid().ToString("N"), "Synthetic captured preference.", default);
         var malformed = Package(fixture, catalog, "save-malformed-disable");
@@ -328,7 +328,7 @@ public sealed class SettingsFeatureSaveTests
     public async Task Save_Cancelled_DoesNotAccessUninitializedStorage()
     {
         using var fixture = new RegressionFixture();
-        var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
+        var store = new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
         var catalog = Catalog(fixture, store);
         var service = new SettingsFeatureOverviewService(store, catalog);
 
@@ -339,16 +339,16 @@ public sealed class SettingsFeatureSaveTests
     }
 
     /// <summary>Creates real settings persistence and catalog services against a fresh disposable database.</summary>
-    private static async Task<(ExperimentalStore Store, SkillCatalogService Catalog, SettingsFeatureOverviewService Service)> PrepareAsync(RegressionFixture fixture)
+    private static async Task<(SkillsAndMemoryStore Store, SkillCatalogService Catalog, SettingsFeatureOverviewService Service)> PrepareAsync(RegressionFixture fixture)
     {
         await fixture.Database.InitializeAsync(default);
-        var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
+        var store = new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
         var catalog = Catalog(fixture, store);
         return (store, catalog, new SettingsFeatureOverviewService(store, catalog));
     }
 
     /// <summary>Creates a catalog using only packaged local prompts and synthetic fixture files.</summary>
-    private static SkillCatalogService Catalog(RegressionFixture fixture, ExperimentalStore store) =>
+    private static SkillCatalogService Catalog(RegressionFixture fixture, SkillsAndMemoryStore store) =>
         new(fixture.Paths, store, new LocalizationService(), new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
 
     /// <summary>Copies the exact original approval into a requested row edit.</summary>

@@ -3,7 +3,6 @@ version: 2
 description: Suggest evidence-backed memory maintenance without changing any saved memory.
 tags:
   - memory
-  - experimental
 metadata:
   owner: PromptMeUp
   data-classification: user-content

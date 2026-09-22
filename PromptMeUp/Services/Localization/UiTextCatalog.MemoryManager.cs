@@ -85,12 +85,19 @@ internal static partial class UiTextCatalog
             "¿Eliminar este recuerdo? Elige Eliminar para confirmar.",
             "Xóa ghi nhớ này? Chọn Xóa để xác nhận."));
         entries.Add("MemoryManager.NoteHelp", new(
-            English: "Up to 1,000 characters. Enter accepts the field; Ctrl+U clears it. Existing line breaks are preserved.",
-            Italian: "Fino a 1.000 caratteri. Invio conferma il campo; Ctrl+U lo svuota. Gli a capo esistenti vengono conservati.",
-            French: "Jusqu'à 1 000 caractères. Entrée valide le champ ; Ctrl+U l'efface. Les sauts de ligne existants sont conservés.",
-            German: "Bis zu 1.000 Zeichen. Enter übernimmt das Feld; Strg+U leert es. Bestehende Zeilenumbrüche bleiben erhalten.",
-            Spanish: "Hasta 1.000 caracteres. Intro acepta el campo; Ctrl+U lo vacía. Se conservan los saltos de línea existentes.",
-            Vietnamese: "Tối đa 1.000 ký tự. Enter chấp nhận trường; Ctrl+U xóa nội dung. Các dấu xuống dòng hiện có được giữ nguyên."));
+            English: "Up to 1,000 characters. Enter edits this text area; Ctrl+Enter accepts an edit.",
+            Italian: "Fino a 1.000 caratteri. Invio modifica quest'area di testo; Ctrl+Invio conferma la modifica.",
+            French: "Jusqu'à 1 000 caractères. Entrée modifie cette zone de texte ; Ctrl+Entrée valide la modification.",
+            German: "Bis zu 1.000 Zeichen. Enter bearbeitet dieses Textfeld; Strg+Enter übernimmt die Änderung.",
+            Spanish: "Hasta 1.000 caracteres. Intro edita esta área de texto; Ctrl+Intro acepta el cambio.",
+            Vietnamese: "Tối đa 1.000 ký tự. Enter sửa vùng văn bản; Ctrl+Enter chấp nhận thay đổi."));
+        entries.Add("MemoryManager.EditorKeys", new(
+            "Type: edit | Enter: new line | Ctrl+Enter: apply | Esc: discard",
+            "Scrivi: modifica | Invio: nuova riga | Ctrl+Invio: applica | Esc: scarta",
+            "Saisir : modifier | Entrée : nouvelle ligne | Ctrl+Entrée : appliquer | Échap : annuler",
+            "Tippen: ändern | Enter: neue Zeile | Strg+Enter: übernehmen | Esc: verwerfen",
+            "Escribir: editar | Intro: nueva línea | Ctrl+Intro: aplicar | Esc: descartar",
+            "Nhập: sửa | Enter: dòng mới | Ctrl+Enter: áp dụng | Esc: bỏ"));
         entries.Add("MemoryManager.EditHelp", new(
             "Edit the note, then Save. Memories save separately from Settings.",
             "Modifica la nota, poi Salva. I ricordi si salvano separatamente dalle impostazioni.",
@@ -120,19 +127,19 @@ internal static partial class UiTextCatalog
             Spanish: "Arriba/Abajo: notas | Tab: siguiente | Esc: cerrar",
             Vietnamese: "Lên/Xuống: ghi chú | Tab: tiếp | Esc: đóng"));
         entries.Add("MemoryManager.DetailKeys", new(
-            English: "Up/Down/PgUp/PgDn: scroll | F6: notes | Tab: actions | Esc: close",
-            Italian: "Su/Giù/PgUp/PgDn: scorri | F6: note | Tab: azioni | Esc: chiudi",
-            French: "Haut/Bas/PgUp/PgDn : défiler | F6 : notes | Tab : actions | Esc : fermer",
-            German: "Auf/Ab/PgUp/PgDn: blättern | F6: Notizen | Tab: Aktionen | Esc: schließen",
-            Spanish: "Arriba/Abajo/PgUp/PgDn: desplazar | F6: notas | Tab: acciones | Esc: cerrar",
-            Vietnamese: "Lên/Xuống/PgUp/PgDn: cuộn | F6: ghi chú | Tab: thao tác | Esc: đóng"));
+            English: "Enter: edit | Up/Down/PgUp/PgDn: scroll | Left/Right: suggestion | Tab/F6: area",
+            Italian: "Invio: modifica | Su/Giù/PgUp/PgDn: scorri | Sinistra/Destra: proposta | Tab/F6: area",
+            French: "Entrée : modifier | Haut/Bas/PgUp/PgDn : défiler | Gauche/Droite : suggestion | Tab/F6 : zone",
+            German: "Enter: ändern | Auf/Ab/PgUp/PgDn: blättern | Links/Rechts: Vorschlag | Tab/F6: Bereich",
+            Spanish: "Intro: editar | Arriba/Abajo/PgUp/PgDn: desplazar | Izquierda/Derecha: sugerencia | Tab/F6: área",
+            Vietnamese: "Enter: sửa | Lên/Xuống/PgUp/PgDn: cuộn | Trái/Phải: đề xuất | Tab/F6: vùng"));
         entries.Add("MemoryManager.DetailKeysCompact", new(
-            English: "PgUp/PgDn: scroll | Tab: actions | Esc: close",
-            Italian: "PgUp/PgDn: scorri | Tab: azioni | Esc: chiudi",
-            French: "PgUp/PgDn: défiler | Tab: actions | Esc: fermer",
-            German: "PgUp/PgDn: blättern | Tab: Aktionen | Esc: zu",
-            Spanish: "PgUp/PgDn: desplazar | Tab: acciones | Esc: cerrar",
-            Vietnamese: "PgUp/PgDn: cuộn | Tab: thao tác | Esc: đóng"));
+            English: "Enter: edit | PgUp/PgDn: scroll | Tab/F6: area",
+            Italian: "Invio: modifica | PgUp/PgDn: scorri | Tab/F6: area",
+            French: "Entrée : modifier | PgUp/PgDn : défiler | Tab/F6 : zone",
+            German: "Enter: ändern | PgUp/PgDn: blättern | Tab/F6: Bereich",
+            Spanish: "Intro: editar | PgUp/PgDn: desplazar | Tab/F6: área",
+            Vietnamese: "Enter: sửa | PgUp/PgDn: cuộn | Tab/F6: vùng"));
         entries.Add("MemoryManager.ActionKeys", new(
             English: "Left/Right/Tab: actions | Enter: choose | F6: notes | Esc: cancel",
             Italian: "Sinistra/Destra/Tab: azioni | Invio: scegli | F6: note | Esc: annulla",

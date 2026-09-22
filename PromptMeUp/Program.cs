@@ -128,14 +128,14 @@ internal static class Program
         services.AddSingleton<IActivityAuditService, ActivityAuditService>();
         services.AddSingleton<IConversationMemoryService, ConversationMemoryService>();
         services.AddSingleton<PersistentMemoryService>();
-        services.AddSingleton<ExperimentalStore>();
+        services.AddSingleton<SkillsAndMemoryStore>();
         services.AddSingleton<MemoryReflectionService>();
         services.AddSingleton<ReminderService>();
         services.AddSingleton<SkillCatalogService>();
         services.AddSingleton<SettingsFeatureOverviewService>();
         services.AddSingleton<SkillActionService>();
-        services.AddSingleton<ExperimentalView>();
-        services.AddSingleton<ExperimentalWorkflow>();
+        services.AddSingleton<SkillsAndMemoryView>();
+        services.AddSingleton<SkillsAndMemoryWorkflow>();
         services.AddSingleton<ICommandRiskAssessmentService, CommandRiskAssessmentService>();
         services.AddSingleton<ICommandExecutionService, CommandExecutionService>();
         services.AddSingleton<IScriptLanguageCatalog, ScriptLanguageCatalog>();

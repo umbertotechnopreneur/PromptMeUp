@@ -49,9 +49,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private readonly IAppGuideService _appGuide;
     private readonly ILogger<AiConversationWorkflow> _logger;
     private readonly SkillCatalogService? _skills;
-    private readonly ExperimentalStore? _experiments;
-    private readonly ExperimentalWorkflow? _experimentalWorkflow;
+    private readonly SkillsAndMemoryStore? _skillsAndMemory;
+    private readonly SkillsAndMemoryWorkflow? _skillsAndMemoryWorkflow;
     private readonly ReminderService? _reminders;
+    private readonly MemoryManagerWorkflow? _memoryManagerWorkflow;
 
     /// <summary>Creates the focused query, chat, connection-test, and session-lifecycle workflow.</summary>
     public AiConversationWorkflow(
@@ -72,9 +73,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         IAppGuideService appGuide,
         ILogger<AiConversationWorkflow> logger,
         SkillCatalogService? skills = null,
-        ExperimentalStore? experiments = null,
-        ExperimentalWorkflow? experimentalWorkflow = null,
-        ReminderService? reminders = null)
+        SkillsAndMemoryStore? skillsAndMemory = null,
+        SkillsAndMemoryWorkflow? skillsAndMemoryWorkflow = null,
+        ReminderService? reminders = null,
+        MemoryManagerWorkflow? memoryManagerWorkflow = null)
     {
         _memoryService = memoryService ?? throw new ArgumentNullException(nameof(memoryService));
         _openAi = openAi ?? throw new ArgumentNullException(nameof(openAi));
@@ -93,9 +95,10 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         _appGuide = appGuide ?? throw new ArgumentNullException(nameof(appGuide));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _skills = skills;
-        _experiments = experiments;
-        _experimentalWorkflow = experimentalWorkflow;
+        _skillsAndMemory = skillsAndMemory;
+        _skillsAndMemoryWorkflow = skillsAndMemoryWorkflow;
         _reminders = reminders;
+        _memoryManagerWorkflow = memoryManagerWorkflow;
     }
 
     /// <summary>Runs a single-turn session and offers a safe continuation into chat after the model response.</summary>
@@ -177,11 +180,11 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             {
                 _shell.RenderNotice(_text.Text("Direct.Active"));
             }
-            if (_experiments is not null)
+            if (_skillsAndMemory is not null)
             {
-                var experiments = await _experiments.SettingsAsync(cancellationToken).ConfigureAwait(false);
-                var lastRun = await _experiments.GetAsync("last-heartbeat", cancellationToken).ConfigureAwait(false);
-                if (experiments.Enabled && experiments.MaintenanceReminder
+                var skillsAndMemory = await _skillsAndMemory.SettingsAsync(cancellationToken).ConfigureAwait(false);
+                var lastRun = await _skillsAndMemory.GetAsync("last-heartbeat", cancellationToken).ConfigureAwait(false);
+                if (skillsAndMemory.Enabled && skillsAndMemory.MaintenanceReminder
                     && (lastRun is null || !DateTimeOffset.TryParse(lastRun, out var last) || DateTimeOffset.UtcNow - last > TimeSpan.FromDays(7)))
                 {
                     _shell.RenderNotice(_text.Text("Lab.Due"));
@@ -241,7 +244,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                     await RenderActiveSnapshotAsync(sessionId, memory, settings, cancellationToken, force: true).ConfigureAwait(false);
                     continue;
                 }
-                if (await HandleExperimentalCommandAsync(input, settings, cancellationToken).ConfigureAwait(false)
+                if (await HandleSkillsAndMemoryCommandAsync(input, settings, cancellationToken).ConfigureAwait(false)
                     || await HandleMemoryCommandAsync(input, cancellationToken).ConfigureAwait(false))
                 {
                     continue;
@@ -462,8 +465,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
         memory.SummaryRenderedSinceLastResult = false;
-        var captureRevision = captureObservation && _experiments is not null
-            ? await _experiments.RevisionAsync(cancellationToken).ConfigureAwait(false) : null;
+        var captureRevision = captureObservation && _skillsAndMemory is not null
+            ? await _skillsAndMemory.RevisionAsync(cancellationToken).ConfigureAwait(false) : null;
         if (userText.Length > settings.MaxMessageCharacters)
         {
             throw new ConversationLimitException(_text.Text("Chat.InputTooLong", settings.MaxMessageCharacters));
@@ -487,9 +490,9 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         memory.LastResponse = response;
         var assistantUpdate = memory.Memory.Add("assistant", response.Text);
         _chatView.RenderAssistant(response.Text, animate: true, cancellationToken);
-        if (captureObservation && _experiments is not null)
+        if (captureObservation && _skillsAndMemory is not null)
         {
-            await _experiments.CaptureAsync(sessionId, userText, cancellationToken, captureRevision).ConfigureAwait(false);
+            await _skillsAndMemory.CaptureAsync(sessionId, userText, cancellationToken, captureRevision).ConfigureAwait(false);
         }
         await AuditPruningAsync(sessionId, assistantUpdate.PrunedMessages, cancellationToken).ConfigureAwait(false);
         await RenderActiveSnapshotAsync(sessionId, memory, settings, cancellationToken).ConfigureAwait(false);
@@ -745,8 +748,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Keeps explicit experiment administration out of chat context and automatic provider requests.</summary>
-    private async Task<bool> HandleExperimentalCommandAsync(string input, AppSettings settings, CancellationToken ct)
+    /// <summary>Keeps explicit skills and memory administration out of chat context and automatic provider requests.</summary>
+    private async Task<bool> HandleSkillsAndMemoryCommandAsync(string input, AppSettings settings, CancellationToken ct)
     {
         var parts = input.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
         var command = parts.FirstOrDefault()?.ToLowerInvariant() switch
@@ -762,14 +765,22 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         {
             return false;
         }
-        if (parts.Length != 1 || _experimentalWorkflow is null)
+        if (parts.Length != 1 || command == AppCommand.Proposals && _memoryManagerWorkflow is null
+            || command != AppCommand.Proposals && _skillsAndMemoryWorkflow is null)
         {
             _shell.RenderError(_text.Text("Lab.Invalid"));
             return true;
         }
         try
         {
-            await _experimentalWorkflow.RunAsync(command.Value, settings, ct).ConfigureAwait(false);
+            if (command == AppCommand.Proposals)
+            {
+                await _memoryManagerWorkflow!.RunAsync(ct, selectProposals: true).ConfigureAwait(false);
+            }
+            else
+            {
+                await _skillsAndMemoryWorkflow!.RunAsync(command.Value, settings, ct).ConfigureAwait(false);
+            }
         }
         catch (InteractiveFlowCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -814,7 +825,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                     _shell.RenderSuccess(_text.Text("Memory.Saved", saved.Id));
                     break;
                 case "/forget" when parts.Length == 2:
-                    if (_experimentalWorkflow is not null && !_experimentalWorkflow.ConfirmMemoryForget())
+                    if (_skillsAndMemoryWorkflow is not null && !_skillsAndMemoryWorkflow.ConfirmMemoryForget())
                     {
                         _shell.RenderNotice(_text.Text("Common.Cancelled"));
                         break;

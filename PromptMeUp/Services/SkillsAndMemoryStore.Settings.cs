@@ -5,7 +5,7 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-public sealed partial class ExperimentalStore
+public sealed partial class SkillsAndMemoryStore
 {
     /// <summary>Rejects malformed drafts and missing capture or clearing acknowledgements before opening a write transaction.</summary>
     internal void ValidateFeatureChanges(SettingsFeatureChanges changes)
@@ -55,7 +55,7 @@ public sealed partial class ExperimentalStore
         {
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = "SELECT value FROM experimental_settings WHERE scope_key = $scope AND name = $name;";
+            command.CommandText = "SELECT value FROM skills_and_memory_settings WHERE scope_key = $scope AND name = $name;";
             command.Parameters.AddWithValue("$scope", scope);
             command.Parameters.AddWithValue("$name", "skill:" + change.Skill.Name);
             var current = await command.ExecuteScalarAsync(ct).ConfigureAwait(false) as string;

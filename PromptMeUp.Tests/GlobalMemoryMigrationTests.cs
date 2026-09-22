@@ -20,7 +20,7 @@ public sealed class GlobalMemoryMigrationTests
         await fixture.Database.InitializeAsync(default);
         await fixture.Database.InitializeAsync(default);
 
-        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(8L, await fixture.ScalarAsync("PRAGMA user_version;"));
         Assert.Equal(3L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories WHERE scope_key = 'global';"));
         Assert.Equal(beforeNotes, await ReadNoteSnapshotAsync(fixture));
         Assert.Equal(beforeProvenance, await ReadProvenanceSnapshotAsync(fixture));
@@ -84,7 +84,7 @@ public sealed class GlobalMemoryMigrationTests
         Assert.Equal(beforeProvenance, await ReadProvenanceSnapshotAsync(fixture));
         await fixture.ScalarAsync("DROP TRIGGER reject_fixture_scope_update;");
         await fixture.Database.InitializeAsync(default);
-        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(8L, await fixture.ScalarAsync("PRAGMA user_version;"));
         Assert.Equal(3L, await fixture.ScalarAsync("SELECT COUNT(*) FROM persistent_memories WHERE scope_key = 'global';"));
     }
 

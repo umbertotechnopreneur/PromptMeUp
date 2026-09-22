@@ -15,7 +15,7 @@ using YamlDotNet.RepresentationModel;
 namespace PromptMeUp.Services;
 
 /// <summary>Adapts CLI-Intelligence's package model with bounded parsing and content-bound activation.</summary>
-public sealed class SkillCatalogService(AppPaths paths, ExperimentalStore store, ILocalizationService text, IPromptCatalogService prompts)
+public sealed class SkillCatalogService(AppPaths paths, SkillsAndMemoryStore store, ILocalizationService text, IPromptCatalogService prompts)
 {
     internal const int MaximumContextTokens = 1800;
     private static readonly JsonSerializerOptions ContextJson = new() { Encoder = JavaScriptEncoder.Create(UnicodeRanges.All) };

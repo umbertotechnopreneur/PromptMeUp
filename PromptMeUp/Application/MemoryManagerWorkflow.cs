@@ -11,39 +11,52 @@ public sealed class MemoryManagerWorkflow
 {
     private readonly PersistentMemoryService _memories;
     private readonly IMemoryManagerView _view;
-    private readonly IConsoleShellView _shell;
     private readonly ILocalizationService _text;
-    private readonly ExperimentalWorkflow? _experimental;
-    private readonly ISettingsService? _settings;
+    private readonly SkillsAndMemoryWorkflow? _skillsAndMemory;
 
     /// <summary>Connects the passive memory manager to local persistence and localized operation feedback.</summary>
     public MemoryManagerWorkflow(
         PersistentMemoryService memories,
         IMemoryManagerView view,
-        IConsoleShellView shell,
         ILocalizationService text,
-        ExperimentalWorkflow? experimental = null,
-        ISettingsService? settings = null)
+        SkillsAndMemoryWorkflow? skillsAndMemory = null)
     {
         _memories = memories ?? throw new ArgumentNullException(nameof(memories));
         _view = view ?? throw new ArgumentNullException(nameof(view));
-        _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _text = text ?? throw new ArgumentNullException(nameof(text));
-        _experimental = experimental;
-        _settings = settings;
+        _skillsAndMemory = skillsAndMemory;
     }
 
     /// <summary>Refreshes accessible notes after each operation and keeps recoverable input errors inside the manager.</summary>
-    public async Task RunAsync(CancellationToken cancellationToken)
+    public async Task RunAsync(CancellationToken cancellationToken, bool selectProposals = false)
     {
+        string? feedback = null;
+        var feedbackIsError = false;
+        var openProposals = selectProposals;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var memories = await _memories.ListAsync(cancellationToken).ConfigureAwait(false);
+            var proposals = MemoryProposalWorkspace.Disabled;
+            if (_skillsAndMemory is not null)
+            {
+                try
+                {
+                    proposals = await _skillsAndMemory.LoadProposalWorkspaceAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (IsProposalDataError(exception))
+                {
+                    feedback = _text.Text("Lab.Invalid");
+                    feedbackIsError = true;
+                }
+            }
             MemoryManagerSelection selection;
             try
             {
-                selection = _view.Choose(memories);
+                selection = _view.Choose(memories, proposals, feedback, feedbackIsError, openProposals);
+                openProposals = false;
+                feedback = null;
+                feedbackIsError = false;
             }
             catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -58,35 +71,36 @@ public sealed class MemoryManagerWorkflow
                 switch (selection.Action)
                 {
                     case MemoryManagerAction.Create:
-                        await SaveAsync(null, cancellationToken).ConfigureAwait(false);
+                        feedback = await SaveAsync(null, selection.Text, cancellationToken).ConfigureAwait(false);
                         break;
                     case MemoryManagerAction.Edit:
-                        await SaveAsync(FindSelected(memories, selection.Id), cancellationToken).ConfigureAwait(false);
+                        feedback = await SaveAsync(FindSelected(memories, selection.Id), selection.Text, cancellationToken).ConfigureAwait(false);
                         break;
                     case MemoryManagerAction.Delete:
                         var memory = FindSelected(memories, selection.Id);
-                        _shell.RenderNotice(_text.Text("Lab.ForgetNotice"));
-                        if (_view.ConfirmDelete(memory))
+                        if (await _memories.ForgetAsync(memory.Id, cancellationToken).ConfigureAwait(false))
                         {
-                            if (await _memories.ForgetAsync(memory.Id, cancellationToken).ConfigureAwait(false))
-                            {
-                                _shell.RenderSuccess(_text.Text("Memory.Forgotten"));
-                            }
-                            else
-                            {
-                                _shell.RenderError(_text.Text("Memory.NotFound"));
-                            }
-                        }
-                        break;
-                    case MemoryManagerAction.Proposals:
-                        if (_experimental is not null && _settings is not null)
-                        {
-                            await _experimental.RunAsync(AppCommand.Proposals,
-                                await _settings.LoadAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                            feedback = _text.Text("Memory.Forgotten");
                         }
                         else
                         {
-                            _shell.RenderNotice(_text.Text("Lab.Disabled"));
+                            feedback = _text.Text("Memory.NotFound");
+                            feedbackIsError = true;
+                        }
+                        break;
+                    case MemoryManagerAction.ApproveProposal:
+                    case MemoryManagerAction.RejectProposal:
+                        if (_skillsAndMemory is null)
+                        {
+                            feedback = _text.Text("Lab.Disabled");
+                            feedbackIsError = true;
+                        }
+                        else
+                        {
+                            await _skillsAndMemory.ApplyProposalReviewAsync(selection.Id
+                                ?? throw new InvalidOperationException(_text.Text("Lab.Invalid")), selection.Text,
+                                selection.Action == MemoryManagerAction.ApproveProposal, cancellationToken).ConfigureAwait(false);
+                            feedback = _text.Text("Lab.Saved");
                         }
                         break;
                     default:
@@ -95,55 +109,46 @@ public sealed class MemoryManagerWorkflow
             }
             catch (MemoryValidationException exception)
             {
-                _shell.RenderError(exception.Message);
+                feedback = exception.Message;
+                feedbackIsError = true;
             }
-            catch (InvalidOperationException exception) when (selection.Action == MemoryManagerAction.Proposals)
+            catch (InvalidOperationException exception) when (selection.Action is MemoryManagerAction.ApproveProposal or MemoryManagerAction.RejectProposal)
             {
-                _shell.RenderError(exception.Message);
+                feedback = exception.Message;
+                feedbackIsError = true;
+            }
+            catch (Exception exception) when (selection.Action is MemoryManagerAction.ApproveProposal or MemoryManagerAction.RejectProposal
+                && IsProposalDataError(exception))
+            {
+                feedback = _text.Text("Lab.Invalid");
+                feedbackIsError = true;
             }
             catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                _shell.RenderMuted(_text.Text("Common.Cancelled"));
+                feedback = _text.Text("Common.Cancelled");
             }
         }
     }
 
-    /// <summary>Saves a reviewed draft through the same input validation used by chat memory commands.</summary>
-    private async Task SaveAsync(PersistentMemory? memory, CancellationToken cancellationToken)
+    /// <summary>Saves reviewed inline text through the same authoritative validation used by chat memory commands.</summary>
+    private async Task<string> SaveAsync(PersistentMemory? memory, string? draft, CancellationToken cancellationToken)
     {
-        MemoryDraft? draft = null;
-        string? error = null;
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            draft = _view.Edit(memory, draft, error);
-            if (draft is null)
-            {
-                return;
-            }
-            try
-            {
-                var saved = memory is null
-                    ? await _memories.RememberAsync(draft.Text, true, cancellationToken).ConfigureAwait(false)
-                    : await _memories.UpdateAsync(memory.Id, draft.Text, true, cancellationToken).ConfigureAwait(false);
-                _shell.RenderSuccess(_text.Text("Memory.Saved", saved.Id));
-                return;
-            }
-            catch (MemoryValidationException exception)
-            {
-                if (memory is not null && !(await _memories.ListAsync(cancellationToken).ConfigureAwait(false))
-                    .Any(current => string.Equals(current.Id, memory.Id, StringComparison.Ordinal)))
-                {
-                    _shell.RenderError(_text.Text("Memory.NotFound"));
-                    return;
-                }
-                error = exception.Message;
-            }
-        }
+        var reviewed = draft ?? throw new MemoryValidationException(_text.Text("Memory.Empty"));
+        var saved = memory is null
+            ? await _memories.RememberAsync(reviewed, true, cancellationToken).ConfigureAwait(false)
+            : await _memories.UpdateAsync(memory.Id, reviewed, true, cancellationToken).ConfigureAwait(false);
+        return _text.Text("Memory.Saved", saved.Id);
     }
 
     /// <summary>Resolves only an exact identifier from the current accessible list.</summary>
     private PersistentMemory FindSelected(IReadOnlyList<PersistentMemory> memories, string? id) =>
         memories.SingleOrDefault(memory => string.Equals(memory.Id, id, StringComparison.Ordinal))
         ?? throw new MemoryValidationException(_text.Text("Memory.NotFound"));
+
+    /// <summary>Identifies local proposal and settings failures that should remain inside the editor.</summary>
+    private static bool IsProposalDataError(Exception exception) => exception is IOException
+        or UnauthorizedAccessException
+        or System.Text.Json.JsonException
+        or YamlDotNet.Core.YamlException
+        or ArgumentException;
 }

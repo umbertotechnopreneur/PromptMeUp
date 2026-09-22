@@ -7,13 +7,13 @@ using PromptMeUp.Models;
 namespace PromptMeUp.Services;
 
 /// <summary>Reads project feature drafts and saves explicitly reviewed preferences without executing skill actions.</summary>
-public sealed class SettingsFeatureOverviewService(ExperimentalStore store, SkillCatalogService skills,
+public sealed class SettingsFeatureOverviewService(SkillsAndMemoryStore store, SkillCatalogService skills,
     ILogger<SettingsFeatureOverviewService>? logger = null, ILocalizationService? localization = null)
 {
     private readonly ILogger<SettingsFeatureOverviewService> _logger = logger ?? NullLogger<SettingsFeatureOverviewService>.Instance;
     private readonly ILocalizationService _text = localization ?? new LocalizationService();
 
-    /// <summary>Refreshes preferences and catalog counts; effective activation also requires the experiment master switch.</summary>
+    /// <summary>Refreshes preferences and catalog counts; effective activation also requires the project master switch.</summary>
     public async Task<SettingsFeatureOverview> ReadAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

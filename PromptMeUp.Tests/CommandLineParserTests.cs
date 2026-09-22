@@ -9,14 +9,14 @@ public sealed class CommandLineParserTests
 {
     private readonly CommandLineParser _parser = new(new LocalizationService());
 
-    /// <summary>Parses experimental screens without accepting unreviewed payloads or combining top-level actions.</summary>
+    /// <summary>Parses skills and memory screens without accepting unreviewed payloads or combining top-level actions.</summary>
     [Theory]
     [InlineData("--skills", AppCommand.Skills)]
     [InlineData("--learning", AppCommand.Learning)]
     [InlineData("--proposals", AppCommand.Proposals)]
     [InlineData("--dream", AppCommand.Dream)]
     [InlineData("--heartbeat", AppCommand.Heartbeat)]
-    public void Parse_Experiment_RequiresOneScreen(string argument, AppCommand expected)
+    public void Parse_SkillsAndMemoryCommand_RequiresOneScreen(string argument, AppCommand expected)
     {
         var result = _parser.Parse([argument, "--language", "it"]);
         Assert.True(result.Succeeded);

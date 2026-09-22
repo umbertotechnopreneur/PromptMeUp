@@ -7,20 +7,20 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-/// <summary>Stores project-scoped experiment preferences without enabling any feature by default.</summary>
-public sealed partial class ExperimentalStore(AppPaths paths, ISensitiveDataRedactor redactor, ILocalizationService text)
+/// <summary>Stores project-scoped skills and memory preferences without enabling any feature by default.</summary>
+public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataRedactor redactor, ILocalizationService text)
 {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     /// <summary>Loads explicit preferences for the current project, preserving disabled defaults.</summary>
-    public async Task<ExperimentalSettings> SettingsAsync(CancellationToken ct)
+    public async Task<SkillsAndMemorySettings> SettingsAsync(CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         return await ReadSettingsAsync(connection, null, PersistentMemoryService.ResolveProjectScope(), ct).ConfigureAwait(false);
     }
 
     /// <summary>Persists preferences only if the reviewed snapshot is current, purging observations when capture is switched off.</summary>
-    public async Task SaveSettingsAsync(ExperimentalSettings settings, ExperimentalSettings expected, CancellationToken ct)
+    public async Task SaveSettingsAsync(SkillsAndMemorySettings settings, SkillsAndMemorySettings expected, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(expected);
@@ -50,7 +50,7 @@ public sealed partial class ExperimentalStore(AppPaths paths, ISensitiveDataReda
         ValidatePreference(key, string.Empty);
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT value FROM experimental_settings WHERE scope_key = $scope AND name = $name;";
+        command.CommandText = "SELECT value FROM skills_and_memory_settings WHERE scope_key = $scope AND name = $name;";
         command.Parameters.AddWithValue("$scope", PersistentMemoryService.ResolveProjectScope());
         command.Parameters.AddWithValue("$name", key);
         return await command.ExecuteScalarAsync(ct).ConfigureAwait(false) as string;
@@ -85,7 +85,7 @@ public sealed partial class ExperimentalStore(AppPaths paths, ISensitiveDataReda
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            INSERT INTO experimental_settings(scope_key, name, value) VALUES($scope, $name, $value)
+            INSERT INTO skills_and_memory_settings(scope_key, name, value) VALUES($scope, $name, $value)
             ON CONFLICT(scope_key, name) DO UPDATE SET value = excluded.value;
             """;
         command.Parameters.AddWithValue("$scope", scope);
@@ -95,15 +95,15 @@ public sealed partial class ExperimentalStore(AppPaths paths, ISensitiveDataReda
     }
 
     /// <summary>Reads opt-in state from the same snapshot as a dependent write.</summary>
-    private async Task<ExperimentalSettings> ReadSettingsAsync(SqliteConnection connection, SqliteTransaction? transaction,
+    private async Task<SkillsAndMemorySettings> ReadSettingsAsync(SqliteConnection connection, SqliteTransaction? transaction,
         string scope, CancellationToken ct)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM experimental_settings WHERE scope_key = $scope AND name = 'settings';";
+        command.CommandText = "SELECT value FROM skills_and_memory_settings WHERE scope_key = $scope AND name = 'settings';";
         command.Parameters.AddWithValue("$scope", scope);
         var value = await command.ExecuteScalarAsync(ct).ConfigureAwait(false) as string;
-        return value is null ? new() : JsonSerializer.Deserialize<ExperimentalSettings>(value, Json) ?? throw InvalidLearning();
+        return value is null ? new() : JsonSerializer.Deserialize<SkillsAndMemorySettings>(value, Json) ?? throw InvalidLearning();
     }
 
     /// <summary>Snapshots project identity and purge epochs before capturing input or requesting reflection.</summary>

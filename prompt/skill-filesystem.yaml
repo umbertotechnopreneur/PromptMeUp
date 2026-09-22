@@ -3,8 +3,8 @@ version: 2
 metadata:
   icon: "📂"
   color: "#F9E2AF"
-description: Experimental skill-filesystem guidance
-tags: [experimental, skills]
+description: Filesystem skill guidance
+tags: [skills]
 texts:
   en: |-
     Help inspect directories and small text files. Keep reads bounded and avoid following links or collecting credentials. Commands require the normal review and approval.

@@ -6,7 +6,7 @@ using PromptMeUp.Services;
 
 namespace PromptMeUp.Tests;
 
-public sealed class ExperimentalStoreTests
+public sealed class SkillsAndMemoryStoreTests
 {
     /// <summary>Another instance's revoked consent cannot be restored by either unrelated toggle from an older settings screen.</summary>
     [Theory]
@@ -14,7 +14,7 @@ public sealed class ExperimentalStoreTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public async Task SaveSettings_StaleUnrelatedToggle_DoesNotRestoreRevokedConsent(bool disableExperiment, bool automaticSkills)
+    public async Task SaveSettings_StaleUnrelatedToggle_DoesNotRestoreRevokedConsent(bool disableSkillsAndMemory, bool automaticSkills)
     {
         using var fixture = new RegressionFixture();
         var first = await PrepareAsync(fixture);
@@ -22,7 +22,7 @@ public sealed class ExperimentalStoreTests
         var stale = await first.SettingsAsync(default);
         var proposal = await AddProposalAsync(first);
         await first.SaveProposalsAsync([proposal], default);
-        var revoked = disableExperiment ? new ExperimentalSettings() : stale with { CaptureObservations = false };
+        var revoked = disableSkillsAndMemory ? new SkillsAndMemorySettings() : stale with { CaptureObservations = false };
         await second.SaveSettingsAsync(revoked, await second.SettingsAsync(default), default);
         var revision = await second.RevisionAsync(default);
         var requested = automaticSkills ? stale with { AutomaticSkills = true } : stale with { MaintenanceReminder = true };
@@ -378,7 +378,7 @@ public sealed class ExperimentalStoreTests
     }
 
     /// <summary>Initializes a disposable database with explicitly enabled capture and no provider or process calls.</summary>
-    private static async Task<ExperimentalStore> PrepareAsync(RegressionFixture fixture)
+    private static async Task<SkillsAndMemoryStore> PrepareAsync(RegressionFixture fixture)
     {
         await fixture.Database.InitializeAsync(default);
         var store = CreateStore(fixture);
@@ -386,8 +386,8 @@ public sealed class ExperimentalStoreTests
         return store;
     }
 
-    /// <summary>Creates an isolated experimental store using production redaction and localization.</summary>
-    private static ExperimentalStore CreateStore(RegressionFixture fixture) =>
+    /// <summary>Creates an isolated skills and memory store using production redaction and localization.</summary>
+    private static SkillsAndMemoryStore CreateStore(RegressionFixture fixture) =>
         new(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
 
     /// <summary>Creates the real memory persistence service without real user data or logging sinks.</summary>
@@ -395,7 +395,7 @@ public sealed class ExperimentalStoreTests
         new(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService(), NullLogger<PersistentMemoryService>.Instance);
 
     /// <summary>Captures independent-session synthetic evidence for one valid memory proposal.</summary>
-    private static async Task<MemoryProposal> AddProposalAsync(ExperimentalStore store)
+    private static async Task<MemoryProposal> AddProposalAsync(SkillsAndMemoryStore store)
     {
         await store.CaptureAsync(Guid.NewGuid().ToString("N"), "Prefer short explanations.", default);
         await store.CaptureAsync(Guid.NewGuid().ToString("N"), "Keep explanations concise.", default);

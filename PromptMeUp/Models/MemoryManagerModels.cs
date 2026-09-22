@@ -8,12 +8,19 @@ public enum MemoryManagerAction
     Create,
     Edit,
     Delete,
-    Proposals,
+    ApproveProposal,
+    RejectProposal,
     Close
 }
 
-/// <summary>Contains the chosen action and an exact saved-memory identifier when required.</summary>
-public sealed record MemoryManagerSelection(MemoryManagerAction Action, string? Id = null);
+/// <summary>Contains one confirmed editor action, its exact item identifier, and reviewed text when required.</summary>
+public sealed record MemoryManagerSelection(MemoryManagerAction Action, string? Id = null, string? Text = null);
 
-/// <summary>Contains a saved-note draft; the global flag remains for compatibility with existing callers.</summary>
-public sealed record MemoryDraft(string Text, bool IsGlobal = true);
+/// <summary>Supplies the inline memory editor with current suggestions and their complete local evidence.</summary>
+public sealed record MemoryProposalWorkspace(
+    bool Enabled,
+    IReadOnlyList<MemoryProposal> Proposals,
+    IReadOnlyList<LearningObservation> Evidence)
+{
+    public static MemoryProposalWorkspace Disabled { get; } = new(false, [], []);
+}

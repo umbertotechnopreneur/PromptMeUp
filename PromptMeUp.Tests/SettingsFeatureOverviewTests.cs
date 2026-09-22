@@ -22,12 +22,12 @@ public sealed class SettingsFeatureOverviewTests
 
         var overview = await service.ReadAsync(default);
 
-        Assert.Equal(new ExperimentalSettings(), overview.Settings);
+        Assert.Equal(new SkillsAndMemorySettings(), overview.Settings);
         Assert.False(overview.CatalogUnavailable);
         Assert.Equal(0, overview.EnabledSkillCount);
         Assert.Equal(catalog.List().Count, overview.SkillCount);
         Assert.True(overview.SkillCount > 0);
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
         Assert.False(Directory.Exists(Path.Combine(fixture.Paths.DataDirectory, "skills")));
     }
@@ -53,7 +53,7 @@ public sealed class SettingsFeatureOverviewTests
         Assert.True(retainedApproval.Enabled);
         Assert.Equal(first.Fingerprint, retainedApproval.ApprovalFingerprint);
 
-        var settings = new ExperimentalSettings(Enabled: true, MaintenanceReminder: true);
+        var settings = new SkillsAndMemorySettings(Enabled: true, MaintenanceReminder: true);
         await store.SaveSettingsAsync(settings, masterOff.Settings, default);
         var masterOn = await service.ReadAsync(default);
         Assert.Equal(settings, masterOn.Settings);
@@ -115,7 +115,7 @@ public sealed class SettingsFeatureOverviewTests
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
         var store = Store(fixture);
-        var settings = new ExperimentalSettings(Enabled: true, AutomaticSkills: true, CaptureObservations: true,
+        var settings = new SkillsAndMemorySettings(Enabled: true, AutomaticSkills: true, CaptureObservations: true,
             MaintenanceReminder: true);
         await store.SaveSettingsAsync(settings, await store.SettingsAsync(default), default);
         await store.CaptureAsync(Guid.NewGuid().ToString("N"), "Synthetic retained preference.", default);
@@ -138,7 +138,7 @@ public sealed class SettingsFeatureOverviewTests
         Assert.Equal(0, first.EnabledSkillCount);
         Assert.Equal(storedSettings, await store.GetAsync("settings", default));
         Assert.Equal(revision, await store.RevisionAsync(default));
-        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_observations;"));
         Assert.Equal(expired, await fixture.ScalarAsync("SELECT created_unix FROM learning_observations;"));
         Assert.Equal("Synthetic retained preference.", await fixture.ScalarAsync("SELECT body FROM learning_observations;"));
@@ -171,7 +171,7 @@ public sealed class SettingsFeatureOverviewTests
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
         var store = Store(fixture);
-        var settings = new ExperimentalSettings(Enabled: enabled, MaintenanceReminder: true);
+        var settings = new SkillsAndMemorySettings(Enabled: enabled, MaintenanceReminder: true);
         await store.SaveSettingsAsync(settings, await store.SettingsAsync(default), default);
         var storedSettings = await store.GetAsync("settings", default);
         var revision = await store.RevisionAsync(default);
@@ -188,7 +188,7 @@ public sealed class SettingsFeatureOverviewTests
         Assert.Equal(0, overview.SkillCount);
         Assert.Equal(storedSettings, await store.GetAsync("settings", default));
         Assert.Equal(revision, await store.RevisionAsync(default));
-        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(1L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         var log = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Warning, log.Level);
         Assert.Equal("Skill catalog unavailable (InvalidOperationException).", log.Message);
@@ -217,11 +217,11 @@ public sealed class SettingsFeatureOverviewTests
     }
 
     /// <summary>Creates a project store backed only by the fixture's disposable database.</summary>
-    private static ExperimentalStore Store(RegressionFixture fixture) =>
+    private static SkillsAndMemoryStore Store(RegressionFixture fixture) =>
         new(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
 
     /// <summary>Creates the actual package catalog with local prompt files and no provider collaborator.</summary>
-    private static SkillCatalogService Catalog(RegressionFixture fixture, ExperimentalStore store) =>
+    private static SkillCatalogService Catalog(RegressionFixture fixture, SkillsAndMemoryStore store) =>
         new(fixture.Paths, store, new LocalizationService(),
             new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
 

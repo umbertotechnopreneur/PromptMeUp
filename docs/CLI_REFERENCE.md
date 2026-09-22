@@ -4,9 +4,9 @@ Ask `hm` a terminal question, check its answer, and choose whether to run a sugg
 
 ## Skills and memory
 
-This branch includes opt-in `hm --skills`, `hm --learning`, `hm --dream`, `hm --heartbeat`, and `hm --proposals` screens. They require an interactive terminal. The same names are available as slash commands inside chat. `--yes` never approves skill actions or memory changes.
+PromptMeUp includes opt-in `hm --skills`, `hm --learning`, `hm --dream`, `hm --heartbeat`, and `hm --proposals` screens. They require an interactive terminal. The same names are available as slash commands inside chat. `hm --proposals` opens the suggested-memory entry in the shared memory editor. `--yes` never approves skill actions or memory changes.
 
-See the [skills and memory guide](EXPERIMENTAL_MEMORY_SKILLS.md) before collecting messages or importing a skill. Dream and heartbeat suggest changes; they do not silently change saved notes or schedule background work.
+See the [skills and memory guide](SKILLS_AND_MEMORY.md) before collecting messages or importing a skill. Dream and heartbeat suggest changes; they do not silently change saved notes or schedule background work.
 
 ## Ask or choose a command
 
@@ -441,7 +441,7 @@ budget?" or "How do saved memories work?" The assistant can request relevant
 chapters from the guide included with your installed version. No special chat
 command is needed.
 
-The experimental features have dedicated chapters too. Try asking:
+Skills and memory have dedicated chapters too. Try asking:
 
 - "How do I enable skills and choose one?"
 - "Which skills are available, and what parameters do they take?"
