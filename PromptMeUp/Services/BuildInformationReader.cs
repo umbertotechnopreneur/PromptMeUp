@@ -27,7 +27,6 @@ public static class BuildInformationReader
             version,
             machineName,
             builtAtLocal,
-            GetRequiredValue(metadata, "BuildTimeZone"),
             GetRequiredValue(metadata, "BuildGitCommit"));
     }
 

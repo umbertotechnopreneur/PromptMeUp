@@ -280,7 +280,7 @@ public sealed class ConsoleShellView : IConsoleShellView
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚙", "~")}{_text.Text("Shell.Runtime")}", $".NET {runtimeVersion}", TerminalTheme.Info),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🖥", "OS")}{_text.Text("Shell.Platform")}", runtimeIdentifier),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚖", "=")}{_text.Text("About.License")}", "MIT", TerminalTheme.Success),
-            TerminalTheme.CompactMetric(_text.Text("About.BuildDate"), $"{buildInformation.BuiltAtLocal:yyyy-MM-dd HH:mm:ss zzz} ({buildInformation.TimeZone})", TerminalTheme.Info),
+            TerminalTheme.CompactMetric(_text.Text("About.BuildDate"), buildInformation.BuiltAtLocal.ToString("O"), TerminalTheme.Info),
             TerminalTheme.CompactMetric(_text.Text("About.GitCommit"), buildInformation.GitCommit, TerminalTheme.Accent)
         ], preferredPairs: 2, width: _console.Profile.Width);
         var links = new Grid();

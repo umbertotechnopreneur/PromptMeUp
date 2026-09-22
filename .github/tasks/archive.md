@@ -4,6 +4,7 @@
 
 - Added an `IsFirstRun` settings flag derived from the successfully saved setup state, without redundant persisted state or legacy migration code.
 - Routed every valid command through the common startup path and added a localized first-run prompt that opens Setup on OK or returns to the shell on Cancel.
+- Removed the redundant build time-zone field and render the extended ISO 8601 build timestamp, whose value already contains the local UTC offset.
 
 Validation: preflight, scoped formatting verification, XML method-comment check, and warning-free Release build passed. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
 
