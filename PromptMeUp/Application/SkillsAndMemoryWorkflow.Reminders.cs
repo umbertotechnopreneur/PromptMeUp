@@ -5,7 +5,7 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Application;
 
-public sealed partial class ExperimentalWorkflow
+public sealed partial class SkillsAndMemoryWorkflow
 {
     /// <summary>Creates, lists, and cancels project reminders through explicit, default-cancel confirmation screens.</summary>
     public async Task RunRemindersAsync(AppSettings settings, CancellationToken ct)

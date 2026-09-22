@@ -177,7 +177,7 @@ internal static partial class UiTextCatalog
             "Die Skills lassen sich nicht lesen. Prüfe importierte Skills; andere Einstellungen bleiben verfügbar.",
             "No se pueden leer las skills. Revisa las importadas; puedes cambiar los demás ajustes.",
             "Không đọc được kỹ năng. Hãy kiểm tra kỹ năng đã nhập; bạn vẫn có thể đổi cài đặt khác."));
-        entries.Add("Settings.FeatureExperiment", new(
+        entries.Add("Settings.FeatureSkillsAndMemory", new(
             "Skills and memory",
             "Skills e memoria",
             "Compétences et mémoire",

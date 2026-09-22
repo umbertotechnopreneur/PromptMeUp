@@ -14,28 +14,41 @@ public sealed record SkillDefinition(string Name, string Description, string Ver
 /// <summary>Identifies a workflow-owned skill menu action without coupling a view to menu positions.</summary>
 internal enum SkillMenuAction
 {
-    Back,
     EnableProject,
     DisableProject,
     Import,
     ToggleAutomatic,
     ClearSelection,
-    ManageSkill,
     ToggleSkill,
     SelectSkill,
     RunSkill
 }
 
-/// <summary>Supplies one passive skill menu row and its workflow payload to the interactive view.</summary>
+/// <summary>Groups related skill commands in the compact sidebar without coupling the view to workflow behavior.</summary>
+internal sealed record SkillMenuGroup(
+    string Label,
+    string Description,
+    IReadOnlyList<SkillMenuItem> Items,
+    string Icon = "🧩");
+
+/// <summary>Supplies one inline skill command and its workflow payload to the interactive view.</summary>
 internal sealed record SkillMenuItem(
     SkillMenuAction Action,
     string Label,
     string Description,
     SkillDefinition? Skill = null,
-    string Icon = "🧩");
+    string Icon = "🧩",
+    string? ActionName = null,
+    bool CanExecute = true,
+    string? InputLabel = null,
+    string InitialInput = "",
+    bool MultilineInput = false);
 
-/// <summary>Contains only explicitly enabled experimental behavior in the current project.</summary>
-public sealed record ExperimentalSettings(bool Enabled = false, bool AutomaticSkills = false,
+/// <summary>Returns one central skill action together with its reviewed inline field value.</summary>
+internal sealed record SkillMenuSelection(SkillMenuItem Item, string? Input);
+
+/// <summary>Contains only explicitly enabled skills and memory behavior in the current project.</summary>
+public sealed record SkillsAndMemorySettings(bool Enabled = false, bool AutomaticSkills = false,
     bool CaptureObservations = false, bool MaintenanceReminder = false);
 
 /// <summary>Identifies one bounded, redacted conversation observation and its original session.</summary>

@@ -169,11 +169,11 @@ public sealed class SkillContextBudgetTests
     }
 
     /// <summary>Creates preferences over the initialized fixture database with normal redaction and localization.</summary>
-    private static ExperimentalStore Store(RegressionFixture fixture, ILocalizationService text) =>
+    private static SkillsAndMemoryStore Store(RegressionFixture fixture, ILocalizationService text) =>
         new(fixture.Paths, new SensitiveDataRedactor(), text);
 
     /// <summary>Uses production packaged prompts for every regression except the explicit localization seam.</summary>
-    private static SkillCatalogService Catalog(RegressionFixture fixture, ExperimentalStore store, ILocalizationService text) =>
+    private static SkillCatalogService Catalog(RegressionFixture fixture, SkillsAndMemoryStore store, ILocalizationService text) =>
         new(fixture.Paths, store, text, Prompts(fixture));
 
     /// <summary>Creates the real read-only YAML catalog over the fixture's copied prompt resources.</summary>

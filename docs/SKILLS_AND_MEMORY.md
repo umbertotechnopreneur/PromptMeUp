@@ -58,7 +58,7 @@ For suggestions from future messages, open Settings → Memory. Turn on the shar
 | --- | --- |
 | `hm --learning` | Manage message collection directly; read or clear collected messages. |
 | `hm --dream` | After at least two captured sessions, ask for possible new memories. |
-| `hm --proposals` | Read the evidence, edit if needed, then approve or reject each suggestion. |
+| `hm --proposals` | Open suggested memories in the shared memory editor, review the evidence, edit supported suggestions, then approve or reject them. |
 | `hm --heartbeat` | Check saved memories for duplicates or other suggested changes. |
 
 These commands also work in chat as `/skills`, `/learning`, `/dream`, `/proposals`, and `/heartbeat`. Dream shows the messages before asking to send them to OpenAI. Heartbeat checks exact duplicates locally; AI review is optional. Neither saves or changes a memory without your approval. The reminder in Settings → Memory only reminds you to review your memories; it does not run heartbeat.

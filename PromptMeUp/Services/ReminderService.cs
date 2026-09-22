@@ -202,14 +202,14 @@ public sealed class ReminderService(AppPaths paths, ISensitiveDataRedactor redac
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "SELECT value FROM experimental_settings WHERE scope_key = $scope AND name = 'settings';";
+        command.CommandText = "SELECT value FROM skills_and_memory_settings WHERE scope_key = $scope AND name = 'settings';";
         command.Parameters.AddWithValue("$scope", scope);
         var settingsJson = await command.ExecuteScalarAsync(ct).ConfigureAwait(false) as string;
-        if (settingsJson is null || JsonSerializer.Deserialize<ExperimentalSettings>(settingsJson, ExperimentalStore.Json)?.Enabled != true)
+        if (settingsJson is null || JsonSerializer.Deserialize<SkillsAndMemorySettings>(settingsJson, SkillsAndMemoryStore.Json)?.Enabled != true)
         {
             return false;
         }
-        command.CommandText = "SELECT value FROM experimental_settings WHERE scope_key = $scope AND name = 'skill:set_reminder';";
+        command.CommandText = "SELECT value FROM skills_and_memory_settings WHERE scope_key = $scope AND name = 'skill:set_reminder';";
         var fingerprint = await command.ExecuteScalarAsync(ct).ConfigureAwait(false) as string;
         if (string.IsNullOrEmpty(fingerprint))
         {

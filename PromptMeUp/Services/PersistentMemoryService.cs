@@ -244,8 +244,8 @@ public sealed partial class PersistentMemoryService
             var removed = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) > 0;
             if (removed)
             {
-                await ExperimentalStore.ClearLearningAsync(connection, transaction, GlobalScope, cancellationToken).ConfigureAwait(false);
-                await ExperimentalStore.AdvanceRevisionAsync(connection, transaction, GlobalScope, cancellationToken).ConfigureAwait(false);
+                await SkillsAndMemoryStore.ClearLearningAsync(connection, transaction, GlobalScope, cancellationToken).ConfigureAwait(false);
+                await SkillsAndMemoryStore.AdvanceRevisionAsync(connection, transaction, GlobalScope, cancellationToken).ConfigureAwait(false);
             }
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Explicit memory deletion completed. Removed={Removed}", removed);

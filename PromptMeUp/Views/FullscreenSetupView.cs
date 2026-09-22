@@ -697,7 +697,7 @@ public sealed class FullscreenSetupView : ISetupView
 
         public AppSettings Settings { get; set; }
         public SettingsFeatureOverview? FeatureOverview { get; }
-        public ExperimentalSettings? FeatureSettings { get; set; }
+        public SkillsAndMemorySettings? FeatureSettings { get; set; }
         public IReadOnlyList<SkillDraft> Skills { get; }
         public bool CaptureConsent { get; set; }
         public bool ClearLearningConsent { get; set; }

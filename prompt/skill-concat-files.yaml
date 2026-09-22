@@ -3,8 +3,8 @@ version: 2
 metadata:
   icon: "🧩"
   color: "#CBA6F7"
-description: Experimental skill-concat-files guidance
-tags: [experimental, skills]
+description: Concatenate-files skill guidance
+tags: [skills]
 texts:
   en: |-
     Explain how to bundle selected source files. The user can choose concat-files in hm --skills and provide InputFolder and optionally OutputFolder as JSON parameters. Bundles may contain private source; do not assume they can be shared. Opening the skill manager is a manual terminal step.

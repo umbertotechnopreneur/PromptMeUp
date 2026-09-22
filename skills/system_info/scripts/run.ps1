@@ -55,7 +55,33 @@ switch -CaseSensitive -Exact ($Action) {
         [pscustomobject]@{ Disks = $items.ToArray() } | ConvertTo-Json -Depth 3 -Compress
     }
     'network' {
-        $interfaces = @([Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces())
+        $allInterfaces = @([Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces())
+        if ([Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::Windows)) {
+            $physicalIds = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($adapter in @(Get-NetAdapter -Physical -ErrorAction Stop)) {
+                [void]$physicalIds.Add($adapter.InterfaceGuid.ToString('B'))
+            }
+            $interfaces = @($allInterfaces | Where-Object { $physicalIds.Contains($_.Id) })
+        }
+        elseif ([Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::Linux)) {
+            $interfaces = @($allInterfaces | Where-Object {
+                [IO.Directory]::Exists([IO.Path]::Combine('/sys/class/net', $_.Name, 'device'))
+            })
+        }
+        elseif ([Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::OSX)) {
+            $physicalNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+            $hardwarePorts = @(& /usr/sbin/networksetup -listallhardwareports)
+            if ($LASTEXITCODE -ne 0) { throw $_ValidationError }
+            foreach ($line in $hardwarePorts) {
+                if ($line -match '^\s*Device:\s*(\S+)\s*$') {
+                    [void]$physicalNames.Add($Matches[1])
+                }
+            }
+            $interfaces = @($allInterfaces | Where-Object { $physicalNames.Contains($_.Name) })
+        }
+        else {
+            throw $_ValidationError
+        }
         if ($interfaces.Count -gt 256) { throw $_ValidationError }
         $groups = @($interfaces | Group-Object { $_.NetworkInterfaceType.ToString() + '/' + $_.OperationalStatus.ToString() } | Sort-Object Name | ForEach-Object {
             [pscustomobject]@{ TypeAndStatus = $_.Name; Count = $_.Count }

@@ -14,21 +14,21 @@ public sealed class BundledSkillTests
         "http_request", "web_search", "timezone_convert", "set_reminder"
     ];
 
-    /// <summary>Loads the actual packaged catalog and verifies its exact scope without opting into any experiment or skill.</summary>
+    /// <summary>Loads the actual packaged catalog and verifies its exact scope without enabling any skill.</summary>
     [Fact]
     public async Task PackagedCatalog_HasExactlyTenDisabledBundledSkills()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
         var text = new LocalizationService();
-        var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
+        var store = new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), text);
         var catalog = new SkillCatalogService(fixture.Paths, store, text,
             new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
 
         var packages = catalog.List();
 
         Assert.Equal(ExpectedNames.Order(StringComparer.Ordinal), packages.Select(package => package.Name).Order(StringComparer.Ordinal));
-        Assert.Equal(new ExperimentalSettings(), await store.SettingsAsync(default));
+        Assert.Equal(new SkillsAndMemorySettings(), await store.SettingsAsync(default));
         Assert.False(Directory.Exists(Path.Combine(fixture.Paths.DataDirectory, "skills")));
         foreach (var package in packages)
         {
@@ -149,6 +149,6 @@ public sealed class BundledSkillTests
 
     /// <summary>Creates a read-only catalog over packaged files and the fixture's isolated local package directory.</summary>
     private static SkillCatalogService Catalog(RegressionFixture fixture, LocalizationService text) =>
-        new(fixture.Paths, new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text), text,
+        new(fixture.Paths, new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), text), text,
             new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
 }

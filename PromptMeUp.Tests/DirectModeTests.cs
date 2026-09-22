@@ -53,7 +53,7 @@ public sealed class DirectModeTests
         await fixture.ScalarAsync("ALTER TABLE app_settings DROP COLUMN direct_mode_enabled; PRAGMA user_version = 4;");
         await fixture.Database.InitializeAsync(default);
         Assert.Equal(original, await fixture.Database.LoadSettingsAsync(default));
-        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(8L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Persists the default-off session-summary preference and adds it safely to a version-five database.</summary>
@@ -70,7 +70,7 @@ public sealed class DirectModeTests
         await fixture.Database.InitializeAsync(default);
 
         Assert.Equal(original, await fixture.Database.LoadSettingsAsync(default));
-        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(8L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Retains an explicitly enabled during-work summary preference across database reinitialization.</summary>
@@ -109,7 +109,7 @@ public sealed class DirectModeTests
         Assert.Equal(original.Theme, migrated.Theme);
         Assert.Equal(original.ShowSessionSummaryDuringWork, migrated.ShowSessionSummaryDuringWork);
         Assert.True(Enum.IsDefined<ScriptLanguage>(migrated.ScriptLanguage));
-        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(8L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Prevents countdown and execution for vetoed or incomplete reviews, including inconsistent score and severity.</summary>

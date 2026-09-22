@@ -6,7 +6,7 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-public sealed partial class ExperimentalStore
+public sealed partial class SkillsAndMemoryStore
 {
     /// <summary>Captures only a completed directly typed user turn after checking current opt-in preferences.</summary>
     public async Task CaptureAsync(string sessionId, string userMessage, CancellationToken ct, string? expectedRevision = null)

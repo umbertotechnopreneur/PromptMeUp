@@ -4,7 +4,7 @@ metadata:
   icon: "🖥️"
   color: "#89DCEB"
 description: Guidance for bounded and privacy-conscious local system information
-tags: [experimental, skills, local]
+tags: [skills, local]
 texts:
   en: |-
     Use the reviewed system_info run action for overview, env, processes, disk or network. Environment access lists names only, never values. Do not collect host names, user names, process command lines, IP or MAC addresses. Process results are limited to 15; disk output omits mount paths and network output shows counts and types only. Every action needs normal command approval.

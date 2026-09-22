@@ -36,7 +36,7 @@ public sealed class ThemeSettingsTests
 
         Assert.Equal(original with { Theme = "cyan" }, migrated);
         Assert.Equal("Keep this note after upgrading.", await fixture.ScalarAsync("SELECT body FROM persistent_memories;"));
-        Assert.Equal(7L, await fixture.ScalarAsync("PRAGMA user_version;"));
+        Assert.Equal(8L, await fixture.ScalarAsync("PRAGMA user_version;"));
     }
 
     /// <summary>Persists a selected theme through reinitialization without changing any unrelated setting.</summary>

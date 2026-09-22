@@ -4,7 +4,7 @@ metadata:
   icon: "🕒"
   color: "#F2CDCD"
 description: Guidance for deterministic local time zone conversion
-tags: [experimental, skills, local]
+tags: [skills, local]
 texts:
   en: |-
     Convert dates with the reviewed timezone_convert run action, using exact OS-supported IANA or Windows IDs. Set ToTimeZone and optionally FromTimeZone and Time in yyyy-MM-ddTHH:mm or yyyy-MM-ddTHH:mm:ss form, without an offset. Omit Time for the current instant. Use Action list and optional Filter to find IDs. Reject ambiguous or missing daylight saving times; never guess from city fragments. Conversion is local and requires normal command approval.

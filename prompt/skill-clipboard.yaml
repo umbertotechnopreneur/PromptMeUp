@@ -4,7 +4,7 @@ metadata:
   icon: "📋"
   color: "#94E2D5"
 description: Guidance for explicitly approved local Windows clipboard actions
-tags: [experimental, skills, local]
+tags: [skills, local]
 texts:
   en: |-
     Help read or write Windows clipboard text only on explicit request. Use the clipboard skill's reviewed run action with Action read or write and Text for writes. Reads and writes are limited to 4 KiB. Never request credentials, run silently, or automatically send clipboard contents to an AI service. Results are local; normal command approval is required.

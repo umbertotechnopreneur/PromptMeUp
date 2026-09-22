@@ -4,7 +4,7 @@ metadata:
   icon: "📸"
   color: "#F5C2E7"
 description: Guidance for explicitly approved local Windows PNG captures
-tags: [experimental, skills, local]
+tags: [skills, local]
 texts:
   en: |-
     Only offer screenshot capture on explicit request. The reviewed run action takes Mode full_screen, active_window or active_monitor, and OutputPath for a new PNG in an existing local directory. The foreground window is evaluated when the command executes and may be the terminal. Ask the user to hide credentials and private content before approval. Images are not redacted. Never upload automatically or copy to the clipboard; report only the saved path. Normal command approval is required.

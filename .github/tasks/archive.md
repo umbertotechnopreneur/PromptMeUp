@@ -1,5 +1,14 @@
 # Task Archive
 
+## 2026-09-22 — Unify skills and memory editing
+
+- Reworked Skills into a numbered category sidebar with inline commands, package review, textboxes, and textareas in the central panel.
+- Reworked saved and suggested memories into one central editor, removed the separate proposal review screen, and routed proposal commands to that workspace.
+- Renamed active Experimental workflow, store, model, view, localization, schema, prompt, and documentation terms to Skills and Memory.
+- Limited the system information skill's network output to physical adapters while preserving its JSON contract.
+- Passed all 986 automated tests. Built, signed, verified, and installed local Debug x64 MSIX `0.0.1.2211`, updating `0.0.1.2210` in place with healthy registration, a working `hm.exe` alias, and matching packaged/installed DLL hashes.
+- Validation: PowerShell syntax, preflight, scoped formatting, XML comments, Release compilation, Release cleanup, and application Debug cleanup passed. Execution policy blocked recursive deletion of this package's temporary publish and payload folders, now tracked in the task list.
+
 ## 2026-09-21 — Review private design documentation boundary
 
 - Reviewed tracked design/planning candidates; retained real screenshots and current technical guides. Clarified that mockups, roadmaps and internal product decisions belong outside Git. Documentation checks only; no build or tests.

@@ -6,7 +6,7 @@ namespace PromptMeUp.Services.Sqlite;
 internal static class SqliteSchema
 {
     /// <summary>Identifies the schema version supported by this application build.</summary>
-    internal const int Version = 7;
+    internal const int Version = 8;
 
     /// <summary>Enables the persistent write-ahead logging mode before schema creation starts.</summary>
     internal const string EnableWriteAheadLoggingSql = "PRAGMA journal_mode = WAL;";
@@ -141,7 +141,7 @@ internal static class SqliteSchema
         );
         CREATE INDEX IF NOT EXISTS ix_organization_costs_bucket ON organization_costs (bucket_start_unix);
 
-        CREATE TABLE IF NOT EXISTS experimental_settings (
+        CREATE TABLE IF NOT EXISTS skills_and_memory_settings (
             scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
             name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 120),
             value TEXT NOT NULL CHECK(length(value) <= 4096),

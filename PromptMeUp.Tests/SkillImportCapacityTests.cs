@@ -137,7 +137,7 @@ public sealed class SkillImportCapacityTests
     private static SkillCatalogService Catalog(RegressionFixture fixture)
     {
         var text = new LocalizationService();
-        return new SkillCatalogService(fixture.Paths, new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text), text,
+        return new SkillCatalogService(fixture.Paths, new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), text), text,
             new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
     }
 }

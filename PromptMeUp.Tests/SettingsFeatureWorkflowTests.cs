@@ -25,7 +25,7 @@ public sealed class SettingsFeatureWorkflowTests
         }, _ => throw new InvalidOperationException("Unexpected settings save."));
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
     }
 
@@ -49,7 +49,7 @@ public sealed class SettingsFeatureWorkflowTests
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
         Assert.True(collected);
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
     }
 
     /// <summary>A single submission saves both inline project preferences and ordinary app settings.</summary>
@@ -59,7 +59,7 @@ public sealed class SettingsFeatureWorkflowTests
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
         var expected = AppSettings.Default with { SetupCompleted = true, PreferredName = "Morgan" };
-        var desired = new ExperimentalSettings(Enabled: true, AutomaticSkills: true);
+        var desired = new SkillsAndMemorySettings(Enabled: true, AutomaticSkills: true);
         AppSettings? saved = null;
         var workflow = Workflow(fixture, state => new SetupSubmission(expected, null, null, false)
         {
@@ -84,7 +84,7 @@ public sealed class SettingsFeatureWorkflowTests
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
         Assert.Equal(1, saves);
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
     }
 
@@ -135,7 +135,7 @@ public sealed class SettingsFeatureWorkflowTests
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        var newer = new ExperimentalSettings(Enabled: true, CaptureObservations: true);
+        var newer = new SkillsAndMemorySettings(Enabled: true, CaptureObservations: true);
         var workflow = Workflow(fixture, state =>
         {
             Store(fixture).SaveSettingsAsync(newer, state.FeatureOverview!.Settings, default).GetAwaiter().GetResult();
@@ -161,7 +161,7 @@ public sealed class SettingsFeatureWorkflowTests
         }, _ => throw new InvalidOperationException("Unexpected settings save."));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.RunAsync(AppSettings.Default, default));
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
     }
 
     /// <summary>A later app settings failure accurately reports already committed feature preferences.</summary>
@@ -170,7 +170,7 @@ public sealed class SettingsFeatureWorkflowTests
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
-        var desired = new ExperimentalSettings(Enabled: true);
+        var desired = new SkillsAndMemorySettings(Enabled: true);
         var warnings = new List<string>();
         var workflow = Workflow(fixture, state => new SetupSubmission(AppSettings.Default, null, null, false)
         {
@@ -219,7 +219,7 @@ public sealed class SettingsFeatureWorkflowTests
         Assert.Equal(italian.Text("Lab.SkillTooLarge", "set_reminder", SkillCatalogService.MaximumContextTokens), error.Message);
         Assert.Equal("en", text.Language);
         Assert.Empty(warnings);
-        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM experimental_settings;"));
+        Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM skills_and_memory_settings;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM learning_revisions;"));
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM ai_requests;"));
     }
@@ -256,7 +256,7 @@ public sealed class SettingsFeatureWorkflowTests
     }
 
     /// <summary>Creates a feature store over the isolated test database.</summary>
-    private static ExperimentalStore Store(RegressionFixture fixture) =>
+    private static SkillsAndMemoryStore Store(RegressionFixture fixture) =>
         new(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService());
 
     /// <summary>Uses real feature persistence while forbidding provider calls and unexpected secret access.</summary>

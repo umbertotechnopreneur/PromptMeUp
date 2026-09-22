@@ -197,17 +197,17 @@ public sealed class ReminderServiceTests
     {
         var text = new LocalizationService();
         var redactor = new SensitiveDataRedactor();
-        var store = new ExperimentalStore(fixture.Paths, redactor, text);
+        var store = new SkillsAndMemoryStore(fixture.Paths, redactor, text);
         var catalog = new SkillCatalogService(fixture.Paths, store, text,
             new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
         return new ReminderService(fixture.Paths, redactor, text, catalog, clock);
     }
 
     /// <summary>Explicitly enables the project and exact bundled package for one test database.</summary>
-    private static async Task<(ExperimentalStore Store, SkillCatalogService Catalog, SkillDefinition Skill)> EnableAsync(RegressionFixture fixture)
+    private static async Task<(SkillsAndMemoryStore Store, SkillCatalogService Catalog, SkillDefinition Skill)> EnableAsync(RegressionFixture fixture)
     {
         var text = new LocalizationService();
-        var store = new ExperimentalStore(fixture.Paths, new SensitiveDataRedactor(), text);
+        var store = new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), text);
         var catalog = new SkillCatalogService(fixture.Paths, store, text,
             new YamlPromptCatalogService(fixture.Paths, NullLogger<YamlPromptCatalogService>.Instance));
         var skill = Assert.Single(catalog.List(), item => item.Name == "set_reminder" && item.Origin == "bundled");

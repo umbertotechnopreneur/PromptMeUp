@@ -16,7 +16,7 @@ and note before confirming. Select an existing reminder to cancel it.
 
 Reminders stay local to the current project and survive restarts. They appear
 once, when an active chat reaches its next input prompt. They are not background
-alarms or operating-system notifications. Disabling the experiment or this skill
+alarms or operating-system notifications. Disabling skills and memory or this skill
 pauses delivery; re-enabling resumes it. Shown and cancelled reminders are deleted.
 
 Keep at most 50 pending reminders, with one-line notes of up to 500 characters.
