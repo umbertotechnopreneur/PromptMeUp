@@ -52,20 +52,20 @@ public sealed class ReminderService(AppPaths paths, ISensitiveDataRedactor redac
         return due > now ? due : throw InvalidTime();
     }
 
-    /// <summary>Reports whether the current project opted in to this exact, currently available bundled package.</summary>
+    /// <summary>Reports whether the global settings opted in to this exact, currently available bundled package.</summary>
     public async Task<bool> IsAvailableAsync(CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
-        return await IsActivatedAsync(connection, transaction, PersistentMemoryService.ResolveProjectScope(), ct).ConfigureAwait(false);
+        return await IsActivatedAsync(connection, transaction, PersistentMemoryService.GlobalScope, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Returns this project's pending reminders only while their explicitly approved feature remains active.</summary>
+    /// <summary>Returns global pending reminders only while their explicitly approved feature remains active.</summary>
     public async Task<IReadOnlyList<Reminder>> ListAsync(CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         return await IsActivatedAsync(connection, transaction, scope, ct).ConfigureAwait(false)
             ? await ReadAsync(connection, transaction, scope, null, ct).ConfigureAwait(false) : [];
     }
@@ -87,7 +87,7 @@ public sealed class ReminderService(AppPaths paths, ISensitiveDataRedactor redac
         {
             throw InvalidTime();
         }
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         await RequireActivatedAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -113,11 +113,11 @@ public sealed class ReminderService(AppPaths paths, ISensitiveDataRedactor redac
         return reminder;
     }
 
-    /// <summary>Deletes only the exact reminder that was displayed and confirmed in the current project.</summary>
+    /// <summary>Deletes only the exact global reminder that was displayed and confirmed.</summary>
     public async Task<bool> CancelAsync(Reminder reminder, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(reminder);
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         await RequireActivatedAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -141,7 +141,7 @@ public sealed class ReminderService(AppPaths paths, ISensitiveDataRedactor redac
     public async Task DeliverDueAsync(Action<Reminder> display, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(display);
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         if (!await IsActivatedAsync(connection, transaction, scope, ct).ConfigureAwait(false))

@@ -39,7 +39,7 @@ public interface IConsoleShellView
 
     string ReadText(string prompt);
 
-    void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier);
+    void RenderVersion(BuildInformation buildInformation, string runtimeVersion, string runtimeIdentifier);
 
     void WriteLine();
 }
@@ -269,17 +269,19 @@ public sealed class ConsoleShellView : IConsoleShellView
         _console.Prompt(new TextPrompt<string>(Markup.Escape(prompt)));
 
     /// <summary>Renders product, runtime, source, and safety details as a compact frameless About section.</summary>
-    public void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier)
+    public void RenderVersion(BuildInformation buildInformation, string runtimeVersion, string runtimeIdentifier)
     {
         const string websiteUrl = "https://umbertogiacobbi.biz";
         const string motto = "Yet another CLI AI assistant :-)";
         var icon = TerminalTheme.IconPrefix(Options, "✨", "*");
         var details = TerminalTheme.PairGrid(
         [
-            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◆", "*")}{_text.Text("Shell.Application")}", $"v{applicationVersion}", TerminalTheme.Accent),
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "◆", "*")}{_text.Text("Shell.Application")}", $"v{buildInformation.Version}", TerminalTheme.Accent),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚙", "~")}{_text.Text("Shell.Runtime")}", $".NET {runtimeVersion}", TerminalTheme.Info),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🖥", "OS")}{_text.Text("Shell.Platform")}", runtimeIdentifier),
-            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚖", "=")}{_text.Text("About.License")}", "MIT", TerminalTheme.Success)
+            TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚖", "=")}{_text.Text("About.License")}", "MIT", TerminalTheme.Success),
+            TerminalTheme.CompactMetric(_text.Text("About.BuildDate"), buildInformation.BuiltAtLocal.ToString("O"), TerminalTheme.Info),
+            TerminalTheme.CompactMetric(_text.Text("About.GitCommit"), buildInformation.GitCommit, TerminalTheme.Accent)
         ], preferredPairs: 2, width: _console.Profile.Width);
         var links = new Grid();
         links.AddColumn(new GridColumn().RightAligned().NoWrap());

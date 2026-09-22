@@ -7,16 +7,16 @@ using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
 
-/// <summary>Stores project-scoped skills and memory preferences without enabling any feature by default.</summary>
+/// <summary>Stores global skills and memory preferences without enabling any feature by default.</summary>
 public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataRedactor redactor, ILocalizationService text)
 {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    /// <summary>Loads explicit preferences for the current project, preserving disabled defaults.</summary>
+    /// <summary>Loads explicit global preferences, preserving disabled defaults.</summary>
     public async Task<SkillsAndMemorySettings> SettingsAsync(CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
-        return await ReadSettingsAsync(connection, null, PersistentMemoryService.ResolveProjectScope(), ct).ConfigureAwait(false);
+        return await ReadSettingsAsync(connection, null, PersistentMemoryService.GlobalScope, ct).ConfigureAwait(false);
     }
 
     /// <summary>Persists preferences only if the reviewed snapshot is current, purging observations when capture is switched off.</summary>
@@ -24,7 +24,7 @@ public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataR
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(expected);
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         var previous = await ReadSettingsAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -44,14 +44,14 @@ public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataR
         await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
-    /// <summary>Reads a bounded project preference by a stable internal key.</summary>
+    /// <summary>Reads a bounded global preference by a stable internal key.</summary>
     public async Task<string?> GetAsync(string key, CancellationToken ct)
     {
         ValidatePreference(key, string.Empty);
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT value FROM skills_and_memory_settings WHERE scope_key = $scope AND name = $name;";
-        command.Parameters.AddWithValue("$scope", PersistentMemoryService.ResolveProjectScope());
+        command.Parameters.AddWithValue("$scope", PersistentMemoryService.GlobalScope);
         command.Parameters.AddWithValue("$name", key);
         return await command.ExecuteScalarAsync(ct).ConfigureAwait(false) as string;
     }
@@ -65,7 +65,7 @@ public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataR
             throw InvalidLearning();
         }
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
-        await WritePreferenceAsync(connection, null, PersistentMemoryService.ResolveProjectScope(), key, value, ct).ConfigureAwait(false);
+        await WritePreferenceAsync(connection, null, PersistentMemoryService.GlobalScope, key, value, ct).ConfigureAwait(false);
     }
 
     /// <summary>Rejects malformed or credential-bearing preference names and values before persistence.</summary>
@@ -106,22 +106,21 @@ public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataR
         return value is null ? new() : JsonSerializer.Deserialize<SkillsAndMemorySettings>(value, Json) ?? throw InvalidLearning();
     }
 
-    /// <summary>Snapshots project identity and purge epochs before capturing input or requesting reflection.</summary>
+    /// <summary>Snapshots global purge epochs before capturing input or requesting reflection.</summary>
     public async Task<string> RevisionAsync(CancellationToken ct)
     {
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
-        return await ReadRevisionAsync(connection, null, PersistentMemoryService.ResolveProjectScope(), ct).ConfigureAwait(false);
+        return await ReadRevisionAsync(connection, null, PersistentMemoryService.GlobalScope, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Reads both epochs in one SQLite snapshot so global and project purges invalidate in-flight work.</summary>
+    /// <summary>Reads the global purge epoch in one SQLite snapshot before dependent work.</summary>
     private static async Task<string> ReadRevisionAsync(SqliteConnection connection, SqliteTransaction? transaction,
         string scope, CancellationToken ct)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            SELECT $scope || ':' || COALESCE((SELECT revision FROM learning_revisions WHERE scope_key = $scope), '')
-                || ':' || COALESCE((SELECT revision FROM learning_revisions WHERE scope_key = 'global'), '');
+            SELECT $scope || ':' || COALESCE((SELECT revision FROM learning_revisions WHERE scope_key = $scope), '');
             """;
         command.Parameters.AddWithValue("$scope", scope);
         return (string)(await command.ExecuteScalarAsync(ct).ConfigureAwait(false))!;
@@ -165,10 +164,10 @@ public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataR
         }
     }
 
-    /// <summary>Clears the current project's captured evidence and pending proposals together.</summary>
+    /// <summary>Clears global captured evidence and pending proposals together.</summary>
     public async Task ClearObservationsAsync(CancellationToken ct)
     {
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         await ClearLearningAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -183,8 +182,8 @@ public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataR
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            DELETE FROM learning_observations WHERE scope_key = $scope OR $scope = 'global';
-            DELETE FROM memory_proposals WHERE scope_key = $scope OR $scope = 'global';
+            DELETE FROM learning_observations WHERE scope_key = $scope;
+            DELETE FROM memory_proposals WHERE scope_key = $scope;
             """;
         command.Parameters.AddWithValue("$scope", scope);
         await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);

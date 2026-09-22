@@ -157,19 +157,19 @@ internal static partial class UiTextCatalog
             "Guardar aplica tus cambios",
             "Lưu để áp dụng thay đổi"));
         entries.Add("Settings.FeaturesTitle", new(
-            "This project",
-            "Questo progetto",
-            "Ce projet",
-            "Dieses Projekt",
-            "Este proyecto",
-            "Dự án này"));
+            "Global features",
+            "Funzioni globali",
+            "Fonctions globales",
+            "Globale Funktionen",
+            "Funciones globales",
+            "Tính năng toàn cục"));
         entries.Add("Settings.FeaturesGate", new(
-            "These options work when Skills and memory is on for this project.",
-            "Queste opzioni funzionano quando Skills e memoria è attivo per questo progetto.",
-            "Ces options fonctionnent lorsque Compétences et mémoire est activé pour ce projet.",
-            "Diese Optionen gelten, wenn Skills und Gedächtnis für dieses Projekt aktiv ist.",
-            "Estas opciones funcionan cuando Skills y memoria está activo para este proyecto.",
-            "Các tùy chọn này hoạt động khi bật Kỹ năng và bộ nhớ cho dự án này."));
+            "These options work when global Skills and memory is on.",
+            "Queste opzioni funzionano quando Skills e memoria globale è attivo.",
+            "Ces options fonctionnent lorsque Compétences et mémoire globales sont activées.",
+            "Diese Optionen gelten, wenn globale Skills und Gedächtnis aktiv sind.",
+            "Estas opciones funcionan cuando Skills y memoria globales están activos.",
+            "Các tùy chọn này hoạt động khi bật Kỹ năng và bộ nhớ toàn cục."));
         entries.Add("Settings.SkillCatalogUnavailable", new(
             "Cannot read the skills. Check imported skills; you can still change other settings.",
             "Non riesco a leggere le skill. Controlla quelle importate; puoi comunque cambiare le altre impostazioni.",
@@ -326,26 +326,26 @@ internal static partial class UiTextCatalog
             "Skills y memoria se guardaron. No se pudieron guardar los demás ajustes.",
             "Đã lưu kỹ năng và bộ nhớ. Không thể lưu các cài đặt khác."));
         entries.Add("Settings.FeatureMaster", new(
-            "Project skills and memory",
-            "Skills e memoria del progetto",
-            "Compétences et mémoire du projet",
-            "Skills und Gedächtnis im Projekt",
-            "Skills y memoria del proyecto",
-            "Kỹ năng và bộ nhớ dự án"));
+            "Global skills and memory",
+            "Skills e memoria globali",
+            "Compétences et mémoire globales",
+            "Globale Skills und Gedächtnis",
+            "Skills y memoria globales",
+            "Kỹ năng và bộ nhớ toàn cục"));
         entries.Add("Settings.FeatureMasterHelp", new(
-            "Turns on skill and memory options for this project. Message collection stays off until you choose it separately.",
-            "Attiva le opzioni di skills e memoria per questo progetto. I messaggi non vengono raccolti finché non scegli di farlo a parte.",
-            "Active les options de compétences et mémoire pour ce projet. La collecte de messages reste désactivée tant que vous ne la choisissez pas séparément.",
-            "Aktiviert Skill- und Gedächtnisoptionen für dieses Projekt. Nachrichten werden erst erfasst, wenn du dies separat auswählst.",
-            "Activa las opciones de skills y memoria para este proyecto. Los mensajes no se recopilan hasta que lo elijas por separado.",
-            "Bật các tùy chọn kỹ năng và bộ nhớ cho dự án này. Tin nhắn chỉ được thu thập khi bạn bật riêng tùy chọn đó."));
+            "Turns on global skill and memory options. Message collection stays off until you choose it separately.",
+            "Attiva le opzioni globali di skills e memoria. I messaggi non vengono raccolti finché non scegli di farlo a parte.",
+            "Active les options globales de compétences et mémoire. La collecte de messages reste désactivée tant que vous ne la choisissez pas séparément.",
+            "Aktiviert globale Skill- und Gedächtnisoptionen. Nachrichten werden erst erfasst, wenn du dies separat auswählst.",
+            "Activa las opciones globales de skills y memoria. Los mensajes no se recopilan hasta que lo elijas por separado.",
+            "Bật các tùy chọn kỹ năng và bộ nhớ toàn cục. Tin nhắn chỉ được thu thập khi bạn bật riêng tùy chọn đó."));
         entries.Add("Settings.FeatureEnableFirst", new(
-            "First turn on Skills and memory for this project.",
-            "Prima attiva Skills e memoria per questo progetto.",
-            "Activez d’abord Compétences et mémoire pour ce projet.",
-            "Aktiviere zuerst Skills und Gedächtnis für dieses Projekt.",
-            "Primero activa Skills y memoria para este proyecto.",
-            "Trước tiên bật Kỹ năng và bộ nhớ cho dự án này."));
+            "First turn on global Skills and memory.",
+            "Prima attiva Skills e memoria globale.",
+            "Activez d’abord Compétences et mémoire globales.",
+            "Aktiviere zuerst globale Skills und Gedächtnis.",
+            "Primero activa Skills y memoria globales.",
+            "Trước tiên bật Kỹ năng và bộ nhớ toàn cục."));
         entries.Add("Settings.CaptureConsent", new(
             "I agree to keep my messages",
             "Accetto di conservare i messaggi",
@@ -382,11 +382,11 @@ internal static partial class UiTextCatalog
             "Los recuerdos se guardan aparte: Cancelar en Configuración no los deshace.",
             "Ghi nhớ được lưu riêng: Hủy trong Cài đặt không hoàn tác chúng."));
         entries.Add("Settings.DisableFeaturesConsentInfo", new(
-            "Saving this choice turns off skills and memory for this project and permanently deletes collected messages and suggestions. Saved memories and earlier history remain.",
-            "Salvare questa scelta disattiva skills e memoria per questo progetto e cancella definitivamente messaggi raccolti e suggerimenti. I ricordi salvati e la cronologia precedente restano.",
-            "Enregistrer ce choix désactive compétences et mémoire pour ce projet et supprime définitivement messages collectés et suggestions. Les souvenirs enregistrés et l’historique précédent restent.",
-            "Diese Wahl zu speichern deaktiviert Skills und Gedächtnis für dieses Projekt und löscht erfasste Nachrichten und Vorschläge endgültig. Gespeicherte Erinnerungen und der frühere Verlauf bleiben.",
-            "Guardar esta opción desactiva skills y memoria para este proyecto y borra definitivamente mensajes recopilados y sugerencias. Los recuerdos guardados y el historial anterior permanecen.",
-            "Lưu lựa chọn này sẽ tắt kỹ năng và bộ nhớ cho dự án, đồng thời xóa vĩnh viễn tin nhắn đã thu thập và đề xuất. Ghi nhớ đã lưu và lịch sử trước đó vẫn còn."));
+            "Saving this choice turns off global skills and memory and permanently deletes collected messages and suggestions. Saved memories and earlier history remain.",
+            "Salvare questa scelta disattiva skills e memoria globale e cancella definitivamente messaggi raccolti e suggerimenti. I ricordi salvati e la cronologia precedente restano.",
+            "Enregistrer ce choix désactive les compétences et mémoire globales et supprime définitivement messages collectés et suggestions. Les souvenirs enregistrés et l’historique précédent restent.",
+            "Diese Wahl zu speichern deaktiviert globale Skills und Gedächtnis und löscht erfasste Nachrichten und Vorschläge endgültig. Gespeicherte Erinnerungen und der frühere Verlauf bleiben.",
+            "Guardar esta opción desactiva skills y memoria globales y borra definitivamente mensajes recopilados y sugerencias. Los recuerdos guardados y el historial anterior permanecen.",
+            "Lưu lựa chọn này sẽ tắt kỹ năng và bộ nhớ toàn cục, đồng thời xóa vĩnh viễn tin nhắn đã thu thập và đề xuất. Ghi nhớ đã lưu và lịch sử trước đó vẫn còn."));
     }
 }

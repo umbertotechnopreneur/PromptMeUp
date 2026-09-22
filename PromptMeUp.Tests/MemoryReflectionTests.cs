@@ -142,18 +142,18 @@ public sealed class MemoryReflectionTests
         Assert.Empty(proposal.SourceIds);
     }
 
-    /// <summary>Preserved legacy collections above two hundred notes can still produce complete, bounded maintenance batches.</summary>
+    /// <summary>Large global collections produce complete maintenance batches while keeping provider input bounded.</summary>
     [Fact]
-    public async Task HeartbeatBatch_ListsOverTwoHundredLegacyNotesAndKeepsProviderInputBounded()
+    public async Task HeartbeatBatch_ListsOverTwoHundredGlobalNotesAndKeepsProviderInputBounded()
     {
         using var fixture = new RegressionFixture();
         await fixture.Database.InitializeAsync(default);
         await fixture.ScalarAsync("""
-            WITH RECURSIVE legacy(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM legacy WHERE n < 205)
+            WITH RECURSIVE notes(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM notes WHERE n < 205)
             INSERT INTO persistent_memories(id, scope_key, body, updated_unix)
-            SELECT printf('%032x', n), CASE WHEN n % 3 = 0 THEN 'global' ELSE printf('%064x', n % 3) END,
+            SELECT printf('%032x', n), 'global',
                    'Preserved preference ' || n || '.', 1700000000 + n
-            FROM legacy;
+            FROM notes;
             """);
         var store = new PersistentMemoryService(fixture.Paths, new SensitiveDataRedactor(), new LocalizationService(),
             NullLogger<PersistentMemoryService>.Instance);

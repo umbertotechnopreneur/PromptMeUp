@@ -17,7 +17,7 @@ public sealed partial class PersistentMemoryService
     public const int MaximumMemoriesPerScope = 100;
     public const int MaximumMemories = 5;
     public const int MaximumContentTokens = 650;
-    private const string GlobalScope = "global";
+    internal const string GlobalScope = "global";
 
     private readonly string _connectionString;
     private readonly ISensitiveDataRedactor _redactor;
@@ -326,27 +326,6 @@ public sealed partial class PersistentMemoryService
         }
     }
 
-    /// <summary>Hashes the nearest Git root or working directory so project isolation never persists local paths.</summary>
-    internal static string ResolveProjectScope()
-    {
-        var current = new DirectoryInfo(Directory.GetCurrentDirectory());
-        var root = current;
-        for (DirectoryInfo? candidate = current; candidate is not null; candidate = candidate.Parent)
-        {
-            var marker = Path.Combine(candidate.FullName, ".git");
-            if (Directory.Exists(marker) || File.Exists(marker))
-            {
-                root = candidate;
-                break;
-            }
-        }
-        var normalized = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root.FullName));
-        if (OperatingSystem.IsWindows())
-        {
-            normalized = normalized.ToUpperInvariant();
-        }
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)));
-    }
 
     /// <summary>Extracts distinct Unicode word terms for deterministic local relevance ranking.</summary>
     private static HashSet<string> ExtractTerms(string value) =>
