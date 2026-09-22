@@ -7,6 +7,9 @@ namespace PromptMeUp.Views;
 
 public interface IFirstRunView
 {
+    /// <summary>Shows why setup must be completed before commands can run.</summary>
+    void RenderSetupRequired();
+
     /// <summary>Asks whether setup should open before the requested command continues.</summary>
     bool ConfirmSetup();
 }
@@ -21,12 +24,7 @@ public sealed class FirstRunView(
     public bool ConfirmSetup()
     {
         var copy = FirstRunCopy.For(text.Language);
-        var icon = TerminalTheme.IconPrefix(shell.Options, "✨", "*");
-
-        console.WriteLine();
-        TerminalTheme.WriteRule(console, icon + copy.Title, TerminalTheme.Accent);
-        console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(copy.Message)}[/]");
-        console.WriteLine();
+        RenderSetupRequired();
 
         var choice = console.Prompt(
             new SelectionPrompt<FirstRunChoice>()
@@ -38,6 +36,18 @@ public sealed class FirstRunView(
                     : $"[{TerminalTheme.Warning}]↩ {Markup.Escape(copy.Cancel)}[/]"));
 
         return choice == FirstRunChoice.Setup;
+    }
+
+    /// <summary>Renders the localized first-run requirement without requesting terminal input.</summary>
+    public void RenderSetupRequired()
+    {
+        var copy = FirstRunCopy.For(text.Language);
+        var icon = TerminalTheme.IconPrefix(shell.Options, "✨", "*");
+
+        console.WriteLine();
+        TerminalTheme.WriteRule(console, icon + copy.Title, TerminalTheme.Accent);
+        console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(copy.Message)}[/]");
+        console.WriteLine();
     }
 
     private enum FirstRunChoice

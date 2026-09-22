@@ -149,6 +149,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             {
                 var firstRunView = _firstRunView
                     ?? throw new InvalidOperationException("The first-run view is unavailable.");
+                if (!IsInteractive)
+                {
+                    firstRunView.RenderSetupRequired();
+                    return 0;
+                }
+
                 EnsureInteractive();
                 if (!firstRunView.ConfirmSetup())
                 {
