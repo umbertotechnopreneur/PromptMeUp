@@ -1,5 +1,12 @@
 ﻿# Task Archive
 
+## 2026-09-23 — Remove hidden headless app entry from Store MSIX manifest
+
+- Moved the `hm.exe` execution alias extension onto the visible `PromptMeUp` application entry and removed the second application entry with `AppListEntry="none"`.
+- The generated Store manifest now has one visible app entry; fresh x64 and ARM64 packages still need Store validation.
+
+Validation: PowerShell parser and repository preflight checks passed. Store upload was not repeated.
+
 ## 2026-09-23 — Consolidate repository scripts
 
 - Added `scripts/PromptMeUp.ps1` as the single repository entry point, with an interactive menu when no command is supplied and direct `-Command` routing for automation.

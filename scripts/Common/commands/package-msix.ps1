@@ -278,12 +278,6 @@ $manifest = @"
       <uap:VisualElements DisplayName="PromptMeUp" Description="Help with your next terminal command."
         BackgroundColor="transparent" Square44x44Logo="Assets\Logo44.png"
         Square150x150Logo="Assets\Logo150.png" AppListEntry="default" />
-    </Application>
-    <Application Id="PromptMeUpAlias" Executable="hm.exe" uap10:RuntimeBehavior="win32App"
-      uap10:TrustLevel="mediumIL" uap10:Subsystem="console" uap10:SupportsMultipleInstances="true">
-      <uap:VisualElements DisplayName="PromptMeUp" Description="Help with your next terminal command."
-        BackgroundColor="transparent" Square44x44Logo="Assets\Logo44.png"
-        Square150x150Logo="Assets\Logo150.png" AppListEntry="none" />
       <Extensions>
         <uap5:Extension Category="windows.appExecutionAlias">
           <uap5:AppExecutionAlias uap10:Subsystem="console">
