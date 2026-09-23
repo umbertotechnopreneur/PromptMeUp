@@ -18,6 +18,40 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
     {
         ArgumentNullException.ThrowIfNull(current);
         logger.LogInformation("Onboarding started. Language={Language}, ProtectedStorage={ProtectedStorage}", current.Language, OperatingSystem.IsWindows());
+        var result = view is IFirstRunViewport viewport
+            ? await viewport.RunStepsAsync(() => RunStepsAsync(current, ct)).ConfigureAwait(false)
+            : await RunStepsAsync(current, ct).ConfigureAwait(false);
+        if (!result.Completed)
+        {
+            return 0;
+        }
+
+        if (desktop.IsAvailable && await view.ChooseDesktopAsync(ct).ConfigureAwait(false))
+        {
+            try
+            {
+                var desktopResult = desktop.Create();
+                logger.LogInformation("Onboarding desktop shortcut result. Result={Result}", desktopResult);
+                shell.RenderSuccess(text.Text(desktopResult == DesktopLauncherResult.Created ? "Home.DesktopCreated" : "Home.DesktopExists"));
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+                or System.Runtime.InteropServices.COMException or InvalidOperationException
+                or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
+            {
+                logger.LogWarning("Onboarding desktop shortcut failed. ExceptionType={ExceptionType}, StackTrace={StackTrace}",
+                    exception.GetType().FullName, new System.Diagnostics.StackTrace(exception, fNeedFileInfo: false).ToString());
+                shell.RenderWarning(text.Text("Home.DesktopFailed"));
+            }
+        }
+
+        view.RenderReady(result.Name);
+        logger.LogInformation("Onboarding completed.");
+        return 0;
+    }
+
+    /// <summary>Collects and persists the four resumable onboarding steps inside the selected terminal surface.</summary>
+    private async Task<FirstRunResult> RunStepsAsync(AppSettings current, CancellationToken ct)
+    {
         view.RenderWelcome();
         var step = 1;
         var verified = false;
@@ -29,7 +63,7 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
                 logger.LogInformation("Onboarding step opened. Step=1, Name=Language");
                 var language = await view.ChooseLanguageAsync(current.Language, ct).ConfigureAwait(false);
                 logger.LogInformation("Onboarding step answered. Step=1, Action={Action}, Language={Language}", language.Action, language.Value);
-                if (language.Action == FirstRunAction.Exit) { return 0; }
+                if (language.Action == FirstRunAction.Exit) { return new(false, current.PreferredName); }
                 text.SetLanguage(language.Value);
                 current = current with { Language = language.Value, SetupCompleted = false, UpdatedAt = DateTimeOffset.UtcNow };
                 await settings.SaveAsync(current, ct).ConfigureAwait(false);
@@ -41,12 +75,12 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
                 var key = await view.ReadKeyAsync(secrets.IsConfigured(current.ApiKeyVariable), OperatingSystem.IsWindows(), ct)
                     .ConfigureAwait(false);
                 logger.LogInformation("Onboarding step answered. Step=2, Action={Action}", key.Action);
-                if (key.Action == FirstRunAction.Exit) { return 0; }
+                if (key.Action == FirstRunAction.Exit) { return new(false, current.PreferredName); }
                 if (key.Action == FirstRunAction.Back) { step = 1; continue; }
                 var candidate = key.Value ?? secrets.Load(current.ApiKeyVariable)
                     ?? throw new InvalidOperationException(text.Text("Oobe.InvalidKey"));
                 var result = await VerifyAndStoreAsync(candidate, current, ct).ConfigureAwait(false);
-                if (result == FirstRunAction.Exit) { return 0; }
+                if (result == FirstRunAction.Exit) { return new(false, current.PreferredName); }
                 if (result == FirstRunAction.Back) { continue; }
                 verified = true;
                 shell.RenderSuccess(text.Text("Oobe.Connected"));
@@ -57,7 +91,7 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
                 logger.LogInformation("Onboarding step opened. Step=3, Name=Personalization");
                 var name = await view.ReadNameAsync(current.PreferredName, ct).ConfigureAwait(false);
                 logger.LogInformation("Onboarding step answered. Step=3, Action={Action}", name.Action);
-                if (name.Action == FirstRunAction.Exit) { return 0; }
+                if (name.Action == FirstRunAction.Exit) { return new(false, current.PreferredName); }
                 if (name.Action == FirstRunAction.Back) { step = 2; continue; }
                 current = current with { PreferredName = name.Value, UpdatedAt = DateTimeOffset.UtcNow };
                 await settings.SaveAsync(current, ct).ConfigureAwait(false);
@@ -67,7 +101,7 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
             var overview = await features.ReadAsync(ct).ConfigureAwait(false);
             var memory = await view.ReadMemoryAsync(overview.Settings, ct).ConfigureAwait(false);
             logger.LogInformation("Onboarding step answered. Step=4, Action={Action}", memory.Action);
-            if (memory.Action == FirstRunAction.Exit) { return 0; }
+            if (memory.Action == FirstRunAction.Exit) { return new(false, current.PreferredName); }
             if (memory.Action == FirstRunAction.Back) { step = 3; continue; }
             if (!verified) { throw new InvalidOperationException("Onboarding requires a verified OpenAI connection."); }
             if (overview.CatalogUnavailable)
@@ -98,26 +132,7 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
             await settings.SaveAsync(current, ct).ConfigureAwait(false);
             logger.LogInformation("Onboarding preferences saved. MemoriesEnabled={MemoriesEnabled}, LearningCapture={LearningCapture}, DirectMode={DirectMode}",
                 preferences.Enabled, preferences.CaptureObservations, current.DirectModeEnabled);
-            if (desktop.IsAvailable && await view.ChooseDesktopAsync(ct).ConfigureAwait(false))
-            {
-                try
-                {
-                    var result = desktop.Create();
-                    logger.LogInformation("Onboarding desktop shortcut result. Result={Result}", result);
-                    shell.RenderSuccess(text.Text(result == DesktopLauncherResult.Created ? "Home.DesktopCreated" : "Home.DesktopExists"));
-                }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
-                    or System.Runtime.InteropServices.COMException or InvalidOperationException
-                    or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
-                {
-                    logger.LogWarning("Onboarding desktop shortcut failed. ExceptionType={ExceptionType}, StackTrace={StackTrace}",
-                        exception.GetType().FullName, new System.Diagnostics.StackTrace(exception, fNeedFileInfo: false).ToString());
-                    shell.RenderWarning(text.Text("Home.DesktopFailed"));
-                }
-            }
-            view.RenderReady(current.PreferredName);
-            logger.LogInformation("Onboarding completed.");
-            return 0;
+            return new(true, current.PreferredName);
         }
     }
 
@@ -171,3 +186,6 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
         }
     }
 }
+
+/// <summary>Reports whether onboarding finished and carries the safe display name to the final screen.</summary>
+internal readonly record struct FirstRunResult(bool Completed, string Name);

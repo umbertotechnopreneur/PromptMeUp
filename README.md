@@ -66,6 +66,8 @@ See [what is saved and shared](docs/PRIVACY.md) for the details. The app is MIT-
 
 `hm` means **help me**. It is the front door to every PromptMeUp feature: start with a question, open a chat, manage memories, adjust setup, or ask for help with a command, tool, error, file, or script. Start with a question:
 
+Prefer a printable overview? Keep the [two-page command guide](output/pdf/promptmeup-quick-reference.pdf) nearby: the first page covers everyday commands, and the second collects advanced workflows and switches.
+
 ```powershell
 hm "How do I undo my last local commit without losing my changes?"
 ```
