@@ -1,7 +1,7 @@
 ﻿# SPDX-License-Identifier: MIT
 <#
 .SYNOPSIS
-  Package a prepared Windows publish folder as an MSIX with a Start-menu help launcher and hm execution alias.
+  Package a prepared Windows publish folder as an MSIX with a Start-menu launcher and hm execution alias.
 .DESCRIPTION
   Requires a self-contained, non-single-file publish folder with exported notices,
   and Windows SDK packaging tools. Signed Debug packages also require an existing
@@ -72,7 +72,7 @@ function Get-PayloadFiles {
             $relative = [IO.Path]::GetRelativePath($Directory, $item.FullName).Replace('\', '/')
             # Keep Debug symbols beside the publish output, but never place them in the MSIX.
             if ($relative -match '^[^/]+\.pdb$') { continue }
-            $allowed = $relative -match '^(?:[^/]+\.dll|(?:hm|createdump)\.exe|hm\.(?:deps|runtimeconfig)\.json|LICENSE|THIRD_PARTY_NOTICES\.md|THIRD_PARTY_INVENTORY\.json|BUILD_INFO\.txt|hm-path\.(?:ps1|sh))$' `
+            $allowed = $relative -match '^(?:[^/]+\.dll|(?:hm|createdump)\.exe|hm\.(?:deps|runtimeconfig)\.json|PromptMeUp\.ico|LICENSE|THIRD_PARTY_NOTICES\.md|THIRD_PARTY_INVENTORY\.json|BUILD_INFO\.txt|hm-path\.(?:ps1|sh))$' `
                 -or $relative -match '^(?:prompt/[^/]+\.yaml|themes/[^/]+\.json|LICENSES/.+|[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*/[^/]+\.resources\.dll)$' `
                 -or $bundledSkillFiles -ccontains $relative
             if (-not $allowed) { throw "Unexpected publish content '$relative'. Use a clean publish folder with exported notices." }
@@ -190,7 +190,8 @@ if ($Channel -eq 'Store' -and $Version -notmatch '^[1-9]\d*\.\d+\.\d+\.0$') {
 }
 $minimumWindowsVersion = if ($Channel -eq 'Store') { '10.0.22000.0' } else { '10.0.19041.0' }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = Join-Path $artifactsRoot "msix\$($Channel.ToLowerInvariant())\$Version\$Architecture"
+    $artifactChannel = if ($Channel -eq 'Store') { 'store' } else { 'debug' }
+    $OutputDirectory = Join-Path $artifactsRoot "$artifactChannel\$Version\$Architecture"
 }
 $outputRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($OutputDirectory, $repositoryRoot))
 if (-not $outputRoot.StartsWith($artifactsRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
@@ -272,7 +273,7 @@ $manifest = @"
     <Resource Language="de-DE" /><Resource Language="es-ES" /><Resource Language="vi-VN" />
   </Resources>
   <Applications>
-    <Application Id="PromptMeUp" Executable="hm.exe" uap10:Parameters="--help"
+    <Application Id="PromptMeUp" Executable="hm.exe"
       uap10:RuntimeBehavior="win32App" uap10:TrustLevel="mediumIL" uap10:Subsystem="console"
       uap10:SupportsMultipleInstances="true">
       <uap:VisualElements DisplayName="PromptMeUp" Description="Help with your next terminal command."

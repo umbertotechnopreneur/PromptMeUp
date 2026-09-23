@@ -1,6 +1,8 @@
 ﻿## Task
 
-- [ ] Prepare Store MSIX 1.0.0.0 for Windows 11 x64 and ARM64 through a manual GitHub Actions workflow; verify the workflow and collect both packages before Store upload.
+- [ ] Remove `artifacts/msix/debug/1.0.0.0-oobe-20260924-021718/publish` and `x64/payload`, preserving the signed MSIX, checksums, package metadata, and installation record. Standard .NET cleanup succeeded; automatic approval review blocked recursive deletion.
+
+- [ ] Review and submit the generated x64 and ARM64 MSIX packages from `artifacts/store/1.0.0.0/` in Partner Center; resolve any remaining Store validation findings.
 
 - [ ] Rebuild and submit x64 and ARM64 Store MSIX packages to confirm the manifest no longer triggers the headless-app validation error; resolve any remaining Store validation findings.
 

@@ -1,5 +1,33 @@
 ﻿# Task Archive
 
+## 2026-09-24 — Install Debug MSIX 1.0.0.0 checkpoint
+
+- Published the current working source for Windows x64 in Debug with application version 1.0.0 and MSIX version 1.0.0.0.
+- Exported redistribution notices, built the MSIX under `artifacts/msix/debug/1.0.0.0-oobe-20260924-021718/`, and signed it with the existing trusted current-user publisher certificate.
+- Attempted an in-place update with `-ForceUpdateFromAnyVersion -ForceTargetApplicationShutdown`. Windows rejected the changed content under the same package identity and version with `0x80073CFB`; removed and reinstalled the current-user package to complete replacement. No application-data files were present in the package's user-data folders.
+- Verified the installed application hash against the new build, version 1.0.0.0, the execution alias, product icon, and Start entry without help arguments. Saved the verification record beside the package.
+
+Validation: Debug publish with warnings treated as errors, MSIX manifest validation, signing and signature verification passed. Standard .NET cleanup succeeded after limiting it to the published project because test assets had no Windows runtime target. Automatic approval review blocked recursive cleanup of publish and payload directories; follow-up remains in the task list. Automated tests and CLI smoke tests were not run. No Store upload or Git push was performed.
+
+## 2026-09-24 — Guided welcome, home menu, and desktop launch
+
+- Added four localized welcome steps: system language and ASCII flag, masked OpenAI key verification, optional name, and separate memory and learning consent. Completion does not open general settings.
+- Store verified Windows keys in Credential Manager. Explain learning collection, redaction, provider analysis, and the separate local activity history. Leave skills disabled until explicitly enabled.
+- Added a shared colored pixel banner for welcome and home. Running `hm` opens a numbered menu with single-key choices for existing chat, script, diagnostic, memory, skills, settings, and help workflows.
+- Added an unchecked desktop shortcut option at the end of onboarding. The native link uses the existing product icon and Windows execution alias; Start launches the same no-argument home flow.
+- Added regression cases for verification before credential persistence, failed verification, memory choices, desktop consent, and immediate numeric navigation.
+
+Validation: preflight, PowerShell syntax, project XML, XML method comments, formatting verification, and Release build with warnings treated as errors passed. Build output was cleaned. Automated tests and CLI smoke tests were not run; no MSIX was built or installed.
+
+## 2026-09-23 — Generate Store MSIX packages and unify artifact roots
+
+- Generated unsigned x64 and ARM64 Store MSIX packages for version 1.0.0.0 under `artifacts/store/1.0.0.0/`.
+- Changed package defaults to use `artifacts/store/<version>/<architecture>/` for Store and `artifacts/debug/<version>/<architecture>/` for Debug.
+- Kept temporary Store publish output under the Store artifact root and removed the obsolete `artifacts/msix/store-work` directory.
+- Updated the packaging guide and left Partner Center submission for follow-up.
+
+Validation: preflight passed; Release packaging succeeded for both architectures; package manifests and SHA-256 hashes were checked; build output was cleaned. Automated tests were not run.
+
 ## 2026-09-23 — Remove hidden headless app entry from Store MSIX manifest
 
 - Moved the `hm.exe` execution alias extension onto the visible `PromptMeUp` application entry and removed the second application entry with `AppListEntry="none"`.
@@ -1183,3 +1211,12 @@ Validation: preflight, formatting verification, XML comment check, and Release b
 - Updated chat to use the configured preferred name and begin typing directly on the prompt line.
 
 Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
+
+- [x] Keep direct mode limited to one application session and clear its persisted setting on `--reset` and when the session ends.
+
+- [x] Render command-line prompts beside the You > label and let them wrap across the available terminal width.
+- [x] Repair the local test database scope constraints with direct SQL, preserve the affected rows, and retain a pre-change backup.
+
+- [x] Move legacy skill settings into the global settings table, remove the obsolete table from the local database, and add an idempotent startup migration for older databases.
+
+- [x] Make --reset clear setup and direct-mode flags only, and make --reset all delete/recreate the full SQLite database.

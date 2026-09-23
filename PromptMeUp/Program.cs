@@ -160,6 +160,8 @@ internal static class Program
         services.AddSingleton<ICommandAuthorizationView, CommandAuthorizationView>();
         services.AddSingleton<IThirdPartyView, ThirdPartyView>();
         services.AddSingleton<IFirstRunView, FirstRunView>();
+        services.AddSingleton<IHomeView, HomeView>();
+        services.AddSingleton<IDesktopLauncherService, DesktopLauncherService>();
         services.AddSingleton<IPortablePathView, PortablePathView>();
         services.AddSingleton<IExecutableLocationView, ExecutableLocationView>();
         services.AddSingleton<INerdFontView, NerdFontView>();
@@ -180,6 +182,7 @@ internal static class Program
         services.AddSingleton<FilePreviewWorkflow>();
         services.AddSingleton<ApplicationActivityRecorder>();
         services.AddSingleton<SetupWorkflow>();
+        services.AddSingleton<FirstRunWorkflow>();
         services.AddSingleton<MemoryManagerWorkflow>();
         services.AddSingleton<MemoryCommandWorkflow>();
         services.AddSingleton<InstallationWorkflow>();

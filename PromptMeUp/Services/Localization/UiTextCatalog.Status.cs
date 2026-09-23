@@ -42,13 +42,6 @@ internal static partial class UiTextCatalog
             German: "Arbeitsbudget",
             Spanish: "Presupuesto operativo",
             Vietnamese: "Ngân sách làm việc"));
-        entries.Add("Shell.CurrentDirectory", new(
-            English: "Current directory",
-            Italian: "Cartella corrente",
-            French: "Dossier courant",
-            German: "Aktuelles Verzeichnis",
-            Spanish: "Carpeta actual",
-            Vietnamese: "Thư mục hiện tại"));
         entries.Add("Shell.Input", new(
             English: "Input tokens",
             Italian: "Token in",

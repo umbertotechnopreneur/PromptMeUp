@@ -37,6 +37,7 @@ public sealed class CommandLineParser : ICommandLineParser
         string? previewAction = null;
         string? prefix = null;
         string? pattern = null;
+        var resetAll = false;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -157,6 +158,11 @@ public sealed class CommandLineParser : ICommandLineParser
                     if (!TrySelect(AppCommand.Reset, ref command, ref commandWasSelected, out var resetError))
                     {
                         return FailureMessage(resetError);
+                    }
+                    if (index + 1 < args.Count && args[index + 1].Equals("all", StringComparison.OrdinalIgnoreCase))
+                    {
+                        resetAll = true;
+                        index++;
                     }
                     break;
                 case "--ai-settings" or "--ai-setup":
@@ -421,7 +427,7 @@ public sealed class CommandLineParser : ICommandLineParser
         }
 
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern, resetAll),
             null);
     }
 

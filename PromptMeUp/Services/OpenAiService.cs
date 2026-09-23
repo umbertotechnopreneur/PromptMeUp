@@ -121,6 +121,27 @@ public sealed class OpenAiService : IOpenAiService
             guide).ConfigureAwait(false);
     }
 
+    /// <summary>Reads the bounded provider error classification without using error prose to make retry decisions.</summary>
+    private static string? ReadProviderErrorCode(string responseJson)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(responseJson);
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object
+                && error.TryGetProperty("code", out var code) && code.ValueKind == JsonValueKind.String)
+            {
+                var value = code.GetString();
+                return value is { Length: <= 100 } ? value : null;
+            }
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Runs the localized YAML connection probe and returns its expected short phrase.</summary>
     public async Task<ConnectionTestResult> TestConnectionAsync(
         AppSettings settings,
@@ -315,7 +336,10 @@ public sealed class OpenAiService : IOpenAiService
             {
                 var providerError = OpenAiResponseParser.ReadApiError(responseJson)
                     ?? $"OpenAI returned HTTP {(int)response.StatusCode}.";
-                throw new OpenAiRequestException(providerError, "responses_api_failed", (int)response.StatusCode);
+                throw new OpenAiRequestException(providerError, "responses_api_failed", (int)response.StatusCode)
+                {
+                    ProviderCode = ReadProviderErrorCode(responseJson)
+                };
             }
 
             accounting = OpenAiResponseParser.ParseAccounting(responseJson);
@@ -565,6 +589,8 @@ public sealed class OpenAiRequestException : Exception
     }
 
     public string ErrorCode { get; }
+
+    public string? ProviderCode { get; init; }
 
     public int? StatusCode { get; }
 }

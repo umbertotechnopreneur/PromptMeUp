@@ -51,7 +51,8 @@ public sealed record CommandLineOptions(
     string? ResumeId = null,
     string? PreviewAction = null,
     string? Prefix = null,
-    string? Pattern = null);
+    string? Pattern = null,
+    bool ResetAll = false);
 
 public sealed record CommandLineParseResult(CommandLineOptions? Options, string? Error)
 {

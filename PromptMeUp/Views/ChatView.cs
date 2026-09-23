@@ -91,11 +91,12 @@ public sealed class ChatView : IChatView
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         var icon = TerminalTheme.IconPrefix(_shell.Options, "👤", ">");
+        var label = $"{icon}{_text.Text("Chat.You")} › ";
         _console.WriteLine();
-        _console.MarkupLine(
-            $"[bold {TerminalTheme.Accent}]{Markup.Escape(icon)}{Markup.Escape(_text.Text("Chat.You"))}[/] " +
-            $"[{TerminalTheme.Accent}]›[/]");
-        ConversationText.Write(_console, new Text(text, Style.Parse(TerminalTheme.Primary)));
+        _console.Write(new Paragraph()
+            .Append(label, Style.Parse($"bold {TerminalTheme.Accent}"))
+            .Append(text, Style.Parse(TerminalTheme.Primary)));
+        _console.WriteLine();
     }
 
     /// <summary>Renders a model response through the Markdown renderer so formatting never degrades into raw source text.</summary>

@@ -855,6 +855,11 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     /// <summary>Loads selected notes once into a bounded low-trust YAML envelope without adding them to conversation history.</summary>
     private async Task<MemoryEnvelope> LoadMemoryEnvelopeAsync(string query, CancellationToken cancellationToken)
     {
+        if (_skillsAndMemory is not null
+            && !(await _skillsAndMemory.SettingsAsync(cancellationToken).ConfigureAwait(false)).Enabled)
+        {
+            return new MemoryEnvelope(null, 0, 0);
+        }
         var selection = await _persistentMemory.SelectAsync(query, cancellationToken).ConfigureAwait(false);
         var notes = selection.Memories.ToList();
         var template = notes.Count == 0 ? string.Empty

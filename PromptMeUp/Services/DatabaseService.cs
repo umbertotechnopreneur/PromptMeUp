@@ -12,6 +12,8 @@ public interface IDatabaseService
 {
     Task InitializeAsync(CancellationToken cancellationToken);
 
+    Task ResetAsync(CancellationToken cancellationToken);
+
     Task<AppSettings> LoadSettingsAsync(CancellationToken cancellationToken);
 
     Task SaveSettingsAsync(AppSettings settings, CancellationToken cancellationToken);
@@ -60,6 +62,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
         """;
 
     private readonly string _connectionString;
+    private readonly string _databasePath;
     private readonly ILogger<SqliteDatabaseService> _logger;
     private readonly IPromptInjectionProtectionService _promptProtection;
     private readonly ISensitiveDataRedactor _redactor;
@@ -73,6 +76,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
         ISensitiveDataRedactor redactor)
     {
         ArgumentNullException.ThrowIfNull(paths);
+        _databasePath = paths.DatabasePath;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _promptProtection = promptProtection ?? throw new ArgumentNullException(nameof(promptProtection));
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
@@ -111,6 +115,30 @@ public sealed class SqliteDatabaseService : IDatabaseService
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>Deletes the local database and SQLite sidecars, then creates a fresh schema and default settings row.</summary>
+    public async Task ResetAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var suffix in new[] { string.Empty, "-wal", "-shm", "-journal" })
+            {
+                var path = _databasePath + suffix;
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Loads the validated singleton application settings record.</summary>
@@ -741,6 +769,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
                 await EnsureScriptLanguageColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
             await EnsureGlobalSkillsSettingsScopeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            await EnsureLegacySkillsSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
             {
@@ -892,6 +921,29 @@ public sealed class SqliteDatabaseService : IDatabaseService
             SELECT 'global', name, value FROM legacy_skills_and_memory_settings
             WHERE rowid IN (SELECT MAX(rowid) FROM legacy_skills_and_memory_settings GROUP BY name);
             DROP TABLE legacy_skills_and_memory_settings;
+            """;
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Merges saved legacy skill preferences into the current global settings table and removes the obsolete table.</summary>
+    private static async Task EnsureLegacySkillsSettingsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'experimental_settings';";
+        if (Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)) == 0)
+        {
+            return;
+        }
+
+        command.CommandText = """
+            INSERT OR IGNORE INTO skills_and_memory_settings(scope_key, name, value)
+            SELECT 'global', name, value FROM experimental_settings
+            WHERE rowid IN (SELECT MAX(rowid) FROM experimental_settings GROUP BY name);
+            DROP TABLE experimental_settings;
             """;
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }

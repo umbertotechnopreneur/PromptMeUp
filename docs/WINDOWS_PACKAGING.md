@@ -168,7 +168,7 @@ msiexec.exe /x .\artifacts\release\0.1.5\packages\PromptMeUp-0.1.5-win-x64.msi
 
 The build never reads or packages `OPENAI_API_KEY`, `OPENAI_ADMIN_KEY`, settings, databases, logs, or the local application-data directory. Code signing is intentionally separate and must happen before final SHA-256 calculation and WinGet manifest generation.
 
-## Install with the `hm` execution alias and Start-menu help
+## Install with the `hm` execution alias and Start-menu launcher
 
 The MSIX package registers `hm.exe` through Windows' app execution aliases. You can then type `hm` without adding the build or installation folder to `PATH`.
 
@@ -193,7 +193,7 @@ The thumbprint identifies your public certificate; you don't pass a private key 
 
 A Debug publish may contain `.pdb` files beside the executable. The packager leaves those symbols in the publish folder and excludes them from the MSIX, so you can package the same publish output without recompiling just to remove symbols. Other unexpected files still stop packaging.
 
-For a Debug package, the default output is `artifacts/msix/debug/<version>/<architecture>/`; use `-Channel Store` for Store-channel staging. Signed packaging requires the explicit matching certificate. Use `-Unsigned` only when an unsigned staging package is intentional. The script rejects links and unexpected files such as databases, logs, or credentials. It only builds the package: it doesn't install or run the app, run tests, or change certificate trust or `PATH`.
+For a Debug package, the default output is `artifacts/debug/<version>/<architecture>/`; Store packages go under `artifacts/store/<version>/<architecture>/`. Signed packaging requires the explicit matching certificate. Use `-Unsigned` only when an unsigned staging package is intentional. The script rejects links and unexpected files such as databases, logs, or credentials. It only builds the package: it doesn't install or run the app, run tests, or change certificate trust or `PATH`.
 
 The four-part package version defaults to the published executable's file version. Use `-Version 0.1.5.1` when a packaging revision needs a higher version. Use `-SdkBinDirectory` to select the directory containing the SDK tools. An optional `-TimestampServer https://...` adds an RFC 3161 timestamp from your chosen signing service; without one, the signature's validity is limited by the certificate's expiry.
 
@@ -204,7 +204,16 @@ Add-AppxPackage -Path .\artifacts\msix\debug\<version>\x64\PromptMeUp-<version>-
 Get-Command hm -CommandType Application
 ```
 
-PromptMeUp appears in Start. Clicking its icon launches the packaged console application with `hm --help`; Windows uses the user's configured default terminal host. The separate hidden package entry registers the `hm.exe` alias without `--help`, so normal calls such as `hm "show Git status"` retain their arguments.
+PromptMeUp appears in Start. Clicking its icon launches `hm` without arguments,
+opening the first-run welcome or, once configured, the numbered home menu. Windows
+uses the user's configured default terminal host. The same visible application
+entry registers the `hm.exe` alias, so calls such as `hm "show Git status"` retain
+their arguments.
+
+The welcome offers an optional, initially unchecked desktop shortcut. It creates
+a native current-user link to the stable Windows execution alias and copies the
+product icon into the local application data directory. No batch launcher is
+needed. This choice belongs to onboarding; the native MSIX installer is unchanged.
 
 Windows exposes the alias through the user's `Microsoft\WindowsApps` directory. If another installation's `hm.exe` appears first, remove that installation's old `PATH` entry or uninstall it after checking which copy is active. Windows' **App execution aliases** settings let you enable or disable the MSIX alias. Do not run `hm --path install` for the MSIX copy.
 
@@ -226,6 +235,6 @@ On a Windows machine with the .NET 10 SDK and Windows SDK packaging tools, run t
 pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command store-msix -Version 1.0.0
 ```
 
-The script publishes x64 and ARM64 in Release, exports redistribution notices, and creates two unsigned MSIX files under `artifacts/msix/store/1.0.0.0/`. Both packages declare Windows 11 as the minimum version and use the reserved PromptMeUp Store identity. Review each `package.json`, `AppxManifest.xml`, and SHA-256 checksum, then upload the MSIX files in Partner Center **Packages**. The script does not install, upload, submit, or publish the app. It does not create GitHub release assets; the release workflow creates only the two Windows ZIP archives.
+The script publishes x64 and ARM64 in Release, exports redistribution notices, and creates two unsigned MSIX files under `artifacts/store/1.0.0.0/`. Its temporary publish outputs also stay under that Store directory. Both packages declare Windows 11 as the minimum version and use the reserved PromptMeUp Store identity. Review each `package.json`, `AppxManifest.xml`, and SHA-256 checksum, then upload the MSIX files in Partner Center **Packages**. The script does not install, upload, submit, or publish the app. It does not create GitHub release assets; the release workflow creates only the two Windows ZIP archives.
 
 Microsoft Store signs MSIX packages after certification, so this script needs no signing certificate. An unsigned Store submission package is not intended for direct distribution outside the Store. Keep local signed Debug packages and unsigned Store packages in their separate artifact directories.

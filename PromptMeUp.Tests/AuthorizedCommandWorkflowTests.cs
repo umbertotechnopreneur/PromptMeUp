@@ -480,7 +480,7 @@ public sealed class AuthorizedCommandWorkflowTests
         public void Configure(ConsoleRenderOptions options) => Options = options;
 
         /// <summary>Rejects unexpected header rendering in this focused workflow fixture.</summary>
-        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey, string currentDirectory) =>
+        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey) =>
             throw new InvalidOperationException("Header rendering is outside this workflow.");
 
         /// <summary>Rejects unexpected runtime-status rendering in this focused workflow fixture.</summary>

@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\assets\lenna.rgb.gz" LogicalName="PromptMeUp.Assets.lenna.rgb.gz" />
+    <Content Include="..\assets\PromptMeUp.ico" Link="PromptMeUp.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\prompt\*.yaml" Link="prompt\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\themes\*.json" Link="themes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\skills\**\*" Link="skills\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

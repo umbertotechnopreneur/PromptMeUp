@@ -25,8 +25,8 @@ foreach ($part in $Version.Split('.')) {
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $packageVersion = "$Version.0"
-$outputRoot = Join-Path $repositoryRoot "artifacts/msix/store/$packageVersion"
-$publishRoot = Join-Path $repositoryRoot "artifacts/msix/store-work/$packageVersion"
+$outputRoot = Join-Path $repositoryRoot "artifacts/store/$packageVersion"
+$publishRoot = Join-Path $outputRoot 'publish'
 $architectures = @('x64', 'arm64')
 foreach ($architecture in $architectures) {
     if (Test-Path -LiteralPath (Join-Path $outputRoot $architecture)) {

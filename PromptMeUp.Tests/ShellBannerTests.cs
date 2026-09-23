@@ -32,20 +32,20 @@ public sealed class ShellBannerTests
         Assert.True(help.LastIndexOf("--dry-run", StringComparison.Ordinal) < help.IndexOf("hm · help me", StringComparison.Ordinal));
     }
 
-    /// <summary>Verifies that a caller-supplied path is shown in full even when it contains markup-like brackets.</summary>
+    /// <summary>Verifies that the prompt header omits the redundant current directory.</summary>
     [Theory]
     [InlineData(48, true)]
     [InlineData(120, false)]
-    public void Header_RendersCurrentDirectoryAsLiteralText(int width, bool noEmoji)
+    public void Header_DoesNotRenderCurrentDirectory(int width, bool noEmoji)
     {
         var (_, output, text, shell) = CreateConsole(width, noEmoji);
         const string directory = "/workspace/[draft]/project with spaces/subdirectory";
 
-        shell.RenderHeader("query", AppSettings.Default with { Language = "it" }, true, directory);
+        shell.RenderHeader("query", AppSettings.Default with { Language = "it" }, true);
 
         var compact = Compact(output.ToString());
-        Assert.Contains(Compact(text.Text("Shell.CurrentDirectory")), compact, StringComparison.Ordinal);
-        Assert.Contains(Compact(directory), compact, StringComparison.Ordinal);
+        Assert.DoesNotContain(Compact(text.Text("Shell.CurrentDirectory")), compact, StringComparison.Ordinal);
+        Assert.DoesNotContain(Compact(directory), compact, StringComparison.Ordinal);
     }
 
     /// <summary>Verifies active context and operating budgets remain distinct from last-call and cumulative usage.</summary>
