@@ -92,7 +92,7 @@ public sealed class FeatureHelpViewTests
         console.Profile.Width = width;
         var text = new LocalizationService();
         text.SetLanguage(language);
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(true, true));
         var about = TestProxy.Create<IAboutView>((method, _) => throw new NotSupportedException(method.Name));
         return (new HelpView(console, text, shell, about), text, output);

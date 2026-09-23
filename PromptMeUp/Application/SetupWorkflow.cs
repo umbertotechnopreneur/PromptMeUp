@@ -80,10 +80,6 @@ public sealed class SetupWorkflow(
             {
                 shell.RenderMuted(guidance);
             }
-            if (secretGuidance.Count > 0 && OperatingSystem.IsWindows())
-            {
-                shell.RenderWarning(text.Text("Setup.KeyRestartRequired"));
-            }
             await activity.TryRecordAsync(
                 "setup",
                 "completed",

@@ -118,6 +118,7 @@ public sealed class HelpView(
                 new("--status", text.Text("Help.Status")),
                 new("--lenna, lenna", text.Text("Help.Lenna")) { Example = "hm lenna" },
                 new("--costs", text.Text("Help.Costs")),
+                new("--prepare-logs", text.Text("Help.PrepareLogs")) { Example = "hm --prepare-logs" },
                 new("--where, -where", text.Text("Help.Where")) { Example = "hm --where" },
                 new("--third-party", text.Text("Help.ThirdParty"))
             ]),

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Verifies the repository rule requiring a brief XML summary on every C# implementation method.
 #>
@@ -6,7 +6,7 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$repositoryRoot = Split-Path -Parent $PSScriptRoot
+$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $sourceRoots = @(
     (Join-Path $repositoryRoot 'PromptMeUp'),
     (Join-Path $repositoryRoot 'PromptMeUp.Tests')
@@ -44,8 +44,7 @@ foreach ($sourceRoot in $sourceRoots) {
 }
 
 if ($violations.Count -gt 0) {
-    Write-Error ("Missing XML method summaries:`n - " + ($violations -join "`n - "))
-    exit 1
+    throw ("Missing XML method summaries:`n - " + ($violations -join "`n - "))
 }
 
 Write-Host 'XML method comment check passed.' -ForegroundColor Green

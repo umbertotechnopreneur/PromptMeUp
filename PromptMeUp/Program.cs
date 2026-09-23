@@ -30,8 +30,14 @@ internal static class Program
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
                 shared: true,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}")
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SessionId}] {SourceContext} {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
+
+        using var logSession = Serilog.Context.LogContext.PushProperty("SessionId", Guid.NewGuid().ToString("N")[..12]);
+        Log.Information("Application starting. Version={Version}, Runtime={Runtime}, ArgumentCount={ArgumentCount}, InputRedirected={InputRedirected}, OutputRedirected={OutputRedirected}",
+            typeof(Program).Assembly.GetName().Version?.ToString(),
+            System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier,
+            args.Length, Console.IsInputRedirected, Console.IsOutputRedirected);
 
         using var shutdown = new CancellationTokenSource();
         ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
@@ -41,6 +47,8 @@ internal static class Program
         };
         Console.CancelKeyPress += cancelHandler;
         IConsoleShellView? shell = null;
+        ILocalizationService? text = null;
+        var exitCode = 1;
 
         try
         {
@@ -48,21 +56,39 @@ internal static class Program
             ConfigureServices(services, paths, shutdown.Token);
             await using var provider = services.BuildServiceProvider();
             shell = provider.GetRequiredService<IConsoleShellView>();
-            return await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
+            text = provider.GetRequiredService<ILocalizationService>();
+            exitCode = await provider.GetRequiredService<IPromptMeUpApplication>().RunAsync(args, shutdown.Token);
+            return exitCode;
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
         {
-            return 130;
+            exitCode = 130;
+            return exitCode;
         }
         catch (InteractiveFlowCanceledException)
         {
-            return 0;
+            exitCode = 0;
+            return exitCode;
         }
         catch (Exception exception)
         {
-            Log.Fatal("PromptMeUp terminated unexpectedly. ExceptionType={ExceptionType}", exception.GetType().Name);
-            AnsiConsole.MarkupLine($"[red]PromptMeUp failed:[/] {Markup.Escape(exception.Message)}");
-            return 1;
+            var cause = exception.GetBaseException();
+            Log.Fatal("PromptMeUp terminated unexpectedly. ExceptionType={ExceptionType}, CauseType={CauseType}, StackTrace={StackTrace}",
+                exception.GetType().FullName, cause.GetType().FullName, new System.Diagnostics.StackTrace(cause, fNeedFileInfo: false).ToString());
+            if (text is null)
+            {
+                text = new LocalizationService();
+                text.SetLanguage(SupportedLanguages.ResolveSystemLanguage());
+            }
+            AnsiConsole.MarkupLine($"[{TerminalTheme.Error}]{Markup.Escape(text.Text("Startup.Failed", cause.GetType().Name, paths.LogsDirectory))}[/]");
+            if (args.Length == 0 && !Console.IsInputRedirected && !Console.IsOutputRedirected && !shutdown.IsCancellationRequested)
+            {
+                AnsiConsole.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Startup.PressEnter"))}[/]");
+                try { await Console.In.ReadLineAsync(shutdown.Token); }
+                catch (OperationCanceledException) when (shutdown.IsCancellationRequested) { }
+                catch (IOException) { }
+            }
+            return exitCode;
         }
         finally
         {
@@ -73,6 +99,7 @@ internal static class Program
             }
             finally
             {
+                Log.Information("Application stopped. ExitCode={ExitCode}", exitCode);
                 await Log.CloseAndFlushAsync();
             }
         }
@@ -102,6 +129,10 @@ internal static class Program
             Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
         services.AddSingleton<IDatabaseService, SqliteDatabaseService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IProjectBannerSchedule>(provider => new ProjectBannerSchedule(
+            Path.Combine(paths.DataDirectory, "project-banner-date.txt"),
+            TimeProvider.System,
+            provider.GetRequiredService<ILogger<ProjectBannerSchedule>>()));
         services.AddSingleton<IThemeCatalogService>(_ => new ThemeCatalogService(Path.Combine(AppContext.BaseDirectory, "themes")));
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
         services.AddSingleton<ISensitiveDataRedactor, SensitiveDataRedactor>();
@@ -156,6 +187,9 @@ internal static class Program
         services.AddSingleton<ICommandAuthorizationView, CommandAuthorizationView>();
         services.AddSingleton<IThirdPartyView, ThirdPartyView>();
         services.AddSingleton<IFirstRunView, FirstRunView>();
+        services.AddSingleton<IHomeView, HomeView>();
+        services.AddSingleton<IDesktopLauncherService, DesktopLauncherService>();
+        services.AddSingleton<DiagnosticBundleService>();
         services.AddSingleton<IPortablePathView, PortablePathView>();
         services.AddSingleton<IExecutableLocationView, ExecutableLocationView>();
         services.AddSingleton<INerdFontView, NerdFontView>();
@@ -176,6 +210,7 @@ internal static class Program
         services.AddSingleton<FilePreviewWorkflow>();
         services.AddSingleton<ApplicationActivityRecorder>();
         services.AddSingleton<SetupWorkflow>();
+        services.AddSingleton<FirstRunWorkflow>();
         services.AddSingleton<MemoryManagerWorkflow>();
         services.AddSingleton<MemoryCommandWorkflow>();
         services.AddSingleton<InstallationWorkflow>();

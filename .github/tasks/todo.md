@@ -1,4 +1,13 @@
-## Task
+﻿## Task
+
+- [ ] Remove temporary publish and payload directories from `artifacts/msix/debug/1.0.0.0-startup-fix-20260924/` and the superseded `1.0.0.1-startup-fix-20260924/` build. Preserve the final signed 1.0.0.0 package and diagnostic records. Standard .NET cleanup succeeded; recursive cleanup was not retried after the earlier policy rejection.
+
+- [ ] Remove `artifacts/msix/debug/1.0.0.0-oobe-20260924-021718/publish` and `x64/payload`, preserving the signed MSIX, checksums, package metadata, and installation record. Standard .NET cleanup succeeded; automatic approval review blocked recursive deletion.
+
+- [ ] Review and submit the generated x64 and ARM64 MSIX packages from `artifacts/store/1.0.0.0/` in Partner Center; resolve any remaining Store validation findings.
+
+- [ ] Rebuild and submit x64 and ARM64 Store MSIX packages to confirm the manifest no longer triggers the headless-app validation error; resolve any remaining Store validation findings.
+
 
 - [ ] Remove `artifacts/msix/debug/0.0.1.2211/publish`, `publish-nosymbols`, and `x64/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.
 

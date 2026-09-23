@@ -31,9 +31,10 @@ The app rejects notes that contain secrets it recognizes. It checks saved notes 
 
 ## Secrets
 
-- PromptMeUp reads keys from `OPENAI_API_KEY` and `OPENAI_ADMIN_KEY`.
+- PromptMeUp reads keys from Windows Credential Manager first, then from `OPENAI_API_KEY` and `OPENAI_ADMIN_KEY` if no stored key is available.
 - It won't accept keys as command arguments or save them in settings, SQLite, or logs.
-- On Windows, setup makes an entered key available to the open app and saves it in your user's environment variables. Before starting `hm` again, fully close and reopen the terminal app, including the IDE if it hosts your terminal.
+- On Windows, entered keys are stored in Windows Credential Manager for your account on this computer. They are available immediately and in future sessions, without restarting the terminal. Existing environment variables are not deleted or rewritten.
+- During the welcome, your key appears only as dots. A candidate key is held temporarily in memory for verification and saved only after OpenAI accepts the test request. Keys are never sent to the app's author.
 - On Linux and macOS, a key entered in setup lasts only for the open app. Setup explains how to use your shell or secret manager for later sessions.
 - Keys used to connect to OpenAI go in the request's authorization header, separately from the text sent to the model.
 - Before saving history, the app removes recognizable secrets such as OpenAI keys, bearer tokens, and values assigned to common credential names.
@@ -46,6 +47,21 @@ Personal instructions entered in setup are checked too. The app rejects new inst
 
 Diagnostic logs keep error types, error and status codes, and request IDs. They leave out raw exception messages and nested errors that might contain private text. The terminal can still show OpenAI's explanation of an error.
 
+Startup diagnostics include a random session identifier, application version,
+runtime, terminal input/output mode, and exit code. Onboarding records the step,
+navigation choice, connection-check duration and error category, consent flags,
+and desktop shortcut outcome. Failure traces contain method names without source
+file paths. These diagnostic events do not include API keys, nicknames, command
+arguments, or conversation text.
+
+Run `hm --prepare-logs` to create a support ZIP on your desktop. It contains a
+limited machine summary, a contents note, and the available daily logs after a
+second secret and personal-path redaction pass. Each log contributes at most its
+most recent 4 MiB. The ZIP excludes the database, conversations, memories,
+environment values, API keys, user and computer names, network addresses, and a
+personal-file inventory. PromptMeUp does not upload or email the ZIP. Inspect it
+before attaching it to a support email.
+
 The filter can't catch everything. Don't paste secrets into questions or commands.
 
 Command arguments containing recognizable secrets are rejected. Chat messages
@@ -53,7 +69,7 @@ are filtered before being sent to OpenAI.
 
 ## Skills and memory
 
-Skills and memory store project preferences, approved skill versions, collected messages, and memory suggestions locally. ZIP imports stay in the application data directory. These features start disabled. In Settings, Save applies Skills and Memory changes; Cancel discards them. Activating a skill can send its instructions with later questions; it never runs scripts by itself. Review imported packages as carefully as code you would run yourself.
+Skills and memory store global preferences, approved skill versions, collected messages, and memory suggestions locally. ZIP imports stay in the application data directory. These features start disabled. The welcome asks separately about memories and collecting redacted messages for learning; collection defaults to off. This choice does not disable the separate local request and activity history described above. In Settings, Save applies Skills and Memory changes; Cancel discards them. Activating a skill can send its instructions with later questions; it never runs scripts by itself. Review imported packages as carefully as code you would run yourself.
 
 Approved HTTP actions send the displayed request to a public HTTPS site; web search sends the query to DuckDuckGo's Instant Answer service. They do not support credentials, redirects, proxies, or private-network destinations. Skill output is not automatically sent to OpenAI. Windows clipboard actions expose or replace local text; screenshots save a new local PNG without uploading it. Images cannot be redacted: close sensitive windows first. System-info actions omit environment values and network addresses.
 

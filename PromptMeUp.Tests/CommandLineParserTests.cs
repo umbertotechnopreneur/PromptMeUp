@@ -155,6 +155,17 @@ public sealed class CommandLineParserTests
         Assert.Equal(AppCommand.Where, result.Options!.Command);
     }
 
+    /// <summary>Verifies the support-bundle switch is a standalone local command.</summary>
+    [Fact]
+    public void Parse_PrepareLogs_SelectsDiagnosticBundleCommand()
+    {
+        var result = _parser.Parse(["--prepare-logs"]);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(AppCommand.PrepareLogs, result.Options!.Command);
+        Assert.False(_parser.Parse(["--prepare-logs", "unexpected"]).Succeeded);
+    }
+
     /// <summary>Verifies that parser errors follow an explicit supported interface language.</summary>
     [Fact]
     public void Parse_ErrorAfterLanguageOverride_IsLocalized()

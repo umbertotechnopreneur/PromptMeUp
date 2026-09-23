@@ -6,11 +6,13 @@ Coding assistants must wait for an explicit request before running automated tes
 
 ## Check the build
 
+Open the shared repository menu with `pwsh -NoProfile -File .\scripts\PromptMeUp.ps1`, or run the same operations directly with `-Command`:
+
 ```powershell
-pwsh -NoProfile -File .\scripts\preflight.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command preflight
 dotnet restore .\PromptMeUp.slnx
 dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
-pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command check-xml
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
 ```
 
@@ -20,7 +22,7 @@ When the user explicitly requests the automated test suite:
 dotnet test .\PromptMeUp.slnx --configuration Release --no-build
 ```
 
-The local formatting check doesn't edit files. If it finds a problem, use `scripts/format.ps1` and review the changes. GitHub Actions runs on pushes to `main`, pull requests, and manual runs. It applies and checks formatting, checks XML comments, then builds, tests, and checks portable packages on Windows, Linux, and macOS.
+The local formatting check doesn't edit files. If it finds a problem, run `scripts/PromptMeUp.ps1 -Command format` and review the changes. GitHub Actions runs on pushes to `main`, pull requests, and manual runs. It applies and checks formatting, checks XML comments, then builds, tests, and checks portable packages on Windows, Linux, and macOS.
 
 Regression tests cover quoted/serialized JSON credentials, provider-bound command output, rejected and legacy preambles, Serilog exception privacy, HTTP body deadlines and limits, inherited process pipes, conservative command risk, long-answer visibility, Unix shell context, model-specific pricing bands, and indexed request summaries. HTTP and credential providers are synthetic; process tests run only inert PowerShell output/sleep commands and clean up their test child. The review-to-test mapping is recorded in [the September 2 review](../.github/tasks/review-2026-09-02.md).
 
@@ -116,8 +118,8 @@ Nerd Font validation should start with `--dry-run`. The real operation is opt-in
 ## Check Windows packages
 
 ```powershell
-pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
-pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command release-artifacts -PlanOnly
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command release-artifacts
 ```
 
 Confirm that both portable ZIPs contain only `hm.exe`, `prompt/*.yaml`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; the current-architecture executable reports the requested package version; `winget validate` succeeds; and every checksum in `SHA256SUMS.txt` matches its package. In Windows Sandbox or another disposable environment, confirm that a non-admin MSI install targets `%LOCALAPPDATA%\Programs\PromptMeUp`, registers only the current-user `PATH`, `hm -where` resolves that installed binary, and uninstall removes the installed files and installer-owned PATH entry. Do not install either distribution format or mutate the host `PATH` during routine validation.

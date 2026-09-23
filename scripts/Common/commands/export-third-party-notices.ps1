@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+﻿# SPDX-License-Identifier: MIT
 <#
 .SYNOPSIS
   Export resolved package attribution and full upstream notices into a release payload.
@@ -12,7 +12,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$root = Split-Path -Parent $PSScriptRoot
+$root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $assets = Get-Content (Join-Path $root 'PromptMeUp/obj/project.assets.json') -Raw | ConvertFrom-Json -AsHashtable
 $licenseRoot = Join-Path $OutputDirectory 'LICENSES'
 if (Test-Path -LiteralPath $licenseRoot) { throw 'Use a fresh payload directory for notice export.' }

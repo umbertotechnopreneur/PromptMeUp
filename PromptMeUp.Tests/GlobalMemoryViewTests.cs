@@ -102,7 +102,7 @@ public sealed class GlobalMemoryViewTests
             }
             return method.Invoke(localization, args);
         });
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(true, true));
         return new(console, text, shell, output, keys);
     }

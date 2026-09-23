@@ -112,6 +112,20 @@ internal static partial class UiTextCatalog
             German: "Gefällt Ihnen das Tool? Geben Sie ihm einen Stern auf GitHub oder senden Sie uns Ihre Vorschläge.",
             Spanish: "¿Te gusta la herramienta? Dale una estrella en GitHub o envíanos tus sugerencias.",
             Vietnamese: "Bạn thích công cụ này? Hãy tặng một sao trên GitHub hoặc gửi góp ý cho chúng tôi."));
+        entries.Add("About.Privacy", new(
+            English: "Privacy",
+            Italian: "Privacy",
+            French: "Confidentialité",
+            German: "Datenschutz",
+            Spanish: "Privacidad",
+            Vietnamese: "Quyền riêng tư"));
+        entries.Add("About.Terms", new(
+            English: "Terms",
+            Italian: "Termini",
+            French: "Conditions",
+            German: "Nutzungsbedingungen",
+            Spanish: "Términos",
+            Vietnamese: "Điều khoản"));
         entries.Add("Footer.Thanks", new(
             English: "Thank you for using hm (help me)!",
             Italian: "Grazie per aver utilizzato hm (help me)!",
@@ -252,6 +266,13 @@ internal static partial class UiTextCatalog
             German: "Zeigt Konfiguration und lokale Dienste.",
             Spanish: "Muestra la configuración y los servicios locales.",
             Vietnamese: "Hiển thị cấu hình và dịch vụ cục bộ."));
+        entries.Add("Help.PrepareLogs", new(
+            English: "Create a redacted support ZIP on the desktop. Nothing is sent automatically.",
+            Italian: "Crea sul desktop uno ZIP ripulito per l’assistenza. Non invia nulla automaticamente.",
+            French: "Crée sur le bureau un ZIP expurgé pour l’assistance. Aucun envoi automatique.",
+            German: "Erstellt ein bereinigtes Support-ZIP auf dem Desktop. Es wird nichts automatisch gesendet.",
+            Spanish: "Crea en el escritorio un ZIP depurado para soporte. No envía nada automáticamente.",
+            Vietnamese: "Tạo ZIP hỗ trợ đã lọc trên màn hình nền. Không tự động gửi dữ liệu."));
         entries.Add("Help.Test", new(
             English: "Run the YAML connection prompt with teletype output.",
             Italian: "Esegue il prompt YAML di test con effetto teletype.",
