@@ -7,7 +7,7 @@
     <AssemblyName>hm</AssemblyName>
     <ApplicationIcon>..\assets\PromptMeUp.ico</ApplicationIcon>
     <PackageId>PromptMeUp.Cli</PackageId>
-    <Version>0.0.1</Version>
+    <Version>1.0.0</Version>
     <Authors>Umberto Giacobbi</Authors>
     <Description>Ask from the terminal, understand the answer, and explicitly approve every command before it runs.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -38,8 +38,8 @@
     <Content Include="..\prompt\*.yaml" Link="prompt\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\themes\*.json" Link="themes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\skills\**\*" Link="skills\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="..\scripts\hm-path.ps1" Link="hm-path.ps1" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="..\scripts\hm-path.sh" Link="hm-path.sh" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\scripts\Common\commands\hm-path.ps1" Link="hm-path.ps1" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\scripts\Common\commands\hm-path.sh" Link="hm-path.sh" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

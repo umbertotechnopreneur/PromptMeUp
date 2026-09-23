@@ -1,4 +1,7 @@
-## Task
+﻿## Task
+
+- [ ] Prepare Store MSIX 1.0.0.0 for Windows 11 x64 and ARM64 through a manual GitHub Actions workflow; verify the workflow and collect both packages before Store upload.
+
 
 - [ ] Remove `artifacts/msix/debug/0.0.1.2211/publish`, `publish-nosymbols`, and `x64/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.
 

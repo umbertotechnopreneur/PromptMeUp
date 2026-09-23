@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+﻿# SPDX-License-Identifier: MIT
 <#
 .SYNOPSIS
   Build one self-contained portable archive with full redistribution notices.
@@ -12,8 +12,8 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
-$root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot '..\bundled-skills.ps1')
+$root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if ($IsWindows -and -not $Runtime.StartsWith('win-')) {
     throw 'Build Unix archives on a Unix host to preserve executable permissions.'
 }

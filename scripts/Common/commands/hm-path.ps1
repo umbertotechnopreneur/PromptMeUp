@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Previews, installs, removes, or inspects the portable PromptMeUp PATH entry.
 #>
@@ -13,11 +13,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repositoryRoot = Split-Path -Parent $PSScriptRoot
+$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $candidates = @(
     $ExecutablePath,
     (Join-Path $PSScriptRoot 'hm.exe'),
     (Join-Path $PSScriptRoot 'hm'),
+    (Join-Path $repositoryRoot 'scripts\hm.exe'),
+    (Join-Path $repositoryRoot 'scripts\hm'),
     (Join-Path $repositoryRoot 'PromptMeUp\bin\Release\net10.0\hm.exe'),
     (Join-Path $repositoryRoot 'PromptMeUp\bin\Release\net10.0\hm')
 ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
@@ -40,4 +42,6 @@ if ($Yes) {
 }
 
 & $executable @arguments
-exit $LASTEXITCODE
+if ($LASTEXITCODE -ne 0) {
+    throw "hm --path failed with exit code $LASTEXITCODE."
+}

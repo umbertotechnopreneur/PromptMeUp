@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
     [string]$Version,
@@ -28,9 +28,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
+. (Join-Path $PSScriptRoot '..\bundled-skills.ps1')
 
-$repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $solutionPath = Join-Path $repositoryRoot 'PromptMeUp.slnx'
 $projectPath = Join-Path $repositoryRoot 'PromptMeUp\PromptMeUp.csproj'
 $artifactsRoot = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot 'artifacts'))

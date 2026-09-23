@@ -113,10 +113,10 @@ Choose non-test checks by the changed files and run them once after the final re
 Non-test commands for code changes:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\preflight.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command preflight
 dotnet restore .\PromptMeUp.slnx
 dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
-pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command check-xml
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
 ```
 

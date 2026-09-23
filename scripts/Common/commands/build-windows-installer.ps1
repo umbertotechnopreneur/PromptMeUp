@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+﻿# SPDX-License-Identifier: MIT
 <#
 .SYNOPSIS
   Package a prepared portable Windows payload as an unsigned, per-user EXE installer.
@@ -16,11 +16,11 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
+. (Join-Path $PSScriptRoot '..\bundled-skills.ps1')
 $bundledSkillFiles = @(Get-BundledSkillFiles)
 if (-not $IsWindows) { throw 'Windows installer packaging requires Windows.' }
 
-$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $artifactsRoot = Join-Path $repositoryRoot 'artifacts'
 $publishRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($PublishDirectory, $repositoryRoot))
 $outputRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($OutputDirectory, $repositoryRoot))

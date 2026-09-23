@@ -1,4 +1,27 @@
-# Task Archive
+﻿# Task Archive
+
+## 2026-09-23 — Consolidate repository scripts
+
+- Added `scripts/PromptMeUp.ps1` as the single repository entry point, with an interactive menu when no command is supplied and direct `-Command` routing for automation.
+- Moved the previous PowerShell entry points into private command modules under `scripts/Common/commands` and kept the published PATH helpers working from their new source location.
+- Updated repository guidance, packaging documentation, project links, and GitHub workflows to use the unified launcher.
+
+Validation: all PowerShell files passed parser checks, both changed GitHub workflows passed YAML parsing, every private command is referenced by the launcher, preflight, formatting verification, XML method comments, and the warning-free Release build passed. Automated tests, CLI smoke tests, and packaging were not run because they were not requested.
+
+## 2026-09-23 — Refine the first-run attribution line
+
+- Added a blank line before the PromptMeUp GitHub link.
+- Moved the author credit onto the GitHub line and added two accessible icons with text fallbacks.
+
+Validation: preflight, repository-wide formatting verification, XML method comments, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested.
+
+## 2026-09-23 — Normalize C# formatting and exclude Debug symbols from MSIX
+
+- Normalized the 37 affected C# files to UTF-8 with BOM and CRLF, without changing source text.
+- Excluded root-level PDB files from Debug MSIX payloads while preserving them in the publish directory.
+- Updated the Windows packaging guide to explain how to reuse a Debug publish containing symbols.
+
+Validation: PowerShell syntax, preflight, repository-wide `dotnet format --verify-no-changes`, XML method comments, and warning-free Release build passed. A signed MSIX was packaged from an existing Debug publish containing `hm.pdb`; the package contained no PDB files. Release build output was cleaned. Automated tests were not run.
 
 ## 2026-09-22 — Require setup on first run
 

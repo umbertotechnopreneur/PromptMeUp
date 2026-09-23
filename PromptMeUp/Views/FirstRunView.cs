@@ -48,14 +48,15 @@ public sealed class FirstRunView(
     {
         var copy = FirstRunCopy.For(text.Language);
         var icon = TerminalTheme.IconPrefix(shell.Options, "✨", "*");
+        var repositoryIcon = TerminalTheme.IconPrefix(shell.Options, "🔗", ">");
+        var authorIcon = TerminalTheme.IconPrefix(shell.Options, "❤️", "<3");
 
         console.WriteLine();
         TerminalTheme.WriteRule(console, icon + copy.Title, TerminalTheme.Accent);
         console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(copy.Message)}[/]");
         console.MarkupLine($"[{TerminalTheme.Muted}]Privacy:[/] [underline {TerminalTheme.Info} link={PrivacyUrl}]{PrivacyUrl}[/]  ·  [{TerminalTheme.Muted}]Terms:[/] [underline {TerminalTheme.Info} link={TermsUrl}]{TermsUrl}[/]");
-        console.MarkupLine($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]");
         console.WriteLine();
-        console.MarkupLine($"[{TerminalTheme.Muted}]Made with love by [underline {TerminalTheme.Info} link={AuthorUrl}]umbertogiacobbi.biz[/][/]");
+        console.MarkupLine($"{Markup.Escape(repositoryIcon)}[underline {TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]  ·  {Markup.Escape(authorIcon)}[{TerminalTheme.Muted}]Made with love by [underline {TerminalTheme.Info} link={AuthorUrl}]umbertogiacobbi.biz[/][/]");
         console.WriteLine();
     }
 
