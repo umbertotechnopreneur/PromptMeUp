@@ -189,6 +189,8 @@ internal static class Program
         services.AddSingleton<IFirstRunView, FirstRunView>();
         services.AddSingleton<IHomeView, HomeView>();
         services.AddSingleton<IDesktopLauncherService, DesktopLauncherService>();
+        services.AddSingleton<CommandGuideService>();
+        services.AddSingleton<CommandGuideWorkflow>();
         services.AddSingleton<DiagnosticBundleService>();
         services.AddSingleton<IPortablePathView, PortablePathView>();
         services.AddSingleton<IExecutableLocationView, ExecutableLocationView>();

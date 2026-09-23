@@ -7,7 +7,7 @@ using PromptMeUp.Views;
 namespace PromptMeUp.Application;
 
 /// <summary>Opens the command reference and coordinates local memory navigation without AI services.</summary>
-public sealed class HelpWorkflow(IHelpView view, IConsoleShellView shell,
+public sealed class HelpWorkflow(IHelpView view, IConsoleShellView shell, CommandGuideWorkflow guide,
     MemoryManagerWorkflow? memories = null, IDatabaseService? database = null)
 {
     /// <summary>Applies invocation preferences and displays adaptive fullscreen or scrolling help.</summary>
@@ -20,7 +20,7 @@ public sealed class HelpWorkflow(IHelpView view, IConsoleShellView shell,
         }
         shell.Configure(new ConsoleRenderOptions(options.NoAnimation, options.NoEmoji, SuppressFooter: true));
         cancellationToken.ThrowIfCancellationRequested();
-        view.Render(() => OpenMemoriesAsync(cancellationToken).GetAwaiter().GetResult());
+        view.Render(() => OpenMemoriesAsync(cancellationToken).GetAwaiter().GetResult(), guide.Open, guide.DocumentPath);
         return 0;
     }
 

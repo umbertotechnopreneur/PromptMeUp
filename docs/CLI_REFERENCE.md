@@ -194,8 +194,12 @@ become memories. This opt-in controls learning collection, not the separate loca
 activity and usage records. Use `hm --learning` to manage learning.
 
 Skills remain disabled until you enable them with `hm --skills`. The final welcome
-screen suggests a first question, chat, and diagnosis command. It also links the
-[two-page command guide](../output/pdf/promptmeup-quick-reference.pdf) and shows
+screen suggests a first question, chat, and diagnosis command. It offers **Open the
+PDF guide** to open the installed [two-page command guide](../output/pdf/promptmeup-quick-reference.pdf)
+in your default PDF reader. **Finish** is selected by default. The English PDF is
+included with the app at `docs/promptmeup-quick-reference.pdf` beside the executable,
+works offline, and can be opened again from **Command guide (PDF)** in `hm --help`
+without setup or an API key. The final screen also shows
 `hm --status`, `hm --prepare-logs`, `hm --help`, and `hm --setup` as recovery and
 configuration paths. It does not open general settings or send an initial chat
 request automatically. Once the command alias or PATH is configured, you can use

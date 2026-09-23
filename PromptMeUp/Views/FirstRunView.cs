@@ -17,7 +17,8 @@ public interface IFirstRunView
     Task<FirstRunInput<string>> ReadNameAsync(string current, CancellationToken ct);
     Task<FirstRunInput<FirstRunMemoryChoice>> ReadMemoryAsync(SkillsAndMemorySettings current, CancellationToken ct);
     Task<bool> ChooseDesktopAsync(CancellationToken ct);
-    void RenderReady(string name);
+    void RenderReady(string name, string guidePath);
+    Task<bool> ChooseGuideAsync(CancellationToken ct);
 }
 
 /// <summary>Hosts first-run steps in a disposable viewport when the terminal can redraw them safely.</summary>
@@ -196,7 +197,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     }
 
     /// <summary>Closes onboarding without opening settings or starting an unrequested conversation.</summary>
-    public void RenderReady(string name)
+    public void RenderReady(string name, string guidePath)
     {
         console.WriteLine();
         TerminalTheme.WriteRule(console, Icon("🎉", "*") + text.Text("Oobe.Ready"), TerminalTheme.Success);
@@ -204,13 +205,17 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
             ? text.Text("Oobe.Thanks") : text.Text("Oobe.ThanksName", name))}[/]");
         Write("StartUsing");
         RenderStarterCommands();
-        Link(Icon("📄", ">") + text.Text("Oobe.QuickReference"),
-            "https://github.com/umbertotechnopreneur/PromptMeUp/blob/main/output/pdf/promptmeup-quick-reference.pdf");
+        Link(Icon("📄", ">") + text.Text("Guide.Title"), new Uri(guidePath).AbsoluteUri);
+        console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Guide.Description"))}[/]");
         Write("Recovery", TerminalTheme.Muted);
         Write("Skills", TerminalTheme.Muted);
         Write("ChangeLater", TerminalTheme.Muted);
         console.WriteLine();
     }
+
+    /// <summary>Offers the installed PDF after setup, with finishing selected by default.</summary>
+    public async Task<bool> ChooseGuideAsync(CancellationToken ct) =>
+        await ChooseAsync([text.Text("Guide.Finish"), text.Text("Guide.Open")], ct).ConfigureAwait(false) == 1;
 
     /// <summary>Shows three practical starting points in an open two-column command grid.</summary>
     private void RenderStarterCommands()

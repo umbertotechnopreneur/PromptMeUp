@@ -11,7 +11,8 @@ namespace PromptMeUp.Application;
 /// <summary>Coordinates explicit onboarding consent, credential verification, and resumable preferences.</summary>
 public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecretService secrets,
     IOpenAiService openAi, SettingsFeatureOverviewService features, IFirstRunView view,
-    IConsoleShellView shell, ILocalizationService text, IDesktopLauncherService desktop, ILogger<FirstRunWorkflow> logger)
+    IConsoleShellView shell, ILocalizationService text, IDesktopLauncherService desktop, ILogger<FirstRunWorkflow> logger,
+    CommandGuideWorkflow guide)
 {
     /// <summary>Completes four guided steps without opening the general settings screen.</summary>
     public async Task<int> RunAsync(AppSettings current, CancellationToken ct)
@@ -44,8 +45,12 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
             }
         }
 
-        view.RenderReady(result.Name);
+        view.RenderReady(result.Name, guide.DocumentPath);
         logger.LogInformation("Onboarding completed.");
+        if (await view.ChooseGuideAsync(ct).ConfigureAwait(false))
+        {
+            guide.Open();
+        }
         return 0;
     }
 

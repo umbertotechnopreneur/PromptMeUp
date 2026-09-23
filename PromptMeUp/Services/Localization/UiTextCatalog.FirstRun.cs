@@ -443,13 +443,6 @@ internal static partial class UiTextCatalog
             German: "Füge einen Fehler oder ein Protokoll ein und analysiere es Schritt für Schritt.",
             Spanish: "Pega un error o registro y analízalo paso a paso.",
             Vietnamese: "Dán lỗi hoặc nhật ký và phân tích từng bước."));
-        entries.Add("Oobe.QuickReference", new(
-            English: "Open the two-page command guide (PDF)",
-            Italian: "Apri la guida ai comandi in due pagine (PDF)",
-            French: "Ouvrir le guide des commandes en deux pages (PDF)",
-            German: "Zweiseitigen Befehlsleitfaden öffnen (PDF)",
-            Spanish: "Abrir la guía de comandos de dos páginas (PDF)",
-            Vietnamese: "Mở hướng dẫn lệnh hai trang (PDF)"));
         entries.Add("Oobe.Recovery", new(
             English: "If something goes wrong, use hm --status to check your setup, hm --prepare-logs to create a support package, or hm --help to find another way forward.",
             Italian: "Se qualcosa non va, usa hm --status per controllare la configurazione, hm --prepare-logs per creare un pacchetto di supporto oppure hm --help per trovare un’altra strada.",
