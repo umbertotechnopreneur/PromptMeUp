@@ -38,7 +38,7 @@ public sealed class TerminalViewTests
         var (console, output) = CreateConsole();
         var text = new LocalizationService();
         text.SetLanguage("it");
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false));
         var view = new ChatView(console, text, new PoorMarkdownRenderer(console), shell);
 
@@ -104,7 +104,7 @@ public sealed class TerminalViewTests
         var (console, output) = CreateConsole();
         var text = new LocalizationService();
         text.SetLanguage("it");
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false));
         var status = new AppStatus(
             AppSettings.Default with { Language = "it" },
@@ -133,7 +133,7 @@ public sealed class TerminalViewTests
         var (console, output) = CreateConsole();
         var text = new LocalizationService();
         text.SetLanguage("it");
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false));
         var view = new NerdFontView(console, text, shell);
 
@@ -157,7 +157,7 @@ public sealed class TerminalViewTests
         var (console, output) = CreateConsole();
         var text = new LocalizationService();
         text.SetLanguage("it");
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false));
         var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell);
 

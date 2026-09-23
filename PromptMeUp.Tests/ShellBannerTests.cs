@@ -130,7 +130,7 @@ public sealed class ShellBannerTests
         console.Profile.Width = width;
         var text = new LocalizationService();
         text.SetLanguage("it");
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: noEmoji));
         return (console, output, text, shell);
     }

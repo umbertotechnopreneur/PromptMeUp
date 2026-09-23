@@ -145,6 +145,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
         try
         {
+            if (options.Command == AppCommand.Reset)
+            {
+                await _settings.SaveAsync(settings with { SetupCompleted = false, UpdatedAt = DateTimeOffset.UtcNow }, cancellationToken).ConfigureAwait(false);
+                return 0;
+            }
+
             if (settings.IsFirstRun)
             {
                 var firstRunView = _firstRunView

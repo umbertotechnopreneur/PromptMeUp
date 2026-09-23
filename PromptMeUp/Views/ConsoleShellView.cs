@@ -49,13 +49,15 @@ public sealed class ConsoleShellView : IConsoleShellView
     private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
     private readonly IAnsiConsole _console;
     private readonly ILocalizationService _text;
+    private readonly IProjectBannerSchedule _projectBannerSchedule;
     private bool _projectBannerRendered;
 
     /// <summary>Creates the shared premium console chrome used by every top-level command.</summary>
-    public ConsoleShellView(IAnsiConsole console, ILocalizationService text)
+    public ConsoleShellView(IAnsiConsole console, ILocalizationService text, IProjectBannerSchedule projectBannerSchedule)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
+        _projectBannerSchedule = projectBannerSchedule ?? throw new ArgumentNullException(nameof(projectBannerSchedule));
     }
 
     public ConsoleRenderOptions Options { get; private set; } = new(false, false);
@@ -82,7 +84,7 @@ public sealed class ConsoleShellView : IConsoleShellView
         _console.WriteLine();
     }
 
-    /// <summary>Aligns the working directory with the tagline and leaves one blank line below it.</summary>
+    /// <summary>Aligns the working directory with the tagline.</summary>
     private void RenderCurrentDirectory(string currentDirectory)
     {
         var grid = TerminalTheme.PairGrid(
@@ -92,7 +94,6 @@ public sealed class ConsoleShellView : IConsoleShellView
             preferredPairs: 1,
             width: Math.Max(1, _console.Profile.Width - 2));
         _console.Write(new Padder(grid, new Padding(2, 0, 0, 0)));
-        _console.WriteLine();
     }
 
     /// <summary>Draws one responsive turn snapshot after a request or on explicit status demand.</summary>
@@ -180,10 +181,10 @@ public sealed class ConsoleShellView : IConsoleShellView
         }
     }
 
-    /// <summary>Renders the localized thanks, project links, and copyright once per invocation.</summary>
+    /// <summary>Renders the localized thanks, project links, and copyright at most once per local day.</summary>
     public void RenderProjectBanner()
     {
-        if (_projectBannerRendered)
+        if (_projectBannerRendered || !_projectBannerSchedule.TryMarkRenderedToday())
         {
             return;
         }

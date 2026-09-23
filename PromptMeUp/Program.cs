@@ -102,6 +102,10 @@ internal static class Program
             Environment.GetEnvironmentVariable, provider.GetRequiredService<ILocalizationService>()));
         services.AddSingleton<IDatabaseService, SqliteDatabaseService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IProjectBannerSchedule>(provider => new ProjectBannerSchedule(
+            Path.Combine(paths.DataDirectory, "project-banner-date.txt"),
+            TimeProvider.System,
+            provider.GetRequiredService<ILogger<ProjectBannerSchedule>>()));
         services.AddSingleton<IThemeCatalogService>(_ => new ThemeCatalogService(Path.Combine(AppContext.BaseDirectory, "themes")));
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
         services.AddSingleton<ISensitiveDataRedactor, SensitiveDataRedactor>();

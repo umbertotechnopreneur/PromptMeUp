@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,7 +11,7 @@ public interface IRuntimeContextService
     RuntimeContext GetCurrent(ScriptLanguage preferredScriptLanguage);
 }
 
-/// <summary>Builds portable runtime context while withholding machine identities and exposing a sanitized working path only to operational prompts.</summary>
+/// <summary>Builds portable runtime context and exposes the machine name and sanitized working path only to operational prompts.</summary>
 public sealed class RuntimeContextService : IRuntimeContextService
 {
     private const int MaximumWorkingDirectoryLength = 240;
@@ -26,7 +26,7 @@ public sealed class RuntimeContextService : IRuntimeContextService
         _redactor = redactor ?? throw new ArgumentNullException(nameof(redactor));
     }
 
-    /// <summary>Returns the OS, effective shell, selected script interpreter, and an account-safe local working directory.</summary>
+    /// <summary>Returns the OS, effective shell, selected script interpreter, machine name, and an account-safe local working directory.</summary>
     public RuntimeContext GetCurrent(ScriptLanguage preferredScriptLanguage)
     {
         if (!Enum.IsDefined(preferredScriptLanguage))
@@ -41,7 +41,10 @@ public sealed class RuntimeContextService : IRuntimeContextService
                 DetectPlatform(),
                 Environment.OSVersion.Version,
                 Environment.CurrentDirectory,
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)),
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            {
+                MachineName = Environment.MachineName
+            },
             definition.DisplayName,
             availability,
             _redactor);
@@ -63,10 +66,13 @@ public sealed class RuntimeContextService : IRuntimeContextService
             ApprovedCommandShell,
             preferredScriptInterpreter.Trim(),
             isPreferredScriptInterpreterAvailable,
-            SanitizeWorkingDirectory(snapshot.CurrentDirectory, snapshot.UserProfile, redactor));
+            SanitizeWorkingDirectory(snapshot.CurrentDirectory, snapshot.UserProfile, redactor))
+        {
+            MachineName = SanitizeMachineName(snapshot.MachineName)
+        };
     }
 
-    /// <summary>Identifies the supported platform family without reading a user or machine identity.</summary>
+    /// <summary>Identifies the supported platform family without reading account identity.</summary>
     private static RuntimePlatform DetectPlatform() => OperatingSystem.IsWindows()
         ? RuntimePlatform.Windows
         : OperatingSystem.IsMacOS()
@@ -126,6 +132,18 @@ public sealed class RuntimeContextService : IRuntimeContextService
         return redacted.Length <= MaximumWorkingDirectoryLength
             ? redacted
             : string.Concat(redacted.AsSpan(0, MaximumWorkingDirectoryLength - 1), "…");
+    }
+
+    /// <summary>Removes control characters from an explicitly shared machine name before provider-bound use.</summary>
+    private static string SanitizeMachineName(string? machineName)
+    {
+        if (string.IsNullOrWhiteSpace(machineName))
+        {
+            return "unavailable";
+        }
+
+        var sanitized = new string(machineName.Trim().Where(character => !char.IsControl(character)).ToArray());
+        return string.IsNullOrWhiteSpace(sanitized) ? "unavailable" : sanitized;
     }
 
     /// <summary>Normalizes a local path for safe display without treating it as an instruction or preserving control characters.</summary>
@@ -197,12 +215,15 @@ public sealed class RuntimeContextService : IRuntimeContextService
     }
 }
 
-/// <summary>Captures only trusted platform and local-path facts before prompt-safe formatting.</summary>
+/// <summary>Captures trusted platform, machine, and local-path facts before prompt-safe formatting.</summary>
 internal sealed record RuntimeContextSnapshot(
     RuntimePlatform Platform,
     Version? OperatingSystemVersion,
     string? CurrentDirectory,
-    string? UserProfile);
+    string? UserProfile)
+{
+    public string? MachineName { get; init; }
+}
 
 /// <summary>Represents the supported console platform families plus an explicit fallback.</summary>
 internal enum RuntimePlatform

@@ -112,6 +112,20 @@ internal static partial class UiTextCatalog
             German: "Gefällt Ihnen das Tool? Geben Sie ihm einen Stern auf GitHub oder senden Sie uns Ihre Vorschläge.",
             Spanish: "¿Te gusta la herramienta? Dale una estrella en GitHub o envíanos tus sugerencias.",
             Vietnamese: "Bạn thích công cụ này? Hãy tặng một sao trên GitHub hoặc gửi góp ý cho chúng tôi."));
+        entries.Add("About.Privacy", new(
+            English: "Privacy",
+            Italian: "Privacy",
+            French: "Confidentialité",
+            German: "Datenschutz",
+            Spanish: "Privacidad",
+            Vietnamese: "Quyền riêng tư"));
+        entries.Add("About.Terms", new(
+            English: "Terms",
+            Italian: "Termini",
+            French: "Conditions",
+            German: "Nutzungsbedingungen",
+            Spanish: "Términos",
+            Vietnamese: "Điều khoản"));
         entries.Add("Footer.Thanks", new(
             English: "Thank you for using hm (help me)!",
             Italian: "Grazie per aver utilizzato hm (help me)!",

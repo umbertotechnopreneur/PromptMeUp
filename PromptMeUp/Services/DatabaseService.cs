@@ -740,6 +740,7 @@ public sealed class SqliteDatabaseService : IDatabaseService
             {
                 await EnsureScriptLanguageColumnAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             }
+            await EnsureGlobalSkillsSettingsScopeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             await EnsureDefaultSettingsAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             if (currentVersion != SqliteSchema.Version)
             {
@@ -861,6 +862,38 @@ public sealed class SqliteDatabaseService : IDatabaseService
             command.Parameters.AddWithValue("$scriptLanguage", DetectDefaultScriptLanguage());
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>Migrates legacy project-scoped Skills settings into the single global scope used by the current application.</summary>
+    private static async Task EnsureGlobalSkillsSettingsScopeAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'skills_and_memory_settings';";
+        var schema = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+        if (schema?.Contains("scope_key = 'global'", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return;
+        }
+
+        command.CommandText = "ALTER TABLE skills_and_memory_settings RENAME TO legacy_skills_and_memory_settings;";
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        command.CommandText = """
+            CREATE TABLE skills_and_memory_settings (
+                scope_key TEXT NOT NULL CHECK(scope_key = 'global'),
+                name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 120),
+                value TEXT NOT NULL CHECK(length(value) <= 4096),
+                PRIMARY KEY(scope_key, name)
+            );
+            INSERT INTO skills_and_memory_settings(scope_key, name, value)
+            SELECT 'global', name, value FROM legacy_skills_and_memory_settings
+            WHERE rowid IN (SELECT MAX(rowid) FROM legacy_skills_and_memory_settings GROUP BY name);
+            DROP TABLE legacy_skills_and_memory_settings;
+            """;
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Creates all tables and indexes for a previously unversioned database.</summary>

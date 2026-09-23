@@ -20,6 +20,11 @@ public sealed class FirstRunView(
     ILocalizationService text,
     IConsoleShellView shell) : IFirstRunView
 {
+    private const string PrivacyUrl = "https://umbertogiacobbi.biz/privacy/";
+    private const string TermsUrl = "https://umbertogiacobbi.biz/terms/";
+    private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
+    private const string AuthorUrl = "https://umbertogiacobbi.biz";
+
     /// <summary>Asks whether setup should open now and treats Escape or cancel as a return to the shell.</summary>
     public bool ConfirmSetup()
     {
@@ -47,6 +52,10 @@ public sealed class FirstRunView(
         console.WriteLine();
         TerminalTheme.WriteRule(console, icon + copy.Title, TerminalTheme.Accent);
         console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(copy.Message)}[/]");
+        console.MarkupLine($"[{TerminalTheme.Muted}]Privacy:[/] [underline {TerminalTheme.Info} link={PrivacyUrl}]{PrivacyUrl}[/]  ·  [{TerminalTheme.Muted}]Terms:[/] [underline {TerminalTheme.Info} link={TermsUrl}]{TermsUrl}[/]");
+        console.MarkupLine($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]");
+        console.WriteLine();
+        console.MarkupLine($"[{TerminalTheme.Muted}]Made with love by [underline {TerminalTheme.Info} link={AuthorUrl}]umbertogiacobbi.biz[/][/]");
         console.WriteLine();
     }
 

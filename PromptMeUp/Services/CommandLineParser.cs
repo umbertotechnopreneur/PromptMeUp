@@ -153,6 +153,12 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(setupError);
                     }
                     break;
+                case "--reset":
+                    if (!TrySelect(AppCommand.Reset, ref command, ref commandWasSelected, out var resetError))
+                    {
+                        return FailureMessage(resetError);
+                    }
+                    break;
                 case "--ai-settings" or "--ai-setup":
                     if (!TrySelect(AppCommand.AiSettings, ref command, ref commandWasSelected, out var aiSettingsError))
                     {
