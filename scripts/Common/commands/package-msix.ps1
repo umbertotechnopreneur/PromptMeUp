@@ -74,6 +74,7 @@ function Get-PayloadFiles {
             if ($relative -match '^[^/]+\.pdb$') { continue }
             $allowed = $relative -match '^(?:[^/]+\.dll|(?:hm|createdump)\.exe|hm\.(?:deps|runtimeconfig)\.json|PromptMeUp\.ico|LICENSE|THIRD_PARTY_NOTICES\.md|THIRD_PARTY_INVENTORY\.json|BUILD_INFO\.txt|hm-path\.(?:ps1|sh))$' `
                 -or $relative -match '^(?:prompt/[^/]+\.yaml|themes/[^/]+\.json|LICENSES/.+|[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*/[^/]+\.resources\.dll)$' `
+                -or $relative -ceq 'docs/promptmeup-quick-reference.pdf' `
                 -or $bundledSkillFiles -ccontains $relative
             if (-not $allowed) { throw "Unexpected publish content '$relative'. Use a clean publish folder with exported notices." }
             if ($item.Name -match '(?i)(?:^\.env(?:\.|$)|\.(?:db|sqlite|log|pfx|p12|pem|key)$)') {
@@ -168,7 +169,8 @@ if (-not (Test-Path -LiteralPath $publishRoot -PathType Container)) { throw 'Pub
 Assert-NoReparseAncestor $publishRoot
 $files = @(Get-PayloadFiles $publishRoot)
 foreach ($name in @('hm.exe', 'hm.dll', 'hm.deps.json', 'hm.runtimeconfig.json', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll',
-        'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md') + $bundledSkillFiles) {
+        'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md',
+        'docs/promptmeup-quick-reference.pdf') + $bundledSkillFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishRoot $name) -PathType Leaf)) { throw "Prepared publish folder is missing '$name'." }
 }
 Assert-PeArchitecture (Join-Path $publishRoot 'hm.exe')

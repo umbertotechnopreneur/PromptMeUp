@@ -415,6 +415,41 @@ internal static partial class UiTextCatalog
             German: "Nutze hm nach Einrichtung des Befehlsalias oder PATH aus jedem Terminalordner. Hilfe: hm --help.",
             Spanish: "Usa hm desde cualquier carpeta del terminal cuando el alias o PATH esté configurado. Ayuda: hm --help.",
             Vietnamese: "Dùng hm từ mọi thư mục trong terminal sau khi cấu hình bí danh lệnh hoặc PATH. Trợ giúp: hm --help."));
+        entries.Add("Oobe.TryFirst", new(
+            English: "Try your first useful task",
+            Italian: "Prova subito qualcosa di utile",
+            French: "Essayez votre première tâche utile",
+            German: "Probiere deine erste nützliche Aufgabe",
+            Spanish: "Prueba tu primera tarea útil",
+            Vietnamese: "Thử tác vụ hữu ích đầu tiên"));
+        entries.Add("Oobe.TryAsk", new(
+            English: "Ask for a command or a clear explanation.",
+            Italian: "Chiedi un comando o una spiegazione chiara.",
+            French: "Demandez une commande ou une explication claire.",
+            German: "Frage nach einem Befehl oder einer klaren Erklärung.",
+            Spanish: "Pide un comando o una explicación clara.",
+            Vietnamese: "Yêu cầu một lệnh hoặc lời giải thích rõ ràng."));
+        entries.Add("Oobe.TryChat", new(
+            English: "Open a conversation and ask follow-up questions.",
+            Italian: "Apri una conversazione e fai domande successive.",
+            French: "Ouvrez une conversation et posez des questions de suivi.",
+            German: "Starte ein Gespräch und stelle Folgefragen.",
+            Spanish: "Abre una conversación y haz preguntas de seguimiento.",
+            Vietnamese: "Mở cuộc trò chuyện và đặt câu hỏi tiếp theo."));
+        entries.Add("Oobe.TryDiagnose", new(
+            English: "Paste an error or log and work through it.",
+            Italian: "Incolla un errore o un log e analizzalo passo dopo passo.",
+            French: "Collez une erreur ou un journal et analysez-le pas à pas.",
+            German: "Füge einen Fehler oder ein Protokoll ein und analysiere es Schritt für Schritt.",
+            Spanish: "Pega un error o registro y analízalo paso a paso.",
+            Vietnamese: "Dán lỗi hoặc nhật ký và phân tích từng bước."));
+        entries.Add("Oobe.Recovery", new(
+            English: "If something goes wrong, use hm --status to check your setup, hm --prepare-logs to create a support package, or hm --help to find another way forward.",
+            Italian: "Se qualcosa non va, usa hm --status per controllare la configurazione, hm --prepare-logs per creare un pacchetto di supporto oppure hm --help per trovare un’altra strada.",
+            French: "En cas de problème, utilisez hm --status pour vérifier la configuration, hm --prepare-logs pour créer un dossier d’assistance ou hm --help pour trouver une autre solution.",
+            German: "Wenn etwas nicht funktioniert, prüfe die Einrichtung mit hm --status, erstelle mit hm --prepare-logs ein Supportpaket oder finde mit hm --help einen anderen Weg.",
+            Spanish: "Si algo falla, usa hm --status para revisar la configuración, hm --prepare-logs para crear un paquete de soporte o hm --help para buscar otra opción.",
+            Vietnamese: "Nếu có sự cố, dùng hm --status để kiểm tra thiết lập, hm --prepare-logs để tạo gói hỗ trợ hoặc hm --help để tìm hướng khác."));
         entries.Add("Oobe.Skills", new(
             English: "Skills are reusable instructions for specific tasks. They are available but disabled by default. Explore them with hm --skills.",
             Italian: "Le skills sono istruzioni riutilizzabili per attività specifiche. Sono disponibili ma disattivate di default. Scoprile con hm --skills.",

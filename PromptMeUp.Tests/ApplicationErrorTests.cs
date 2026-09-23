@@ -79,7 +79,8 @@ public sealed class ApplicationErrorTests
             helpView: null!,
             thirdPartyView: null!,
             paths: null!,
-            logger: NullLogger<PromptMeUpApplication>.Instance);
+            logger: NullLogger<PromptMeUpApplication>.Instance,
+            help: null!);
 
         var exitCode = await app.RunAsync(["--costs"], default);
 

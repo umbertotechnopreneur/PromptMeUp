@@ -51,6 +51,7 @@ public sealed class FirstRunWorkflowTests
                 new(memories, capture, true))),
             "ChooseDesktopAsync" => Task.FromResult(addDesktop),
             "RenderReady" => MarkReady(args, () => ready = true),
+            "ChooseGuideAsync" => Task.FromResult(false),
             _ => throw new InvalidOperationException("Unexpected first-run step: " + method.Name)
         });
         var workflow = CreateWorkflow(fixture, text, store, secrets, openAi, view, desktop, diagnostics);
@@ -157,7 +158,8 @@ public sealed class FirstRunWorkflowTests
             new SettingsFeatureOverviewService(store, catalog, localization: text), view, shell, text,
             desktop ?? TestProxy.Create<IDesktopLauncherService>((method, _) => method.Name == "get_IsAvailable"
                 ? false : throw new InvalidOperationException("Desktop writes are forbidden in this test.")),
-            logger ?? NullLogger<FirstRunWorkflow>.Instance);
+            logger ?? NullLogger<FirstRunWorkflow>.Instance,
+            new CommandGuideWorkflow(new CommandGuideService(), shell, text, NullLogger<CommandGuideWorkflow>.Instance));
     }
 
     /// <summary>Tracks validation and persistence order without accessing a real secret store.</summary>

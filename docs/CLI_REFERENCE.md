@@ -181,6 +181,12 @@ does not mark setup complete. The next run offers any already saved key for
 verification. Press Ctrl+C to cancel, including while a connection check is running.
 The check times out after 30 seconds.
 
+In an interactive terminal that supports a disposable alternate buffer, each
+completed step collapses to one compact header while the active step keeps its
+instructions and choices. The step header uses a horizontal color gradient to make
+the current position clear. Terminals without that capability keep the same guided
+choices in scrolling output without clearing the main terminal history.
+
 “Dreaming” means reviewing collected chat excerpts to propose useful memories.
 Excerpts are stored locally with recognizable secrets obscured; relevant excerpts
 are sent to OpenAI during analysis. You review the resulting proposals before they
@@ -188,9 +194,16 @@ become memories. This opt-in controls learning collection, not the separate loca
 activity and usage records. Use `hm --learning` to manage learning.
 
 Skills remain disabled until you enable them with `hm --skills`. The final welcome
-screen shows `hm --help` and `hm --setup`; it does not open general settings or send
-an initial chat request automatically. Once the command alias or PATH is configured,
-you can use `hm` from any terminal directory.
+screen suggests a first question, chat, and diagnosis command. It offers **Open the
+PDF guide** to open the installed [two-page command guide](../output/pdf/promptmeup-quick-reference.pdf)
+in your default PDF reader. **Finish** is selected by default. The English PDF is
+included with the app at `docs/promptmeup-quick-reference.pdf` beside the executable,
+works offline, and can be opened again from **Command guide (PDF)** in `hm --help`
+without setup or an API key. The final screen also shows
+`hm --status`, `hm --prepare-logs`, `hm --help`, and `hm --setup` as recovery and
+configuration paths. It does not open general settings or send an initial chat
+request automatically. Once the command alias or PATH is configured, you can use
+`hm` from any terminal directory.
 
 With the Windows MSIX installed and its `hm` execution alias enabled, the final
 step also offers an unchecked desktop shortcut option. Selecting it creates a

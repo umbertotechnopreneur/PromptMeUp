@@ -17,13 +17,51 @@ public interface IFirstRunView
     Task<FirstRunInput<string>> ReadNameAsync(string current, CancellationToken ct);
     Task<FirstRunInput<FirstRunMemoryChoice>> ReadMemoryAsync(SkillsAndMemorySettings current, CancellationToken ct);
     Task<bool> ChooseDesktopAsync(CancellationToken ct);
-    void RenderReady(string name);
+    void RenderReady(string name, string guidePath);
+    Task<bool> ChooseGuideAsync(CancellationToken ct);
+}
+
+/// <summary>Hosts first-run steps in a disposable viewport when the terminal can redraw them safely.</summary>
+internal interface IFirstRunViewport
+{
+    Task<T> RunStepsAsync<T>(Func<Task<T>> interaction);
 }
 
 /// <summary>Renders an open, scrolling welcome with accessible keyboard actions.</summary>
 public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text,
-    ISensitiveDataRedactor redactor, IConsoleShellView shell) : IFirstRunView
+    ISensitiveDataRedactor redactor, IConsoleShellView shell) : IFirstRunView, IFirstRunViewport
 {
+    private bool _collapsibleSteps;
+    private int _lastStep;
+
+    /// <summary>Uses an alternate buffer so completed prompts can collapse without erasing terminal history.</summary>
+    Task<T> IFirstRunViewport.RunStepsAsync<T>(Func<Task<T>> interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+        if (!FullscreenViewport.CanUse(console))
+        {
+            return interaction();
+        }
+
+        T result = default!;
+        FullscreenViewport.Run(console, () =>
+        {
+            _collapsibleSteps = true;
+            _lastStep = 0;
+            console.Cursor.Show();
+            try
+            {
+                result = interaction().GetAwaiter().GetResult();
+            }
+            finally
+            {
+                _collapsibleSteps = false;
+                _lastStep = 0;
+            }
+        });
+        return Task.FromResult(result);
+    }
+
     /// <summary>Introduces the product before asking for the first preference.</summary>
     public void RenderWelcome()
     {
@@ -159,33 +197,94 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     }
 
     /// <summary>Closes onboarding without opening settings or starting an unrequested conversation.</summary>
-    public void RenderReady(string name)
+    public void RenderReady(string name, string guidePath)
     {
         console.WriteLine();
         TerminalTheme.WriteRule(console, Icon("🎉", "*") + text.Text("Oobe.Ready"), TerminalTheme.Success);
         console.MarkupLine($"[bold {TerminalTheme.Primary}]{Markup.Escape(string.IsNullOrEmpty(name)
             ? text.Text("Oobe.Thanks") : text.Text("Oobe.ThanksName", name))}[/]");
         Write("StartUsing");
+        RenderStarterCommands();
+        Link(Icon("📄", ">") + text.Text("Guide.Title"), new Uri(guidePath).AbsoluteUri);
+        console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Guide.Description"))}[/]");
+        Write("Recovery", TerminalTheme.Muted);
         Write("Skills", TerminalTheme.Muted);
         Write("ChangeLater", TerminalTheme.Muted);
         console.WriteLine();
     }
 
-    /// <summary>Renders a numbered section without clearing terminal history.</summary>
-    private void Step(int number, string title, string hint)
+    /// <summary>Offers the installed PDF after setup, with finishing selected by default.</summary>
+    public async Task<bool> ChooseGuideAsync(CancellationToken ct) =>
+        await ChooseAsync([text.Text("Guide.Finish"), text.Text("Guide.Open")], ct).ConfigureAwait(false) == 1;
+
+    /// <summary>Shows three practical starting points in an open two-column command grid.</summary>
+    private void RenderStarterCommands()
     {
         console.WriteLine();
+        console.MarkupLine($"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Oobe.TryFirst"))}[/]");
+        var grid = new Grid()
+            .AddColumn(new GridColumn().RightAligned())
+            .AddColumn(new GridColumn());
+        foreach (var example in new[]
+        {
+            (Command: "hm \"How do I list the largest files here?\"", Description: "TryAsk"),
+            (Command: "hm --chat", Description: "TryChat"),
+            (Command: "hm --diagnose", Description: "TryDiagnose")
+        })
+        {
+            grid.AddRow(
+                new Markup($"[bold {TerminalTheme.Info}]{Markup.Escape(example.Command)}[/]"),
+                new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Oobe." + example.Description))}[/]"));
+        }
+        console.Write(grid);
+        console.WriteLine();
+    }
+
+    /// <summary>Renders one numbered section and collapses earlier prompts only inside a disposable viewport.</summary>
+    private void Step(int number, string title, string hint)
+    {
+        if (_collapsibleSteps && _lastStep > 0)
+        {
+            console.WriteAnsi(writer =>
+            {
+                writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
+                writer.EraseInDisplay(2);
+                writer.CursorHome();
+            });
+            RenderCompletedSteps(number);
+        }
+        else
+        {
+            console.WriteLine();
+        }
+
         var icon = number switch { 1 => "🌍", 2 => "🔑", 3 => "👋", _ => "🧠" };
-        TerminalTheme.WriteRule(console, Icon(icon, ">") + text.Text("Oobe.Step", number) + " · " + text.Text("Oobe." + title), TerminalTheme.Accent);
+        TerminalTheme.WriteGradientRule(console,
+            Icon(icon, ">") + text.Text("Oobe.Step", number) + " · " + text.Text("Oobe." + title), TerminalTheme.Accent);
         Write(hint, TerminalTheme.Muted);
         console.WriteLine();
+        _lastStep = number;
+    }
+
+    /// <summary>Leaves one compact status header for each completed step above the active prompt.</summary>
+    private void RenderCompletedSteps(int activeStep)
+    {
+        var titles = new[] { "Language", "Connect", "Name", "Memory" };
+        for (var index = 1; index < activeStep; index++)
+        {
+            var heading = text.Text("Oobe.Step", index) + " · " + text.Text("Oobe." + titles[index - 1]);
+            console.MarkupLine($"[bold {TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + heading)}[/]");
+        }
     }
 
     /// <summary>Writes escaped localized text in the shared palette.</summary>
     private void Write(string key, string? color = null)
     {
         var copy = Markup.Escape(text.Text("Oobe." + key));
-        foreach (var command in new[] { "hm --help", "hm --skills", "hm --learning", "hm --setup" })
+        foreach (var command in new[]
+        {
+            "hm --prepare-logs", "hm --learning", "hm --skills", "hm --status", "hm --setup", "hm --help"
+        })
         {
             copy = copy.Replace(command, $"[bold {TerminalTheme.Info}]{command}[/]", StringComparison.Ordinal);
         }
@@ -202,7 +301,6 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     /// <summary>Shows keyboard choices with the terminal's visible focus marker.</summary>
     private Task<int> ChooseAsync(string[] labels, CancellationToken ct)
     {
-        console.Write(new Rule().RuleStyle(TerminalTheme.Muted));
         return new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
             .AddChoices(Enumerable.Range(0, labels.Length)).UseConverter(index => ActionLabel(labels[index]))
             .ShowAsync(console, ct);

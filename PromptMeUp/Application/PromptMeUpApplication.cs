@@ -34,6 +34,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IStatusView _statusView;
     private readonly ICostsView _costsView;
     private readonly IHelpView _helpView;
+    private readonly HelpWorkflow _help;
     private readonly IThirdPartyView _thirdPartyView;
     private readonly IFirstRunView? _firstRunView;
     private readonly FirstRunWorkflow? _firstRun;
@@ -73,6 +74,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IThirdPartyView thirdPartyView,
         AppPaths paths,
         ILogger<PromptMeUpApplication> logger,
+        HelpWorkflow help,
         ArtifactLimits? artifactLimits = null,
         IThemeCatalogService? themes = null,
         LennaWorkflow? lenna = null,
@@ -104,6 +106,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _statusView = statusView;
         _costsView = costsView;
         _helpView = helpView;
+        _help = help;
         _thirdPartyView = thirdPartyView;
         _paths = paths;
         _logger = logger;
@@ -382,9 +385,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             case AppCommand.Main:
                 return await RunHomeAsync(options, promptCount, cancellationToken).ConfigureAwait(false);
             case AppCommand.Help:
-                _helpView.Render(() => (_memories ?? throw new InvalidOperationException("The memory manager is unavailable."))
-                    .RunAsync(cancellationToken).GetAwaiter().GetResult());
-                return 0;
+                return _help.Run(options, cancellationToken);
             case AppCommand.Version:
                 RenderVersion();
                 return 0;

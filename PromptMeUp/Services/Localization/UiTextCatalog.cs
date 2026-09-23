@@ -38,6 +38,7 @@ internal static partial class UiTextCatalog
         AddFirstRunEntries(entries);
         AddHomeEntries(entries);
         AddHelpBrowserEntries(entries);
+        AddCommandGuideEntries(entries);
         AddLennaEntries(entries);
         AddMemoryManagerEntries(entries);
         AddMemoryCliEntries(entries);

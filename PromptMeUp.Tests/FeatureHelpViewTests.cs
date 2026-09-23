@@ -31,7 +31,7 @@ public sealed class FeatureHelpViewTests
     {
         var (view, text, _) = Create(language, 120);
         var sections = (IReadOnlyList<HelpSection>)typeof(HelpView)
-            .GetMethod("CreateSections", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, [null])!;
+            .GetMethod("CreateSections", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, [null, null, null])!;
         var section = Assert.Single(sections, item => item.Entries.Any(entry => entry.Command == "--skills"));
 
         Assert.Equal(Commands.Select(item => item.Command), section.Entries.Select(entry => entry.Command));
@@ -77,6 +77,33 @@ public sealed class FeatureHelpViewTests
         Assert.DoesNotContain(Compact(text.Text("Lab.NeedSessions")), rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("\u001b[2J", output.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("\u001b[3J", output.ToString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>Keeps offline guide navigation passive and never renders a document path as an hm command.</summary>
+    [Theory]
+    [InlineData("en")]
+    [InlineData("it")]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("vi")]
+    public void CommandGuide_OpensOnlyThroughItsAction(string language)
+    {
+        var (view, text, output) = Create(language, 120);
+        var opened = false;
+        Action open = () => opened = true;
+        var sections = (IReadOnlyList<HelpSection>)typeof(HelpView)
+            .GetMethod("CreateSections", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(view, [null, open, "docs/promptmeup-quick-reference.pdf"])!;
+        var guide = Assert.Single(sections, section => section.Title == text.Text("Guide.Title"));
+        Assert.False(Assert.Single(guide.Entries).IsCommand);
+        Assert.False(opened);
+        view.RenderStatic();
+        Assert.DoesNotContain("hm docs/", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("promptmeup-quick-reference.pdf", output.ToString(), StringComparison.Ordinal);
+        Assert.False(opened);
+        guide.Open!();
+        Assert.True(opened);
     }
 
     /// <summary>Creates passive help with in-memory output and no interactive, filesystem, or provider operations.</summary>
