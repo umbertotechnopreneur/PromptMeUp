@@ -53,6 +53,7 @@ function Get-PayloadFiles {
             $relative = [IO.Path]::GetRelativePath($Directory, $item.FullName).Replace('\', '/')
             $allowed = $relative -match '^(?:hm\.exe|LICENSE|THIRD_PARTY_NOTICES\.md|THIRD_PARTY_INVENTORY\.json|BUILD_INFO\.txt|hm-path\.(?:ps1|sh))$' `
                 -or $relative -match '^(?:prompt/[^/]+\.yaml|themes/[^/]+\.json|LICENSES/[A-Za-z0-9_./-]+)$' `
+                -or $relative -ceq 'docs/promptmeup-quick-reference.pdf' `
                 -or $bundledSkillFiles -ccontains $relative
             if (-not $allowed -or $item.Name -match '(?i)(?:^\.env(?:\.|$)|\.(?:db|sqlite|log|pfx|p12|pem|key)$)') {
                 throw "Unexpected payload file '$relative'. Use a fresh single-file portable publish with exported notices."
@@ -98,7 +99,7 @@ foreach ($path in @($publishRoot, $outputRoot, $repositoryRoot)) {
 $files = @(Get-PayloadFiles $publishRoot)
 if ($files.Count -eq 0) { throw 'The prepared payload is empty.' }
 foreach ($name in @('hm.exe', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'BUILD_INFO.txt',
-        'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md') + $bundledSkillFiles) {
+        'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md', 'docs/promptmeup-quick-reference.pdf') + $bundledSkillFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishRoot $name) -PathType Leaf)) { throw "The payload is missing '$name'." }
 }
 $executable = Join-Path $publishRoot 'hm.exe'

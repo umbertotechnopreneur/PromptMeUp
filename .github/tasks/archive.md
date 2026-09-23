@@ -1,5 +1,12 @@
 ﻿# Task Archive
 
+## 2026-09-24 — Accept the bundled command guide in Windows CI packaging
+
+- Fixed the existing Windows installer validation used by the quality gate: allow and require the exact `docs/promptmeup-quick-reference.pdf` payload path, matching the MSIX contract.
+- Preserved rejection of unrelated files and the existing credential and local-data guards. The installer template already copies nested payload files.
+
+Validation: PowerShell syntax and scoped diff checks passed. No local builds, installers, or automated tests were run; PR checks validate the Windows packaging step after push.
+
 ## 2026-09-24 — Improve onboarding and add a printable command guide
 
 - Reworked the first-run steps into a disposable, collapsible terminal surface when supported. Completed prompts now leave compact headers, while the active step uses a horizontal cyan-to-pink gradient rule; scrolling terminals keep a simpler fallback without redundant choice separators.
