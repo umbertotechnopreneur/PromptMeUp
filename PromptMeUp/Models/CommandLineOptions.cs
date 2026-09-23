@@ -28,6 +28,7 @@ public enum AppCommand
     Forget,
     TestAi,
     Costs,
+    PrepareLogs,
     ThirdParty,
     Where,
     InstallFont,

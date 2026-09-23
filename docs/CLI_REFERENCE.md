@@ -56,6 +56,7 @@ to a file, this follow-up menu doesn't open.
 | `--reset` | `--reset all` | Resets setup and direct-mode flags. Add `all` to erase and recreate the local database, including settings, notes, usage, and conversation history. |
 | `--test-ai` | — | Checks that the configured model can answer a short request in your chosen language. |
 | `--costs` | — | Shows usage and cost estimates, refreshing public prices and any available organization costs. |
+| `--prepare-logs` | — | Creates a redacted support ZIP on the desktop with limited machine diagnostics and up to 14 available daily log files. It excludes the database, chats, memories, keys, environment values, user and computer names, and network addresses. Nothing is sent automatically. |
 | `--status` | — | Shows your settings and whether local storage is ready. |
 | `--about` | `about` | Shows the HELP ME banner, project information, author, and license. |
 | `--lenna` | `lenna` | Shows the bundled calibration portrait centered in the terminal, without an AI request. |

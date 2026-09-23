@@ -230,6 +230,12 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(costsError);
                     }
                     break;
+                case "--prepare-logs":
+                    if (!TrySelect(AppCommand.PrepareLogs, ref command, ref commandWasSelected, out var prepareLogsError))
+                    {
+                        return FailureMessage(prepareLogsError);
+                    }
+                    break;
                 case "--third-party":
                     if (!TrySelect(AppCommand.ThirdParty, ref command, ref commandWasSelected, out var thirdPartyError))
                     {
@@ -494,6 +500,7 @@ public sealed class CommandLineParser : ICommandLineParser
         AppCommand.AiSettings => "ai-settings",
         AppCommand.Theme => "theme",
         AppCommand.InstallFont => "install-font",
+        AppCommand.PrepareLogs => "prepare-logs",
         AppCommand.ThirdParty => "third-party",
         AppCommand.Path => "path",
         _ => command.ToString().ToLowerInvariant()

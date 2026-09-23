@@ -76,7 +76,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     private void RenderOpeningBanner()
     {
         var icon = TerminalTheme.IconPrefix(Options, "✦", "*");
-        var title = $"{icon}[whitesmoke]P R O M P T M E[/][white] U P[/]";
+        var title = $"{icon}[#F5F5F5]P R O M P T M E[/][white] U P[/]";
         var width = Math.Max(1, (int)Math.Floor(_console.Profile.Width * 0.8d));
         var dividerWidth = Math.Max(1, width - (icon.Length + "P R O M P T M E U P".Length) - 1);
         var firstColorWidth = dividerWidth / 2;

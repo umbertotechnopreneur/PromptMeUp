@@ -47,6 +47,21 @@ Personal instructions entered in setup are checked too. The app rejects new inst
 
 Diagnostic logs keep error types, error and status codes, and request IDs. They leave out raw exception messages and nested errors that might contain private text. The terminal can still show OpenAI's explanation of an error.
 
+Startup diagnostics include a random session identifier, application version,
+runtime, terminal input/output mode, and exit code. Onboarding records the step,
+navigation choice, connection-check duration and error category, consent flags,
+and desktop shortcut outcome. Failure traces contain method names without source
+file paths. These diagnostic events do not include API keys, nicknames, command
+arguments, or conversation text.
+
+Run `hm --prepare-logs` to create a support ZIP on your desktop. It contains a
+limited machine summary, a contents note, and the available daily logs after a
+second secret and personal-path redaction pass. Each log contributes at most its
+most recent 4 MiB. The ZIP excludes the database, conversations, memories,
+environment values, API keys, user and computer names, network addresses, and a
+personal-file inventory. PromptMeUp does not upload or email the ZIP. Inspect it
+before attaching it to a support email.
+
 The filter can't catch everything. Don't paste secrets into questions or commands.
 
 Command arguments containing recognizable secrets are rejected. Chat messages

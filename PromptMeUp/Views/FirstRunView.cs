@@ -202,7 +202,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     /// <summary>Shows keyboard choices with the terminal's visible focus marker.</summary>
     private Task<int> ChooseAsync(string[] labels, CancellationToken ct)
     {
-        TerminalTheme.WriteRule(console, string.Empty, TerminalTheme.Muted);
+        console.Write(new Rule().RuleStyle(TerminalTheme.Muted));
         return new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
             .AddChoices(Enumerable.Range(0, labels.Length)).UseConverter(index => ActionLabel(labels[index]))
             .ShowAsync(console, ct);

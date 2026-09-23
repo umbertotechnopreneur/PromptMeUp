@@ -38,6 +38,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IFirstRunView? _firstRunView;
     private readonly FirstRunWorkflow? _firstRun;
     private readonly IHomeView? _home;
+    private readonly DiagnosticBundleService? _diagnosticBundles;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
     private readonly ArtifactLimits _artifactLimits;
@@ -81,7 +82,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         SkillsAndMemoryWorkflow? skillsAndMemory = null,
         IFirstRunView? firstRunView = null,
         FirstRunWorkflow? firstRun = null,
-        IHomeView? home = null)
+        IHomeView? home = null,
+        DiagnosticBundleService? diagnosticBundles = null)
     {
         _parser = parser;
         _database = database;
@@ -115,6 +117,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _firstRunView = firstRunView;
         _firstRun = firstRun;
         _home = home;
+        _diagnosticBundles = diagnosticBundles;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -133,6 +136,15 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
 
         var options = parse.Options!;
         _shell.Configure(new ConsoleRenderOptions(options.NoAnimation, options.NoEmoji));
+        if (options.Command == AppCommand.PrepareLogs)
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var result = await (_diagnosticBundles ?? throw new InvalidOperationException("Diagnostic bundle service is unavailable."))
+                .PrepareAsync(desktop, cancellationToken).ConfigureAwait(false);
+            _shell.RenderSuccess(_text.Text("Logs.Prepared", result.Path, result.LogFileCount));
+            _shell.RenderNotice(_text.Text("Logs.ReviewBeforeSending"));
+            return 0;
+        }
         await _database.InitializeAsync(cancellationToken).ConfigureAwait(false);
         var promptCount = (await _prompts.ListAsync(cancellationToken).ConfigureAwait(false)).Count;
         var settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
@@ -152,6 +164,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
         var hasApiKey = _secrets.IsConfigured(settings.ApiKeyVariable);
         var commandName = ToCommandName(options.Command);
+        _logger.LogInformation("Startup route selected. Command={Command}, FirstRun={FirstRun}, Interactive={Interactive}, Language={Language}",
+            commandName, settings.IsFirstRun, IsInteractive, _text.Language);
         if (!settings.IsFirstRun && options.Command != AppCommand.Main)
         {
             _shell.RenderHeader(commandName, settings, hasApiKey);
@@ -217,7 +231,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                                           or InvalidOperationException
                                           or ConversationLimitException)
         {
-            _logger.LogWarning("PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}", commandName, exception.GetType().Name);
+            _logger.LogWarning("PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}, StackTrace={StackTrace}",
+                commandName, exception.GetType().Name, new System.Diagnostics.StackTrace(exception, fNeedFileInfo: false).ToString());
             _shell.RenderError(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
             await _activity.TryRecordAsync(commandName, "failed", null, new { error = exception.GetType().Name }).ConfigureAwait(false);
             return 1;
@@ -250,7 +265,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             {
                 TerminalTheme.Apply(_themes.Resolve(current.Theme));
             }
+            _logger.LogInformation("Home menu opened.");
             var action = await home.ChooseAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Home menu choice. Action={Action}", action);
             if (action == HomeAction.Exit)
             {
                 return 0;
@@ -291,7 +308,8 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 OpenAiRequestException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException
                 or InvalidOperationException or ConversationLimitException)
             {
-                _logger.LogWarning("Home action failed. Action={Action}, ErrorType={ErrorType}", action, exception.GetType().Name);
+                _logger.LogWarning("Home action failed. Action={Action}, ErrorType={ErrorType}, StackTrace={StackTrace}",
+                    action, exception.GetType().Name, new System.Diagnostics.StackTrace(exception, fNeedFileInfo: false).ToString());
                 _shell.RenderError(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
             }
         }
@@ -572,6 +590,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         AppCommand.AiSettings => "ai-settings",
         AppCommand.Theme => "theme",
         AppCommand.InstallFont => "install-font",
+        AppCommand.PrepareLogs => "prepare-logs",
         AppCommand.ThirdParty => "third-party",
         _ => command.ToString().ToLowerInvariant()
     };

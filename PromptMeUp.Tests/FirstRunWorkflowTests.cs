@@ -24,6 +24,7 @@ public sealed class FirstRunWorkflowTests
         var store = new SkillsAndMemoryStore(fixture.Paths, new SensitiveDataRedactor(), text);
         var events = new List<string>();
         var ready = false;
+        var diagnostics = new RecordingLogger();
         var desktopCreated = false;
         var desktop = TestProxy.Create<IDesktopLauncherService>((method, _) =>
         {
@@ -52,13 +53,17 @@ public sealed class FirstRunWorkflowTests
             "RenderReady" => MarkReady(args, () => ready = true),
             _ => throw new InvalidOperationException("Unexpected first-run step: " + method.Name)
         });
-        var workflow = CreateWorkflow(fixture, text, store, secrets, openAi, view, desktop);
+        var workflow = CreateWorkflow(fixture, text, store, secrets, openAi, view, desktop, diagnostics);
 
         Assert.Equal(0, await workflow.RunAsync(AppSettings.Default, default));
 
         Assert.Equal(new[] { "temporary", "verified", "disposed", "stored" }, events);
         Assert.True(ready);
         Assert.Equal(addDesktop, desktopCreated);
+        Assert.Contains("Onboarding completed.", diagnostics.Messages);
+        Assert.Equal(4, diagnostics.Messages.Count(message => message.StartsWith("Onboarding step opened.", StringComparison.Ordinal)));
+        Assert.DoesNotContain(SyntheticKey(), string.Join('\n', diagnostics.Messages), StringComparison.Ordinal);
+        Assert.DoesNotContain("Luca", string.Join('\n', diagnostics.Messages), StringComparison.Ordinal);
         var saved = await fixture.Database.LoadSettingsAsync(default);
         Assert.True(saved.SetupCompleted);
         Assert.Equal("Luca", saved.PreferredName);
@@ -139,7 +144,7 @@ public sealed class FirstRunWorkflowTests
     /// <summary>Builds the workflow over isolated real preferences while rejecting unrelated provider calls.</summary>
     private static FirstRunWorkflow CreateWorkflow(RegressionFixture fixture, ILocalizationService text,
         SkillsAndMemoryStore store, IEnvironmentSecretService secrets, IOpenAiService openAi, IFirstRunView view,
-        IDesktopLauncherService? desktop = null)
+        IDesktopLauncherService? desktop = null, Microsoft.Extensions.Logging.ILogger<FirstRunWorkflow>? logger = null)
     {
         var catalog = new SkillCatalogService(fixture.Paths, store, text, RegressionFixture.CreatePackagedPrompts());
         var shell = TestProxy.Create<IConsoleShellView>((method, args) => method.Name switch
@@ -151,7 +156,8 @@ public sealed class FirstRunWorkflowTests
         return new(new SettingsService(fixture.Database), secrets, openAi,
             new SettingsFeatureOverviewService(store, catalog, localization: text), view, shell, text,
             desktop ?? TestProxy.Create<IDesktopLauncherService>((method, _) => method.Name == "get_IsAvailable"
-                ? false : throw new InvalidOperationException("Desktop writes are forbidden in this test.")));
+                ? false : throw new InvalidOperationException("Desktop writes are forbidden in this test.")),
+            logger ?? NullLogger<FirstRunWorkflow>.Instance);
     }
 
     /// <summary>Tracks validation and persistence order without accessing a real secret store.</summary>
@@ -181,6 +187,22 @@ public sealed class FirstRunWorkflowTests
 
     /// <summary>Creates a visibly synthetic candidate that is never sent to a provider.</summary>
     private static string SyntheticKey() => "sk-" + new string('x', 32);
+
+    /// <summary>Captures operational diagnostics to ensure credentials and nicknames never enter logs.</summary>
+    private sealed class RecordingLogger : Microsoft.Extensions.Logging.ILogger<FirstRunWorkflow>
+    {
+        internal List<string> Messages { get; } = [];
+
+        /// <summary>Provides an unused scope without retaining user data.</summary>
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        /// <summary>Enables all operational levels for assertions.</summary>
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        /// <summary>Captures only the formatted diagnostic event emitted by the workflow.</summary>
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId,
+            TState state, Exception? exception, Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception));
+    }
 
     /// <summary>Tracks disposal of a fake credential scope.</summary>
     private sealed class Scope(Action dispose) : IDisposable

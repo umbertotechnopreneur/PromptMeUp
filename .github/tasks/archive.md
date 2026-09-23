@@ -1,5 +1,24 @@
 ﻿# Task Archive
 
+## 2026-09-24 — Prepare a redacted email support bundle
+
+- Added `hm --prepare-logs` as a standalone local command available before onboarding and database initialization.
+- The command creates a new timestamped ZIP on the current user's desktop with a privacy-limited machine summary, a contents note, and up to the 14 available daily logs. Each log contributes at most its latest 4 MiB.
+- Applies credential redaction again while packaging and replaces current-user path roots with neutral tokens. Excludes the database, conversations, memories, environment values, API keys, user and computer names, network addresses, and personal-file inventories.
+- Added six-language confirmation copy, command help, CLI and privacy documentation. Creating the ZIP sends nothing; the user inspects it and attaches it to an email manually.
+
+Validation: 24 focused parser and archive tests passed, followed by all 1,007 tests. Preflight, XML comments, formatting verification, `git diff --check`, and the warning-free Release build passed. The archive regression test verified credential and user-path redaction and database exclusion. Standard Release cleanup completed.
+
+## 2026-09-24 — Fix startup rendering and add onboarding diagnostics
+
+- Replaced untitled calls to the titled-divider helper in home and onboarding with Spectre rules. The previous calls threw `ArgumentException` immediately after the banner.
+- Replaced the unsupported `whitesmoke` color name in the command banner with its hexadecimal color.
+- Added startup session IDs, route and terminal metadata, exit codes, method-only failure traces, and onboarding step and connection-check events without keys, nicknames, or conversation content. Interactive no-argument startup failures wait for Enter before closing.
+- Added welcome rendering coverage in all six languages and assertions that onboarding diagnostics omit credentials and nicknames. Documented the owner's exclusive control over all version components.
+- Installed the corrected Debug MSIX as the owner-requested 1.0.0.0 through `Add-AppxPackage -ForceUpdateFromAnyVersion -ForceTargetApplicationShutdown`. An initially chosen 1.0.0.1 revision was superseded after the owner's correction; the final installation is 1.0.0.0 and matches the corrected build hash.
+
+Validation: all 1,005 tests passed, including home keyboard navigation and actual welcome rendering. Interactive smoke checks with isolated data reached the key screen without provider calls, and the final installed alias stayed open at language selection and exited cleanly on Esc. Preflight, XML comments, formatting, warning-free Release build and Debug publish, package signing and installed-file verification passed. Standard .NET cleanup completed for both configurations; temporary packaging cleanup remains tracked separately.
+
 ## 2026-09-24 — Install Debug MSIX 1.0.0.0 checkpoint
 
 - Published the current working source for Windows x64 in Debug with application version 1.0.0 and MSIX version 1.0.0.0.

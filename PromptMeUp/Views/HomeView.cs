@@ -45,7 +45,7 @@ public sealed class HomeView(IAnsiConsole console, ILocalizationService text, IC
         grid.AddEmptyRow();
         grid.AddRow(new Markup($"[{TerminalTheme.Warning}]0[/]"), new Markup($"[{TerminalTheme.Warning}]{Markup.Escape(text.Text("Home.Exit"))}[/]"));
         console.Write(grid);
-        TerminalTheme.WriteRule(console, string.Empty, TerminalTheme.Muted);
+        console.Write(new Rule().RuleStyle(TerminalTheme.Muted));
         console.MarkupLine($"[{TerminalTheme.Info}]{Markup.Escape(text.Text("Home.Hint"))}[/]");
         while (true)
         {

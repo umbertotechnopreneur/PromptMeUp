@@ -18,6 +18,7 @@ These instructions apply to every change in this repository.
 - Linux and macOS are source-only: users must compile and adapt the source themselves. Do not provide compiled binaries, installers, or commercial support for these platforms, and do not imply that every project can run there unchanged.
 - When a build is explicitly requested, default to a local development/debug build using the Debug configuration. A generic build or release request does not authorize a Microsoft Store package. Produce a Store version only when the owner explicitly asks for one; never upload or publish it without explicit authorization.
 - Keep development/debug artifacts separate from Store release artifacts. These rules do not authorize running builds, changing release pipelines, creating tags, or publishing on their own.
+- The owner chooses every product and package version, including the fourth MSIX revision. Never increment or change it without explicit authorization. For a requested forced installation, use the deployment force flags; if Windows refuses, report the error instead of choosing a new version or uninstalling without authorization.
 - Windows distribution is MSIX-only. Do not propose or add portable ZIP, standalone EXE, or MSI distribution unless the owner explicitly changes this decision. This preference does not authorize packaging or workflow changes.
 
 ## Private business notes

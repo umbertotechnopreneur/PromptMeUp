@@ -266,6 +266,13 @@ internal static partial class UiTextCatalog
             German: "Zeigt Konfiguration und lokale Dienste.",
             Spanish: "Muestra la configuración y los servicios locales.",
             Vietnamese: "Hiển thị cấu hình và dịch vụ cục bộ."));
+        entries.Add("Help.PrepareLogs", new(
+            English: "Create a redacted support ZIP on the desktop. Nothing is sent automatically.",
+            Italian: "Crea sul desktop uno ZIP ripulito per l’assistenza. Non invia nulla automaticamente.",
+            French: "Crée sur le bureau un ZIP expurgé pour l’assistance. Aucun envoi automatique.",
+            German: "Erstellt ein bereinigtes Support-ZIP auf dem Desktop. Es wird nichts automatisch gesendet.",
+            Spanish: "Crea en el escritorio un ZIP depurado para soporte. No envía nada automáticamente.",
+            Vietnamese: "Tạo ZIP hỗ trợ đã lọc trên màn hình nền. Không tự động gửi dữ liệu."));
         entries.Add("Help.Test", new(
             English: "Run the YAML connection prompt with teletype output.",
             Italian: "Esegue il prompt YAML di test con effetto teletype.",

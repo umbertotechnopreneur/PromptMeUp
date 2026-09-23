@@ -7,6 +7,34 @@ internal static partial class UiTextCatalog
     /// <summary>Adds the home menu and optional desktop launcher copy in all six supported languages.</summary>
     private static void AddHomeEntries(Dictionary<string, LocalizedText> entries)
     {
+        entries.Add("Logs.Prepared", new(
+            English: "Support ZIP created on your desktop: {0} ({1} log files).",
+            Italian: "ZIP per l’assistenza creato sul desktop: {0} ({1} file di log).",
+            French: "ZIP d’assistance créé sur votre bureau : {0} ({1} fichiers journaux).",
+            German: "Support-ZIP auf dem Desktop erstellt: {0} ({1} Protokolldateien).",
+            Spanish: "ZIP de soporte creado en el escritorio: {0} ({1} archivos de registro).",
+            Vietnamese: "Đã tạo ZIP hỗ trợ trên màn hình nền: {0} ({1} tệp nhật ký)."));
+        entries.Add("Logs.ReviewBeforeSending", new(
+            English: "Nothing was sent. Inspect the ZIP, then attach it to your support email.",
+            Italian: "Non è stato inviato nulla. Controlla lo ZIP, poi allegalo all’email per l’assistenza.",
+            French: "Rien n’a été envoyé. Vérifiez le ZIP, puis joignez-le à votre e-mail d’assistance.",
+            German: "Es wurde nichts gesendet. Prüfe das ZIP und hänge es dann an deine Support-E-Mail an.",
+            Spanish: "No se ha enviado nada. Revisa el ZIP y adjúntalo al correo de soporte.",
+            Vietnamese: "Chưa có gì được gửi. Hãy kiểm tra ZIP rồi đính kèm vào email hỗ trợ."));
+        entries.Add("Startup.Failed", new(
+            English: "PromptMeUp could not start ({0}). Diagnostic logs: {1}",
+            Italian: "PromptMeUp non è riuscito ad avviarsi ({0}). Log diagnostici: {1}",
+            French: "PromptMeUp n’a pas pu démarrer ({0}). Journaux de diagnostic : {1}",
+            German: "PromptMeUp konnte nicht starten ({0}). Diagnoseprotokolle: {1}",
+            Spanish: "PromptMeUp no pudo iniciarse ({0}). Registros de diagnóstico: {1}",
+            Vietnamese: "PromptMeUp không thể khởi động ({0}). Nhật ký chẩn đoán: {1}"));
+        entries.Add("Startup.PressEnter", new(
+            English: "Press Enter to close. You can send the diagnostic logs to support.",
+            Italian: "Premi Invio per chiudere. Puoi inviare i log diagnostici all’assistenza.",
+            French: "Appuyez sur Entrée pour fermer. Vous pouvez envoyer les journaux à l’assistance.",
+            German: "Drücke Enter zum Schließen. Du kannst die Diagnoseprotokolle an den Support senden.",
+            Spanish: "Pulsa Intro para cerrar. Puedes enviar los registros al soporte.",
+            Vietnamese: "Nhấn Enter để đóng. Bạn có thể gửi nhật ký chẩn đoán cho bộ phận hỗ trợ."));
         entries.Add("Home.CheckboxHelp", new(
             English: "Space selects or clears the checkbox. Enter continues.",
             Italian: "Spazio seleziona o deseleziona la casella. Invio continua.",
