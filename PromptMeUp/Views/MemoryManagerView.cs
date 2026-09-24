@@ -320,8 +320,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _visibleRows = Math.Max(1, bodyRows - 2);
         _detailOffset = Math.Clamp(_detailOffset, 0, Math.Max(0, _lineCount - _visibleRows));
         var body = Inset(new Rows(
-            Line(PageTitle(entry, proposals), TerminalTheme.Accent),
-            new Text(" "),
+            FullscreenWorkspace.SectionHeading(PageTitle(entry, proposals), _focus == EditorFocus.Editor),
             new MemoryLines(lines.Skip(_detailOffset).Take(_visibleRows).ToArray())));
         var actions = Actions(entry, proposals);
         _actionIndex = Math.Clamp(_actionIndex, 0, actions.Count - 1);

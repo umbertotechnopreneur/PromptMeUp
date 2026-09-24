@@ -280,8 +280,8 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
     {
         var rows = new List<IRenderable>
         {
-            new FullscreenLine(GroupLabel(group), Style.Parse("bold " + TerminalTheme.Accent)),
-            new Text(" "),
+            FullscreenWorkspace.SectionHeading(GroupLabel(group),
+                _focus is MenuFocus.Commands or MenuFocus.Editor or MenuFocus.Details),
             new FullscreenLine(Safe(group.Description), Style.Parse(TerminalTheme.Primary)),
             new Text(" "),
             new FullscreenLine(text.Text("Lab.Commands"), Style.Parse("bold " + TerminalTheme.Primary))

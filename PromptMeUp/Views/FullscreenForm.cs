@@ -472,7 +472,9 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         {
             fieldBody = new Rows(fieldBody, preview());
         }
-        var content = Inset(new Rows(Styled(section, "bold " + TerminalTheme.Accent), new Text(" "), fieldBody));
+        var content = Inset(new Rows(
+            FullscreenWorkspace.SectionHeading(section, !_sectionNavigator.IsFocused && _focus < fields.Count),
+            fieldBody));
         var footerKey = _editing is not null ? "Form.EditFooter"
             : pages[_page].Open is not null ? "Form.OpenFooter"
             : _sectionNavigator.IsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";

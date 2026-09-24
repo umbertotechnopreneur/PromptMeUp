@@ -282,8 +282,8 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         _lineCount = lines.Count;
         _offset = Math.Clamp(_offset, 0, Math.Max(0, _lineCount - _visibleRows));
 
-        var heading = $"{(_focus == HelpFocus.Commands ? "> " : string.Empty)}{SectionTitle(active, compact: false)}";
-        var content = Inset(new Rows(Line(heading, "bold " + TerminalTheme.Accent), new Text(" "),
+        var content = Inset(new Rows(FullscreenWorkspace.SectionHeading(
+                SectionTitle(active, compact: false), _focus == HelpFocus.Commands),
             new HelpLines(lines.Skip(_offset).Take(_visibleRows).ToArray())));
 
         var range = text.Text("Help.Browse.Range", _lineCount == 0 ? 0 : _offset + 1,
