@@ -214,6 +214,12 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
                 case ConsoleKey.PageDown when _focus == MenuFocus.Details:
                     MoveDetails(VisibleDetailRows(), items);
                     break;
+                case ConsoleKey.PageUp when _focus == MenuFocus.Groups:
+                    MoveGroup(-1, groups);
+                    break;
+                case ConsoleKey.PageDown when _focus == MenuFocus.Groups:
+                    MoveGroup(1, groups);
+                    break;
                 case ConsoleKey.PageUp when _focus == MenuFocus.Commands && items.Count > 0:
                     MoveItem(-VisibleItemRows(), items);
                     break;
@@ -225,6 +231,12 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
                     break;
                 case ConsoleKey.End when _focus == MenuFocus.Details:
                     MoveDetails(int.MaxValue, items);
+                    break;
+                case ConsoleKey.Home when _focus == MenuFocus.Groups:
+                    MoveGroup(-_groupNavigator.SelectedIndex, groups);
+                    break;
+                case ConsoleKey.End when _focus == MenuFocus.Groups:
+                    MoveGroup(groups.Count - 1 - _groupNavigator.SelectedIndex, groups);
                     break;
                 case ConsoleKey.Home when _focus == MenuFocus.Commands && items.Count > 0:
                     _selectedItemIndex = 0;
