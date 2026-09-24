@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Globalization;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
@@ -11,7 +10,7 @@ namespace PromptMeUp.Views;
 public interface IAboutView
 {
     void Render();
-    IRenderable CreateContent();
+    IRenderable CreateContent(bool renderInstallationCard = false);
 }
 
 /// <summary>Presents the project artwork and information in an adaptive, passive terminal page.</summary>
@@ -21,8 +20,6 @@ public sealed class AboutView(
     IConsoleShellView shell,
     BuildInformation buildInformation) : IAboutView
 {
-    private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
-    private const string AuthorUrl = "https://umbertogiacobbi.biz";
     private int _offset;
     private int _lineCount;
     private int _visibleRows;
@@ -64,45 +61,13 @@ public sealed class AboutView(
         }
     }
 
-    /// <summary>Provides the shared About content without opening a screen or reading input.</summary>
-    public IRenderable CreateContent() => new ResponsiveContent(this);
-
-    /// <summary>Combines the invariant artwork with localized product details and literal project links.</summary>
-    private IRenderable BuildContent(int width)
-    {
-        var details = new Grid();
-        details.AddColumn(new GridColumn().RightAligned());
-        details.AddColumn(new GridColumn().LeftAligned());
-        var narrowDetails = new List<IRenderable>();
-        AddDetail(details, narrowDetails, "Footer.Version", buildInformation.Version);
-        AddDetail(details, narrowDetails, "About.BuildDate",
-            buildInformation.BuiltAtUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture));
-        AddDetail(details, narrowDetails, "About.BuildMachine", buildInformation.MachineName);
-        AddDetail(details, narrowDetails, "About.Author", "Umberto Giacobbi");
-        AddDetail(details, narrowDetails, "About.License", "MIT");
-        AddDetail(details, narrowDetails, "About.Platforms", "Windows / Linux / macOS");
-        return new Rows(
-            Align.Center(new HelpMeBanner()),
-            new Text(" "),
-            new Text(text.Text("About.Description"), Style.Parse(TerminalTheme.Primary)),
-            new Text(" "),
-            width >= 30 ? details : new Rows(narrowDetails),
-            new Text(text.Text("About.Repository"), Style.Parse(TerminalTheme.Muted)),
-            new Markup($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"),
-            new Text(" "),
-            new Text(text.Text("About.Website"), Style.Parse(TerminalTheme.Muted)),
-            new Markup($"[underline {TerminalTheme.Info} link={AuthorUrl}]{AuthorUrl}[/]"));
-    }
-
-    /// <summary>Separates each right-aligned label and left-aligned value with one trailing blank row.</summary>
-    private void AddDetail(Grid grid, List<IRenderable> narrowRows, string labelKey, string value)
-    {
-        var label = new Text(text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted));
-        var renderedValue = new Text(value, Style.Parse(TerminalTheme.Primary));
-        grid.AddRow(label, renderedValue);
-        grid.AddEmptyRow();
-        narrowRows.AddRange([label, renderedValue, new Text(" ")]);
-    }
+    /// <summary>Provides shared product content, with an optional installation card for first-run setup.</summary>
+    public IRenderable CreateContent(bool renderInstallationCard = false) => new Rows(
+        new ProductBanner(text),
+        new Text(" "),
+        new Text(text.Text("About.Description"), Style.Parse(TerminalTheme.Primary)),
+        new Text(" "),
+        new InstallationInfo(text, buildInformation, renderCard: renderInstallationCard));
 
     /// <summary>Scrolls the project information while leaving a permanently focused close action available.</summary>
     private void RunLoop()
@@ -200,18 +165,6 @@ public sealed class AboutView(
             new Layout("body", body),
             new Layout("footer", footer).Size(FullscreenFooter.Height()));
         console.Write(new FormSurface(root));
-    }
-
-    /// <summary>Adapts the shared artwork and details to the width assigned by the containing view.</summary>
-    private sealed class ResponsiveContent(AboutView view) : IRenderable
-    {
-        /// <summary>Measures the layout using the containing view's available width.</summary>
-        public Measurement Measure(RenderOptions options, int maxWidth) =>
-            view.BuildContent(maxWidth).Measure(options, maxWidth);
-
-        /// <summary>Renders the complete content for the containing view to display and scroll.</summary>
-        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) =>
-            view.BuildContent(maxWidth).Render(options, maxWidth);
     }
 
     /// <summary>Preserves the already wrapped text, letter shapes, and link styles within the visible body rows.</summary>

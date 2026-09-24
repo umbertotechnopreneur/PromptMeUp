@@ -353,7 +353,9 @@ public sealed class SettingsFeatureViewTests
             "get_Themes" => new[] { TerminalThemeDefinition.Default },
             _ => throw new NotSupportedException(method.Name)
         });
-        var about = TestProxy.Create<IAboutView>((method, _) => throw new NotSupportedException(method.Name));
+        var about = TestProxy.Create<IAboutView>((method, _) => method.Name == nameof(IAboutView.CreateContent)
+            ? new Text("Project information")
+            : throw new NotSupportedException(method.Name));
         var view = new FullscreenSetupView(console, text, shell, new PromptInjectionProtectionService(), new SensitiveDataRedactor(), themes, about,
             new ScriptLanguageCatalog());
         return new Harness(view, text, output, keys);

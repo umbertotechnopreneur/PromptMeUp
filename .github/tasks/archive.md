@@ -1,5 +1,19 @@
 # Task Archive
 
+## 2026-09-25 — Share themed product and installation information
+
+- Reuse a banner and localized slogan in About and the first setup page, with artwork colors taken from the active terminal theme and a compact fallback for narrow or non-Unicode terminals.
+- Extract the existing installation details and project links into a shared component with an optional full-width card. Enable the card for first-run setup and show the same details without a frame in About.
+- Keep aligned label-value rows on wider terminals and stack them when space is limited. Add the slogan and installation title in all six supported languages and adapt the existing setup test fixture to the shared content provider.
+- Validation: reviewed the scoped source and diff. No build, tests, formatters, linters, installation, or runtime and visual checks were performed. Changes remain local; the installed Debug package has not been updated.
+
+## 2026-09-24 — Install the settings UI Debug build
+
+- Built and installed signed local Debug x64 MSIX `0.1.8.3` from commit `cfcfce2`, using build-time version overrides and embedded debug symbols.
+- After the owner removed the earlier installations, verified healthy package registration, matching published and installed application DLL hashes, and the `hm.exe` alias pointing to this Debug package.
+- Preserved the signed MSIX, package metadata, checksum, and installation record under ignored `artifacts/msix/debug/0.1.8.3/x64`.
+- Completed Debug solution cleanup and removed this build's temporary publish and payload directories. No automated tests, CLI smoke tests, application launch, or application UI validation were performed.
+
 ## 2026-09-24 — Make settings information easier to read
 
 - Split message-collection consent into four titled sections with aligned bullet points, preserving the collection, confirmation, retention, and deletion facts in all six supported languages.

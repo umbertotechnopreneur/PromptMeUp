@@ -56,6 +56,20 @@ internal static partial class UiTextCatalog
             German: "Enter: öffnen | F6: Bereich wechseln | Esc/Q: schließen",
             Spanish: "Intro: abrir | F6: cambiar área | Esc/Q: cerrar",
             Vietnamese: "Enter: mở | F6: đổi vùng | Esc/Q: đóng"));
+        entries.Add("About.Slogan", new(
+            English: "From your words to terminal commands.",
+            Italian: "Dalle tue parole ai comandi del terminale.",
+            French: "De vos mots aux commandes du terminal.",
+            German: "Von deinen Worten zu Terminalbefehlen.",
+            Spanish: "De tus palabras a los comandos del terminal.",
+            Vietnamese: "Từ lời bạn nói đến lệnh terminal."));
+        entries.Add("About.Installation", new(
+            English: "Installation details",
+            Italian: "Dati dell’installazione",
+            French: "Détails de l’installation",
+            German: "Installationsdetails",
+            Spanish: "Datos de la instalación",
+            Vietnamese: "Thông tin cài đặt"));
         entries.Add("About.Description", new(
             English: "A lightweight, portable terminal assistant. Turn natural-language requests into commands you can review before running.",
             Italian: "Un assistente per il terminale leggero e portatile. Trasforma le richieste in linguaggio naturale in comandi da controllare prima di eseguirli.",

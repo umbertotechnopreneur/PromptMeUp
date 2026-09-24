@@ -238,7 +238,7 @@ public sealed class FullscreenSetupView : ISetupView
             new("About.MenuLabel", [])
             {
                 HelpKey = "About.SettingsHint",
-                Overview = _about.CreateContent
+                Overview = () => _about.CreateContent()
             }
         ], state.SaveSucceeded);
     }
@@ -264,9 +264,13 @@ public sealed class FullscreenSetupView : ISetupView
         }).ToArray();
     }
 
-    /// <summary>Combines current draft status and cached usage in one passive, unboxed overview.</summary>
+    /// <summary>Introduces first-run setup with shared product details, then shows draft status and cached usage after setup.</summary>
     private IRenderable CreateGeneralOverview(SetupDraft draft, SetupViewState state)
     {
+        if (!state.Settings.SetupCompleted)
+        {
+            return _about.CreateContent(renderInstallationCard: true);
+        }
         var costs = state.Costs;
         var unavailable = _text.Text("Costs.Unavailable");
         var status = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn();
