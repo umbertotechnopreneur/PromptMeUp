@@ -6,7 +6,7 @@ using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
-/// <summary>Gives fullscreen views one open product header with right-aligned release and project details.</summary>
+/// <summary>Gives fullscreen views one open product header with optional project metadata.</summary>
 internal static class FullscreenHeader
 {
     internal const int Height = 3;
@@ -15,18 +15,18 @@ internal static class FullscreenHeader
         ?? throw new InvalidOperationException("The application version is missing.");
 
     /// <summary>Places a product row above a single full-width divider and a blank line.</summary>
-    internal static IRenderable Create(string title, ConsoleRenderOptions options)
+    internal static IRenderable Create(string title, ConsoleRenderOptions options, bool showRepository = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentNullException.ThrowIfNull(options);
         return new Rows(
-            new Padder(new HeaderLine(title, options), new Padding(2, 0, 2, 0)),
+            new Padder(new HeaderLine(title, options, showRepository), new Padding(2, 0, 2, 0)),
             new Rule { Style = Style.Parse(TerminalTheme.Divider) },
             new Text(" "));
     }
 
-    /// <summary>Keeps project metadata at the right edge while allowing the view title to shrink.</summary>
-    private sealed class HeaderLine(string title, ConsoleRenderOptions renderOptions) : IRenderable
+    /// <summary>Keeps release metadata at the right edge while allowing the view title to shrink.</summary>
+    private sealed class HeaderLine(string title, ConsoleRenderOptions renderOptions, bool showRepository) : IRenderable
     {
         /// <summary>Uses the full available line for the two ends of the header.</summary>
         public Measurement Measure(RenderOptions options, int maxWidth) =>
@@ -36,23 +36,23 @@ internal static class FullscreenHeader
         public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
         {
             var width = Math.Max(0, maxWidth);
-            var project = width >= 110 ? "github.com/umbertotechnopreneur/PromptMeUp" : "GitHub";
-            var metadata = $"v{Version}  ·  {project}";
+            var project = showRepository ? "GitHub" : null;
+            var metadata = project is null ? $"v{Version}" : $"v{Version}  ·  {project}";
             var metadataWidth = new Segment(metadata).CellCount();
             if (width < metadataWidth + 5)
             {
                 yield return new Segment(Fit($"hm  v{Version}", width, options.Capabilities.Unicode),
-                    Style.Parse("#FFFFFF"));
+                    Style.Parse(TerminalTheme.Primary));
                 yield break;
             }
 
-            var brand = width >= 85 ? "hm / PromptMeUp" : "hm";
+            var brand = width >= 70 ? "hm / PromptMeUp" : "hm";
             var icon = renderOptions.NoEmoji ? string.Empty : TerminalTheme.IconPrefix(renderOptions, "💻", "hm");
             var left = Fit($"{icon}{brand}  {title}", width - metadataWidth - 2, options.Capabilities.Unicode);
             if (left.StartsWith(icon + "hm", StringComparison.Ordinal))
             {
                 yield return new Segment(icon, Style.Parse(TerminalTheme.Accent));
-                yield return new Segment("hm", Style.Parse("#FFFFFF"));
+                yield return new Segment("hm", Style.Parse(TerminalTheme.Primary));
                 yield return new Segment(left[(icon.Length + 2)..], Style.Parse(TerminalTheme.Primary));
             }
             else
@@ -60,11 +60,15 @@ internal static class FullscreenHeader
                 yield return new Segment(left, Style.Parse(TerminalTheme.Primary));
             }
             yield return new Segment(new string(' ', width - metadataWidth - new Segment(left).CellCount()));
-            yield return new Segment($"v{Version}  ·  ", Style.Parse(TerminalTheme.Muted));
-            foreach (var segment in ((IRenderable)new Markup($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{project}[/]"))
-                .Render(options, new Segment(project).CellCount()))
+            yield return new Segment($"v{Version}", Style.Parse(TerminalTheme.Muted));
+            if (project is not null)
             {
-                yield return segment;
+                yield return new Segment("  ·  ", Style.Parse(TerminalTheme.Divider));
+                foreach (var segment in ((IRenderable)new Markup($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{project}[/]"))
+                    .Render(options, new Segment(project).CellCount()))
+                {
+                    yield return segment;
+                }
             }
         }
 

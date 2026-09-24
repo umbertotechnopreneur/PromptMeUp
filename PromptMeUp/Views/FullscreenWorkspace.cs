@@ -13,10 +13,10 @@ internal static class FullscreenWorkspace
 
     /// <summary>Builds the common fullscreen shell around passive content and action renderables.</summary>
     internal static IRenderable Create(string title, ConsoleRenderOptions options, int terminalWidth,
-        IRenderable content, IRenderable? sidebar, IRenderable footer, int noticeRows)
+        IRenderable content, IRenderable? sidebar, IRenderable footer, int noticeRows, bool showRepository = false)
     {
         var root = new Layout("workspace").SplitRows(
-            new Layout("header", FullscreenHeader.Create(title, options)).Size(FullscreenHeader.Height),
+            new Layout("header", FullscreenHeader.Create(title, options, showRepository)).Size(FullscreenHeader.Height),
             new Layout("body"),
             new Layout("footer", footer).Size(FullscreenFooter.Height(noticeRows)));
         if (sidebar is null)
