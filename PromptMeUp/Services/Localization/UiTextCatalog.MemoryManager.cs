@@ -98,6 +98,13 @@ internal static partial class UiTextCatalog
             "Tippen: ändern | Enter: neue Zeile | Strg+Enter: übernehmen | Esc: verwerfen",
             "Escribir: editar | Intro: nueva línea | Ctrl+Intro: aplicar | Esc: descartar",
             "Nhập: sửa | Enter: dòng mới | Ctrl+Enter: áp dụng | Esc: bỏ"));
+        entries.Add("MemoryManager.EditorKeysCompact", new(
+            "Ctrl+Enter: apply | Esc: discard",
+            "Ctrl+Invio: applica | Esc: scarta",
+            "Ctrl+Entrée : appliquer | Échap : annuler",
+            "Strg+Enter: übernehmen | Esc: verwerfen",
+            "Ctrl+Intro: aplicar | Esc: descartar",
+            "Ctrl+Enter: áp dụng | Esc: bỏ"));
         entries.Add("MemoryManager.EditHelp", new(
             "Edit the note, then Save. Memories save separately from Settings.",
             "Modifica la nota, poi Salva. I ricordi si salvano separatamente dalle impostazioni.",

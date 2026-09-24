@@ -341,7 +341,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         var footer = FullscreenFooter.Create(
             Line(notice.Text, notice.Color),
             buttons,
-            FullscreenFooter.Shortcuts(_text.Text(hintKey)));
+            FullscreenFooter.Shortcuts(_text.Text(hintKey), _text.Text(hintKey + "Compact"), width - 4));
         _console.Write(FullscreenWorkspace.Create(_text.Text("Settings.Memories"), _shell.Options, frame.Width,
             body, _navigator.Render(entries, NavigationLabel, bodyRows, _text.Text("Form.Sections"),
                 _console.Profile.Capabilities.Unicode), footer, FullscreenFooter.NoticeRows));

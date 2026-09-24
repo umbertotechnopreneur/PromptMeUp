@@ -263,19 +263,13 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             TerminalTheme.IconPrefix(options, "↩️", "x") + backLabel,
             TerminalTheme.Warning,
             _focus == MenuFocus.Back));
-        var footerKey = _focus == MenuFocus.Editor
-            ? new Segment(text.Text("Lab.MenuEditorFooter")).CellCount() > width - 4
-                ? "Lab.MenuEditorFooterCompact"
-                : "Lab.MenuEditorFooter"
-            : new Segment(text.Text("Lab.MenuFooter", groups.Count)).CellCount() > width - 4
-                ? "Lab.MenuFooterCompact"
-                : "Lab.MenuFooter";
-        var footerText = _focus == MenuFocus.Editor ? text.Text(footerKey) : text.Text(footerKey, groups.Count);
+        var footerKey = _focus == MenuFocus.Editor ? "Lab.MenuEditorFooter" : "Lab.MenuFooter";
         var footer = FullscreenFooter.Create(
             new FullscreenLine(_editorError ?? text.Text("Lab.MenuNotice"),
                 Style.Parse(_editorError is null ? TerminalTheme.Muted : TerminalTheme.Error)),
             actions,
-            FullscreenFooter.Shortcuts(footerText));
+            FullscreenFooter.Shortcuts(text.Text(footerKey, groups.Count),
+                text.Text(footerKey + "Compact", groups.Count), width - 4));
         console.Write(FullscreenWorkspace.Create(title, options, frame.Width, content,
             _groupNavigator.Render(groups, GroupLabel, bodyRows, text.Text("Form.Sections"), console.Profile.Capabilities.Unicode),
             footer, FullscreenFooter.NoticeRows));

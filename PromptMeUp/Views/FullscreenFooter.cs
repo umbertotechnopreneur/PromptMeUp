@@ -44,6 +44,14 @@ internal static class FullscreenFooter
         return new ShortcutLine(value);
     }
 
+    /// <summary>Chooses the localized compact shortcut row when the full text exceeds the content width.</summary>
+    internal static IRenderable Shortcuts(string value, string compactValue, int availableWidth)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        ArgumentNullException.ThrowIfNull(compactValue);
+        return new ShortcutLine(new Segment(value).CellCount() > availableWidth ? compactValue : value);
+    }
+
     /// <summary>Gives every workspace action the same spacing, focus marker, and selection colors.</summary>
     internal static IRenderable Button(string label, string color, bool selected) => new ActionButton(
         $"{(selected ? ">" : " ")} [ {label} ]",

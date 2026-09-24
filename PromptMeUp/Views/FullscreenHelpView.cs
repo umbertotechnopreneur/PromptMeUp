@@ -307,11 +307,8 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             HelpFocus.Commands => "Help.Browse.ScrollKeys",
             _ => "Help.Browse.CloseKeys"
         };
-        if (new Segment(text.Text(footerKey)).CellCount() > width - 4)
-        {
-            footerKey += "Compact";
-        }
-        var footer = FullscreenFooter.Create(message, actions, FullscreenFooter.Shortcuts(text.Text(footerKey)));
+        var footer = FullscreenFooter.Create(message, actions,
+            FullscreenFooter.Shortcuts(text.Text(footerKey), text.Text(footerKey + "Compact"), width - 4));
         console.Write(FullscreenWorkspace.Create(text.Text("Help.Title"), _options, console.Profile.Width,
             content, SectionNavigation(sections, bodyHeight), footer, FullscreenFooter.NoticeRows));
     }

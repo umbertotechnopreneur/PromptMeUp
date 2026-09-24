@@ -476,14 +476,10 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         var footerKey = _editing is not null ? "Form.EditFooter"
             : pages[_page].Open is not null ? "Form.OpenFooter"
             : _sectionNavigator.IsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";
-        if (Segment.CellCount([new Segment(text.Text(footerKey))]) > frame.Width - 5)
-        {
-            footerKey += "Compact";
-        }
         var footer = FullscreenFooter.Create(
             new Text(SafeText(hint), Style.Parse(_error is null ? TerminalTheme.Muted : TerminalTheme.Error)),
             Actions(fields.Count),
-            FullscreenFooter.Shortcuts(text.Text(footerKey)),
+            FullscreenFooter.Shortcuts(text.Text(footerKey), text.Text(footerKey + "Compact"), frame.Width - 5),
             _messageHeight);
         console.Write(FullscreenWorkspace.Create(text.Text(titleKey), _options, frame.Width, content,
             sectionNavigation ? SectionNavigation(pages) : null, footer, _messageHeight));
