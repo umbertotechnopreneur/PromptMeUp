@@ -132,10 +132,16 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             switch (key.Key)
             {
                 case ConsoleKey.F6:
-                    MoveFocus(items.Count, SelectedHasInput(items), SelectedHasDetails(items));
+                    _focus = _focus == MenuFocus.Groups
+                        ? items.Count > 0 ? MenuFocus.Commands : MenuFocus.Back
+                        : MenuFocus.Groups;
                     break;
                 case ConsoleKey.Tab:
-                    MoveFocus(items.Count, SelectedHasInput(items), SelectedHasDetails(items));
+                    MoveFocus(items.Count, SelectedHasInput(items), SelectedHasDetails(items),
+                        (key.Modifiers & ConsoleModifiers.Shift) != 0 ? -1 : 1);
+                    break;
+                case ConsoleKey.LeftArrow when (key.Modifiers & ConsoleModifiers.Control) != 0:
+                    _focus = MenuFocus.Groups;
                     break;
                 case ConsoleKey.Enter:
                     if (_focus == MenuFocus.Back)
@@ -361,21 +367,25 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         return new Padder(new Rows(rows.ToArray()), new Padding(2, 0, 2, 0));
     }
 
-    /// <summary>Moves between the sidebar, central commands, and the single footer action.</summary>
-    private void MoveFocus(int itemCount, bool hasInput, bool hasDetails)
+    /// <summary>Cycles forward or backward through the available content and footer areas.</summary>
+    private void MoveFocus(int itemCount, bool hasInput, bool hasDetails, int direction)
     {
-        _focus = _focus switch
+        var areas = new List<MenuFocus> { MenuFocus.Groups };
+        if (itemCount > 0)
         {
-            MenuFocus.Groups when itemCount > 0 => MenuFocus.Commands,
-            MenuFocus.Groups => MenuFocus.Back,
-            MenuFocus.Commands when hasInput => MenuFocus.Editor,
-            MenuFocus.Commands when hasDetails => MenuFocus.Details,
-            MenuFocus.Commands => MenuFocus.Back,
-            MenuFocus.Editor when hasDetails => MenuFocus.Details,
-            MenuFocus.Editor => MenuFocus.Back,
-            MenuFocus.Details => MenuFocus.Back,
-            _ => MenuFocus.Groups
-        };
+            areas.Add(MenuFocus.Commands);
+        }
+        if (hasInput)
+        {
+            areas.Add(MenuFocus.Editor);
+        }
+        if (hasDetails)
+        {
+            areas.Add(MenuFocus.Details);
+        }
+        areas.Add(MenuFocus.Back);
+        var index = areas.IndexOf(_focus);
+        _focus = areas[(index + direction + areas.Count) % areas.Count];
     }
 
     /// <summary>Moves to another sidebar group and resets its command selection.</summary>
@@ -431,9 +441,15 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             _focus = MenuFocus.Commands;
             return false;
         }
-        if (key.Key is ConsoleKey.F6 or ConsoleKey.Tab)
+        if (key.Key == ConsoleKey.F6)
         {
-            _focus = string.IsNullOrWhiteSpace(item.Details) ? MenuFocus.Back : MenuFocus.Details;
+            _focus = MenuFocus.Groups;
+            return false;
+        }
+        if (key.Key == ConsoleKey.Tab)
+        {
+            _focus = (key.Modifiers & ConsoleModifiers.Shift) != 0 ? MenuFocus.Commands
+                : string.IsNullOrWhiteSpace(item.Details) ? MenuFocus.Back : MenuFocus.Details;
             return false;
         }
         if (key.Key == ConsoleKey.Enter

@@ -189,13 +189,25 @@ public sealed class MemoryManagerView : IMemoryManagerView
             switch (key.Key)
             {
                 case ConsoleKey.F6:
+                    _focus = _focus == EditorFocus.Sections ? EditorFocus.Editor : EditorFocus.Sections;
+                    break;
                 case ConsoleKey.Tab:
-                    _focus = _focus switch
-                    {
-                        EditorFocus.Sections => EditorFocus.Editor,
-                        EditorFocus.Editor => EditorFocus.Actions,
-                        _ => EditorFocus.Sections
-                    };
+                    _focus = (key.Modifiers & ConsoleModifiers.Shift) != 0
+                        ? _focus switch
+                        {
+                            EditorFocus.Sections => EditorFocus.Actions,
+                            EditorFocus.Editor => EditorFocus.Sections,
+                            _ => EditorFocus.Editor
+                        }
+                        : _focus switch
+                        {
+                            EditorFocus.Sections => EditorFocus.Editor,
+                            EditorFocus.Editor => EditorFocus.Actions,
+                            _ => EditorFocus.Sections
+                        };
+                    break;
+                case ConsoleKey.LeftArrow when (key.Modifiers & ConsoleModifiers.Control) != 0:
+                    _focus = EditorFocus.Sections;
                     break;
                 case ConsoleKey.Enter:
                     if (_focus == EditorFocus.Sections)
