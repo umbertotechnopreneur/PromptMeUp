@@ -1,7 +1,5 @@
 ## Task
 
-- [ ] Refine fullscreen navigation and shared screen chrome in small, separately committed changes toward the 1.0 beta. Keep each screen's editing behavior intact.
-
 - [ ] Remove `artifacts/msix/debug/0.0.1.2211/publish`, `publish-nosymbols`, and `x64/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.
 
 - [ ] Remove `artifacts/msix/direct-20260921-debug/publish` and `artifacts/msix/direct-20260921-debug/package/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.

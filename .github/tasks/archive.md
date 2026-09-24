@@ -1,5 +1,14 @@
 # Task Archive
 
+## 2026-09-25 — Refine shared fullscreen screens for the 1.0 beta
+
+- Create checkpoint `72b9403` for the prior banner and installation details, then work on the owner-requested `codex/refinements-to-version-1.0-beta` branch.
+- Align F6, Shift+Tab, and Ctrl+Left navigation across fullscreen settings, help, command menus, and memory editing. Add sidebar paging and Home/End navigation to command menus.
+- Simplify the shared header with an optional repository link, select compact shortcut rows through the shared footer, and show the current position in overflowing sidebars.
+- Share a content heading with a focus marker and optional divider across fullscreen sections. Reserve warning color for the destructive consent choice while showing retention details in the primary text color.
+- Make a separate local checkpoint commit for each refinement: `d2000ba`, `ee9c36f`, `cb8057e`, `9f24a6e`, `aa389ff`, `7214250`, and `be72dab`.
+- Validation: reviewed scoped diffs and Git whitespace checks. Builds, automated tests, formatters, linters, runtime checks, and installation were not run; the installed Debug package remains the earlier version.
+
 ## 2026-09-25 — Share themed product and installation information
 
 - Reuse a banner and localized slogan in About and the first setup page, with artwork colors taken from the active terminal theme and a compact fallback for narrow or non-Unicode terminals.
