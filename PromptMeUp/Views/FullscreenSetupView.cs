@@ -54,7 +54,8 @@ public sealed class FullscreenSetupView : ISetupView
         {
             TerminalTheme.Apply(_themes.Resolve(draft.Settings.Theme));
             var pages = CreateSetupPages(draft, state);
-            var initialPage = pages.ToList().FindIndex(page => page.TitleKey == "Settings." + state.InitialSection);
+            var initialTitleKey = state.InitialSection == SettingsSection.About ? "About.MenuLabel" : "Settings." + state.InitialSection;
+            var initialPage = pages.ToList().FindIndex(page => page.TitleKey == initialTitleKey);
             if (initialPage < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(state), "Unsupported settings section.");
@@ -106,8 +107,9 @@ public sealed class FullscreenSetupView : ISetupView
     }
 
     /// <summary>Maps a visible form page back to the stable settings section used when reopening the editor.</summary>
-    private static SettingsSection SelectedSection(FormPage page) =>
-        page.TitleKey.StartsWith("Settings.", StringComparison.Ordinal)
+    private static SettingsSection SelectedSection(FormPage page) => page.TitleKey == "About.MenuLabel"
+        ? SettingsSection.About
+        : page.TitleKey.StartsWith("Settings.", StringComparison.Ordinal)
             && Enum.TryParse<SettingsSection>(page.TitleKey["Settings.".Length..], ignoreCase: false, out var section)
             ? section
             : SettingsSection.General;
@@ -235,10 +237,8 @@ public sealed class FullscreenSetupView : ISetupView
             },
             new("About.MenuLabel", [])
             {
-                Open = _about.Render,
-                HelpKey = "About.OpenHint",
-                Preview = () => new Text(_text.Text("Help.About"), Style.Parse(TerminalTheme.Primary)),
-                PreviewRows = 3
+                HelpKey = "About.SettingsHint",
+                Overview = _about.CreateContent
             }
         ], state.SaveSucceeded);
     }
@@ -332,7 +332,7 @@ public sealed class FullscreenSetupView : ISetupView
             Toggle("Settings.CaptureConsent", () => draft.CaptureConsent, value => draft.CaptureConsent = value,
                 () => draft.NeedsCaptureConsent) with
             {
-                Overview = () => Disclosure("Lab.StartCapture", "Lab.CaptureNotice", "Lab.Retention"),
+                Overview = CreateCaptureConsentOverview,
                 HelpKey = "Settings.FeaturesDraftHelp"
             },
             ClearLearningConsent(draft)
@@ -400,6 +400,36 @@ public sealed class FullscreenSetupView : ISetupView
         return string.Equals(label, key, StringComparison.Ordinal) ? skill.Name : label;
     }
 
+    /// <summary>Separates collection consent into readable facts about local data, OpenAI, retention, and deletion.</summary>
+    private IRenderable CreateCaptureConsentOverview()
+    {
+        var guide = new List<IRenderable>
+        {
+            new Text(_text.Text("Lab.StartCapture"), Style.Parse("bold " + TerminalTheme.Primary)),
+            new Text(" ")
+        };
+        foreach (var (titleKey, icon, keys) in new[]
+        {
+            ("Settings.PrivacyLocal", "💻", new[] { "Settings.CaptureLocalInfo" }),
+            ("Settings.PrivacyProvider", "📤", new[] { "Settings.CaptureProviderInfo" }),
+            ("Settings.CaptureRetention", "⏳", new[] { "Settings.CaptureLimitInfo", "Settings.CaptureExpiryInfo" }),
+            ("Settings.PrivacyControl", "🗑️", new[] { "Settings.CaptureDeleteInfo", "Settings.CaptureSavedInfo", "Settings.CaptureHistoryInfo" })
+        })
+        {
+            guide.Add(new Text(TerminalTheme.IconPrefix(_shell.Options, icon, "-") + _text.Text(titleKey),
+                Style.Parse("bold " + TerminalTheme.Accent)));
+            var points = new Grid().AddColumn(new GridColumn().NoWrap()).AddColumn();
+            foreach (var key in keys)
+            {
+                points.AddRow(new Text("-", Style.Parse(TerminalTheme.Accent)),
+                    new Text(_text.Text(key), Style.Parse(TerminalTheme.Primary)));
+            }
+            guide.Add(points);
+            guide.Add(new Text(" "));
+        }
+        return new Rows(guide);
+    }
+
     /// <summary>Retains complete privacy disclosures only while their explicit acknowledgement is focused.</summary>
     private IRenderable Disclosure(params string[] keys) => new Rows(keys.Select(key =>
         new Text(_text.Text(key), Style.Parse(TerminalTheme.Warning))));
@@ -419,9 +449,13 @@ public sealed class FullscreenSetupView : ISetupView
             new Text(_text.Text("Settings.PrivacyHelp"), Style.Parse(TerminalTheme.Muted)),
             new Text(" ")
         };
-        foreach (var key in new[] { "Local", "Provider", "Learning", "Skills", "Control" })
+        foreach (var (key, icon) in new[]
         {
-            guide.Add(new Text(_text.Text("Settings.Privacy" + key), Style.Parse("bold " + TerminalTheme.Accent)));
+            ("Local", "💻"), ("Provider", "📤"), ("Learning", "🧠"), ("Skills", "🌐"), ("Control", "🗑️")
+        })
+        {
+            guide.Add(new Text(TerminalTheme.IconPrefix(_shell.Options, icon, "-") + _text.Text("Settings.Privacy" + key),
+                Style.Parse("bold " + TerminalTheme.Accent)));
             guide.Add(new Text(_text.Text("Settings.Privacy" + key + "Info"), Style.Parse(TerminalTheme.Primary)));
             guide.Add(new Text(" "));
         }

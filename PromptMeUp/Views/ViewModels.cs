@@ -34,7 +34,8 @@ public enum SettingsSection
     Skills,
     Learning,
     Memories,
-    Privacy
+    Privacy,
+    About
 }
 
 public sealed record SetupSubmission(

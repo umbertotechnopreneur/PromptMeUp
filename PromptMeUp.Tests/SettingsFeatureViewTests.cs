@@ -55,7 +55,7 @@ public sealed class SettingsFeatureViewTests
         Assert.False(original.Settings.Enabled);
         Assert.False(original.Settings.CaptureObservations);
         Assert.Contains(harness.Text.Text("Settings.FeatureConsentRequired"), Plain(harness.Output), StringComparison.Ordinal);
-        Assert.Contains(harness.Text.Text("Lab.CaptureNotice"), Plain(harness.Output), StringComparison.Ordinal);
+        Assert.Contains(harness.Text.Text("Settings.CaptureProviderInfo"), Plain(harness.Output), StringComparison.Ordinal);
         Assert.Empty(harness.Keys);
     }
 

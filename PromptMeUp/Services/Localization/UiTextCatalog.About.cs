@@ -21,6 +21,13 @@ internal static partial class UiTextCatalog
             German: "Enter: Infoseite öffnen. Schließen führt zurück.",
             Spanish: "Intro: abrir Acerca de. Ciérralo para volver.",
             Vietnamese: "Enter: mở giới thiệu. Đóng để quay lại."));
+        entries.Add("About.SettingsHint", new(
+            English: "Project information.",
+            Italian: "Informazioni sul progetto.",
+            French: "Informations sur le projet.",
+            German: "Informationen zum Projekt.",
+            Spanish: "Información del proyecto.",
+            Vietnamese: "Thông tin dự án."));
         entries.Add("Form.OpenFooter", new(
             English: "Up/Down: navigate | Tab/F6: switch focus | Enter: choose | Esc: cancel",
             Italian: "Su/Giù: naviga | Tab/F6: cambia area | Invio: scegli | Esc: annulla",

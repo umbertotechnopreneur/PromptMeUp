@@ -11,6 +11,7 @@ namespace PromptMeUp.Views;
 public interface IAboutView
 {
     void Render();
+    IRenderable CreateContent();
 }
 
 /// <summary>Presents the project artwork and information in an adaptive, passive terminal page.</summary>
@@ -33,7 +34,7 @@ public sealed class AboutView(
         if (!FullscreenHelpView.CanUse(console))
         {
             TerminalTheme.WriteRule(console, text.Text("About.Title"));
-            console.Write(CreateContent(console.Profile.Width));
+            console.Write(CreateContent());
             console.WriteLine();
             console.WriteLine();
             return;
@@ -63,8 +64,11 @@ public sealed class AboutView(
         }
     }
 
+    /// <summary>Provides the shared About content without opening a screen or reading input.</summary>
+    public IRenderable CreateContent() => new ResponsiveContent(this);
+
     /// <summary>Combines the invariant artwork with localized product details and literal project links.</summary>
-    private IRenderable CreateContent(int width)
+    private IRenderable BuildContent(int width)
     {
         var details = new Grid();
         details.AddColumn(new GridColumn().RightAligned());
@@ -174,7 +178,7 @@ public sealed class AboutView(
 
         _visibleRows = height - FullscreenHeader.Height - FullscreenFooter.Height();
         var renderOptions = new RenderOptions(console.Profile.Capabilities, new Size(width, height));
-        var lines = Segment.SplitLines(CreateContent(width - 4).Render(renderOptions, width - 4)).ToList();
+        var lines = Segment.SplitLines(CreateContent().Render(renderOptions, width - 4)).ToList();
         _lineCount = lines.Count;
         _offset = Math.Clamp(_offset, 0, Math.Max(0, _lineCount - _visibleRows));
         var body = new Padder(new VisibleLines(lines.Skip(_offset).Take(_visibleRows).ToArray()), new Padding(2, 0, 2, 0));
@@ -196,6 +200,18 @@ public sealed class AboutView(
             new Layout("body", body),
             new Layout("footer", footer).Size(FullscreenFooter.Height()));
         console.Write(new FormSurface(root));
+    }
+
+    /// <summary>Adapts the shared artwork and details to the width assigned by the containing view.</summary>
+    private sealed class ResponsiveContent(AboutView view) : IRenderable
+    {
+        /// <summary>Measures the layout using the containing view's available width.</summary>
+        public Measurement Measure(RenderOptions options, int maxWidth) =>
+            view.BuildContent(maxWidth).Measure(options, maxWidth);
+
+        /// <summary>Renders the complete content for the containing view to display and scroll.</summary>
+        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) =>
+            view.BuildContent(maxWidth).Render(options, maxWidth);
     }
 
     /// <summary>Preserves the already wrapped text, letter shapes, and link styles within the visible body rows.</summary>

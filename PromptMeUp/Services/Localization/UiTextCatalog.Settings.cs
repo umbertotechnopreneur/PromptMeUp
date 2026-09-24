@@ -353,6 +353,62 @@ internal static partial class UiTextCatalog
             "Speichern meiner Nachrichten erlauben",
             "Acepto guardar mis mensajes",
             "Tôi đồng ý giữ tin nhắn"));
+        entries.Add("Settings.CaptureLocalInfo", new(
+            "Collection saves copies of your messages on this device with recognizable credentials hidden.",
+            "La raccolta salva sul dispositivo copie dei tuoi messaggi con le credenziali riconoscibili oscurate.",
+            "La collecte conserve sur cet appareil des copies de vos messages en masquant les identifiants secrets reconnaissables.",
+            "Die Erfassung speichert Kopien deiner Nachrichten auf diesem Gerät und verdeckt erkennbare Zugangsdaten.",
+            "La recopilación guarda copias de tus mensajes en este dispositivo ocultando credenciales reconocibles.",
+            "Tính năng thu thập lưu bản sao tin nhắn trên thiết bị này và che thông tin xác thực có thể nhận diện."));
+        entries.Add("Settings.CaptureProviderInfo", new(
+            "Dream sends the displayed messages to OpenAI only after your confirmation.",
+            "Dream invia i messaggi mostrati a OpenAI solo dopo la tua conferma.",
+            "Dream envoie les messages affichés à OpenAI uniquement après votre confirmation.",
+            "Dream sendet die angezeigten Nachrichten erst nach deiner Bestätigung an OpenAI.",
+            "Dream envía los mensajes mostrados a OpenAI solo tras tu confirmación.",
+            "Dream chỉ gửi các tin nhắn hiển thị tới OpenAI sau khi bạn xác nhận."));
+        entries.Add("Settings.CaptureRetention", new(
+            "Retention",
+            "Conservazione",
+            "Conservation",
+            "Aufbewahrung",
+            "Conservación",
+            "Thời gian lưu trữ"));
+        entries.Add("Settings.CaptureLimitInfo", new(
+            "Only the newest 200 collected messages per project are kept.",
+            "Si conservano solo i 200 messaggi raccolti più recenti per progetto.",
+            "Seuls les 200 derniers messages collectés par projet sont conservés.",
+            "Nur die neuesten 200 erfassten Nachrichten je Projekt bleiben erhalten.",
+            "Se conservan solo los 200 mensajes recopilados más recientes por proyecto.",
+            "Chỉ giữ 200 tin nhắn đã thu thập mới nhất mỗi dự án."));
+        entries.Add("Settings.CaptureExpiryInfo", new(
+            "Messages and suggestions older than 30 days are removed when you next use these records.",
+            "Messaggi e suggerimenti oltre 30 giorni vengono rimossi quando usi di nuovo questi dati.",
+            "Messages et suggestions de plus de 30 jours sont supprimés à leur prochaine utilisation.",
+            "Nachrichten und Vorschläge über 30 Tage werden bei der nächsten Nutzung dieser Daten entfernt.",
+            "Los mensajes y sugerencias de más de 30 días se eliminan al volver a usar estos datos.",
+            "Tin nhắn và đề xuất quá 30 ngày được xóa khi bạn dùng lại dữ liệu này."));
+        entries.Add("Settings.CaptureDeleteInfo", new(
+            "Turning collection off deletes collected messages and suggestions. Deleting a message also deletes its linked suggestions.",
+            "Disattivare la raccolta elimina messaggi raccolti e suggerimenti. Cancellare un messaggio elimina anche i suggerimenti collegati.",
+            "Désactiver la collecte supprime messages collectés et suggestions. Supprimer un message efface aussi les suggestions liées.",
+            "Ausschalten der Erfassung löscht erfasste Nachrichten und Vorschläge. Das Löschen einer Nachricht entfernt auch die zugehörigen Vorschläge.",
+            "Desactivar la recopilación borra mensajes recopilados y sugerencias. Borrar un mensaje elimina también sus sugerencias vinculadas.",
+            "Tắt thu thập sẽ xóa tin nhắn đã thu thập và đề xuất. Xóa một tin nhắn cũng xóa các đề xuất liên quan."));
+        entries.Add("Settings.CaptureSavedInfo", new(
+            "Saved memories remain until you delete them.",
+            "I ricordi salvati restano finché non li elimini.",
+            "Les souvenirs enregistrés restent jusqu’à leur suppression.",
+            "Gespeicherte Erinnerungen bleiben, bis du sie löschst.",
+            "Los recuerdos guardados permanecen hasta que los borres.",
+            "Ghi nhớ đã lưu vẫn còn cho đến khi bạn xóa."));
+        entries.Add("Settings.CaptureHistoryInfo", new(
+            "Confirmed OpenAI analyses may remain in ordinary local history.",
+            "Le analisi OpenAI confermate possono restare nella normale cronologia locale.",
+            "Les analyses OpenAI confirmées peuvent rester dans l’historique local habituel.",
+            "Bestätigte OpenAI-Analysen können im normalen lokalen Verlauf verbleiben.",
+            "Los análisis de OpenAI confirmados pueden quedar en el historial local habitual.",
+            "Các phân tích OpenAI đã xác nhận có thể vẫn còn trong lịch sử cục bộ thông thường."));
         entries.Add("Settings.ClearLearningConsent", new(
             "I confirm deletion",
             "Confermo la cancellazione",

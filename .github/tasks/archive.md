@@ -1,5 +1,13 @@
 # Task Archive
 
+## 2026-09-24 — Make settings information easier to read
+
+- Split message-collection consent into four titled sections with aligned bullet points, preserving the collection, confirmation, retention, and deletion facts in all six supported languages.
+- Add one context-specific emoji to each Privacy heading through the shared icon helper, including its no-emoji fallback.
+- Embed the shared About artwork and project details in the settings content pane. Reuse the form's scrolling, adapt the content to the pane width, and preserve the selected About section after saving.
+- Update the existing consent-view assertion for the newly separated OpenAI confirmation text.
+- Validation: reviewed the scoped source and diff. Builds, tests, formatters, linters, and runtime or visual checks were not run. A local Debug build and focused settings navigation and layout checks remain useful follow-up work. Changes remain local on the owner-authorized branch.
+
 ## 2026-09-22 — Unify skills and memory editing
 
 - Reworked Skills into a numbered category sidebar with inline commands, package review, textboxes, and textareas in the central panel.
