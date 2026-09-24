@@ -434,9 +434,11 @@ public sealed class FullscreenSetupView : ISetupView
         return new Rows(guide);
     }
 
-    /// <summary>Retains complete privacy disclosures only while their explicit acknowledgement is focused.</summary>
-    private IRenderable Disclosure(params string[] keys) => new Rows(keys.Select(key =>
-        new Text(_text.Text(key), Style.Parse(TerminalTheme.Warning))));
+    /// <summary>Emphasizes the destructive choice while keeping its retention details readable.</summary>
+    private IRenderable Disclosure(string warningKey, string detailKey) => new Rows(
+        new Text(_text.Text(warningKey), Style.Parse(TerminalTheme.Warning)),
+        new Text(" "),
+        new Text(_text.Text(detailKey), Style.Parse(TerminalTheme.Primary)));
 
     /// <summary>Preserves inspected source line breaks while removing terminal controls and markup interpretation.</summary>
     private static string SafePreview(string value) => new(value.Where(character => !char.IsControl(character) || character is '\n' or '\t').ToArray());
