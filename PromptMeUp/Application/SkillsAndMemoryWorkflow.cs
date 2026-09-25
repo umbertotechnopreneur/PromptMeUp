@@ -45,91 +45,35 @@ public sealed partial class SkillsAndMemoryWorkflow(
     /// <summary>Confirms the memory deletion and its explicit learning-evidence purge, defaulting to cancellation.</summary>
     public bool ConfirmMemoryForget() => view.Confirm(text.Text("Lab.ForgetNotice"));
 
-    /// <summary>Manages project activation, exact package approvals, imports, and skill selection.</summary>
+    /// <summary>Manages global activation, exact package approvals, imports, and skill selection.</summary>
     public async Task RunSkillsAsync(AppSettings settings, CancellationToken ct)
     {
         while (true)
         {
             ct.ThrowIfCancellationRequested();
             var preferences = await store.SettingsAsync(ct).ConfigureAwait(false);
-            IReadOnlyList<SkillMenuItem> projectCommands = preferences.Enabled
-                ?
-                [
-                    new(SkillMenuAction.ToggleAutomatic,
-                        text.Text("Lab.Automatic") + " — " + text.Text(preferences.AutomaticSkills ? "Lab.Enabled" : "Lab.Off"),
-                        text.Text("Lab.Automatic"), Icon: "⚡"),
-                    new(SkillMenuAction.ClearSelection, text.Text("Lab.ClearSelection"), text.Text("Lab.ClearSelection"), Icon: "🧹"),
-                    new(SkillMenuAction.DisableProject, text.Text("Lab.Disable"), text.Text("Lab.Disable"), Icon: "⏻")
-                ]
-                :
-                [
-                    new SkillMenuItem(SkillMenuAction.EnableProject, text.Text("Lab.Enable"), text.Text("Lab.Enable"), Icon: "⏻")
-                ];
-            IReadOnlyList<SkillMenuItem> importCommands = preferences.Enabled
-                ? [new SkillMenuItem(SkillMenuAction.Import, text.Text("Lab.Import"), text.Text("Lab.ImportDescription"),
-                    Icon: "📦", InputLabel: text.Text("Lab.Path"))]
-                : [];
-            var installedCommands = new List<SkillMenuItem>();
-            if (preferences.Enabled)
+            var groups = await BuildSkillGroups(preferences, ct).ConfigureAwait(false);
+            var selected = view.ChooseSkills(text.Text("Lab.Skills"), groups, inline =>
             {
-                foreach (var skill in skills.List())
+                if (inline.Item.Action != SkillMenuAction.ToggleSkill)
                 {
-                    var enabled = await skills.IsEnabledAsync(skill, ct).ConfigureAwait(false);
-                    var status = skill.UnavailableReason ?? text.Text(enabled ? "Lab.Enabled" : "Lab.Off");
-                    var details = text.Text("Lab.SkillCommandDetails", skill.Version, status, skill.Description, skill.Origin);
-                    if (skill.UnavailableReason is not null)
-                    {
-                        installedCommands.Add(new SkillMenuItem(SkillMenuAction.ToggleSkill,
-                            skill.Name + " — " + status, details, skill, skill.Icon, CanExecute: false));
-                        continue;
-                    }
-                    installedCommands.Add(new SkillMenuItem(SkillMenuAction.ToggleSkill,
-                        skill.Name + " — " + text.Text(enabled ? "Lab.Deactivate" : "Lab.Activate"),
-                        details, skill, skill.Icon));
-                    if (enabled)
-                    {
-                        installedCommands.Add(new SkillMenuItem(SkillMenuAction.SelectSkill,
-                            skill.Name + " — " + text.Text("Lab.Select"), details, skill, "📌"));
-                        foreach (var action in actions.Actions(skill))
-                        {
-                            var reminder = skill.Origin == "bundled" && skill.Name == "set_reminder";
-                            var native = skill.Origin == "bundled" && skill.Name is "git" or "filesystem";
-                            installedCommands.Add(new SkillMenuItem(SkillMenuAction.RunSkill,
-                                skill.Name + " — " + action,
-                                text.Text("Lab.RunSkillAction", action, skill.Description), skill, "▶️", action,
-                                InputLabel: reminder ? null : text.Text(native ? "Lab.Path" : "Lab.Arguments"),
-                                InitialInput: reminder ? string.Empty : native
-                                    ? Environment.CurrentDirectory
-                                    : actions.DefaultParameters(skill),
-                                MultilineInput: !reminder && !native));
-                        }
-                    }
+                    return null;
                 }
-            }
 
-            IReadOnlyList<SkillMenuGroup> groups =
-            [
-                new(text.Text("Lab.ProjectGroup"), text.Text(preferences.Enabled
-                    ? "Lab.ProjectEnabledDescription"
-                    : "Lab.ProjectDisabledDescription"), projectCommands, "⚙️"),
-                new(text.Text("Lab.InstalledGroup"), text.Text(preferences.Enabled
-                    ? "Lab.InstalledDescription"
-                    : "Lab.Disabled"), installedCommands, "🧩"),
-                new(text.Text("Lab.ImportGroup"), text.Text(preferences.Enabled
-                    ? "Lab.ImportDescription"
-                    : "Lab.Disabled"), importCommands, "📦")
-            ];
-            var selected = view.ChooseSkills(text.Text("Lab.Skills"), groups);
+                RunSkillCommandAsync(inline, settings, ct).GetAwaiter().GetResult();
+                preferences = store.SettingsAsync(ct).GetAwaiter().GetResult();
+                return BuildSkillGroups(preferences, ct).GetAwaiter().GetResult();
+            });
             if (selected is null)
             {
                 return;
             }
             switch (selected.Item.Action)
             {
-                case SkillMenuAction.EnableProject:
+                case SkillMenuAction.EnableSkillsAndMemory:
                     await store.SaveSettingsAsync(preferences with { Enabled = true }, preferences, ct).ConfigureAwait(false);
                     break;
-                case SkillMenuAction.DisableProject:
+                case SkillMenuAction.DisableSkillsAndMemory:
                     if (view.Confirm(text.Text("Lab.Disable")))
                     {
                         await store.SaveSettingsAsync(new(), preferences, ct).ConfigureAwait(false);
@@ -144,7 +88,6 @@ public sealed partial class SkillsAndMemoryWorkflow(
                 case SkillMenuAction.ClearSelection:
                     await store.SetAsync("selected-skill", string.Empty, ct).ConfigureAwait(false);
                     break;
-                case SkillMenuAction.ToggleSkill:
                 case SkillMenuAction.SelectSkill:
                 case SkillMenuAction.RunSkill:
                     await RunSkillCommandAsync(selected, settings, ct).ConfigureAwait(false);
@@ -153,6 +96,79 @@ public sealed partial class SkillsAndMemoryWorkflow(
                     throw new InvalidOperationException("Unsupported skills menu action.");
             }
         }
+    }
+
+    /// <summary>Builds the Skills menu with concise global state labels and complete package details below the commands.</summary>
+    private async Task<IReadOnlyList<SkillMenuGroup>> BuildSkillGroups(SkillsAndMemorySettings preferences, CancellationToken ct)
+    {
+        IReadOnlyList<SkillMenuItem> generalCommands = preferences.Enabled
+            ?
+            [
+                new(SkillMenuAction.ToggleAutomatic,
+                    text.Text("Lab.Automatic") + " — " + text.Text(preferences.AutomaticSkills ? "Lab.Enabled" : "Lab.Off"),
+                    text.Text("Lab.Automatic"), Icon: "⚡"),
+                new(SkillMenuAction.ClearSelection, text.Text("Lab.ClearSelection"), text.Text("Lab.ClearSelection"), Icon: "🧹"),
+                new(SkillMenuAction.DisableSkillsAndMemory, text.Text("Lab.Disable"), text.Text("Lab.Disable"), Icon: "⏻")
+            ]
+            :
+            [
+                new SkillMenuItem(SkillMenuAction.EnableSkillsAndMemory, text.Text("Lab.Enable"), text.Text("Lab.Enable"), Icon: "⏻")
+            ];
+        IReadOnlyList<SkillMenuItem> importCommands = preferences.Enabled
+            ? [new SkillMenuItem(SkillMenuAction.Import, text.Text("Lab.Import"), text.Text("Lab.ImportDescription"),
+                Icon: "📦", InputLabel: text.Text("Lab.Path"))]
+            : [];
+        var installedCommands = new List<SkillMenuItem>();
+        if (preferences.Enabled)
+        {
+            foreach (var skill in skills.List())
+            {
+                var enabled = await skills.IsEnabledAsync(skill, ct).ConfigureAwait(false);
+                var status = skill.UnavailableReason ?? text.Text(enabled ? "Lab.Enabled" : "Lab.Off");
+                var state = skill.UnavailableReason is null
+                    ? TerminalTheme.IconPrefix(shell.Options, enabled ? "🟢" : "🔴", enabled ? "+" : "-") + status
+                    : status;
+                if (skill.UnavailableReason is not null)
+                {
+                    installedCommands.Add(new SkillMenuItem(SkillMenuAction.ToggleSkill,
+                        skill.Name + " — " + state, skill.Description, skill, skill.Icon, CanExecute: false));
+                    continue;
+                }
+                installedCommands.Add(new SkillMenuItem(SkillMenuAction.ToggleSkill,
+                    skill.Name + " — " + state, skill.Description, skill, skill.Icon));
+                if (enabled)
+                {
+                    installedCommands.Add(new SkillMenuItem(SkillMenuAction.SelectSkill,
+                        skill.Name + " — " + text.Text("Lab.Select"), text.Text("Lab.Select"), skill, "📌"));
+                    foreach (var action in actions.Actions(skill))
+                    {
+                        var reminder = skill.Origin == "bundled" && skill.Name == "set_reminder";
+                        var native = skill.Origin == "bundled" && skill.Name is "git" or "filesystem";
+                        installedCommands.Add(new SkillMenuItem(SkillMenuAction.RunSkill,
+                            skill.Name + " — " + action,
+                            text.Text("Lab.RunSkillAction", action, skill.Description), skill, "▶️", action,
+                            InputLabel: reminder ? null : text.Text(native ? "Lab.Path" : "Lab.Arguments"),
+                            InitialInput: reminder ? string.Empty : native
+                                ? Environment.CurrentDirectory
+                                : actions.DefaultParameters(skill),
+                            MultilineInput: !reminder && !native));
+                    }
+                }
+            }
+        }
+
+        return
+        [
+            new(text.Text("Lab.GeneralGroup"), text.Text(preferences.Enabled
+                ? "Lab.GeneralEnabledDescription"
+                : "Lab.GeneralDisabledDescription"), generalCommands, "⚙️"),
+            new(text.Text("Lab.InstalledGroup"), text.Text(preferences.Enabled
+                ? "Lab.InstalledDescription"
+                : "Lab.Disabled"), installedCommands, "🧩"),
+            new(text.Text("Lab.ImportGroup"), text.Text(preferences.Enabled
+                ? "Lab.ImportDescription"
+                : "Lab.Disabled"), importCommands, "📦")
+        ];
     }
 
     /// <summary>Shows the exact inspected package and applies one command selected from the central skills panel.</summary>

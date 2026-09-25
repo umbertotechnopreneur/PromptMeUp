@@ -13,7 +13,7 @@
 ## Quick start
 
 ```powershell
-pwsh -NoProfile -File .\scripts\preflight.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command preflight
 dotnet build .\{{SOLUTION_PATH}} --configuration Release
 ```
 

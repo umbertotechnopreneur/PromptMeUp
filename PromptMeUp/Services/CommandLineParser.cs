@@ -37,6 +37,7 @@ public sealed class CommandLineParser : ICommandLineParser
         string? previewAction = null;
         string? prefix = null;
         string? pattern = null;
+        var resetAll = false;
         var commandWasSelected = false;
         var queryOptionWasSpecified = false;
         var queryParts = new List<string>();
@@ -153,6 +154,17 @@ public sealed class CommandLineParser : ICommandLineParser
                         return FailureMessage(setupError);
                     }
                     break;
+                case "--reset":
+                    if (!TrySelect(AppCommand.Reset, ref command, ref commandWasSelected, out var resetError))
+                    {
+                        return FailureMessage(resetError);
+                    }
+                    if (index + 1 < args.Count && args[index + 1].Equals("all", StringComparison.OrdinalIgnoreCase))
+                    {
+                        resetAll = true;
+                        index++;
+                    }
+                    break;
                 case "--ai-settings" or "--ai-setup":
                     if (!TrySelect(AppCommand.AiSettings, ref command, ref commandWasSelected, out var aiSettingsError))
                     {
@@ -216,6 +228,12 @@ public sealed class CommandLineParser : ICommandLineParser
                     if (!TrySelect(AppCommand.Costs, ref command, ref commandWasSelected, out var costsError))
                     {
                         return FailureMessage(costsError);
+                    }
+                    break;
+                case "--prepare-logs":
+                    if (!TrySelect(AppCommand.PrepareLogs, ref command, ref commandWasSelected, out var prepareLogsError))
+                    {
+                        return FailureMessage(prepareLogsError);
                     }
                     break;
                 case "--third-party":
@@ -415,7 +433,7 @@ public sealed class CommandLineParser : ICommandLineParser
         }
 
         return new CommandLineParseResult(
-            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern),
+            new CommandLineOptions(command, query, language, noAnimation, noEmoji, yes, dryRun, pathAction, inputFile, outputFile, resumeId, previewAction, prefix, pattern, resetAll),
             null);
     }
 
@@ -482,6 +500,7 @@ public sealed class CommandLineParser : ICommandLineParser
         AppCommand.AiSettings => "ai-settings",
         AppCommand.Theme => "theme",
         AppCommand.InstallFont => "install-font",
+        AppCommand.PrepareLogs => "prepare-logs",
         AppCommand.ThirdParty => "third-party",
         AppCommand.Path => "path",
         _ => command.ToString().ToLowerInvariant()

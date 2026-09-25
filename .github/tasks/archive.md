@@ -1,4 +1,157 @@
-# Task Archive
+﻿# Task Archive
+
+## 2026-09-24 — Accept the bundled command guide in Windows CI packaging
+
+- Fixed the existing Windows installer validation used by the quality gate: allow and require the exact `docs/promptmeup-quick-reference.pdf` payload path, matching the MSIX contract.
+- Preserved rejection of unrelated files and the existing credential and local-data guards. The installer template already copies nested payload files.
+
+Validation: PowerShell syntax and scoped diff checks passed. No local builds, installers, or automated tests were run; PR checks validate the Windows packaging step after push.
+
+## 2026-09-24 — Improve onboarding and add a printable command guide
+
+- Reworked the first-run steps into a disposable, collapsible terminal surface when supported. Completed prompts now leave compact headers, while the active step uses a horizontal cyan-to-pink gradient rule; scrolling terminals keep a simpler fallback without redundant choice separators.
+- Expanded the final welcome with three practical starter commands, localized recovery guidance, and explicit opening of the installed two-page command guide in all six supported languages.
+- Added a print-friendly A4 quick reference with essential commands on page one and advanced workflows, global switches, chat controls, and safety guidance on page two. Both pages carry the official application icon.
+- Included the guide in build and publish output and made it an allowed, required MSIX payload file. Added offline opening from Help, including Help reached through the home menu, with localized recovery messages if the guide or PDF reader is unavailable.
+
+Validation: repository preflight, formatting verification, XML method-comment check, MSIX script syntax, and Release build with warnings treated as errors passed. The publish inventory contains exactly one guide at `docs/promptmeup-quick-reference.pdf`; the build copy matches the source SHA-256. Both branded PDF pages were rendered and visually inspected. Automated tests and CLI smoke tests were not run; regression sources compiled. No MSIX was produced or installed during this task. Release build output was cleaned after validation.
+
+## 2026-09-24 — Replace the installed Debug MSIX at version 1.0.0.0
+
+- Removed the existing current-user PromptMeUp package after the owner's explicit authorization and installed the newly signed x64 Debug MSIX from commit `bd27f53`.
+- Preserved the owner-selected package version `1.0.0.0`; no version component was changed.
+
+Validation: `Get-AppxPackage` reports version 1.0.0.0, x64 architecture, `Ok` status, and a Developer signature for `UmbertoGiacobbiDotBiz.PromptMeUp_1.0.0.0_x64__aa9ddh7dsmn36`.
+
+## 2026-09-24 — Prepare a redacted email support bundle
+
+- Added `hm --prepare-logs` as a standalone local command available before onboarding and database initialization.
+- The command creates a new timestamped ZIP on the current user's desktop with a privacy-limited machine summary, a contents note, and up to the 14 available daily logs. Each log contributes at most its latest 4 MiB.
+- Applies credential redaction again while packaging and replaces current-user path roots with neutral tokens. Excludes the database, conversations, memories, environment values, API keys, user and computer names, network addresses, and personal-file inventories.
+- Added six-language confirmation copy, command help, CLI and privacy documentation. Creating the ZIP sends nothing; the user inspects it and attaches it to an email manually.
+
+Validation: 24 focused parser and archive tests passed, followed by all 1,007 tests. Preflight, XML comments, formatting verification, `git diff --check`, and the warning-free Release build passed. The archive regression test verified credential and user-path redaction and database exclusion. Standard Release cleanup completed.
+
+## 2026-09-24 — Fix startup rendering and add onboarding diagnostics
+
+- Replaced untitled calls to the titled-divider helper in home and onboarding with Spectre rules. The previous calls threw `ArgumentException` immediately after the banner.
+- Replaced the unsupported `whitesmoke` color name in the command banner with its hexadecimal color.
+- Added startup session IDs, route and terminal metadata, exit codes, method-only failure traces, and onboarding step and connection-check events without keys, nicknames, or conversation content. Interactive no-argument startup failures wait for Enter before closing.
+- Added welcome rendering coverage in all six languages and assertions that onboarding diagnostics omit credentials and nicknames. Documented the owner's exclusive control over all version components.
+- Installed the corrected Debug MSIX as the owner-requested 1.0.0.0 through `Add-AppxPackage -ForceUpdateFromAnyVersion -ForceTargetApplicationShutdown`. An initially chosen 1.0.0.1 revision was superseded after the owner's correction; the final installation is 1.0.0.0 and matches the corrected build hash.
+
+Validation: all 1,005 tests passed, including home keyboard navigation and actual welcome rendering. Interactive smoke checks with isolated data reached the key screen without provider calls, and the final installed alias stayed open at language selection and exited cleanly on Esc. Preflight, XML comments, formatting, warning-free Release build and Debug publish, package signing and installed-file verification passed. Standard .NET cleanup completed for both configurations; temporary packaging cleanup remains tracked separately.
+
+## 2026-09-24 — Install Debug MSIX 1.0.0.0 checkpoint
+
+- Published the current working source for Windows x64 in Debug with application version 1.0.0 and MSIX version 1.0.0.0.
+- Exported redistribution notices, built the MSIX under `artifacts/msix/debug/1.0.0.0-oobe-20260924-021718/`, and signed it with the existing trusted current-user publisher certificate.
+- Attempted an in-place update with `-ForceUpdateFromAnyVersion -ForceTargetApplicationShutdown`. Windows rejected the changed content under the same package identity and version with `0x80073CFB`; removed and reinstalled the current-user package to complete replacement. No application-data files were present in the package's user-data folders.
+- Verified the installed application hash against the new build, version 1.0.0.0, the execution alias, product icon, and Start entry without help arguments. Saved the verification record beside the package.
+
+Validation: Debug publish with warnings treated as errors, MSIX manifest validation, signing and signature verification passed. Standard .NET cleanup succeeded after limiting it to the published project because test assets had no Windows runtime target. Automatic approval review blocked recursive cleanup of publish and payload directories; follow-up remains in the task list. Automated tests and CLI smoke tests were not run. No Store upload or Git push was performed.
+
+## 2026-09-24 — Guided welcome, home menu, and desktop launch
+
+- Added four localized welcome steps: system language and ASCII flag, masked OpenAI key verification, optional name, and separate memory and learning consent. Completion does not open general settings.
+- Store verified Windows keys in Credential Manager. Explain learning collection, redaction, provider analysis, and the separate local activity history. Leave skills disabled until explicitly enabled.
+- Added a shared colored pixel banner for welcome and home. Running `hm` opens a numbered menu with single-key choices for existing chat, script, diagnostic, memory, skills, settings, and help workflows.
+- Added an unchecked desktop shortcut option at the end of onboarding. The native link uses the existing product icon and Windows execution alias; Start launches the same no-argument home flow.
+- Added regression cases for verification before credential persistence, failed verification, memory choices, desktop consent, and immediate numeric navigation.
+
+Validation: preflight, PowerShell syntax, project XML, XML method comments, formatting verification, and Release build with warnings treated as errors passed. Build output was cleaned. Automated tests and CLI smoke tests were not run; no MSIX was built or installed.
+
+## 2026-09-23 — Generate Store MSIX packages and unify artifact roots
+
+- Generated unsigned x64 and ARM64 Store MSIX packages for version 1.0.0.0 under `artifacts/store/1.0.0.0/`.
+- Changed package defaults to use `artifacts/store/<version>/<architecture>/` for Store and `artifacts/debug/<version>/<architecture>/` for Debug.
+- Kept temporary Store publish output under the Store artifact root and removed the obsolete `artifacts/msix/store-work` directory.
+- Updated the packaging guide and left Partner Center submission for follow-up.
+
+Validation: preflight passed; Release packaging succeeded for both architectures; package manifests and SHA-256 hashes were checked; build output was cleaned. Automated tests were not run.
+
+## 2026-09-23 — Remove hidden headless app entry from Store MSIX manifest
+
+- Moved the `hm.exe` execution alias extension onto the visible `PromptMeUp` application entry and removed the second application entry with `AppListEntry="none"`.
+- The generated Store manifest now has one visible app entry; fresh x64 and ARM64 packages still need Store validation.
+
+Validation: PowerShell parser and repository preflight checks passed. Store upload was not repeated.
+
+## 2026-09-23 — Consolidate repository scripts
+
+- Added `scripts/PromptMeUp.ps1` as the single repository entry point, with an interactive menu when no command is supplied and direct `-Command` routing for automation.
+- Moved the previous PowerShell entry points into private command modules under `scripts/Common/commands` and kept the published PATH helpers working from their new source location.
+- Updated repository guidance, packaging documentation, project links, and GitHub workflows to use the unified launcher.
+
+Validation: all PowerShell files passed parser checks, both changed GitHub workflows passed YAML parsing, every private command is referenced by the launcher, preflight, formatting verification, XML method comments, and the warning-free Release build passed. Automated tests, CLI smoke tests, and packaging were not run because they were not requested.
+
+## 2026-09-23 — Refine the first-run attribution line
+
+- Added a blank line before the PromptMeUp GitHub link.
+- Moved the author credit onto the GitHub line and added two accessible icons with text fallbacks.
+
+Validation: preflight, repository-wide formatting verification, XML method comments, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested.
+
+## 2026-09-23 — Normalize C# formatting and exclude Debug symbols from MSIX
+
+- Normalized the 37 affected C# files to UTF-8 with BOM and CRLF, without changing source text.
+- Excluded root-level PDB files from Debug MSIX payloads while preserving them in the publish directory.
+- Updated the Windows packaging guide to explain how to reuse a Debug publish containing symbols.
+
+Validation: PowerShell syntax, preflight, repository-wide `dotnet format --verify-no-changes`, XML method comments, and warning-free Release build passed. A signed MSIX was packaged from an existing Debug publish containing `hm.pdb`; the package contained no PDB files. Release build output was cleaned. Automated tests were not run.
+
+## 2026-09-22 — Require setup on first run
+
+- Added an `IsFirstRun` settings flag derived from the successfully saved setup state, without redundant persisted state or legacy migration code.
+- Routed every valid command through the common startup path and added a localized first-run prompt that opens Setup on OK or returns to the shell on Cancel.
+- Removed the redundant build time-zone field and render the extended ISO 8601 build timestamp, whose value already contains the local UTC offset.
+
+Validation: preflight, scoped formatting verification, XML method-comment check, warning-free Release build, the complete 982-test suite, and the non-interactive first-run CLI smoke passed. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Release build output was cleaned after validation.
+
+## 2026-09-22 — Fix global activation in the installed app
+
+- Corrected the SQLite schema so skills, learning evidence, proposals, revisions, reminders, and saved memories accept only the global scope used by the application.
+- Removed the obsolete project-to-global memory migration and project-scoped regression fixtures.
+- Built, signed, installed, and interactively verified Debug MSIX `0.0.1.2222`; activation now succeeds from both `hm --skills` and `hm --learning` without terminating the app.
+
+Validation: preflight, XML method-comment check, warning-free Release build, 108 focused storage and settings tests, signed-package verification, and installed interactive smoke checks passed.
+
+## 2026-09-22 — Install global Learning Debug MSIX
+
+- Built, signed, verified, and installed local x64 Debug MSIX `0.0.1.2221` containing the global Skills and Memory changes.
+- Preserved the signed package and SHA-256 record under ignored `artifacts/msix/learning-global-20260922-debug-v2`.
+
+Validation: package signature verification and installed package status passed. Automated tests were not run.
+
+## 2026-09-22 — Make Learning and Skills global
+
+- Rebuilt `hm --learning` on the shared fullscreen workspace used by Skills: action descriptions stay in the footer and confirmation remains in the same visual flow.
+- Replaced the Dream JSON dump with a bounded evidence count and an explicit fullscreen confirmation.
+- Made skills, memory collection, proposals, and reminders use one application-wide scope; updated the six runtime translations and Setup labels to say global.
+
+Validation: preflight, restore, XML method-comment check, diff inspection, and warning-free Release build passed; the repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run.
+
+## 2026-09-22 — Refine the Skills command list
+
+- Removed the redundant command metadata column from `hm --skills`; package details remain available below the selected command.
+- Added green and red status indicators. Toggling a skill now refreshes the active fullscreen menu in place instead of leaving and reopening the page.
+- Moved the selected command description into the footer notice, replacing the fixed navigation sentence.
+
+Validation: preflight, restore, XML method-comment check, diff inspection, and warning-free Release build passed; Release output was cleaned. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run.
+
+## 2026-09-22 — Build and install global Skills Debug MSIX
+
+- Built, signed, verified, and installed local x64 Debug MSIX `0.0.1.2220` for `UmbertoGiacobbiDotBiz.PromptMeUp`.
+- Preserved the signed package and SHA-256 record under ignored `artifacts/msix/global-skills-20260922-debug`.
+
+Validation: package signature verification and installed package status passed. The application Debug output was cleaned. Solution cleanup reported pre-existing test restore assets without a `win-x64` target; the package and its generated intermediates remain under ignored artifacts.
+
+## 2026-09-22 — Keep the Skills screen global
+
+- Replaced the Project group in `hm --skills` with General, including its six localized descriptions and activation message.
+- Renamed the menu actions and added a repository rule that prevents project-scoped labels, groups, availability, or configuration from returning to `hm --skills`.
+
+Validation: preflight, restore, XML method-comment check, scoped source search, diff inspection, and warning-free Release build passed; Release output was cleaned. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run.
 
 ## 2026-09-25 — Install the chat refinements Debug build
 
@@ -1191,3 +1344,12 @@ Validation: preflight, formatting verification, XML comment check, and Release b
 - Updated chat to use the configured preferred name and begin typing directly on the prompt line.
 
 Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
+
+- [x] Keep direct mode limited to one application session and clear its persisted setting on `--reset` and when the session ends.
+
+- [x] Render command-line prompts beside the You > label and let them wrap across the available terminal width.
+- [x] Repair the local test database scope constraints with direct SQL, preserve the affected rows, and retain a pre-change backup.
+
+- [x] Move legacy skill settings into the global settings table, remove the obsolete table from the local database, and add an idempotent startup migration for older databases.
+
+- [x] Make --reset clear setup and direct-mode flags only, and make --reset all delete/recreate the full SQLite database.

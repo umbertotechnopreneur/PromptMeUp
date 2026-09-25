@@ -18,18 +18,18 @@ public static class BuildInformationReader
             ?? throw new InvalidOperationException("The application version is missing.");
         var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToArray();
         var machineName = GetRequiredValue(metadata, "BuildMachine");
-        var timestamp = GetRequiredValue(metadata, "BuildDateUtc");
-        var gitCommit = GetRequiredValue(metadata, "GitCommit");
+        var timestamp = GetRequiredValue(metadata, "BuildDateLocal");
+        var gitCommit = GetRequiredValue(metadata, "BuildGitCommit");
         if (!DateTimeOffset.TryParseExact(timestamp, "O", CultureInfo.InvariantCulture, DateTimeStyles.None,
-                out var builtAtUtc) || builtAtUtc.Offset != TimeSpan.Zero)
+                out var builtAtLocal))
         {
-            throw new InvalidOperationException("The application build timestamp must be an ISO 8601 UTC value.");
+            throw new InvalidOperationException("The application build timestamp must be an ISO 8601 local value.");
         }
-        if (!Regex.IsMatch(gitCommit, "^[0-9a-f]{40}$", RegexOptions.CultureInvariant))
+        if (!Regex.IsMatch(gitCommit, "^[0-9a-f]{12}$", RegexOptions.CultureInvariant))
         {
-            throw new InvalidOperationException("The application Git commit must be a full lowercase SHA-1 hash.");
+            throw new InvalidOperationException("The application Git commit must be a 12-character lowercase SHA.");
         }
-        return new BuildInformation(version, machineName, builtAtUtc, gitCommit);
+        return new BuildInformation(version, machineName, builtAtLocal, gitCommit);
     }
 
     /// <summary>Rejects missing, empty, or duplicate metadata rather than substituting runtime information.</summary>

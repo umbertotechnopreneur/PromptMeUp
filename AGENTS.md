@@ -18,6 +18,7 @@ These instructions apply to every change in this repository.
 - Linux and macOS are source-only: users must compile and adapt the source themselves. Do not provide compiled binaries, installers, or commercial support for these platforms, and do not imply that every project can run there unchanged.
 - When a build is explicitly requested, default to a local development/debug build using the Debug configuration. A generic build or release request does not authorize a Microsoft Store package. Produce a Store version only when the owner explicitly asks for one; never upload or publish it without explicit authorization.
 - Keep development/debug artifacts separate from Store release artifacts. These rules do not authorize running builds, changing release pipelines, creating tags, or publishing on their own.
+- The owner chooses every product and package version, including the fourth MSIX revision. Never increment or change it without explicit authorization. For an owner-requested forced local MSIX installation, use `Add-AppxPackage -Path <package> -ForceUpdateFromAnyVersion -ForceApplicationShutdown`. Never combine `-ForceApplicationShutdown` with `-ForceTargetApplicationShutdown`, and do not use `-Update` for the main package because that switch updates dependency packages. `-ForceUpdateFromAnyVersion` permits the requested package version to replace a higher installed version; it does not bypass Windows error `0x80073CFB` for the same package version with different content. If Windows refuses that equal-version replacement, report the error and obtain explicit authorization before removing and reinstalling the package; do not choose a new version.
 - Windows distribution is MSIX-only. Do not propose or add portable ZIP, standalone EXE, or MSI distribution unless the owner explicitly changes this decision. This preference does not authorize packaging or workflow changes.
 
 ## Private business notes
@@ -53,6 +54,7 @@ These instructions apply to every change in this repository.
 ## Product boundaries
 
 - PromptMeUp is a lightweight .NET 10 console assistant whose public command is `hm`.
+- Skills, memory collection, proposals, and reminders are global. Do not introduce project-scoped labels, groups, availability, configuration, storage, or retention in `hm --skills`, `hm --learning`, or their Setup controls.
 - Keep the application code portable across Windows, Linux, and macOS. Windows distribution is MSIX-only. Do not introduce a background agent or platform-specific runtime dependency.
 - Keep GitHub as the project home and write public copy in product language before implementation detail.
 - Use plain, friendly English in documentation: speak directly to the reader, use short sentences and practical examples, and explain technical terms when needed. Keep factual credits and privacy details accurate.
@@ -112,10 +114,10 @@ Choose non-test checks by the changed files and run them once after the final re
 Non-test commands for code changes:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\preflight.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command preflight
 dotnet restore .\PromptMeUp.slnx
 dotnet format .\PromptMeUp.slnx --verify-no-changes --no-restore
-pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command check-xml
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
 ```
 

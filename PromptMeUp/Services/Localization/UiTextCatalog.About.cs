@@ -98,6 +98,13 @@ internal static partial class UiTextCatalog
             German: "Build-Rechner",
             Spanish: "Equipo de compilación",
             Vietnamese: "Máy biên dịch"));
+        entries.Add("About.GitCommit", new(
+            English: "Git commit",
+            Italian: "Commit Git",
+            French: "Commit Git",
+            German: "Git-Commit",
+            Spanish: "Commit de Git",
+            Vietnamese: "Bản ghi Git"));
         entries.Add("About.Author", new(
             English: "Author",
             Italian: "Autore",

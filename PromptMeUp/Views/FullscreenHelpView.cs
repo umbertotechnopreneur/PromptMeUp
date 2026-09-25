@@ -9,6 +9,7 @@ namespace PromptMeUp.Views;
 /// <summary>Pairs a public command with its localized description.</summary>
 internal sealed record HelpEntry(string Command, string Description)
 {
+    public bool IsCommand { get; init; } = true;
     public string? Example { get; init; }
     public IReadOnlyList<HelpArgument> Arguments { get; init; } = [];
 }
@@ -367,6 +368,11 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
     /// <summary>Separates syntax, indented explanations, and concrete examples while keeping hm white.</summary>
     internal static IRenderable RenderEntry(HelpEntry entry)
     {
+        if (!entry.IsCommand)
+        {
+            return new Rows(new Text(entry.Command, Style.Parse(TerminalTheme.Info)),
+                new Text(entry.Description, Style.Parse(TerminalTheme.Primary)), new Text(" "));
+        }
         var example = CommandExample(entry);
         var rows = new List<IRenderable>
         {

@@ -1,10 +1,10 @@
-# PromptMeUp Windows release packaging
+﻿# PromptMeUp Windows release packaging
 
-GitHub releases include unsigned EXE installers for Windows x64 and ARM64, plus portable archives. The [release guide](RELEASING.md#create-a-release-draft) explains how to generate a draft with one command. This guide covers the EXE builder and the separate local MSI, WinGet, and signed MSIX options.
+The release workflow produces only two portable ZIP archives: Windows x64 and Windows ARM64. Microsoft Store MSIX packages are built locally, unsigned, and uploaded separately by the maintainer. The commands below for EXE, MSI, and WinGet describe legacy packagers; they are not part of the current release workflow.
 
-## Unsigned EXE installers for x64 and ARM64
+## Legacy unsigned EXE installers for x64 and ARM64
 
-The release workflow uses `scripts/build-windows-installer.ps1` with Inno Setup 6 to package each Windows portable payload. The result is `PromptMeUp-<version>-win-x64-setup.exe` or `PromptMeUp-<version>-win-arm64-setup.exe`. A signing certificate is not required. Windows may display an unknown-publisher or SmartScreen warning because these installers are unsigned.
+The legacy `scripts/PromptMeUp.ps1 -Command windows-installer` command uses Inno Setup 6 to package an existing Windows portable payload. It creates `PromptMeUp-<version>-win-x64-setup.exe` or `PromptMeUp-<version>-win-arm64-setup.exe`; neither file is included in the current release workflow. A signing certificate is not required. Windows may display an unknown-publisher or SmartScreen warning because these installers are unsigned.
 
 Each installer accepts its matching Windows CPU type and installs for the current user under `%LOCALAPPDATA%\Programs\PromptMeUp`. It adds that directory to the user's `PATH`; open a new terminal before using `hm`. PowerShell 7 must be installed separately for command execution. The installer does not start PromptMeUp, install a background service, or change the machine `PATH`.
 
@@ -13,7 +13,7 @@ Later versions update the same EXE installation. The installer rejects downgrade
 To package an existing clean Windows portable payload locally, use Inno Setup 6.3 or later in the 6.x series. The Windows runner currently includes 6.7.1. This example assumes the portable payload for version `0.1.7` has already been built:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\build-windows-installer.ps1 `
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command windows-installer `
   -PublishDirectory .\artifacts\portable\0.1.7\win-x64\payload `
   -OutputDirectory .\artifacts\windows-installer-x64 `
   -Architecture x64
@@ -21,9 +21,9 @@ pwsh -NoProfile -File .\scripts\build-windows-installer.ps1 `
 
 Use the `win-arm64` payload and `-Architecture arm64` for ARM64. Pass `-IsccPath` if `ISCC.exe` is outside the standard Inno Setup 6 installation folders. Output must be a fresh directory under `artifacts`. The builder checks the executable's CPU type and version, bundled resources and notices, and allowed payload files. It compiles the installer without installing it, running the app, or changing PATH. Run installation checks separately on matching machines before publishing.
 
-## Local MSI and WinGet packages
+## Legacy local MSI and WinGet packages
 
-Use `scripts/build-release-artifacts.ps1` to make Windows ZIP downloads, WinGet manifests, and an optional x64 MSI installer for the current user. It creates the files locally; review them before publishing or installing.
+Use `scripts/PromptMeUp.ps1 -Command release-artifacts` to make Windows ZIP downloads, WinGet manifests, and an optional x64 MSI installer for the current user. It creates the files locally; review them before publishing or installing.
 
 ## What users receive
 
@@ -66,19 +66,19 @@ Use `-SkipMsi` if you only need portable and WinGet packages. Use `-SkipWingetVa
 Preview all destinations and build choices without writing files:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 -PlanOnly
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command release-artifacts -PlanOnly
 ```
 
 Create the complete local test set:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command release-artifacts
 ```
 
 By default, manifest links point to `http://127.0.0.1:8765` for local testing. For files you plan to publish, pass the HTTPS address where that exact version's downloads will live. Keep those files unchanged once published:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\build-release-artifacts.ps1 `
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command release-artifacts `
   -ArtifactBaseUrl 'https://github.com/umbertotechnopreneur/PromptMeUp/releases/download/v0.1.5'
 ```
 
@@ -168,7 +168,7 @@ msiexec.exe /x .\artifacts\release\0.1.5\packages\PromptMeUp-0.1.5-win-x64.msi
 
 The build never reads or packages `OPENAI_API_KEY`, `OPENAI_ADMIN_KEY`, settings, databases, logs, or the local application-data directory. Code signing is intentionally separate and must happen before final SHA-256 calculation and WinGet manifest generation.
 
-## Install with the `hm` execution alias and Start-menu help
+## Install with the `hm` execution alias and Start-menu launcher
 
 The MSIX package registers `hm.exe` through Windows' app execution aliases. You can then type `hm` without adding the build or installation folder to `PATH`.
 
@@ -180,10 +180,10 @@ Prepare a fresh self-contained folder and its redistribution notices. This examp
 dotnet publish .\PromptMeUp\PromptMeUp.csproj --configuration Debug `
   --runtime win-x64 --self-contained true -p:PublishSingleFile=false `
   --output .\artifacts\msix\debug\local\publish
-pwsh -NoProfile -File .\scripts\export-third-party-notices.ps1 `
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command notices `
   -OutputDirectory .\artifacts\msix\debug\local\publish -Runtime win-x64
 
-pwsh -NoProfile -File .\scripts\package-msix.ps1 `
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command msix `
   -PublishDirectory .\artifacts\msix\debug\local\publish `
   -Channel Debug -Architecture x64 `
   -CertificateThumbprint '<Store publisher-matching certificate thumbprint>'
@@ -191,7 +191,9 @@ pwsh -NoProfile -File .\scripts\package-msix.ps1 `
 
 The thumbprint identifies your public certificate; you don't pass a private key or exported certificate to the script. The script rejects a certificate whose subject differs from PromptMeUp's Store publisher. It copies the prepared app, runtime DLLs, prompts, themes, and license files, makes tile images from `assets/PromptMeUp.ico`, checks the manifest, signs the MSIX, and checks the signature.
 
-For a Debug package, the default output is `artifacts/msix/debug/<version>/<architecture>/`; use `-Channel Store` for Store-channel staging. Signed packaging requires the explicit matching certificate. Use `-Unsigned` only when an unsigned staging package is intentional. The script rejects links and unexpected files such as databases, logs, or credentials. It only builds the package: it doesn't install or run the app, run tests, or change certificate trust or `PATH`.
+A Debug publish may contain `.pdb` files beside the executable. The packager leaves those symbols in the publish folder and excludes them from the MSIX, so you can package the same publish output without recompiling just to remove symbols. Other unexpected files still stop packaging.
+
+For a Debug package, the default output is `artifacts/debug/<version>/<architecture>/`; Store packages go under `artifacts/store/<version>/<architecture>/`. Signed packaging requires the explicit matching certificate. Use `-Unsigned` only when an unsigned staging package is intentional. The script rejects links and unexpected files such as databases, logs, or credentials. It only builds the package: it doesn't install or run the app, run tests, or change certificate trust or `PATH`.
 
 The four-part package version defaults to the published executable's file version. Use `-Version 0.1.5.1` when a packaging revision needs a higher version. Use `-SdkBinDirectory` to select the directory containing the SDK tools. An optional `-TimestampServer https://...` adds an RFC 3161 timestamp from your chosen signing service; without one, the signature's validity is limited by the certificate's expiry.
 
@@ -202,7 +204,16 @@ Add-AppxPackage -Path .\artifacts\msix\debug\<version>\x64\PromptMeUp-<version>-
 Get-Command hm -CommandType Application
 ```
 
-PromptMeUp appears in Start. Clicking its icon launches the packaged console application with `hm --help`; Windows uses the user's configured default terminal host. The separate hidden package entry registers the `hm.exe` alias without `--help`, so normal calls such as `hm "show Git status"` retain their arguments.
+PromptMeUp appears in Start. Clicking its icon launches `hm` without arguments,
+opening the first-run welcome or, once configured, the numbered home menu. Windows
+uses the user's configured default terminal host. The same visible application
+entry registers the `hm.exe` alias, so calls such as `hm "show Git status"` retain
+their arguments.
+
+The welcome offers an optional, initially unchecked desktop shortcut. It creates
+a native current-user link to the stable Windows execution alias and copies the
+product icon into the local application data directory. No batch launcher is
+needed. This choice belongs to onboarding; the native MSIX installer is unchanged.
 
 Windows exposes the alias through the user's `Microsoft\WindowsApps` directory. If another installation's `hm.exe` appears first, remove that installation's old `PATH` entry or uninstall it after checking which copy is active. Windows' **App execution aliases** settings let you enable or disable the MSIX alias. Do not run `hm --path install` for the MSIX copy.
 
@@ -215,3 +226,15 @@ Get-AppxPackage -Name UmbertoGiacobbiDotBiz.PromptMeUp | Remove-AppxPackage
 ```
 
 Your ordinary PromptMeUp data directory remains separate from the package. Removing the MSIX does not remove that saved history or your current-user API key environment variables.
+
+## Build MSIX packages for Microsoft Store
+
+On a Windows machine with the .NET 10 SDK and Windows SDK packaging tools, run the local script for a three-part version such as `1.0.0`:
+
+```powershell
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command store-msix -Version 1.0.0
+```
+
+The script publishes x64 and ARM64 in Release, exports redistribution notices, and creates two unsigned MSIX files under `artifacts/store/1.0.0.0/`. Its temporary publish outputs also stay under that Store directory. Both packages declare Windows 11 as the minimum version and use the reserved PromptMeUp Store identity. Review each `package.json`, `AppxManifest.xml`, and SHA-256 checksum, then upload the MSIX files in Partner Center **Packages**. The script does not install, upload, submit, or publish the app. It does not create GitHub release assets; the release workflow creates only the two Windows ZIP archives.
+
+Microsoft Store signs MSIX packages after certification, so this script needs no signing certificate. An unsigned Store submission package is not intended for direct distribution outside the Store. Keep local signed Debug packages and unsigned Store packages in their separate artifact directories.

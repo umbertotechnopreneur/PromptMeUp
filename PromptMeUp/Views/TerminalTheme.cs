@@ -8,6 +8,11 @@ namespace PromptMeUp.Views;
 
 internal static class TerminalTheme
 {
+    private static readonly Color[] RuleGradientStops =
+    [
+        new(39, 220, 232), new(100, 142, 255), new(172, 114, 244), new(245, 101, 172)
+    ];
+
     internal static TerminalThemeDefinition Current { get; private set; } = TerminalThemeDefinition.Default;
 
     internal static string Background => Current.Colors.Background;
@@ -107,6 +112,38 @@ internal static class TerminalTheme
         console.WriteLine();
         console.MarkupLine(
             $"[bold {color ?? Info}]{Markup.Escape(title)}[/] [{Divider}]{new string('─', dividerWidth)}[/]");
+    }
+
+    /// <summary>Writes an accessible 80%-width heading followed by a restrained horizontal color gradient.</summary>
+    internal static void WriteGradientRule(IAnsiConsole console, string title, string? color = null)
+    {
+        ArgumentNullException.ThrowIfNull(console);
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        var targetWidth = Math.Max(1, (int)Math.Floor(console.Profile.Width * 0.8d));
+        var dividerWidth = Math.Max(1, targetWidth - title.Length - 1);
+        console.Write(new Text(title, Style.Parse("bold " + (color ?? Info))));
+        console.Write(new Text(" "));
+        var character = console.Profile.Capabilities.Unicode ? "─" : "-";
+        for (var index = 0; index < dividerWidth; index++)
+        {
+            console.Write(new Text(character, new Style(RuleGradient(index, dividerWidth))));
+        }
+
+        console.WriteLine();
+    }
+
+    /// <summary>Interpolates the shared cyan-to-pink accent across one horizontal rule.</summary>
+    private static Color RuleGradient(int index, int length)
+    {
+        var position = length <= 1 ? 0d : index / (double)(length - 1) * (RuleGradientStops.Length - 1);
+        var stop = Math.Min((int)position, RuleGradientStops.Length - 2);
+        var fraction = position - stop;
+        var start = RuleGradientStops[stop];
+        var end = RuleGradientStops[stop + 1];
+        return new Color(
+            (byte)Math.Round(start.R * (1d - fraction) + end.R * fraction),
+            (byte)Math.Round(start.G * (1d - fraction) + end.G * fraction),
+            (byte)Math.Round(start.B * (1d - fraction) + end.B * fraction));
     }
 
     /// <summary>Writes an unboxed section with a continuous divider and escaped multiline content.</summary>

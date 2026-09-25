@@ -17,12 +17,14 @@ Keep changes small and explain who they help. Tell me what you checked so I can 
 
 Requirements: .NET 10 SDK, Git, and PowerShell 7 for repository helpers.
 
+Run `pwsh -NoProfile -File .\scripts\PromptMeUp.ps1` with no parameters for the interactive menu. Use `-Command` for repeatable local checks and CI.
+
 ```powershell
-pwsh -NoProfile -File .\scripts\preflight.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command preflight
 dotnet restore .\PromptMeUp.slnx
-pwsh -NoProfile -File .\scripts\format.ps1
-pwsh -NoProfile -File .\scripts\format.ps1 -Verify
-pwsh -NoProfile -File .\scripts\check-xml-comments.ps1
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command format
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command check-format
+pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command check-xml
 dotnet build .\PromptMeUp.slnx --configuration Release --no-restore --warnaserror
 ```
 

@@ -470,12 +470,12 @@ internal static partial class UiTextCatalog
             Spanish: "¿Configurar o cambiar OPENAI_API_KEY ahora?",
             Vietnamese: "Đặt hoặc đổi OPENAI_API_KEY ngay bây giờ?"));
         entries.Add("Setup.Subtitle", new(
-            English: "First-run configuration. Secrets stay in your Windows user environment.",
-            Italian: "Configurazione iniziale. I segreti restano nell'ambiente utente Windows.",
-            French: "Configuration initiale. Les secrets restent dans l'environnement utilisateur Windows.",
-            German: "Erstkonfiguration. Geheimnisse bleiben in der Windows-Benutzerumgebung.",
-            Spanish: "Configuración inicial. Los secretos permanecen en el entorno de usuario de Windows.",
-            Vietnamese: "Cấu hình lần đầu. Khóa bí mật chỉ nằm trong môi trường người dùng Windows."));
+            English: "Your preferences. On Windows, entered keys are kept in Windows Credential Manager.",
+            Italian: "Le tue preferenze. Su Windows, le chiavi inserite sono custodite in Gestione credenziali.",
+            French: "Vos préférences. Sous Windows, les clés saisies sont conservées dans le Gestionnaire d’identification.",
+            German: "Deine Einstellungen. Unter Windows werden eingegebene Schlüssel in der Anmeldeinformationsverwaltung gespeichert.",
+            Spanish: "Tus preferencias. En Windows, las claves se guardan en el Administrador de credenciales.",
+            Vietnamese: "Tùy chọn của bạn. Trên Windows, khóa được lưu trong Windows Credential Manager."));
         entries.Add("Setup.Summary", new(
             English: "Configuration summary",
             Italian: "Riepilogo configurazione",

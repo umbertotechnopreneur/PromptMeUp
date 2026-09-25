@@ -8,7 +8,7 @@ namespace PromptMeUp.Views;
 
 public interface IHelpView
 {
-    void Render(Action? openMemories = null);
+    void Render(Action? openMemories = null, Action? openGuide = null, string? guidePath = null);
 
     /// <summary>Prints help in the current buffer when an error or redirected output must remain visible.</summary>
     void RenderStatic() => Render();
@@ -22,7 +22,7 @@ public sealed class HelpView(
     IAboutView about) : IHelpView
 {
     /// <summary>Opens section navigation when the terminal supports a disposable fullscreen viewport.</summary>
-    public void Render(Action? openMemories = null)
+    public void Render(Action? openMemories = null, Action? openGuide = null, string? guidePath = null)
     {
         if (FullscreenHelpView.CanUse(console))
         {
@@ -30,7 +30,7 @@ public sealed class HelpView(
             try
             {
                 shell.Configure(originalOptions with { SuppressFooter = true });
-                new FullscreenHelpView(console, text, shell.Options).Render(CreateSections(openMemories));
+                new FullscreenHelpView(console, text, shell.Options).Render(CreateSections(openMemories, openGuide, guidePath));
             }
             finally
             {
@@ -39,6 +39,12 @@ public sealed class HelpView(
             return;
         }
         RenderStatic();
+        if (openGuide is not null && console.Profile.Capabilities.Interactive && console.Profile.Out.IsTerminal)
+        {
+            var choice = new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
+                .AddChoices(0, 1).UseConverter(index => text.Text(index == 0 ? "Guide.Finish" : "Guide.Open")).Show(console);
+            if (choice == 1) { openGuide(); }
+        }
     }
 
     /// <summary>Prints every section without hiding errors, entering an alternate buffer, or waiting for input.</summary>
@@ -58,7 +64,7 @@ public sealed class HelpView(
     }
 
     /// <summary>Shares the complete localized command catalog between fullscreen and scrolling help.</summary>
-    private IReadOnlyList<HelpSection> CreateSections(Action? openMemories = null) =>
+    private IReadOnlyList<HelpSection> CreateSections(Action? openMemories = null, Action? openGuide = null, string? guidePath = null) =>
     [
         new("⚡", text.Text("Help.Examples"), text.Text("Help.Browse.Examples"),
             [
@@ -118,6 +124,7 @@ public sealed class HelpView(
                 new("--status", text.Text("Help.Status")),
                 new("--lenna, lenna", text.Text("Help.Lenna")) { Example = "hm lenna" },
                 new("--costs", text.Text("Help.Costs")),
+                new("--prepare-logs", text.Text("Help.PrepareLogs")) { Example = "hm --prepare-logs" },
                 new("--where, -where", text.Text("Help.Where")) { Example = "hm --where" },
                 new("--third-party", text.Text("Help.ThirdParty"))
             ]),
@@ -174,6 +181,12 @@ public sealed class HelpView(
              new("--proposals", text.Text("Help.Proposals")),
              new("--dream", text.Text("Help.Dream")),
              new("--heartbeat", text.Text("Help.Heartbeat"))]),
+        new("📄", text.Text("Guide.Title"), text.Text("Guide.Title"),
+            [new(guidePath ?? "docs/promptmeup-quick-reference.pdf", text.Text("Guide.Description")) { IsCommand = false }])
+        {
+            Open = openGuide,
+            OpenHintKey = "Guide.OpenHint"
+        },
         new("ℹ️", text.Text("About.Title"), text.Text("About.MenuLabel"),
             [new("--about, about", text.Text("Help.About")) { Example = "hm about" }])
         {

@@ -46,7 +46,8 @@ public sealed class SkillsAndMemoryView(IAnsiConsole console, ILocalizationServi
     }
 
     /// <summary>Uses the shared fullscreen workspace for grouped skill commands and preserves the scrolling prompt fallback.</summary>
-    internal SkillMenuSelection? ChooseSkills(string title, IReadOnlyList<SkillMenuGroup> groups)
+    internal SkillMenuSelection? ChooseSkills(string title, IReadOnlyList<SkillMenuGroup> groups,
+        Func<SkillMenuSelection, IReadOnlyList<SkillMenuGroup>?>? handleInline = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentNullException.ThrowIfNull(groups);
@@ -65,16 +66,29 @@ public sealed class SkillsAndMemoryView(IAnsiConsole console, ILocalizationServi
                 item.InputLabel is null ? null : Read(item.InputLabel, item.InitialInput));
         }
 
-        var selected = _skillsMenu.Select(title,
-            groups.Select(group => new FullscreenMenuGroup(group.Icon, group.Label, group.Description,
-                group.Items.Select(item => new FullscreenMenuItem(item.Icon, item.Label, item.Description,
-                    PackageDetails(item.Skill), item.CanExecute, item.InputLabel, item.InitialInput,
-                    item.MultilineInput)).ToArray()))
-                .ToArray(), text.Text("Lab.Back"));
+        var currentGroups = groups;
+        var selected = _skillsMenu.Select(title, ToFullscreenGroups(currentGroups), text.Text("Lab.Back"), value =>
+        {
+            var updated = handleInline?.Invoke(new SkillMenuSelection(
+                currentGroups[value.GroupIndex].Items[value.ItemIndex], value.Input));
+            if (updated is not null)
+            {
+                currentGroups = updated;
+            }
+            return updated is null ? null : ToFullscreenGroups(updated);
+        });
         return selected is { } value
-            ? new SkillMenuSelection(groups[value.GroupIndex].Items[value.ItemIndex], value.Input)
+            ? new SkillMenuSelection(currentGroups[value.GroupIndex].Items[value.ItemIndex], value.Input)
             : null;
     }
+
+    /// <summary>Maps skill groups to the shared fullscreen menu without the redundant right-hand metadata column.</summary>
+    private IReadOnlyList<FullscreenMenuGroup> ToFullscreenGroups(IReadOnlyList<SkillMenuGroup> groups) =>
+        groups.Select(group => new FullscreenMenuGroup(group.Icon, group.Label, group.Description,
+            group.Items.Select(item => new FullscreenMenuItem(item.Icon, item.Label, item.Description,
+                PackageDetails(item.Skill), item.CanExecute, item.InputLabel, item.InitialInput,
+                item.MultilineInput)).ToArray(), ShowItemDescriptions: false))
+            .ToArray();
 
     /// <summary>Builds the complete package review shown beside each installed-skill action.</summary>
     private string? PackageDetails(SkillDefinition? skill)

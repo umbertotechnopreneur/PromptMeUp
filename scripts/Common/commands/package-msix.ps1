@@ -1,12 +1,12 @@
-# SPDX-License-Identifier: MIT
+﻿# SPDX-License-Identifier: MIT
 <#
 .SYNOPSIS
-  Package a prepared Windows publish folder as a signed MSIX with a Start-menu help launcher and hm execution alias.
+  Package a prepared Windows publish folder as an MSIX with a Start-menu launcher and hm execution alias.
 .DESCRIPTION
   Requires a self-contained, non-single-file publish folder with exported notices,
-  Windows SDK packaging tools, and an existing trusted code-signing certificate in
-  CurrentUser\My. Creates a new directory below artifacts; never installs the package,
-  changes certificate trust or PATH, or launches the application.
+  and Windows SDK packaging tools. Signed Debug packages also require an existing
+  trusted code-signing certificate in CurrentUser\My. Creates a new directory below
+  artifacts; never installs the package, changes certificate trust or PATH, or launches it.
 #>
 [CmdletBinding()]
 param(
@@ -23,7 +23,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Common/bundled-skills.ps1')
+. (Join-Path $PSScriptRoot '..\bundled-skills.ps1')
 $bundledSkillFiles = @(Get-BundledSkillFiles)
 if (-not $IsWindows) { throw 'MSIX packaging and certificate-store signing require Windows.' }
 if ($Unsigned -and -not [string]::IsNullOrWhiteSpace($CertificateThumbprint)) {
@@ -35,9 +35,9 @@ if (-not $Unsigned -and [string]::IsNullOrWhiteSpace($CertificateThumbprint)) {
 if ($Unsigned -and $null -ne $TimestampServer) {
     throw 'Unsigned packaging cannot use TimestampServer.'
 }
-# This creates a local test package only. Distribution remains a GitHub Actions release concern.
+# Store packages are unsigned submission artifacts; signed Debug packages are for local testing.
 
-$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'artifacts'))
 $publishRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($PublishDirectory, $repositoryRoot))
 $packageName = 'UmbertoGiacobbiDotBiz.PromptMeUp'
@@ -70,10 +70,13 @@ function Get-PayloadFiles {
                 continue
             }
             $relative = [IO.Path]::GetRelativePath($Directory, $item.FullName).Replace('\', '/')
-            $allowed = $relative -match '^(?:[^/]+\.dll|(?:hm|createdump)\.exe|hm\.(?:deps|runtimeconfig)\.json|LICENSE|THIRD_PARTY_NOTICES\.md|THIRD_PARTY_INVENTORY\.json|BUILD_INFO\.txt|hm-path\.(?:ps1|sh))$' `
+            # Keep Debug symbols beside the publish output, but never place them in the MSIX.
+            if ($relative -match '^[^/]+\.pdb$') { continue }
+            $allowed = $relative -match '^(?:[^/]+\.dll|(?:hm|createdump)\.exe|hm\.(?:deps|runtimeconfig)\.json|PromptMeUp\.ico|LICENSE|THIRD_PARTY_NOTICES\.md|THIRD_PARTY_INVENTORY\.json|BUILD_INFO\.txt|hm-path\.(?:ps1|sh))$' `
                 -or $relative -match '^(?:prompt/[^/]+\.yaml|themes/[^/]+\.json|LICENSES/.+|[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*/[^/]+\.resources\.dll)$' `
+                -or $relative -ceq 'docs/promptmeup-quick-reference.pdf' `
                 -or $bundledSkillFiles -ccontains $relative
-            if (-not $allowed) { throw "Unexpected publish content '$relative'. Use a clean Release publish folder with exported notices." }
+            if (-not $allowed) { throw "Unexpected publish content '$relative'. Use a clean publish folder with exported notices." }
             if ($item.Name -match '(?i)(?:^\.env(?:\.|$)|\.(?:db|sqlite|log|pfx|p12|pem|key)$)') {
                 throw "Local data or credential files cannot be packaged: $relative"
             }
@@ -166,7 +169,8 @@ if (-not (Test-Path -LiteralPath $publishRoot -PathType Container)) { throw 'Pub
 Assert-NoReparseAncestor $publishRoot
 $files = @(Get-PayloadFiles $publishRoot)
 foreach ($name in @('hm.exe', 'hm.dll', 'hm.deps.json', 'hm.runtimeconfig.json', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll',
-        'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md') + $bundledSkillFiles) {
+        'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_INVENTORY.json', 'prompt/chat-system.yaml', 'themes/cyan.json', 'LICENSES/README.md',
+        'docs/promptmeup-quick-reference.pdf') + $bundledSkillFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishRoot $name) -PathType Leaf)) { throw "Prepared publish folder is missing '$name'." }
 }
 Assert-PeArchitecture (Join-Path $publishRoot 'hm.exe')
@@ -183,8 +187,13 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = @($info.FileMajorPart, $info.FileMinorPart, $info.FileBuildPart, $info.FilePrivatePart) -join '.'
 }
 if (@($Version.Split('.') | Where-Object { [long]$_ -gt 65535 }).Count -gt 0) { throw 'Every MSIX version component must be between 0 and 65535.' }
+if ($Channel -eq 'Store' -and $Version -notmatch '^[1-9]\d*\.\d+\.\d+\.0$') {
+    throw 'Store package versions must have a nonzero major version and end in .0.'
+}
+$minimumWindowsVersion = if ($Channel -eq 'Store') { '10.0.22000.0' } else { '10.0.19041.0' }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = Join-Path $artifactsRoot "msix\$($Channel.ToLowerInvariant())\$Version\$Architecture"
+    $artifactChannel = if ($Channel -eq 'Store') { 'store' } else { 'debug' }
+    $OutputDirectory = Join-Path $artifactsRoot "$artifactChannel\$Version\$Architecture"
 }
 $outputRoot = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($OutputDirectory, $repositoryRoot))
 if (-not $outputRoot.StartsWith($artifactsRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
@@ -259,25 +268,19 @@ $manifest = @"
     <Description>Help with your next terminal command.</Description>
   </Properties>
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="$minimumWindowsVersion" MaxVersionTested="10.0.26100.0" />
   </Dependencies>
   <Resources>
     <Resource Language="en-US" /><Resource Language="it-IT" /><Resource Language="fr-FR" />
     <Resource Language="de-DE" /><Resource Language="es-ES" /><Resource Language="vi-VN" />
   </Resources>
   <Applications>
-    <Application Id="PromptMeUp" Executable="hm.exe" uap10:Parameters="--help"
+    <Application Id="PromptMeUp" Executable="hm.exe"
       uap10:RuntimeBehavior="win32App" uap10:TrustLevel="mediumIL" uap10:Subsystem="console"
       uap10:SupportsMultipleInstances="true">
       <uap:VisualElements DisplayName="PromptMeUp" Description="Help with your next terminal command."
         BackgroundColor="transparent" Square44x44Logo="Assets\Logo44.png"
         Square150x150Logo="Assets\Logo150.png" AppListEntry="default" />
-    </Application>
-    <Application Id="PromptMeUpAlias" Executable="hm.exe" uap10:RuntimeBehavior="win32App"
-      uap10:TrustLevel="mediumIL" uap10:Subsystem="console" uap10:SupportsMultipleInstances="true">
-      <uap:VisualElements DisplayName="PromptMeUp" Description="Help with your next terminal command."
-        BackgroundColor="transparent" Square44x44Logo="Assets\Logo44.png"
-        Square150x150Logo="Assets\Logo150.png" AppListEntry="none" />
       <Extensions>
         <uap5:Extension Category="windows.appExecutionAlias">
           <uap5:AppExecutionAlias uap10:Subsystem="console">
@@ -314,7 +317,7 @@ $hash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash
     version = $Version
     architecture = $Architecture
     executionAlias = 'hm.exe'
-    minimumWindowsVersion = '10.0.19041.0'
+    minimumWindowsVersion = $minimumWindowsVersion
     certificateThumbprint = if ($Unsigned) { $null } else { $CertificateThumbprint.ToUpperInvariant() }
     file = [IO.Path]::GetFileName($packagePath)
     sha256 = $hash

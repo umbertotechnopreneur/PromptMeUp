@@ -345,7 +345,7 @@ public sealed class SettingsFeatureViewTests
         rendering.Profile.Capabilities.AlternateBuffer = false;
         var console = TestProxy.Create<IAnsiConsole>((method, args) => method.Name == "get_Input" ? input : method.Invoke(rendering, args));
         var text = new LocalizationService();
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(true, true));
         var themes = TestProxy.Create<IThemeCatalogService>((method, _) => method.Name switch
         {

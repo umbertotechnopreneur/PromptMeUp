@@ -86,7 +86,7 @@ public sealed class CostsView(
         console.Write(metrics);
         console.WriteLine();
 
-        console.Write(ModelPricingTable.Create(text, shell.Options, overview.Prices));
+        console.Write(ModelPricingTable.Create(text, shell.Options, overview.Prices.OrderBy(price => price.Model, StringComparer.OrdinalIgnoreCase).ToArray()));
     }
 
     /// <summary>Formats USD amounts using invariant decimal notation.</summary>

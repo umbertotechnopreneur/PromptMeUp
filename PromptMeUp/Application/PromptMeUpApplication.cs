@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Reflection;
 using Microsoft.Extensions.Logging;
 using PromptMeUp.Infrastructure;
 using PromptMeUp.Models;
@@ -35,7 +34,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     private readonly IStatusView _statusView;
     private readonly ICostsView _costsView;
     private readonly IHelpView _helpView;
+    private readonly HelpWorkflow _help;
     private readonly IThirdPartyView _thirdPartyView;
+    private readonly IFirstRunView? _firstRunView;
+    private readonly FirstRunWorkflow? _firstRun;
+    private readonly IHomeView? _home;
+    private readonly DiagnosticBundleService? _diagnosticBundles;
     private readonly AppPaths _paths;
     private readonly ILogger<PromptMeUpApplication> _logger;
     private readonly ArtifactLimits _artifactLimits;
@@ -70,13 +74,18 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         IThirdPartyView thirdPartyView,
         AppPaths paths,
         ILogger<PromptMeUpApplication> logger,
+        HelpWorkflow help,
         ArtifactLimits? artifactLimits = null,
         IThemeCatalogService? themes = null,
         LennaWorkflow? lenna = null,
         AboutWorkflow? about = null,
         MemoryManagerWorkflow? memories = null,
         MemoryCommandWorkflow? memoryCommands = null,
-        SkillsAndMemoryWorkflow? skillsAndMemory = null)
+        SkillsAndMemoryWorkflow? skillsAndMemory = null,
+        IFirstRunView? firstRunView = null,
+        FirstRunWorkflow? firstRun = null,
+        IHomeView? home = null,
+        DiagnosticBundleService? diagnosticBundles = null)
     {
         _parser = parser;
         _database = database;
@@ -97,6 +106,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _statusView = statusView;
         _costsView = costsView;
         _helpView = helpView;
+        _help = help;
         _thirdPartyView = thirdPartyView;
         _paths = paths;
         _logger = logger;
@@ -107,6 +117,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         _memories = memories;
         _memoryCommands = memoryCommands;
         _skillsAndMemory = skillsAndMemory;
+        _firstRunView = firstRunView;
+        _firstRun = firstRun;
+        _home = home;
+        _diagnosticBundles = diagnosticBundles;
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
@@ -117,24 +131,23 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         var parse = _parser.Parse(args);
         if (!parse.Succeeded)
         {
-            _shell.RenderHeader("?", null, false, Environment.CurrentDirectory);
+            _shell.RenderHeader("?", null, false);
             _shell.RenderError(parse.Error ?? _text.Text("Cli.Invalid"));
             _helpView.RenderStatic();
             return 2;
         }
 
         var options = parse.Options!;
-        if (options.Command == AppCommand.Lenna)
-        {
-            return (_lenna ?? throw new InvalidOperationException(_text.Text("Lenna.LoadError")))
-                .Run(options, cancellationToken);
-        }
-        if (options.Command == AppCommand.About)
-        {
-            return (_about ?? throw new InvalidOperationException(_text.Text("About.Unavailable")))
-                .Run(options, cancellationToken);
-        }
         _shell.Configure(new ConsoleRenderOptions(options.NoAnimation, options.NoEmoji));
+        if (options.Command == AppCommand.PrepareLogs)
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var result = await (_diagnosticBundles ?? throw new InvalidOperationException("Diagnostic bundle service is unavailable."))
+                .PrepareAsync(desktop, cancellationToken).ConfigureAwait(false);
+            _shell.RenderSuccess(_text.Text("Logs.Prepared", result.Path, result.LogFileCount));
+            _shell.RenderNotice(_text.Text("Logs.ReviewBeforeSending"));
+            return 0;
+        }
         await _database.InitializeAsync(cancellationToken).ConfigureAwait(false);
         var promptCount = (await _prompts.ListAsync(cancellationToken).ConfigureAwait(false)).Count;
         var settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
@@ -147,12 +160,54 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         {
             settings = settings with { Language = _text.Language };
         }
+        if (settings.IsFirstRun && options.Command == AppCommand.Help)
+        {
+            _helpView.RenderStatic();
+            return 0;
+        }
         var hasApiKey = _secrets.IsConfigured(settings.ApiKeyVariable);
         var commandName = ToCommandName(options.Command);
-        _shell.RenderHeader(commandName, settings, hasApiKey, Environment.CurrentDirectory);
+        _logger.LogInformation("Startup route selected. Command={Command}, FirstRun={FirstRun}, Interactive={Interactive}, Language={Language}",
+            commandName, settings.IsFirstRun, IsInteractive, _text.Language);
+        if (!settings.IsFirstRun && options.Command != AppCommand.Main)
+        {
+            _shell.RenderHeader(commandName, settings, hasApiKey);
+        }
 
         try
         {
+            if (options.Command == AppCommand.Reset)
+            {
+                if (options.ResetAll)
+                {
+                    await _database.ResetAsync(cancellationToken).ConfigureAwait(false);
+                    settings = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                await _settings.SaveAsync(settings with
+                {
+                    SetupCompleted = false,
+                    DirectModeEnabled = false,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                }, cancellationToken).ConfigureAwait(false);
+                return 0;
+            }
+
+            if (settings.IsFirstRun)
+            {
+                var firstRunView = _firstRunView
+                    ?? throw new InvalidOperationException("The first-run view is unavailable.");
+                if (!IsInteractive)
+                {
+                    firstRunView.RenderSetupRequired();
+                    return 0;
+                }
+
+                EnsureInteractive();
+                return await (_firstRun ?? throw new InvalidOperationException("The first-run workflow is unavailable."))
+                    .RunAsync(settings, cancellationToken).ConfigureAwait(false);
+            }
+
             if (ShouldRefreshPricing(options.Command, settings))
             {
                 await TryRefreshPricingAsync(settings, force: options.Command == AppCommand.Costs, cancellationToken).ConfigureAwait(false);
@@ -179,10 +234,110 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                                           or InvalidOperationException
                                           or ConversationLimitException)
         {
-            _logger.LogWarning("PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}", commandName, exception.GetType().Name);
+            _logger.LogWarning("PromptMeUp command failed. Command={Command}, ErrorType={ErrorType}, StackTrace={StackTrace}",
+                commandName, exception.GetType().Name, new System.Diagnostics.StackTrace(exception, fNeedFileInfo: false).ToString());
             _shell.RenderError(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
             await _activity.TryRecordAsync(commandName, "failed", null, new { error = exception.GetType().Name }).ConfigureAwait(false);
             return 1;
+        }
+        finally
+        {
+            if (!settings.IsFirstRun)
+            {
+                await ResetDirectModeAfterInvocationAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>Routes numbered home choices to the existing workflows and returns here when each one ends.</summary>
+    private async Task<int> RunHomeAsync(CommandLineOptions options, int promptCount, CancellationToken cancellationToken)
+    {
+        var home = _home ?? throw new InvalidOperationException("The home view is unavailable.");
+        if (!IsInteractive)
+        {
+            home.RenderNonInteractive();
+            return 0;
+        }
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var current = await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+            _text.SetLanguage(options.Language ?? current.Language);
+            current = current with { Language = _text.Language };
+            if (_themes is not null)
+            {
+                TerminalTheme.Apply(_themes.Resolve(current.Theme));
+            }
+            _logger.LogInformation("Home menu opened.");
+            var action = await home.ChooseAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Home menu choice. Action={Action}", action);
+            if (action == HomeAction.Exit)
+            {
+                return 0;
+            }
+            try
+            {
+                string? query = null;
+                if (action is HomeAction.Script or HomeAction.Diagnose)
+                {
+                    query = await home.ReadRequestAsync(action, current.MaxMessageCharacters, cancellationToken).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(query))
+                    {
+                        continue;
+                    }
+                }
+                var command = action switch
+                {
+                    HomeAction.Chat => AppCommand.Chat,
+                    HomeAction.Script => AppCommand.Script,
+                    HomeAction.Diagnose => AppCommand.Diagnose,
+                    HomeAction.Memories => AppCommand.Memories,
+                    HomeAction.Skills => AppCommand.Skills,
+                    HomeAction.Settings => AppCommand.Setup,
+                    HomeAction.Help => AppCommand.Help,
+                    _ => throw new InvalidOperationException("Unsupported home action.")
+                };
+                if (ShouldRefreshPricing(command, current))
+                {
+                    await TryRefreshPricingAsync(current, force: false, cancellationToken).ConfigureAwait(false);
+                }
+                await DispatchAsync(options with { Command = command, Query = query }, current, promptCount, cancellationToken).ConfigureAwait(false);
+            }
+            catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                _shell.RenderNotice(_text.Text("Common.Cancelled"));
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested && exception is
+                OpenAiRequestException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException
+                or InvalidOperationException or ConversationLimitException)
+            {
+                _logger.LogWarning("Home action failed. Action={Action}, ErrorType={ErrorType}, StackTrace={StackTrace}",
+                    action, exception.GetType().Name, new System.Diagnostics.StackTrace(exception, fNeedFileInfo: false).ToString());
+                _shell.RenderError(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
+            }
+        }
+    }
+
+    /// <summary>Turns off persisted direct mode after the current application session ends.</summary>
+    private async Task ResetDirectModeAfterInvocationAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var persisted = await _database.LoadSettingsAsync(cancellationToken).ConfigureAwait(false);
+            if (!persisted.DirectModeEnabled)
+            {
+                return;
+            }
+
+            await _settings.SaveAsync(persisted with
+            {
+                DirectModeEnabled = false,
+                UpdatedAt = DateTimeOffset.UtcNow
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning("Could not reset direct mode after the application session. ErrorType={ErrorType}", exception.GetType().Name);
         }
     }
 
@@ -195,6 +350,12 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     {
         switch (options.Command)
         {
+            case AppCommand.Lenna:
+                return (_lenna ?? throw new InvalidOperationException(_text.Text("Lenna.LoadError")))
+                    .Run(options, cancellationToken);
+            case AppCommand.About:
+                return (_about ?? throw new InvalidOperationException(_text.Text("About.Unavailable")))
+                    .Run(options, cancellationToken);
             case AppCommand.Skills:
             case AppCommand.Learning:
             case AppCommand.Dream:
@@ -222,10 +383,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 await _diagnostics.RunAsync(options, settings, cancellationToken).ConfigureAwait(false);
                 return 0;
             case AppCommand.Main:
+                return await RunHomeAsync(options, promptCount, cancellationToken).ConfigureAwait(false);
             case AppCommand.Help:
-                _helpView.Render(() => (_memories ?? throw new InvalidOperationException("The memory manager is unavailable."))
-                    .RunAsync(cancellationToken).GetAwaiter().GetResult());
-                return 0;
+                return _help.Run(options, cancellationToken);
             case AppCommand.Version:
                 RenderVersion();
                 return 0;
@@ -411,12 +571,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         }
     }
 
-    /// <summary>Renders the semantic product and runtime version.</summary>
+    /// <summary>Renders the product version and immutable compilation provenance.</summary>
     private void RenderVersion()
     {
-        var assembly = Assembly.GetExecutingAssembly().GetName();
         _shell.RenderVersion(
-            assembly.Version?.ToString(3) ?? "0.1.5",
+            BuildInformationReader.Read(),
             Environment.Version.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
     }
@@ -432,6 +591,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
         AppCommand.AiSettings => "ai-settings",
         AppCommand.Theme => "theme",
         AppCommand.InstallFont => "install-font",
+        AppCommand.PrepareLogs => "prepare-logs",
         AppCommand.ThirdParty => "third-party",
         _ => command.ToString().ToLowerInvariant()
     };

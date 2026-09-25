@@ -3,28 +3,28 @@
   <!-- Stamp assembly metadata during builds and publish, never when the application starts. -->
   <Target Name="CapturePromptMeUpBuildInformation" BeforeTargets="GetAssemblyAttributes;CoreCompile">
     <PropertyGroup>
-      <PromptMeUpBuildDateUtc Condition="'$(PromptMeUpBuildDateUtc)' == ''">$([System.DateTimeOffset]::UtcNow.ToString('O'))</PromptMeUpBuildDateUtc>
+      <PromptMeUpBuildDateLocal Condition="'$(PromptMeUpBuildDateLocal)' == ''">$([System.DateTimeOffset]::Now.ToString('O'))</PromptMeUpBuildDateLocal>
       <PromptMeUpBuildMachine Condition="'$(PromptMeUpBuildMachine)' == ''">$([System.Environment]::MachineName)</PromptMeUpBuildMachine>
     </PropertyGroup>
-    <Exec Command="git rev-parse --verify HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="Low" Condition="'$(PromptMeUpGitCommit)' == ''">
-      <Output TaskParameter="ConsoleOutput" ItemName="_PromptMeUpGitCommitOutput" />
+    <Exec Command="git rev-parse --short=12 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="Low" Condition="'$(PromptMeUpBuildGitCommit)' == ''">
+      <Output TaskParameter="ConsoleOutput" PropertyName="PromptMeUpBuildGitCommitRaw" />
     </Exec>
-    <PropertyGroup Condition="'$(PromptMeUpGitCommit)' == ''">
-      <PromptMeUpGitCommit>@(_PromptMeUpGitCommitOutput)</PromptMeUpGitCommit>
+    <PropertyGroup>
+      <PromptMeUpBuildGitCommit Condition="'$(PromptMeUpBuildGitCommit)' == ''">$([System.String]::Copy('$(PromptMeUpBuildGitCommitRaw)').Trim())</PromptMeUpBuildGitCommit>
     </PropertyGroup>
     <Error Condition="'$(GenerateAssemblyInfo)' != 'true'" Text="Build information requires GenerateAssemblyInfo=true." />
     <Error Condition="'$(GenerateAssemblyMetadataAttributes)' != 'true'" Text="Build information requires GenerateAssemblyMetadataAttributes=true." />
     <Error Condition="$([System.String]::IsNullOrWhiteSpace('$(PromptMeUpBuildMachine)'))" Text="The build machine name must not be empty." />
-    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(PromptMeUpGitCommit)', '^[0-9a-f]{40}$'))" Text="The Git commit must be a full lowercase SHA-1 hash; supply PromptMeUpGitCommit when building without Git metadata." />
-    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(PromptMeUpBuildDateUtc)', '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}\+00:00$'))" Text="The build date must use the ISO 8601 round-trip format with a +00:00 UTC offset." />
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(PromptMeUpBuildDateLocal)', '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}[+-]\d{2}:\d{2}$'))" Text="The build date must use the ISO 8601 round-trip format with a local UTC offset." />
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(PromptMeUpBuildGitCommit)', '^[0-9a-f]{12}$'))" Text="The build Git commit must be a 12-character lowercase SHA." />
     <PropertyGroup>
       <!-- Parsing also rejects impossible calendar dates supplied through build overrides. -->
-      <PromptMeUpBuildDateUtc>$([System.DateTimeOffset]::ParseExact('$(PromptMeUpBuildDateUtc)', 'O', $([System.Globalization.CultureInfo]::GetCultureInfo(''))).ToString('O'))</PromptMeUpBuildDateUtc>
+      <PromptMeUpBuildDateLocal>$([System.DateTimeOffset]::ParseExact('$(PromptMeUpBuildDateLocal)', 'O', $([System.Globalization.CultureInfo]::GetCultureInfo(''))).ToString('O'))</PromptMeUpBuildDateLocal>
     </PropertyGroup>
     <ItemGroup>
-      <AssemblyMetadata Include="BuildDateUtc" Value="$(PromptMeUpBuildDateUtc)" />
+      <AssemblyMetadata Include="BuildDateLocal" Value="$(PromptMeUpBuildDateLocal)" />
       <AssemblyMetadata Include="BuildMachine" Value="$(PromptMeUpBuildMachine)" />
-      <AssemblyMetadata Include="GitCommit" Value="$(PromptMeUpGitCommit)" />
+      <AssemblyMetadata Include="BuildGitCommit" Value="$(PromptMeUpBuildGitCommit)" />
     </ItemGroup>
   </Target>
 </Project>

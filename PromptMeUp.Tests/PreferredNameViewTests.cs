@@ -24,7 +24,7 @@ public sealed class PreferredNameViewTests
         input.Add(Key(ConsoleKey.Enter));
         var (console, output, keys) = CreateConsole(input);
         var text = new LocalizationService();
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(true, true));
         var themes = TestProxy.Create<IThemeCatalogService>((method, _) => method.Name switch
         {

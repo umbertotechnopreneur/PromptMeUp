@@ -12,6 +12,8 @@ internal sealed class InstallationInfo(ILocalizationService text, BuildInformati
 {
     private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
     private const string AuthorUrl = "https://umbertogiacobbi.biz";
+    private const string PrivacyUrl = "https://umbertogiacobbi.biz/privacy/";
+    private const string TermsUrl = "https://umbertogiacobbi.biz/terms/";
 
     /// <summary>Measures the details using the width assigned by the containing view.</summary>
     public Measurement Measure(RenderOptions options, int maxWidth) =>
@@ -56,7 +58,12 @@ internal sealed class InstallationInfo(ILocalizationService text, BuildInformati
             new Markup($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"),
             new Text(" "),
             new Text(text.Text("About.Website"), Style.Parse(TerminalTheme.Muted)),
-            new Markup($"[underline {TerminalTheme.Info} link={AuthorUrl}]{AuthorUrl}[/]"));
+            new Markup($"[underline {TerminalTheme.Info} link={AuthorUrl}]{AuthorUrl}[/]"),
+            new Text(" "),
+            new Text(text.Text("About.Privacy"), Style.Parse(TerminalTheme.Muted)),
+            new Markup($"[underline {TerminalTheme.Info} link={PrivacyUrl}]{PrivacyUrl}[/]"),
+            new Text(text.Text("About.Terms"), Style.Parse(TerminalTheme.Muted)),
+            new Markup($"[underline {TerminalTheme.Info} link={TermsUrl}]{TermsUrl}[/]"));
     }
 
     /// <summary>Separates each right-aligned label and left-aligned value with one trailing blank row.</summary>

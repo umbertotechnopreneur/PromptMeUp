@@ -72,7 +72,7 @@ internal static class SqliteSchema
 
         CREATE TABLE IF NOT EXISTS persistent_memories (
             id TEXT NOT NULL PRIMARY KEY CHECK (length(id) = 32),
-            scope_key TEXT NOT NULL CHECK (scope_key = 'global' OR length(scope_key) = 64),
+            scope_key TEXT NOT NULL CHECK (scope_key = 'global'),
             body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 1000),
             updated_unix INTEGER NOT NULL CHECK (updated_unix >= 0)
         );
@@ -142,14 +142,14 @@ internal static class SqliteSchema
         CREATE INDEX IF NOT EXISTS ix_organization_costs_bucket ON organization_costs (bucket_start_unix);
 
         CREATE TABLE IF NOT EXISTS skills_and_memory_settings (
-            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            scope_key TEXT NOT NULL CHECK(scope_key = 'global'),
             name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 120),
             value TEXT NOT NULL CHECK(length(value) <= 4096),
             PRIMARY KEY(scope_key, name)
         );
         CREATE TABLE IF NOT EXISTS learning_observations (
             id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
-            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            scope_key TEXT NOT NULL CHECK(scope_key = 'global'),
             session_id TEXT NOT NULL CHECK(length(session_id) = 32),
             body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 4000),
             created_unix INTEGER NOT NULL CHECK(created_unix >= 0)
@@ -157,7 +157,7 @@ internal static class SqliteSchema
         CREATE INDEX IF NOT EXISTS ix_learning_scope ON learning_observations(scope_key, created_unix);
         CREATE TABLE IF NOT EXISTS memory_proposals (
             id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
-            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            scope_key TEXT NOT NULL CHECK(scope_key = 'global'),
             payload_json TEXT NOT NULL CHECK(length(payload_json) <= 32768 AND json_valid(payload_json)),
             status TEXT NOT NULL CHECK(status IN ('pending', 'approved', 'rejected', 'expired')),
             created_unix INTEGER NOT NULL CHECK(created_unix >= 0)
@@ -172,13 +172,13 @@ internal static class SqliteSchema
         );
 
         CREATE TABLE IF NOT EXISTS learning_revisions (
-            scope_key TEXT NOT NULL PRIMARY KEY CHECK(scope_key = 'global' OR length(scope_key) = 64),
+            scope_key TEXT NOT NULL PRIMARY KEY CHECK(scope_key = 'global'),
             revision TEXT NOT NULL CHECK(length(revision) = 32)
         );
 
         CREATE TABLE IF NOT EXISTS skill_reminders (
             id TEXT NOT NULL PRIMARY KEY CHECK(length(id) = 32),
-            scope_key TEXT NOT NULL CHECK(length(scope_key) = 64),
+            scope_key TEXT NOT NULL CHECK(scope_key = 'global'),
             message TEXT NOT NULL CHECK(length(message) BETWEEN 1 AND 500),
             due_unix_ms INTEGER NOT NULL,
             offset_minutes INTEGER NOT NULL CHECK(offset_minutes BETWEEN -840 AND 840)

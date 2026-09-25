@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Applies or verifies the repository's .NET formatting rules.
 
@@ -14,7 +14,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$root = Split-Path -Parent $PSScriptRoot
+$root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $solution = Join-Path $root 'PromptMeUp.slnx'
 
 if (-not (Test-Path -LiteralPath $solution -PathType Leaf)) {
@@ -43,7 +43,7 @@ else {
 
 & dotnet @arguments
 if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
+    throw "dotnet format failed with exit code $LASTEXITCODE."
 }
 
 if ($Verify) {

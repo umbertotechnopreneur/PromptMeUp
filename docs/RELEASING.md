@@ -1,6 +1,6 @@
 # Releasing PromptMeUp
 
-The release workflow prepares unsigned Windows installers for x64 and ARM64, plus portable archives for Windows, Linux, and macOS. Start it when a version is ready. It runs the checks, packages the app, and creates a draft release with checksums. You review the draft and publish it. Merging code into `main` alone doesn't create a release.
+The release workflow prepares two portable ZIP archives: Windows x64 and Windows ARM64. Start it when a version is ready. It runs the checks, packages the app, and creates a draft release with checksums. You review the draft and publish it. Merging code into `main` alone doesn't create a release. Microsoft Store MSIX packages are built locally through a separate script.
 
 ## Create a release draft
 
@@ -16,11 +16,10 @@ Or open **Actions → Release → Run workflow**, choose `main`, leave `mode` se
 
 The workflow builds the selected commit and runs its quality checks. If they pass, it creates the matching tag, such as `v0.1.7`, and a draft containing:
 
-- `PromptMeUp-0.1.7-win-x64-setup.exe` and `PromptMeUp-0.1.7-win-arm64-setup.exe`;
-- six portable archives, one for each supported operating system and CPU type;
-- `SHA256SUMS.txt` covering all eight downloads and GitHub build provenance attestations.
+- `PromptMeUp-0.1.7-win-x64.zip` and `PromptMeUp-0.1.7-win-arm64.zip`;
+- `SHA256SUMS.txt` covering both downloads and GitHub build provenance attestations.
 
-No signing certificate or personal access token needs to be added to repository secrets. The workflow uses GitHub's built-in token with release permissions limited to the delivery job. The EXE installers are unsigned, so Windows may show an unknown-publisher or SmartScreen warning. GitHub provenance and checksums do not replace a Windows code-signing certificate.
+No signing certificate or personal access token needs to be added to repository secrets. The workflow uses GitHub's built-in token with release permissions limited to the delivery job. GitHub provenance and checksums do not replace a Windows code-signing certificate.
 
 Follow the run under **Actions → Release**. When it finishes, open [Releases](https://github.com/umbertotechnopreneur/PromptMeUp/releases), review the draft and downloads, and choose **Publish release**. You can also publish a reviewed draft from the command line:
 
@@ -46,17 +45,17 @@ To try packaging without creating a release or tag, select `rehearsal` in **Acti
 gh workflow run release.yml --ref main -f mode=rehearsal
 ```
 
-It runs the quality checks and builds the same eight downloads. Download `release-bundle` from the finished Actions run.
+It runs the quality checks and builds the same two ZIP downloads. Download `release-bundle` from the finished Actions run.
 
 For a local package, run PowerShell 7 from the repository root:
 
 ```powershell
-pwsh -NoProfile -File ./scripts/build-portable-release.ps1 -Runtime win-x64
+pwsh -NoProfile -File ./scripts/PromptMeUp.ps1 -Command portable -Runtime win-x64
 ```
 
-Choose `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, or `osx-arm64`. Windows packages are ZIP files. Linux and macOS use tar.gz to keep executable permissions; build those archives on a Unix machine. The script requires a fresh output folder so old files can't slip into a new package. For another run, use something like `-OutputDirectory artifacts/rehearsal-2`. Output must stay under `artifacts`.
+Choose `win-x64` or `win-arm64` for Windows distribution. The script requires a fresh output folder so old files can't slip into a new package. For another run, use something like `-OutputDirectory artifacts/rehearsal-2`. Output must stay under `artifacts`.
 
-The workflow tries basic commands only when the build machine matches the package's operating system and CPU type. Try the other packages on matching machines before publishing; building all six doesn't mean all six have been run.
+The workflow tries basic commands only when the build machine matches the package's CPU type. Try the other ZIP on an ARM64 machine before publishing; cross-publishing does not run that app.
 
 ## Start a release with a Git tag
 
@@ -66,7 +65,7 @@ You can also start the same draft workflow by pushing a version tag yourself:
 2. Wait for all main checks to succeed.
 3. Create and push an annotated tag matching that version, for example v1.2.3. Repository automation agents must obtain explicit authorization before creating branches or worktrees; do not tag unfinished local work.
 4. The release workflow verifies that the tagged commit belongs to main and that the tag exactly matches the project version. It reruns the complete quality workflow before packaging.
-5. Review the generated draft, release notes, two Windows installers, six archives, `SHA256SUMS.txt`, and provenance attestations. Verify installation and startup on intended target machines before publishing the draft in GitHub.
+5. Review the generated draft, release notes, two Windows ZIP archives, `SHA256SUMS.txt`, and provenance attestations. Verify startup on intended target machines before publishing the draft in GitHub.
 
 Only the delivery job has release-write and attestation permissions. Pull-request quality jobs receive no release credentials. The workflow never overwrites an existing release or tag.
 
@@ -97,8 +96,12 @@ gh attestation verify ./PromptMeUp-1.2.3-win-x64.zip --repo umbertotechnopreneur
 
 The attestation check verifies GitHub Actions' record of where the package came from. You'll still need code review and testing. See [GitHub's attestation documentation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
 
-## Windows installers and signing
+## Microsoft Store MSIX packages
 
-The release workflow builds EXE installers with Inno Setup on its Windows runner. Each installer contains the native self-contained app for its target CPU, resources, and full redistribution notices. Installation is for the current user and does not require a code-signing certificate or administrator privileges. PowerShell 7 is still needed to execute commands approved in PromptMeUp.
+The GitHub release workflow does not create MSIX packages. On a Windows machine with the .NET 10 SDK and Windows SDK packaging tools, build the x64 and ARM64 Store packages locally:
 
-The [Windows packaging guide](WINDOWS_PACKAGING.md) covers the EXE installer builder and the separate local MSI, WinGet, and signed MSIX routes. This workflow does not sign Windows binaries, submit packages to a store, or submit WinGet manifests. Signed MSIX packaging still requires an existing trusted signing certificate.
+```powershell
+pwsh -NoProfile -File ./scripts/PromptMeUp.ps1 -Command store-msix -Version 1.0.0
+```
+
+The script creates unsigned MSIX files for Store submission only. It does not sign, install, upload, or publish them. Microsoft Store signs them after certification. See the [Windows packaging guide](WINDOWS_PACKAGING.md#build-msix-packages-for-microsoft-store) for the output paths and checks.

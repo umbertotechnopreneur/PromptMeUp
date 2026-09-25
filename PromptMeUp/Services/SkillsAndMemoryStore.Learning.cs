@@ -24,7 +24,7 @@ public sealed partial class SkillsAndMemoryStore
         {
             return;
         }
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         var settings = await ReadSettingsAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -51,10 +51,10 @@ public sealed partial class SkillsAndMemoryStore
         await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
-    /// <summary>Reads recent current-project evidence while expiring retained content older than thirty days.</summary>
+    /// <summary>Reads recent global evidence while expiring retained content older than thirty days.</summary>
     public async Task<IReadOnlyList<LearningObservation>> ObservationsAsync(CancellationToken ct)
     {
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         await PruneLearningAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -80,10 +80,10 @@ public sealed partial class SkillsAndMemoryStore
         return result;
     }
 
-    /// <summary>Lists bounded pending proposals without exposing other projects' learning data.</summary>
+    /// <summary>Lists bounded pending proposals from the global learning data.</summary>
     public async Task<IReadOnlyList<MemoryProposal>> ProposalsAsync(CancellationToken ct)
     {
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         await PruneLearningAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -117,7 +117,7 @@ public sealed partial class SkillsAndMemoryStore
         {
             ValidateProposal(proposal);
         }
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         var settings = await ReadSettingsAsync(connection, transaction, scope, ct).ConfigureAwait(false);
@@ -178,7 +178,7 @@ public sealed partial class SkillsAndMemoryStore
     public async Task RejectAsync(MemoryProposal proposal, CancellationToken ct)
     {
         ValidateProposal(proposal);
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         await using var command = connection.CreateCommand();
@@ -205,27 +205,26 @@ public sealed partial class SkillsAndMemoryStore
         {
             throw InvalidLearning();
         }
-        var projectScope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
-        var currentSettings = await ReadSettingsAsync(connection, transaction, projectScope, ct).ConfigureAwait(false);
+        var currentSettings = await ReadSettingsAsync(connection, transaction, scope, ct).ConfigureAwait(false);
         if (!currentSettings.Enabled || (proposal.SourceIds.Count > 0 && !currentSettings.CaptureObservations))
         {
             throw InvalidLearning();
         }
-        await ValidateEvidenceAsync(connection, transaction, projectScope, proposal, ct).ConfigureAwait(false);
+        await ValidateEvidenceAsync(connection, transaction, scope, proposal, ct).ConfigureAwait(false);
         await using var claim = connection.CreateCommand();
         claim.Transaction = transaction;
         claim.CommandText = "UPDATE memory_proposals SET status = 'approved' WHERE id = $id AND scope_key = $scope AND status = 'pending' AND payload_json = $payload AND created_unix >= $expiry;";
         claim.Parameters.AddWithValue("$id", proposal.Id);
-        claim.Parameters.AddWithValue("$scope", projectScope);
+        claim.Parameters.AddWithValue("$scope", scope);
         claim.Parameters.AddWithValue("$payload", JsonSerializer.Serialize(proposal, Json));
         claim.Parameters.AddWithValue("$expiry", DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds());
         if (await claim.ExecuteNonQueryAsync(ct).ConfigureAwait(false) != 1)
         {
             throw InvalidLearning();
         }
-        const string scope = "global";
         if (proposal.Operation is "merge" or "archive")
         {
             foreach (var target in proposal.Targets)
@@ -283,7 +282,7 @@ public sealed partial class SkillsAndMemoryStore
         }
         else
         {
-            await PruneLearningAsync(connection, transaction, projectScope, ct).ConfigureAwait(false);
+            await PruneLearningAsync(connection, transaction, scope, ct).ConfigureAwait(false);
         }
         await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
@@ -372,7 +371,7 @@ public sealed partial class SkillsAndMemoryStore
         {
             throw InvalidLearning();
         }
-        var scope = PersistentMemoryService.ResolveProjectScope();
+        var scope = PersistentMemoryService.GlobalScope;
         await using var connection = await OpenAsync(ct).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
         await using var command = connection.CreateCommand();

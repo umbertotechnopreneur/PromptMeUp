@@ -10,6 +10,12 @@ See the [skills and memory guide](SKILLS_AND_MEMORY.md) before collecting messag
 
 ## Ask or choose a command
 
+Run `hm` without arguments to open the home menu. Press a number without Enter to
+chat about a command, write a script, diagnose an error, view memories, manage
+skills, change preferences, or open help. Press `0` or Esc to exit. Script and
+error prompts accept multiline pastes; leave the prompt empty to return to the
+menu. Finishing a selected workflow returns to the menu.
+
 ```text
 hm [question]
 hm [command] [options]
@@ -47,8 +53,10 @@ to a file, this follow-up menu doesn't open.
 | `--setup` | — | Opens Settings with General selected. |
 | `--ai-setup` | `--ai-settings` | Opens the same Settings screen with AI selected. |
 | `--theme` | — | Opens the same Settings screen with Theme selected and a live palette preview. |
+| `--reset` | `--reset all` | Resets setup and direct-mode flags. Add `all` to erase and recreate the local database, including settings, notes, usage, and conversation history. |
 | `--test-ai` | — | Checks that the configured model can answer a short request in your chosen language. |
 | `--costs` | — | Shows usage and cost estimates, refreshing public prices and any available organization costs. |
+| `--prepare-logs` | — | Creates a redacted support ZIP on the desktop with limited machine diagnostics and up to 14 available daily log files. It excludes the database, chats, memories, keys, environment values, user and computer names, and network addresses. Nothing is sent automatically. |
 | `--status` | — | Shows your settings and whether local storage is ready. |
 | `--about` | `about` | Shows the HELP ME banner, project information, author, and license. |
 | `--lenna` | `lenna` | Shows the bundled calibration portrait centered in the terminal, without an AI request. |
@@ -151,6 +159,56 @@ too small produces a short explanation instead of a cropped picture.
 
 `hm lenna` also works with different capitalization. Use `hm --query lenna` or a
 longer question to ask the AI about Lenna. As elsewhere, use one command at a time.
+
+## Complete the first-run welcome
+
+Run `hm` in an interactive terminal. The welcome guides you through four steps:
+
+1. Confirm the language suggested by your computer, or choose another of the six supported languages.
+2. Paste an OpenAI API key. Every character is masked with a dot. The screen links to the OpenAI key portal and the official creation guide. A short API request verifies the connection before the key is saved; this request can incur an API charge. You can retry without pasting the key again.
+3. Optionally enter a name or nickname.
+4. Choose whether to enable memories and, separately, collect redacted chat excerpts for learning. Chat collection starts off. You can also require confirmation before commands run.
+
+On Windows, entered keys are stored in Windows Credential Manager for your Windows
+account, rather than written to settings, SQLite, or user environment variables.
+Existing environment keys can still be read; they are not deleted from your environment.
+The verified key is available immediately, without restarting your terminal.
+On source builds for other operating systems, entered keys last only for the current
+process. Configure your shell or secret manager before starting another session.
+
+The welcome saves your language and optional name as you progress. Leaving early
+does not mark setup complete. The next run offers any already saved key for
+verification. Press Ctrl+C to cancel, including while a connection check is running.
+The check times out after 30 seconds.
+
+In an interactive terminal that supports a disposable alternate buffer, each
+completed step collapses to one compact header while the active step keeps its
+instructions and choices. The step header uses a horizontal color gradient to make
+the current position clear. Terminals without that capability keep the same guided
+choices in scrolling output without clearing the main terminal history.
+
+“Dreaming” means reviewing collected chat excerpts to propose useful memories.
+Excerpts are stored locally with recognizable secrets obscured; relevant excerpts
+are sent to OpenAI during analysis. You review the resulting proposals before they
+become memories. This opt-in controls learning collection, not the separate local
+activity and usage records. Use `hm --learning` to manage learning.
+
+Skills remain disabled until you enable them with `hm --skills`. The final welcome
+screen suggests a first question, chat, and diagnosis command. It offers **Open the
+PDF guide** to open the installed [two-page command guide](../output/pdf/promptmeup-quick-reference.pdf)
+in your default PDF reader. **Finish** is selected by default. The English PDF is
+included with the app at `docs/promptmeup-quick-reference.pdf` beside the executable,
+works offline, and can be opened again from **Command guide (PDF)** in `hm --help`
+without setup or an API key. The final screen also shows
+`hm --status`, `hm --prepare-logs`, `hm --help`, and `hm --setup` as recovery and
+configuration paths. It does not open general settings or send an initial chat
+request automatically. Once the command alias or PATH is configured, you can use
+`hm` from any terminal directory.
+
+With the Windows MSIX installed and its `hm` execution alias enabled, the final
+step also offers an unchecked desktop shortcut option. Selecting it creates a
+PromptMeUp icon that opens `hm` directly in your default terminal. It preserves
+an existing shortcut and does not change your terminal or shell preferences.
 
 ## Change the model or conversation limits
 
@@ -523,7 +581,10 @@ In manual mode, **Do not execute commands** is the default menu choice. Picking 
 
 ## First run and redirected output
 
-With no explicit command, `hm` opens help, including on first launch. Redirected output prints the command reference without opening an interactive view. Run `hm --setup` when you want to configure the application.
+The first interactive launch opens the guided welcome. After completing it,
+`hm` without arguments opens the home menu. Redirected invocations print a short
+instruction without waiting for input. Use `hm --help` for the command reference,
+including before onboarding, or `hm --setup` to change preferences afterward.
 
 Use [`hm --ai-setup`](#change-the-model-or-conversation-limits) to select AI in
 Settings, or `hm --setup` to select General. Conversation limits, including the

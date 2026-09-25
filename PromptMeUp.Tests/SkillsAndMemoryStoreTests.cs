@@ -137,9 +137,9 @@ public sealed class SkillsAndMemoryStoreTests
         Assert.Single(await CreateMemories(fixture).ListAsync(default));
     }
 
-    /// <summary>Two turns from one session and evidence copied from another project cannot justify a learned memory.</summary>
+    /// <summary>Two turns from one session cannot justify a learned memory.</summary>
     [Fact]
-    public async Task SaveProposals_SameSessionOrForeignEvidence_RejectsAtomically()
+    public async Task SaveProposals_SameSession_RejectsAtomically()
     {
         using var fixture = new RegressionFixture();
         var store = await PrepareAsync(fixture);
@@ -149,11 +149,6 @@ public sealed class SkillsAndMemoryStoreTests
         var sources = await store.ObservationsAsync(default);
         var proposal = Proposal("add", sources.Select(source => source.Id).ToArray(), []);
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveProposalsAsync([proposal], default));
-        await fixture.ScalarAsync("UPDATE learning_observations SET session_id = $session, scope_key = $scope WHERE id = $id;",
-            ("$session", Guid.NewGuid().ToString("N")), ("$scope", new string('F', 64)), ("$id", sources[0].Id));
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveProposalsAsync([proposal], default));
-
         Assert.Equal(0L, await fixture.ScalarAsync("SELECT COUNT(*) FROM memory_proposals;"));
     }
 
@@ -174,7 +169,7 @@ public sealed class SkillsAndMemoryStoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveProposalsAsync([], default, revision));
     }
 
-    /// <summary>Deleting a global note purges every project's learning but retains unrelated approved memories.</summary>
+    /// <summary>Deleting a global note purges global learning but retains unrelated approved memories.</summary>
     [Fact]
     public async Task ForgetGlobal_PurgesAllLearningAndBlocksOldCapture()
     {
@@ -184,12 +179,7 @@ public sealed class SkillsAndMemoryStoreTests
         await store.SaveProposalsAsync([proposal], default);
         var memories = CreateMemories(fixture);
         var forgotten = await memories.RememberAsync("Forget this global preference.", true, default);
-        var retained = await memories.RememberAsync("Keep this approved project fact.", false, default);
-        await fixture.ScalarAsync("""
-            INSERT INTO learning_observations(id, scope_key, session_id, body, created_unix)
-            VALUES($id, $scope, $session, 'Another project observation.', $now);
-            """, ("$id", Guid.NewGuid().ToString("N")), ("$scope", new string('F', 64)),
-            ("$session", Guid.NewGuid().ToString("N")), ("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        var retained = await memories.RememberAsync("Keep this approved global fact.", false, default);
         var revision = await store.RevisionAsync(default);
 
         Assert.True(await memories.ForgetAsync(forgotten.Id, default, forgotten));
@@ -281,27 +271,6 @@ public sealed class SkillsAndMemoryStoreTests
         Assert.Equal(2, remaining.Count);
         Assert.Contains(unrelated, remaining);
         Assert.Single(remaining, note => note.Text == "Repeated legacy preference.");
-    }
-
-    /// <summary>A proposal reviewed before the global migration cannot silently approve its changed destination snapshot.</summary>
-    [Fact]
-    public async Task Approve_PreMigrationTarget_RequiresFreshReview()
-    {
-        using var fixture = new RegressionFixture();
-        var store = await PrepareAsync(fixture);
-        var memories = CreateMemories(fixture);
-        var original = await memories.RememberAsync("Keep this migrated note.", true, default);
-        await fixture.ScalarAsync("UPDATE persistent_memories SET scope_key = $scope WHERE id = $id; PRAGMA user_version = 3;",
-            ("$scope", PersistentMemoryService.ResolveProjectScope()), ("$id", original.Id));
-        var proposal = Proposal("archive", [], [original with { IsGlobal = false }]);
-        await store.SaveProposalsAsync([proposal], default);
-
-        await fixture.Database.InitializeAsync(default);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => store.ApproveAsync(proposal, proposal.Text, true, default));
-        Assert.Equal(original, Assert.Single(await memories.ListAsync(default)));
-        Assert.Empty(await store.ProposalsAsync(default));
-        Assert.Equal("expired", await fixture.ScalarAsync("SELECT status FROM memory_proposals WHERE id = $id;", ("$id", proposal.Id)));
     }
 
     /// <summary>Modified target snapshots cannot be approved and automatically leave the pending review queue.</summary>

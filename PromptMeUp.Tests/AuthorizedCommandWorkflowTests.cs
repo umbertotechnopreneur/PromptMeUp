@@ -480,7 +480,7 @@ public sealed class AuthorizedCommandWorkflowTests
         public void Configure(ConsoleRenderOptions options) => Options = options;
 
         /// <summary>Rejects unexpected header rendering in this focused workflow fixture.</summary>
-        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey, string currentDirectory) =>
+        public void RenderHeader(string command, AppSettings? settings, bool hasApiKey) =>
             throw new InvalidOperationException("Header rendering is outside this workflow.");
 
         /// <summary>Rejects unexpected runtime-status rendering in this focused workflow fixture.</summary>
@@ -533,7 +533,7 @@ public sealed class AuthorizedCommandWorkflowTests
             throw new InvalidOperationException("Interactive input is outside this workflow.");
 
         /// <summary>Rejects unexpected version rendering in this focused workflow fixture.</summary>
-        public void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier) =>
+        public void RenderVersion(BuildInformation buildInformation, string runtimeVersion, string runtimeIdentifier) =>
             throw new InvalidOperationException("Version rendering is outside this workflow.");
 
         /// <summary>Rejects unexpected blank-line rendering in this focused workflow fixture.</summary>

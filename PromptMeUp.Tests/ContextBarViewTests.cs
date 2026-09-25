@@ -222,7 +222,7 @@ public sealed class ContextBarViewTests
         console.Profile.Width = width;
         var text = new LocalizationService();
         text.SetLanguage(language);
-        var shell = new ConsoleShellView(console, text);
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: true));
         return (console, output, text, shell);
     }

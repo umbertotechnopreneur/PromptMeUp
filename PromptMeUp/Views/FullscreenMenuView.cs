@@ -17,7 +17,8 @@ internal sealed record FullscreenMenuGroup(
     string Icon,
     string Label,
     string Description,
-    IReadOnlyList<FullscreenMenuItem> Items);
+    IReadOnlyList<FullscreenMenuItem> Items,
+    bool ShowItemDescriptions = true);
 
 /// <summary>Identifies one command selected from a fullscreen menu group.</summary>
 internal readonly record struct FullscreenMenuSelection(int GroupIndex, int ItemIndex, string? Input);
@@ -38,7 +39,8 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
     private FullscreenFrame? _lastFrame;
 
     /// <summary>Displays a disposable fullscreen menu and returns the selected grouped command or null for back.</summary>
-    internal FullscreenMenuSelection? Select(string title, IReadOnlyList<FullscreenMenuGroup> groups, string backLabel)
+    internal FullscreenMenuSelection? Select(string title, IReadOnlyList<FullscreenMenuGroup> groups, string backLabel,
+        Func<FullscreenMenuSelection, IReadOnlyList<FullscreenMenuGroup>?>? handleInline = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentNullException.ThrowIfNull(groups);
@@ -65,7 +67,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         try
         {
             FullscreenMenuSelection? selected = null;
-            FullscreenViewport.Run(console, () => selected = RunLoop(title, groups, backLabel));
+            FullscreenViewport.Run(console, () => selected = RunLoop(title, groups, backLabel, handleInline));
             return selected;
         }
         catch (InteractiveFlowCanceledException)
@@ -80,8 +82,30 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
     }
 
     /// <summary>Processes grouped commands, one back action, numeric shortcuts, and terminal resize.</summary>
-    private FullscreenMenuSelection? RunLoop(string title, IReadOnlyList<FullscreenMenuGroup> groups, string backLabel)
+    private FullscreenMenuSelection? RunLoop(string title, IReadOnlyList<FullscreenMenuGroup> groups, string backLabel,
+        Func<FullscreenMenuSelection, IReadOnlyList<FullscreenMenuGroup>?>? handleInline)
     {
+        FullscreenMenuSelection? result = null;
+        bool HandleSelection(FullscreenMenuSelection selection)
+        {
+            var refreshed = handleInline?.Invoke(selection);
+            if (refreshed is null)
+            {
+                result = selection;
+                return true;
+            }
+
+            groups = refreshed;
+            _selectedGroupIndex = Math.Clamp(_groupNavigator.SelectedIndex, 0, groups.Count - 1);
+            _groupNavigator.Reset(_selectedGroupIndex, groups.Count, _focus == MenuFocus.Groups);
+            var items = groups[_groupNavigator.SelectedIndex].Items;
+            _selectedItemIndex = items.Count == 0 ? 0 : Math.Clamp(_selectedItemIndex, 0, items.Count - 1);
+            _itemOffset = Math.Min(_itemOffset, Math.Max(0, items.Count - 1));
+            _detailOffset = 0;
+            EnsureDraft(groups);
+            return false;
+        }
+
         while (true)
         {
             void Paint() => PaintScreen(title, groups, backLabel);
@@ -105,8 +129,11 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             {
                 if (EditInput(key, items[_selectedItemIndex]))
                 {
-                    return new FullscreenMenuSelection(_groupNavigator.SelectedIndex, _selectedItemIndex,
-                        CurrentDraft(items[_selectedItemIndex]));
+                    if (HandleSelection(new FullscreenMenuSelection(_groupNavigator.SelectedIndex, _selectedItemIndex,
+                        CurrentDraft(items[_selectedItemIndex]))))
+                    {
+                        return result;
+                    }
                 }
                 continue;
             }
@@ -155,7 +182,11 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
                     }
                     if (_focus == MenuFocus.Commands && items.Count > 0 && items[_selectedItemIndex].CanExecute)
                     {
-                        return new FullscreenMenuSelection(_groupNavigator.SelectedIndex, _selectedItemIndex, null);
+                        if (HandleSelection(new FullscreenMenuSelection(_groupNavigator.SelectedIndex, _selectedItemIndex, null)))
+                        {
+                            return result;
+                        }
+                        break;
                     }
                     if (items.Count > 0)
                     {
@@ -170,7 +201,11 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
                     }
                     if (_focus == MenuFocus.Commands && items.Count > 0 && items[_selectedItemIndex].CanExecute)
                     {
-                        return new FullscreenMenuSelection(_groupNavigator.SelectedIndex, _selectedItemIndex, null);
+                        if (HandleSelection(new FullscreenMenuSelection(_groupNavigator.SelectedIndex, _selectedItemIndex, null)))
+                        {
+                            return result;
+                        }
+                        break;
                     }
                     if (_focus == MenuFocus.Groups && items.Count > 0)
                     {
@@ -277,7 +312,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             _focus == MenuFocus.Back));
         var footerKey = _focus == MenuFocus.Editor ? "Lab.MenuEditorFooter" : "Lab.MenuFooter";
         var footer = FullscreenFooter.Create(
-            new FullscreenLine(_editorError ?? text.Text("Lab.MenuNotice"),
+            new FullscreenLine(_editorError ?? SelectedDescription(active),
                 Style.Parse(_editorError is null ? TerminalTheme.Muted : TerminalTheme.Error)),
             actions,
             FullscreenFooter.Shortcuts(text.Text(footerKey, groups.Count),
@@ -313,7 +348,11 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         var visibleRows = Math.Max(1, bodyRows - 8 - inputRows - detailRows);
         EnsureItemVisible(group.Items.Count, visibleRows);
         var end = Math.Min(group.Items.Count, _itemOffset + visibleRows);
-        var grid = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn());
+        var grid = new Grid().AddColumn(new GridColumn().RightAligned());
+        if (group.ShowItemDescriptions)
+        {
+            grid.AddColumn(new GridColumn());
+        }
         for (var index = _itemOffset; index < end; index++)
         {
             var item = group.Items[index];
@@ -324,8 +363,15 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
                 : Style.Parse(!item.CanExecute ? TerminalTheme.Muted
                     : selected ? "bold " + TerminalTheme.Primary : TerminalTheme.Primary);
             var marker = focused ? "> " : "  ";
-            grid.AddRow(new FullscreenLine(marker + ItemLabel(item), style),
-                new FullscreenLine(Safe(item.Description), style));
+            var label = new FullscreenLine(marker + ItemLabel(item), style);
+            if (group.ShowItemDescriptions)
+            {
+                grid.AddRow(label, new FullscreenLine(Safe(item.Description), style));
+            }
+            else
+            {
+                grid.AddRow(label);
+            }
         }
         rows.Add(grid);
         if (_itemOffset > 0 || end < group.Items.Count)
@@ -371,6 +417,18 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             }
         }
         return new Padder(new Rows(rows.ToArray()), new Padding(2, 0, 2, 0));
+    }
+
+    /// <summary>Shows the active command's concise description in the footer instead of repeating it in a second column.</summary>
+    private string SelectedDescription(FullscreenMenuGroup group)
+    {
+        if (group.Items.Count == 0)
+        {
+            return group.Description;
+        }
+
+        var item = group.Items[Math.Clamp(_selectedItemIndex, 0, group.Items.Count - 1)];
+        return string.IsNullOrWhiteSpace(item.Description) ? group.Description : item.Description;
     }
 
     /// <summary>Cycles forward or backward through the available content and footer areas.</summary>
