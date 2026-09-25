@@ -108,7 +108,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
             ? new(FirstRunAction.Back, null) : new(FirstRunAction.Next, key.Trim());
     }
 
-    /// <summary>Places the key guidance beside a compact OpenAI ASCII mark on wide terminals.</summary>
+    /// <summary>Places the key guidance beside an adaptive OpenAI ASCII mark on wide terminals.</summary>
     private void RenderConnectionIntro(bool protectedStorage)
     {
         var content = new Rows(
@@ -123,13 +123,14 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
             new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Oobe.Cost"))}[/]"));
         if (console.Profile.Width >= 110)
         {
-            var logo = new Rows(
-                new Text("     .-==-.     \n   .'/ /\\ \\'.   \n  / / /  \\ \\ \\  \n | | | /\\ | | | \n  \\ \\ \\/ / / /  \n   '.\\_\\/_.''   \n     '-..-'     ", Style.Parse(TerminalTheme.Info)),
-                new Text("     OpenAI", Style.Parse("bold " + TerminalTheme.Primary)));
+            var detailed = console.Profile.Width >= 145;
+            var logoWidth = detailed
+                ? OpenAiAsciiLogo.DetailedColumnWidth
+                : OpenAiAsciiLogo.CompactColumnWidth;
             var grid = new Grid()
-                .AddColumn(new GridColumn { Width = console.Profile.Width - 38 })
-                .AddColumn(new GridColumn { Width = 28 });
-            grid.AddRow(content, logo);
+                .AddColumn(new GridColumn { Width = console.Profile.Width - logoWidth - 10 })
+                .AddColumn(new GridColumn { Width = logoWidth });
+            grid.AddRow(content, OpenAiAsciiLogo.Create(detailed));
             console.Write(grid);
         }
         else

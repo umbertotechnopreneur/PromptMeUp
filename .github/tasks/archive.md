@@ -1384,3 +1384,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Routed simple script, theme, skills, navigation, and memory prompts through `TerminalChoiceMenu`, retaining the memory pager settings.
 - Removed the unused asynchronous menu wrapper. The fullscreen menu keeps its separate navigation and inline-editor implementation.
 - Validation: scoped caller review and `git diff HEAD~5..HEAD --check` passed. Build, automated tests, and interactive UI checks were not run because they were not requested.
+
+## 2026-09-26 — Add an adaptive OpenAI ASCII logo to onboarding
+
+- Replaced the inline setup mark with a reusable terminal component.
+- Added a detailed woven mark for wide terminals, retained a compact variant at medium widths, and hid the decoration when space is limited.
+- Colored the mark with the existing theme accents and kept the OpenAI label aligned beneath it.
+- Validation: repository preflight, XML comment check, scoped formatting verification, and Release build passed with zero warnings and errors. Automated tests and an interactive UI preview were not run because they were not requested. Repository-wide formatting remains blocked by pre-existing encoding and line-ending findings in unrelated files.
