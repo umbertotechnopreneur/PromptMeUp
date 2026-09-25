@@ -64,15 +64,16 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     }
 
     /// <summary>Chooses the normal confirmation or direct countdown without performing execution or risk review.</summary>
-    public Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken)
+    public async Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return executionMode switch
+        using var state = new TerminalStateScope(_console, _text, TerminalActivityState.NeedsInput);
+        return await (executionMode switch
         {
             CommandExecutionMode.Confirm => Task.FromResult(Confirm()),
             CommandExecutionMode.Direct => new CommandCountdownView(_console, _text).WaitAsync(cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(executionMode))
-        };
+        }).ConfigureAwait(false);
     }
 
     /// <summary>Asks for explicit approval with a default-negative prompt in the normal view.</summary>

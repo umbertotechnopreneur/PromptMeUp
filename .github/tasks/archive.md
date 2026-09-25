@@ -1410,3 +1410,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Unified user, assistant, plan, script, and command-output identities. Replaced the animated two-line progress display with a quiet working row and measured completion, cancellation, or failure.
 - Removed blinking stderr labels; retained all command previews and authorization behavior.
 - Validation: XML comments, complete solution formatting, and Release build passed with zero warnings and errors.
+
+## 2026-09-26 — Responsive session strip and quiet interaction states
+
+- Extracted TerminalSessionStrip into indivisible model, context, state, mode, cost, and elapsed-time blocks.
+- Preserved system, user, tool, and assistant context counts at narrow widths; reused proportional meter allocation and kept the thirteen-cell meter.
+- Added quiet ready, working, and decision states with scoped terminal titles, and made the input dock reserve its actual responsive height.
+- Validation: XML comments, complete solution formatting, and Release build passed with zero warnings and errors.

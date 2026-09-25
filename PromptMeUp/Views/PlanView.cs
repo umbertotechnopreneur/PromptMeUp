@@ -42,6 +42,7 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     /// <summary>Confirms starting or resuming guidance while each command still requires its own approval.</summary>
     public bool ConfirmStart()
     {
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         TerminalPromptDock.Align(console, reservedRows: 2);
         return console.Prompt(new ConfirmationPrompt(text.Text("Plan.Start")) { DefaultValue = false });
     }
@@ -49,6 +50,7 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     /// <summary>Requires the user to compare observed output with the declared outcome after a successful check.</summary>
     public bool ConfirmOutcome(PlanStep step)
     {
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         TerminalPromptDock.Align(console, reservedRows: 2);
         return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Plan.Outcome", step.Expected))) { DefaultValue = false });
     }

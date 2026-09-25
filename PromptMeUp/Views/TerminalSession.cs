@@ -16,6 +16,7 @@ internal sealed class TerminalSession
     internal TimeSpan Elapsed => _elapsed.Elapsed;
     internal string ModeKey { get; set; } = "Terminal.Mode.Chat";
     internal TerminalActivityState State { get; set; } = TerminalActivityState.Ready;
+    internal ShellRuntimeStatus? LastStatus { get; set; }
 
     /// <summary>Finds the console-local presentation state without coupling views to application services.</summary>
     internal static TerminalSession For(IAnsiConsole console) => Sessions.GetValue(console, _ => new TerminalSession());
@@ -26,6 +27,7 @@ internal sealed class TerminalSession
         Options = options;
         ModeKey = "Terminal.Mode.Chat";
         State = TerminalActivityState.Ready;
+        LastStatus = null;
         _elapsed.Restart();
     }
 }

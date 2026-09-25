@@ -981,7 +981,13 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             MemoryCount = memory.Envelope.Count,
             SessionInputTokens = accounting.Usage.InputTokens,
             SessionOutputTokens = accounting.Usage.OutputTokens,
-            HasSessionUsage = true
+            HasSessionUsage = true,
+            ConversationMode = memory.PromptId switch
+            {
+                "diagnose-system" => ConversationDisplayMode.Diagnose,
+                "explain-system" => ConversationDisplayMode.Explain,
+                _ => ConversationDisplayMode.Chat
+            }
         };
     }
 

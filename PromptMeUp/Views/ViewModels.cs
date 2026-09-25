@@ -53,6 +53,9 @@ public sealed record SetupSubmission(
 
 public sealed record ConsoleRenderOptions(bool NoAnimation, bool NoEmoji, bool SuppressFooter = false);
 
+/// <summary>Identifies the interactive workflow without coupling session metrics to localized labels.</summary>
+public enum ConversationDisplayMode { Chat, Plan, Script, Diagnose, Explain }
+
 public sealed record ShellRuntimeStatus(
     string Provider,
     string Model,
@@ -69,6 +72,7 @@ public sealed record ShellRuntimeStatus(
     long CacheWriteTokens)
 {
     public long? ActiveContextTokens { get; init; }
+    public ConversationDisplayMode? ConversationMode { get; init; }
 
     public long ContextBudgetTokens { get; init; }
 

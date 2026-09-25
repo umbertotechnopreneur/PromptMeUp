@@ -59,6 +59,7 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
     public ScriptAction Choose(ScriptPresentation presentation)
     {
         ArgumentNullException.ThrowIfNull(presentation);
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         var actions = new List<ScriptAction> { ScriptAction.Save };
         if (presentation.Runtime.IsAvailable)
         {

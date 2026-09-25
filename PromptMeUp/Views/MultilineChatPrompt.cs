@@ -30,11 +30,14 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var reader = new TerminalInputReader(console.Input, maximumCharacters, win32Encoding: OperatingSystem.IsWindows());
         _label = label;
         _status = status;
+        var session = TerminalSession.For(console);
+        session.LastStatus = status;
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.Ready);
         var hint = text.Text(
             showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
             KeyPrefix("Enter"), KeyPrefix("Newline"), KeyPrefix("Arrows"), KeyPrefix("Escape"));
         console.MarkupLine($"[{TerminalTheme.Muted}]{hint}[/]");
-        TerminalPromptDock.Align(console, reservedRows: 6);
+        TerminalPromptDock.Align(console, reservedRows: ReservedRows());
         console.Cursor.Hide();
         try
         {
@@ -88,12 +91,13 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         else if (_paintedRows > 0)
         {
             console.WriteLine();
-            TerminalPromptDock.Align(console, reservedRows: 6);
+            _paintedRows = 0;
+            TerminalPromptDock.Align(console, reservedRows: ReservedRows());
         }
         var width = Math.Max(1, size.Width - 1);
         var bar = new TerminalPromptBar(text, _status,
             showBorders: size.Height >= 8, showStatus: size.Height >= 4,
-            showBreakdown: size.Height >= 8);
+            showBreakdown: size.Height >= 8, session: TerminalSession.For(console));
         var header = bar.Header(width);
         var footer = bar.Footer(width);
         foreach (var row in header)
@@ -136,6 +140,16 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         _paintedSize = size;
     }
 
+    /// <summary>Reserves exactly the responsive strip, initial input row and optional bottom divider.</summary>
+    private int ReservedRows()
+    {
+        var height = console.Profile.Height;
+        var bar = new TerminalPromptBar(text, _status, height >= 8, height >= 4, height >= 8,
+            TerminalSession.For(console));
+        var width = Math.Max(1, console.Profile.Width - 1);
+        return bar.Header(width).Count + bar.Footer(width).Count + 1;
+    }
+
     /// <summary>Clears one owned row before writing its already width-bounded contents.</summary>
     private void WriteRow(string markup)
     {
@@ -149,6 +163,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         if (_paintedSize != (console.Profile.Width, console.Profile.Height))
         {
             console.WriteLine();
+            _paintedRows = 0;
             return;
         }
         console.WriteAnsi(writer =>

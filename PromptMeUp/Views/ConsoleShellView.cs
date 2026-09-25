@@ -95,6 +95,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     public void RenderRuntimeStatus(ShellRuntimeStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
+        TerminalSession.For(_console).LastStatus = status;
         var turnCost = status.HasTurnCost
             ? status.TurnCostUsd.HasValue ? FormatCost(status.TurnCostUsd.Value) : _text.Text("Costs.Unavailable")
             : status.PromptCostUsd.HasValue || status.ResponseCostUsd.HasValue
@@ -147,7 +148,7 @@ public sealed class ConsoleShellView : IConsoleShellView
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         ArgumentNullException.ThrowIfNull(action);
         var session = TerminalSession.For(_console);
-        session.State = TerminalActivityState.Working;
+        using var state = new TerminalStateScope(_console, _text, TerminalActivityState.Working);
         var elapsed = Stopwatch.StartNew();
         var outcome = TerminalActivityState.Completed;
         var row = new TerminalActivityRow(message, TerminalActivityState.Working, useSymbols: !Options.NoEmoji);
@@ -275,6 +276,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     /// <summary>Reads one required text value using a localized passive-view prompt.</summary>
     public string ReadText(string prompt)
     {
+        using var state = new TerminalStateScope(_console, _text, TerminalActivityState.NeedsInput);
         TerminalPromptDock.Align(_console, reservedRows: 2);
         return _console.Prompt(new TextPrompt<string>(Markup.Escape(prompt)));
     }
