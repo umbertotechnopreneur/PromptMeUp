@@ -200,7 +200,7 @@ internal sealed class TerminalPromptBar(
     }
 
     /// <summary>Draws a thin full-width theme separator around the active input area.</summary>
-    private static string Rule(int width) => $"[{TerminalTheme.Accent}]{new string('─', width)}[/]";
+    private static string Rule(int width) => ThemeSeparator.Markup(width);
 
     /// <summary>Shortens token amounts for a one-line status strip.</summary>
     private static string FormatTokens(long value) => value switch

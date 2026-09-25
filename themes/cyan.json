@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "cyan",
   "name": "Cyan",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F4FAFF",
     "muted": "#BDCED8",
     "accent": "#4EDAE9",
+    "accentSecondary": "#F47CB7",
     "info": "#43C9FF",
     "divider": "#94B9C8",
     "success": "#7CE6A2",

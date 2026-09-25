@@ -10,6 +10,7 @@ public sealed record TerminalThemeColors(
     string Primary,
     string Muted,
     string Accent,
+    string AccentSecondary,
     string Info,
     string Divider,
     string Success,
@@ -31,11 +32,11 @@ public sealed record TerminalThemeDefinition(int Version, string Id, string Name
     public string? SourcePath { get; init; }
 
     public static TerminalThemeDefinition Default { get; } = new(
-        3,
+        4,
         "cyan",
         "Cyan",
         new TerminalThemeColors(
-            "#081820", "#F4FAFF", "#BDCED8", "#4EDAE9", "#43C9FF", "#94B9C8",
+            "#081820", "#F4FAFF", "#BDCED8", "#4EDAE9", "#F47CB7", "#43C9FF", "#94B9C8",
             "#7CE6A2", "#FFD479", "#FF9B9B", "#4EDAE9", "#081820"))
     {
         Author = "PromptMeUp contributors",

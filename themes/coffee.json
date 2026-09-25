@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "coffee",
   "name": "Coffee",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#FFF8EF",
     "muted": "#D9CBBD",
     "accent": "#F4B66E",
+    "accentSecondary": "#E7A7D6",
     "info": "#76D2EA",
     "divider": "#BDA38E",
     "success": "#B9DDA3",

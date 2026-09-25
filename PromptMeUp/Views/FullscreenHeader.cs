@@ -21,7 +21,7 @@ internal static class FullscreenHeader
         ArgumentNullException.ThrowIfNull(options);
         return new Rows(
             new Padder(new HeaderLine(title, options, showRepository), new Padding(2, 0, 2, 0)),
-            new Rule { Style = Style.Parse(TerminalTheme.Divider) },
+            new ThemeSeparator(),
             new Text(" "));
     }
 

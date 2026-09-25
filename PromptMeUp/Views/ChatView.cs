@@ -141,7 +141,7 @@ public sealed class ChatView : IChatView
         }
 
         _console.WriteLine();
-        _console.Write(new Rule().RuleStyle(TerminalTheme.Divider));
+        _console.Write(new ThemeSeparator());
     }
 
     /// <summary>Notifies the user when old active-context messages were pruned but remain in the session ledger.</summary>

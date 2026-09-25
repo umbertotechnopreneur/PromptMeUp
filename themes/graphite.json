@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "graphite",
   "name": "Graphite",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F5F5F5",
     "muted": "#C6CDD2",
     "accent": "#F0F5FA",
+    "accentSecondary": "#D8A7FF",
     "info": "#70C9FF",
     "divider": "#A7B3BD",
     "success": "#A3E0B2",

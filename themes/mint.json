@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "mint",
   "name": "Mint",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#EEFFF8",
     "muted": "#B6D9CE",
     "accent": "#55E2A7",
+    "accentSecondary": "#ED9DCD",
     "info": "#6AC7FF",
     "divider": "#86B9AA",
     "success": "#B0EFA8",

@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "coral",
   "name": "Coral",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#FFF6EF",
     "muted": "#DECABD",
     "accent": "#FF9E70",
+    "accentSecondary": "#EAA8EE",
     "info": "#75D8EF",
     "divider": "#C6A089",
     "success": "#B6E5A1",

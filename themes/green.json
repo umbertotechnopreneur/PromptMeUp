@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "green",
   "name": "Green",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F0FFF4",
     "muted": "#BBD6C7",
     "accent": "#5CE5A2",
+    "accentSecondary": "#DAA2F5",
     "info": "#73DBD2",
     "divider": "#91B9A3",
     "success": "#A2ED9C",

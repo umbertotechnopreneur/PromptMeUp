@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "forest",
   "name": "Forest",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F3FFF0",
     "muted": "#C3D4BD",
     "accent": "#A8DE70",
+    "accentSecondary": "#D2A0F4",
     "info": "#65D8D1",
     "divider": "#9CB98B",
     "success": "#9DE8AD",

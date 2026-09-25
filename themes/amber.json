@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "amber",
   "name": "Amber",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#FFF8E8",
     "muted": "#DED0B3",
     "accent": "#FFC247",
+    "accentSecondary": "#F49EC4",
     "info": "#70D9EC",
     "divider": "#BDA779",
     "success": "#BAE69C",

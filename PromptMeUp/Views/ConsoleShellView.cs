@@ -79,10 +79,8 @@ public sealed class ConsoleShellView : IConsoleShellView
         var title = $"{icon}[#F5F5F5]P R O M P T M E[/][white] U P[/]";
         var width = Math.Max(1, (int)Math.Floor(_console.Profile.Width * 0.8d));
         var dividerWidth = Math.Max(1, width - (icon.Length + "P R O M P T M E U P".Length) - 1);
-        var firstColorWidth = dividerWidth / 2;
         _console.WriteLine();
-        _console.MarkupLine(
-            $"{title} [#e8b9d3]{new string('─', firstColorWidth)}[/][#b9d8ed]{new string('─', dividerWidth - firstColorWidth)}[/]");
+        _console.MarkupLine($"{title} {ThemeSeparator.Markup(dividerWidth)}");
         _console.MarkupLine($"  [bold {TerminalTheme.Info}]{Markup.Escape(_text.Text("Shell.OpeningKicker"))}[/]");
         _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Tagline"))}[/]");
         _console.WriteLine();

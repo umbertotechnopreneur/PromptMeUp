@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "violet",
   "name": "Violet",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F9F2FF",
     "muted": "#D1BFE0",
     "accent": "#C08EFF",
+    "accentSecondary": "#F4A3D0",
     "info": "#64CEFF",
     "divider": "#AC94CA",
     "success": "#A9E7BD",

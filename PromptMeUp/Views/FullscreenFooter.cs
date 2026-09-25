@@ -33,7 +33,7 @@ internal static class FullscreenFooter
         return new Layout("fullscreen-footer").SplitRows(
             new Layout("notice", new Rows(new Text(" "), Inset(notice))).Size(noticeRows),
             new Layout("actions", new Rows(
-                new Rule { Style = Style.Parse(TerminalTheme.Divider) }, Inset(actions))).Size(ActionsRows),
+                new ThemeSeparator(), Inset(actions))).Size(ActionsRows),
             new Layout("hints", new Rows(new Text(" "), Inset(hints))).Size(HintRows));
     }
 

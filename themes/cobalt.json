@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "cobalt",
   "name": "Cobalt",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F0F5FF",
     "muted": "#BECBE8",
     "accent": "#78A6FF",
+    "accentSecondary": "#F2A6E8",
     "info": "#4BD4FF",
     "divider": "#90A7D4",
     "success": "#9BE6B4",

@@ -259,7 +259,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         }
 
         var icon = number switch { 1 => "🌍", 2 => "🔑", 3 => "👋", _ => "🧠" };
-        TerminalTheme.WriteGradientRule(console,
+        TerminalTheme.WriteRule(console,
             Icon(icon, ">") + text.Text("Oobe.Step", number) + " · " + text.Text("Oobe." + title), TerminalTheme.Accent);
         Write(hint, TerminalTheme.Muted);
         console.WriteLine();

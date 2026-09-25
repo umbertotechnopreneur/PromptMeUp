@@ -17,7 +17,7 @@ internal static class FullscreenWorkspace
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         return new Rows(
             new FullscreenLine($"{(focused ? "> " : "  ")}{title}", Style.Parse("bold " + TerminalTheme.Accent)),
-            showDivider ? new Rule { Style = Style.Parse(TerminalTheme.Divider) } : new Text(" "));
+            showDivider ? new ThemeSeparator() : new Text(" "));
     }
 
     /// <summary>Builds the common fullscreen shell around passive content and action renderables.</summary>

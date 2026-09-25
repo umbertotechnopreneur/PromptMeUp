@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "rose",
   "name": "Rose",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#FFF2F6",
     "muted": "#DEC1D0",
     "accent": "#FF8EC0",
+    "accentSecondary": "#FFC56F",
     "info": "#78CAFF",
     "divider": "#C59AAC",
     "success": "#AFE6C3",

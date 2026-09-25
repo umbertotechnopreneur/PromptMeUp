@@ -18,12 +18,10 @@ public sealed class ThemeCatalogService : IThemeCatalogService
 {
     private const int MaximumThemeCount = 32;
     private const int MaximumThemeFileBytes = 16 * 1024;
-    private static readonly string[] LegacyDefinitionProperties = ["version", "id", "name", "colors"];
-    private static readonly string[] AttributionDefinitionProperties = ["version", "id", "name", "author", "description", "colors"];
     private static readonly string[] DefinitionProperties = ["version", "id", "name", "author", "website", "description", "colors"];
     private static readonly string[] ColorProperties =
     [
-        "background", "primary", "muted", "accent", "info", "divider", "success", "warning", "error",
+        "background", "primary", "muted", "accent", "accentSecondary", "info", "divider", "success", "warning", "error",
         "selectionBackground", "selectionForeground"
     ];
 
@@ -97,16 +95,11 @@ public sealed class ThemeCatalogService : IThemeCatalogService
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("version", out var schema)
                 || schema.ValueKind != JsonValueKind.Number
-                || !schema.TryGetInt32(out var version) || version is not (1 or 2 or 3))
+                || !schema.TryGetInt32(out var version) || version != 4)
             {
-                throw new InvalidOperationException("Only theme schema versions 1, 2, and 3 are supported.");
+                throw new InvalidOperationException("Only theme schema version 4 is supported.");
             }
-            RequireProperties(root, version switch
-            {
-                1 => LegacyDefinitionProperties,
-                2 => AttributionDefinitionProperties,
-                _ => DefinitionProperties
-            });
+            RequireProperties(root, DefinitionProperties);
 
             var id = ReadString(root, "id");
             var name = ReadString(root, "name");
@@ -123,13 +116,13 @@ public sealed class ThemeCatalogService : IThemeCatalogService
             RequireProperties(colors, ColorProperties);
             var values = ColorProperties.Select(property => ReadColor(colors, property)).ToArray();
             var palette = new TerminalThemeColors(values[0], values[1], values[2], values[3], values[4], values[5],
-                values[6], values[7], values[8], values[9], values[10]);
+                values[6], values[7], values[8], values[9], values[10], values[11]);
             ValidateContrast(palette);
             return new TerminalThemeDefinition(version, id, name, palette)
             {
-                Author = version >= 2 ? ReadMetadata(root, "author", 80) : null,
-                Website = version >= 3 ? ReadWebsite(root) : null,
-                Description = version >= 2 ? ReadMetadata(root, "description", 240) : null,
+                Author = ReadMetadata(root, "author", 80),
+                Website = ReadWebsite(root),
+                Description = ReadMetadata(root, "description", 240),
                 SourcePath = Path.GetFullPath(file)
             };
         }
@@ -208,7 +201,8 @@ public sealed class ThemeCatalogService : IThemeCatalogService
     /// <summary>Requires readable text and distinct dividers against each theme's explicit background.</summary>
     private static void ValidateContrast(TerminalThemeColors colors)
     {
-        string[] textColors = [colors.Primary, colors.Muted, colors.Accent, colors.Info, colors.Success, colors.Warning, colors.Error, "#F5F5F5"];
+        string[] textColors = [colors.Primary, colors.Muted, colors.Accent, colors.AccentSecondary, colors.Info,
+            colors.Success, colors.Warning, colors.Error, "#F5F5F5"];
         if (textColors.Any(color => ContrastRatio(color, colors.Background) < 4.5d)
             || ContrastRatio(colors.SelectionForeground, colors.SelectionBackground) < 4.5d
             || ContrastRatio(colors.Divider, colors.Background) < 3d)

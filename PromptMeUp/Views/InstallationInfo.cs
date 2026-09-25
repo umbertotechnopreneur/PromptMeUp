@@ -37,7 +37,7 @@ internal sealed class InstallationInfo(ILocalizationService text, BuildInformati
                 Padding = new Padding(1, 0, 1, 0),
                 Expand = true
             }
-            : new Rows(new Rule(title).RuleStyle(TerminalTheme.Divider), new Text(" "), body);
+            : new Rows(new ThemeSeparator(title), new Text(" "), body);
     }
 
     /// <summary>Uses aligned label-value rows with a stacked layout when the available content width is narrow.</summary>

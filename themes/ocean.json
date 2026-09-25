@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "ocean",
   "name": "Ocean",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F1FAFF",
     "muted": "#B5CEDA",
     "accent": "#47D3E7",
+    "accentSecondary": "#F591C9",
     "info": "#6DAFFF",
     "divider": "#86ADBB",
     "success": "#90E0A8",

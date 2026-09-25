@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "midnight",
   "name": "Midnight",
   "author": "PromptMeUp contributors",
@@ -10,6 +10,7 @@
     "primary": "#F5F5FF",
     "muted": "#C1C3DE",
     "accent": "#929DFF",
+    "accentSecondary": "#F2A4CA",
     "info": "#5ACDF5",
     "divider": "#989CC6",
     "success": "#A0E3B5",
