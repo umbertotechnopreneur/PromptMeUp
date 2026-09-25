@@ -1,5 +1,7 @@
 ## Task
 
+- [ ] Remove `artifacts/msix/debug/0.1.8.5/publish` and `x64/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; policy blocked recursive directory deletion.
+
 - [ ] Remove `artifacts/msix/debug/0.0.1.2211/publish`, `publish-nosymbols`, and `x64/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.
 
 - [ ] Remove `artifacts/msix/direct-20260921-debug/publish` and `artifacts/msix/direct-20260921-debug/package/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.

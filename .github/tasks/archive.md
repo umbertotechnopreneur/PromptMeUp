@@ -1,5 +1,13 @@
 # Task Archive
 
+## 2026-09-25 — Install the chat refinements Debug build
+
+- Built a self-contained x64 Debug publish with embedded symbols and version `0.1.8.5` from source commit `41e9171`.
+- Exported notices for 27 packages, then created, signed, and verified the local MSIX and its SHA-256 checksum.
+- Installed `UmbertoGiacobbiDotBiz.PromptMeUp` `0.1.8.5` over `0.1.8.4`. Verified healthy current-user registration, the WindowsApps execution alias, matching published and installed `hm.dll` hashes, and the installed executable's version and commit.
+- Preserved the signed MSIX, checksum, package metadata, and installation record under ignored `artifacts/msix/debug/0.1.8.5/x64`. Debug application-runtime and solution cleanup passed.
+- Automated tests, CLI smoke tests, and interactive UI checks were not run for this installation. Recursive deletion of this build's temporary publish and payload directories was blocked by policy and remains in the task list.
+
 ## 2026-09-25 — Refine shared fullscreen screens for the 1.0 beta
 
 - Create checkpoint `72b9403` for the prior banner and installation details, then work on the owner-requested `codex/refinements-to-version-1.0-beta` branch.
