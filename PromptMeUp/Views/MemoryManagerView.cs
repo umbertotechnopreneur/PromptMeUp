@@ -584,7 +584,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         }
         else if (key.Key is ConsoleKey.LeftArrow or ConsoleKey.Backspace && _caret > 0)
         {
-            var previous = PreviousElement(_input, _caret);
+            var previous = TerminalTextElements.Previous(_input, _caret);
             if (key.Key == ConsoleKey.Backspace)
             {
                 _input = _input.Remove(previous, _caret - previous);
@@ -593,7 +593,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         }
         else if (key.Key is ConsoleKey.RightArrow or ConsoleKey.Delete && _caret < _input.Length)
         {
-            var next = NextElement(_input, _caret);
+            var next = TerminalTextElements.Next(_input, _caret);
             if (key.Key == ConsoleKey.Delete)
             {
                 _input = _input.Remove(_caret, next - _caret);
@@ -646,14 +646,6 @@ public sealed class MemoryManagerView : IMemoryManagerView
         var nextEnd = _input.IndexOf('\n', nextStart);
         _caret = Math.Min(nextStart + column, nextEnd < 0 ? _input.Length : nextEnd);
     }
-
-    /// <summary>Finds the preceding Unicode text element for cursor movement and deletion.</summary>
-    private static int PreviousElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).LastOrDefault(start => start < index);
-
-    /// <summary>Finds the following Unicode text element without splitting a composed character.</summary>
-    private static int NextElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
 
     /// <summary>Changes the proposal shown in the central editor without leaving the suggestions section.</summary>
     private void ChangeProposal(int delta, MemoryProposalWorkspace proposals)

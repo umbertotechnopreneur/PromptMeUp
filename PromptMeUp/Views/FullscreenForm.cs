@@ -376,7 +376,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
         else if (key.Key is ConsoleKey.LeftArrow or ConsoleKey.Backspace && _caret > 0)
         {
-            var previous = PreviousElement(_input, _caret);
+            var previous = TerminalTextElements.Previous(_input, _caret);
             if (key.Key == ConsoleKey.Backspace)
             {
                 _input = _input.Remove(previous, _caret - previous);
@@ -385,7 +385,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
         else if (key.Key is ConsoleKey.RightArrow or ConsoleKey.Delete && _caret < _input.Length)
         {
-            var next = NextElement(_input, _caret);
+            var next = TerminalTextElements.Next(_input, _caret);
             if (key.Key == ConsoleKey.Delete)
             {
                 _input = _input.Remove(_caret, next - _caret);
@@ -407,14 +407,6 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             }
         }
     }
-
-    /// <summary>Finds the preceding Unicode text element for cursor movement and deletion.</summary>
-    private static int PreviousElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).LastOrDefault(start => start < index);
-
-    /// <summary>Finds the following Unicode text element without splitting a composed character.</summary>
-    private static int NextElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
 
     /// <summary>Draws a fixed viewport with sections, focus, contextual guidance and persistent actions.</summary>
     private void Render(string titleKey, IReadOnlyList<FormPage> pages, IReadOnlyList<FormField> fields)
