@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -14,6 +15,29 @@ internal sealed record TerminalMenuChoice<T>(T Value, string Label, string? Deta
 /// <summary>Shares menu appearance and keyboard behavior across scrolling setup flows.</summary>
 internal static class TerminalChoiceMenu
 {
+    /// <summary>Renders numbered destinations with consistent spacing and optional descriptions.</summary>
+    internal static IRenderable Numbered(IReadOnlyList<TerminalMenuChoice<int>> choices, bool showDetails)
+    {
+        Validate(choices);
+        var grid = new Grid().AddColumn(new GridColumn().RightAligned().NoWrap()).AddColumn();
+        for (var index = 0; index < choices.Count; index++)
+        {
+            var choice = choices[index];
+            var numberColor = choice.Tone == TerminalMenuTone.Caution ? TerminalTheme.Warning : TerminalTheme.Accent;
+            var label = $"[bold {Color(choice.Tone)}]{Markup.Escape(choice.Label)}[/]";
+            if (showDetails && !string.IsNullOrWhiteSpace(choice.Detail))
+            {
+                label += $"\n[{TerminalTheme.Muted}]{Markup.Escape(choice.Detail)}[/]";
+            }
+            grid.AddRow(new Markup($"[bold {numberColor}]{choice.Value}[/]"), new Markup(label));
+            if (index < choices.Count - 1)
+            {
+                grid.AddEmptyRow();
+            }
+        }
+        return grid;
+    }
+
     /// <summary>Shows one selected value without interpreting choice text as terminal markup.</summary>
     internal static async Task<T> SelectAsync<T>(IAnsiConsole console,
         IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct, string? title = null)
@@ -91,16 +115,19 @@ internal static class TerminalChoiceMenu
     /// <summary>Styles the choice and optional detail with existing semantic theme colors.</summary>
     private static string Format<T>(TerminalMenuChoice<T> choice)
     {
-        var color = choice.Tone switch
-        {
-            TerminalMenuTone.Positive => TerminalTheme.Success,
-            TerminalMenuTone.Muted => TerminalTheme.Muted,
-            TerminalMenuTone.Caution => TerminalTheme.Warning,
-            _ => TerminalTheme.Primary
-        };
+        var color = Color(choice.Tone);
         var label = $"[{color}]{Markup.Escape(choice.Label)}[/]";
         return string.IsNullOrWhiteSpace(choice.Detail)
             ? label
             : label + $" [{TerminalTheme.Muted}]· {Markup.Escape(choice.Detail)}[/]";
     }
+
+    /// <summary>Maps semantic menu emphasis to the existing theme palette.</summary>
+    private static string Color(TerminalMenuTone tone) => tone switch
+    {
+        TerminalMenuTone.Positive => TerminalTheme.Success,
+        TerminalMenuTone.Muted => TerminalTheme.Muted,
+        TerminalMenuTone.Caution => TerminalTheme.Warning,
+        _ => TerminalTheme.Primary
+    };
 }
