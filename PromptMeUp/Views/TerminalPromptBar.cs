@@ -54,7 +54,7 @@ internal sealed class TerminalPromptBar(
         }
 
         var percentage = Math.Clamp(used * 100d / status.ContextBudgetTokens, 0d, 100d);
-        var context = $"{FormatTokens(used)}/{FormatTokens(status.ContextBudgetTokens)} · "
+        var context = $"~{FormatTokens(used)}/{FormatTokens(status.ContextBudgetTokens)} · "
             + $"{percentage.ToString("0", CultureInfo.InvariantCulture)}%";
         var separator = "  │  ";
         if (new Segment(model + separator + context).CellCount() > width)
@@ -65,6 +65,15 @@ internal sealed class TerminalPromptBar(
         var result = modelMarkup + $"[{TerminalTheme.Divider}]{separator}[/]"
             + $"[bold {TerminalTheme.Info}]{Markup.Escape(context)}[/]";
         var plainStatus = model + separator + context;
+        var cost = status.SessionCostKnown
+            ? $"{text.Text("Shell.SessionCost")}: ~${status.RunningCostUsd.ToString("0.0000", CultureInfo.InvariantCulture)}"
+            : string.Empty;
+        if (cost.Length > 0 && new Segment(plainStatus + separator + cost).CellCount() <= width)
+        {
+            result += $"[{TerminalTheme.Divider}]{separator}[/]"
+                + $"[{TerminalTheme.Success}]{Markup.Escape(cost)}[/]";
+            plainStatus += separator + cost;
+        }
         const int meterWidth = 8;
         var filled = Math.Clamp((int)Math.Round(percentage * meterWidth / 100d), 0, meterWidth);
         var meter = new string('━', meterWidth);
@@ -73,15 +82,6 @@ internal sealed class TerminalPromptBar(
             result += $"[{TerminalTheme.Divider}]{separator}[/]"
                 + $"[{TerminalTheme.Accent}]{new string('━', filled)}[/]"
                 + $"[{TerminalTheme.Divider}]{new string('─', meterWidth - filled)}[/]";
-            plainStatus += separator + meter;
-        }
-        var cost = status.SessionCostKnown
-            ? $"{text.Text("Shell.SessionCost")}: ${status.RunningCostUsd.ToString("0.0000", CultureInfo.InvariantCulture)}"
-            : string.Empty;
-        if (cost.Length > 0 && new Segment(plainStatus + separator + cost).CellCount() <= width)
-        {
-            result += $"[{TerminalTheme.Divider}]{separator}[/]"
-                + $"[{TerminalTheme.Success}]{Markup.Escape(cost)}[/]";
         }
         return result;
     }
@@ -110,14 +110,14 @@ internal sealed class TerminalPromptBar(
             {
                 var selected = metrics.Take(count).ToArray();
                 var plain = string.Join("  │  ", selected.Select(metric =>
-                    $"{(compact ? metric.ShortLabel : metric.Label)} {FormatTokens(metric.Value)}"));
+                    $"{(compact ? metric.ShortLabel : metric.Label)} ~{FormatTokens(metric.Value)}"));
                 if (new Segment(plain).CellCount() > width)
                 {
                     continue;
                 }
                 return string.Join($"[{TerminalTheme.Divider}]  │  [/]", selected.Select(metric =>
                     $"[{metric.Color}]{Markup.Escape(compact ? metric.ShortLabel : metric.Label)}[/] "
-                    + $"[{TerminalTheme.Primary}]{FormatTokens(metric.Value)}[/]"));
+                    + $"[{TerminalTheme.Primary}]~{FormatTokens(metric.Value)}[/]"));
             }
         }
         return null;
