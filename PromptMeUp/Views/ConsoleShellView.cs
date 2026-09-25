@@ -213,12 +213,21 @@ public sealed class ConsoleShellView : IConsoleShellView
     }
 
     /// <summary>Shows a sanitized frameless error without exposing exception internals.</summary>
-    public void RenderError(string message) =>
-        TerminalTheme.WriteSection(
-            _console,
-            TerminalTheme.IconPrefix(Options, "❌", "x") + _text.Text("Common.Error"),
-            message,
-            TerminalTheme.Error);
+    public void RenderError(string message)
+    {
+        var safe = TerminalText.Safe(message);
+        var collapse = safe.Length > 400 || safe.Count(character => character == '\n') > 4;
+        if (!collapse)
+        {
+            TerminalTheme.WriteSection(_console, _text.Text("Common.Error"), safe, TerminalTheme.Error);
+            return;
+        }
+        var summary = safe.Split('\n').FirstOrDefault(line => !string.IsNullOrWhiteSpace(line)) ?? _text.Text("Common.Error");
+        _console.Write(new TerminalActivityRow(summary, TerminalActivityState.Failed, useSymbols: !Options.NoEmoji));
+        _console.WriteLine();
+        TerminalDisclosure.Write(_console, _text, TerminalTurnKind.Tool, _text.Text("Common.Error"),
+            new Text(safe, Style.Parse(TerminalTheme.Primary)), safe.Length);
+    }
 
     /// <summary>Shows a short frameless informational message.</summary>
     public void RenderNotice(string message)

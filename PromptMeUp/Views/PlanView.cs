@@ -31,6 +31,9 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
             table.AddRow(new Text(StepIndicator(index)), new Text(step.Label + "\n" + step.Expected), new Text(text.Text("Plan." + step.Status)));
         }
         console.Write(table);
+        TerminalSession.For(console).History.Add(TerminalTurnKind.Plan, plan.Goal,
+            new Rows(new Text(TerminalText.Safe(plan.Goal)), new Text(TerminalText.Safe(plan.Directory)), table),
+            plan.Goal.Length + plan.Directory.Length + plan.Steps.Sum(step => step.Label.Length + step.Expected.Length));
         console.WriteLine();
         console.Write(new Text(text.Text("Plan.Resume"), Style.Parse(TerminalTheme.Muted)));
         console.WriteLine();

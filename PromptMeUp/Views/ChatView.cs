@@ -48,6 +48,7 @@ public sealed class ChatView : IChatView
     public void RenderIntro()
     {
         _inputHintShown = false;
+        TerminalSession.For(_console).HasPromptDock = true;
         var icon = TerminalTheme.IconPrefix(_shell.Options, "💬", ">");
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("Chat.Title")}", TerminalTheme.Accent);
         var shortcuts = new[] { _text.Text("Chat.Command.RunSyntax"), "/status", "/exit", "/help" };
@@ -104,6 +105,8 @@ public sealed class ChatView : IChatView
         TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.User);
         _console.Write(new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)));
         _console.WriteLine();
+        TerminalSession.For(_console).History.Add(TerminalTurnKind.User, _text.Text("Terminal.Role.User"),
+            new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)), text.Length);
     }
 
     /// <summary>Renders a model response through the Markdown renderer so formatting never degrades into raw source text.</summary>
@@ -112,6 +115,8 @@ public sealed class ChatView : IChatView
         ArgumentNullException.ThrowIfNull(markdown);
         cancellationToken.ThrowIfCancellationRequested();
         var (heading, body) = SeparateLeadingHeading(markdown);
+        TerminalSession.For(_console).History.Add(TerminalTurnKind.Assistant, heading ?? string.Empty,
+            PoorMarkdownRenderer.Content(body), markdown.Length);
         TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.Assistant, heading);
 
         if (!string.IsNullOrWhiteSpace(body))

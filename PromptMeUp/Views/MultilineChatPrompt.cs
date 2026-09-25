@@ -53,12 +53,21 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                 }
                 else if (input.Key is { } key)
                 {
+                    if (TerminalHistoryView.IsShortcut(key) && FullscreenViewport.CanUse(console))
+                    {
+                        EraseDraft();
+                        TerminalHistoryView.Show(console, text, key, reader);
+                        console.Cursor.Hide();
+                        continue;
+                    }
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                     {
                         EraseDraft();
                         TerminalTurnHeader.Write(console, text, TerminalTurnKind.User);
                         console.Write(new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
                         console.WriteLine();
+                        session.History.Add(TerminalTurnKind.User, text.Text("Terminal.Role.User"),
+                            new Text(TerminalText.Safe(buffer.Text), Style.Parse(TerminalTheme.Primary)), buffer.Text.Length);
                         return buffer.Text;
                     }
                     if (!buffer.Edit(key))
@@ -98,7 +107,8 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var bar = new TerminalPromptBar(text, _status,
             showBorders: size.Height >= 8, showStatus: size.Height >= 4,
             showBreakdown: size.Height >= 8, session: TerminalSession.For(console));
-        var header = bar.Header(width);
+        var header = bar.Header(width).ToList();
+        if (NavigationHint(width) is { } navigation) header.Add(navigation);
         var footer = bar.Footer(width);
         foreach (var row in header)
         {
@@ -147,7 +157,18 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var bar = new TerminalPromptBar(text, _status, height >= 8, height >= 4, height >= 8,
             TerminalSession.For(console));
         var width = Math.Max(1, console.Profile.Width - 1);
-        return bar.Header(width).Count + bar.Footer(width).Count + 1;
+        return bar.Header(width).Count + bar.Footer(width).Count + 1 + (NavigationHint(width) is null ? 0 : 1);
+    }
+
+    /// <summary>Shows the retained turn position and discovery keys only when the viewer is usable.</summary>
+    private string? NavigationHint(int width)
+    {
+        var history = TerminalSession.For(console).History;
+        if (history.Turns.Count == 0 || !FullscreenViewport.CanUse(console)) return null;
+        var index = history.SelectedIndex ?? history.Turns.Count - 1;
+        var label = text.Text("Terminal.TurnPosition", history.Turns[index].Number, history.Turns[^1].Number)
+            + " · " + text.Text("Terminal.NavigationKeys");
+        return $"[{TerminalTheme.Muted}]{Markup.Escape(TerminalText.Clip(label, width))}[/]";
     }
 
     /// <summary>Clears one owned row before writing its already width-bounded contents.</summary>

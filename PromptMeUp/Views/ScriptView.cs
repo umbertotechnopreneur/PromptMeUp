@@ -37,6 +37,11 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
         console.Write(new Text(presentation.Artifact.Source, Style.Parse(TerminalTheme.Primary)));
         console.WriteLine();
         console.WriteLine();
+        TerminalSession.For(console).History.Add(TerminalTurnKind.Script, language,
+            new Rows(new Text(TerminalText.Safe(presentation.Artifact.Explanation)),
+                new Text(TerminalText.Safe(presentation.OutputPath), Style.Parse(TerminalTheme.Info)),
+                new Text(TerminalText.Safe(presentation.Artifact.Source), Style.Parse(TerminalTheme.Primary))),
+            presentation.Artifact.Explanation.Length + presentation.OutputPath.Length + presentation.Artifact.Source.Length);
         if (presentation.Original is not null && presentation.Original != presentation.Artifact.Source)
         {
             var diff = TerminalTable.Create("−", "+");

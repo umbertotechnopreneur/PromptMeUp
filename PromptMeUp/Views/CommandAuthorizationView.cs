@@ -3,6 +3,7 @@
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -101,33 +102,28 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         var succeeded = result.ExitCode == 0 && !result.TimedOut;
         var outputColor = succeeded ? TerminalTheme.Success : TerminalTheme.Warning;
         TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.Tool);
-        _console.Write(new TerminalActivityRow(_text.Text("Command.Output"),
+        var exitLabel = result.ExitCode?.ToString() ?? _text.Text("Command.Timeout");
+        var summary = _text.Text("Command.Output") + " · " + _text.Text("Command.ExitCode") + ": " + exitLabel;
+        _console.Write(new TerminalActivityRow(summary,
             succeeded ? TerminalActivityState.Completed : TerminalActivityState.Failed,
             TimeSpan.FromMilliseconds(result.ElapsedMilliseconds), !_shell.Options.NoEmoji));
         _console.WriteLine();
+        var details = new List<IRenderable>
+        {
+            new Text(TerminalText.Safe(result.Command), Style.Parse(TerminalTheme.Info))
+        };
         if (!string.IsNullOrWhiteSpace(result.StandardOutput))
         {
-            _console.MarkupLine($"[{TerminalTheme.Muted}]STDOUT[/]");
-            foreach (var line in result.StandardOutput.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
-            {
-                _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
-            }
-
-            _console.WriteLine();
+            details.Add(new Text("STDOUT", Style.Parse(TerminalTheme.Muted)));
+            details.Add(new Text(TerminalText.Safe(result.StandardOutput), Style.Parse(TerminalTheme.Primary)));
         }
 
         if (!string.IsNullOrWhiteSpace(result.StandardError))
         {
-            var errorIcon = TerminalTheme.IconPrefix(_shell.Options, "⚠", "!");
-            _console.Markup($"[bold {TerminalTheme.Error}]{Markup.Escape(errorIcon)}[/]");
-            _console.Write(new Text("STDERR", new Style(
-                foreground: Style.Parse(TerminalTheme.Error).Foreground, decoration: Decoration.Bold)));
-            _console.WriteLine();
-            foreach (var line in result.StandardError.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
-            {
-                _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
-            }
-
+            details.Add(new Text("STDERR", Style.Parse($"bold {TerminalTheme.Error}")));
+            details.Add(new Text(TerminalText.Safe(result.StandardError), Style.Parse(TerminalTheme.Primary)));
+            var firstError = result.StandardError.Split('\n').FirstOrDefault(line => !string.IsNullOrWhiteSpace(line)) ?? string.Empty;
+            _console.Write(new Text(TerminalText.Clip(firstError, Math.Max(1, _console.Profile.Width - 1)), Style.Parse(TerminalTheme.Warning)));
             _console.WriteLine();
         }
 
@@ -144,8 +140,15 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
                 TerminalTheme.IconPrefix(_shell.Options, "✂", "#") + _text.Text("Command.Truncated"),
                 result.OutputTruncated ? _text.Text("Common.Yes") : _text.Text("Common.No"))
         ], preferredPairs: 3, width: _console.Profile.Width);
-        _console.Write(metadata);
-        _console.WriteLine();
+        details.Add(metadata);
+        if (result.OutputTruncated)
+        {
+            _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.Truncated"))}: {Markup.Escape(_text.Text("Common.Yes"))}[/]");
+        }
+        TerminalDisclosure.Write(_console, _text, TerminalTurnKind.Tool, summary, new Rows(details),
+            result.Command.Length + result.StandardOutput.Length + result.StandardError.Length,
+            collapse: result.StandardOutput.Length + result.StandardError.Length > 0,
+            deferReview: TerminalSession.For(_console).HasPromptDock);
     }
 
     /// <summary>Maps risk severity to the active theme while retaining separate labels and indicators.</summary>

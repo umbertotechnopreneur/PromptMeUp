@@ -61,7 +61,7 @@ internal static class FullscreenViewport
 internal readonly record struct FullscreenFrame(int Width, int Height, string Theme);
 
 /// <summary>Waits for one key while preserving a pending read across resize and numeric-shortcut timeouts.</summary>
-internal sealed class FullscreenInput(IAnsiConsole console, ILocalizationService text)
+internal sealed class FullscreenInput(IAnsiConsole console, ILocalizationService text, TerminalInputReader? reader = null)
 {
     private Task<ConsoleKeyInfo?>? _pendingRead;
 
@@ -96,6 +96,13 @@ internal sealed class FullscreenInput(IAnsiConsole console, ILocalizationService
     internal void Reset() => _pendingRead = null;
 
     /// <summary>Uses the cancellation-aware input wrapper supplied by the application host.</summary>
-    private async Task<ConsoleKeyInfo?> ReadKeyAsync() =>
-        await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
+    private async Task<ConsoleKeyInfo?> ReadKeyAsync()
+    {
+        if (reader is null) return await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
+        while (true)
+        {
+            var input = await reader.ReadAsync().ConfigureAwait(false);
+            if (input.Key is { } key) return key;
+        }
+    }
 }

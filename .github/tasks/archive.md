@@ -1417,3 +1417,11 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Preserved system, user, tool, and assistant context counts at narrow widths; reused proportional meter allocation and kept the thirteen-cell meter.
 - Added quiet ready, working, and decision states with scoped terminal titles, and made the input dock reserve its actual responsive height.
 - Validation: XML comments, complete solution formatting, and Release build passed with zero warnings and errors.
+
+## 2026-09-26 — On-demand details and retained conversation turns
+
+- Added a bounded memory-only transcript and a read-only alternate-buffer viewer with turn navigation and independent content scrolling.
+- Added F2 details and Ctrl+PageUp/PageDown navigation to the multiline prompt while retaining its draft and caret.
+- Kept complete output inline when an interactive viewer is unavailable. Command errors retain their first error line and exit status; previews and authorization remain fully visible.
+- Reused the Markdown parser for original answers and expanded history instead of adding a second renderer.
+- Validation: Release build and XML check passed; 77 focused rendering, context, input, and component tests passed. Interactive desktop behavior remains to be checked.
