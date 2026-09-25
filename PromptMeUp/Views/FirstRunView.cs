@@ -162,6 +162,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         {
             Write("RecordingOff", TerminalTheme.Muted);
         }
+        Write("HistoryNotice", TerminalTheme.Muted);
         if ((overview.Settings.Enabled && !enabled) || (overview.Settings.CaptureObservations && !capture))
         {
             Write("ClearLearning", TerminalTheme.Warning);
@@ -191,7 +192,6 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         Section("🛡", "CommandMode");
         Write("DirectNotice", TerminalTheme.Muted);
         var confirmCommands = await YesNoAsync("ConfirmCommands", false, ct).ConfigureAwait(false);
-        Write("HistoryNotice", TerminalTheme.Muted);
         return new(FirstRunAction.Next, new(name, enabled, capture, confirmCommands, selectedSkills));
     }
 
