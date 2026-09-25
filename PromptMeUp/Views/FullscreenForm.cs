@@ -644,20 +644,14 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private IRenderable Actions(int fieldCount)
     {
         var labels = new[] { "Form.Save", "Form.Cancel" };
-        var row = new Grid();
-        foreach (var label in labels)
-        {
-            row.AddColumn();
-        }
-        row.AddRow(labels.Select((label, index) =>
+        return TerminalActionBar.Create(labels.Select((label, index) =>
         {
             var selected = !_sectionNavigator.IsFocused && _focus == fieldCount + index;
             var icon = label == "Form.Save"
                 ? TerminalTheme.IconPrefix(_options, "💾", "+")
                 : TerminalTheme.IconPrefix(_options, "↩️", "x");
-            return FullscreenFooter.Button(icon + text.Text(label), ActionColor(label), selected);
+            return new TerminalAction(icon + text.Text(label), ActionColor(label), selected);
         }).ToArray());
-        return row;
     }
 
     /// <summary>Assigns navigation, progression, saving, and cancellation their semantic theme colors.</summary>

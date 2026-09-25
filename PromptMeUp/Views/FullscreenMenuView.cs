@@ -305,11 +305,11 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         _groupNavigator.IsFocused = _focus == MenuFocus.Groups;
         var active = groups[_groupNavigator.SelectedIndex];
         var content = Content(active, bodyRows);
-        var actions = new Grid().AddColumn();
-        actions.AddRow(FullscreenFooter.Button(
-            TerminalTheme.IconPrefix(options, "↩️", "x") + backLabel,
-            TerminalTheme.Warning,
-            _focus == MenuFocus.Back));
+        var actions = TerminalActionBar.Create(
+        [
+            new TerminalAction(TerminalTheme.IconPrefix(options, "↩️", "x") + backLabel,
+                TerminalTheme.Warning, _focus == MenuFocus.Back)
+        ]);
         var footerKey = _focus == MenuFocus.Editor ? "Lab.MenuEditorFooter" : "Lab.MenuFooter";
         var footer = FullscreenFooter.Create(
             new FullscreenLine(_editorError ?? SelectedDescription(active),

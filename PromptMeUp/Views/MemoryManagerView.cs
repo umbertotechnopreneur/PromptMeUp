@@ -324,13 +324,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
             new MemoryLines(lines.Skip(_detailOffset).Take(_visibleRows).ToArray())));
         var actions = Actions(entry, proposals);
         _actionIndex = Math.Clamp(_actionIndex, 0, actions.Count - 1);
-        var buttons = new Grid();
-        foreach (var unused in actions)
-        {
-            _ = unused;
-            buttons.AddColumn();
-        }
-        buttons.AddRow(actions.Select((action, index) => FullscreenFooter.Button(
+        var buttons = TerminalActionBar.Create(actions.Select((action, index) => new TerminalAction(
             _text.Text(action.LabelKey), action.Color, _focus == EditorFocus.Actions && index == _actionIndex)).ToArray());
         var notice = Notice(entry, proposals, feedback, feedbackIsError);
         var hintKey = _editing ? "MemoryManager.EditorKeys"

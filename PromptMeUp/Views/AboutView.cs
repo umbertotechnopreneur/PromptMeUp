@@ -147,8 +147,11 @@ public sealed class AboutView(
         _lineCount = lines.Count;
         _offset = Math.Clamp(_offset, 0, Math.Max(0, _lineCount - _visibleRows));
         var body = new Padder(new VisibleLines(lines.Skip(_offset).Take(_visibleRows).ToArray()), new Padding(2, 0, 2, 0));
-        var close = new Text($"> [ {TerminalTheme.IconPrefix(shell.Options, "↩️", "<")}{text.Text("Help.Browse.Close")} ]",
-            Style.Parse($"bold {TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"));
+        var close = TerminalActionBar.Create(
+        [
+            new TerminalAction(TerminalTheme.IconPrefix(shell.Options, "↩️", "<") + text.Text("Help.Browse.Close"),
+                TerminalTheme.Warning, Selected: true)
+        ]);
         var overflowing = _lineCount > _visibleRows;
         var notice = overflowing
             ? new Text(text.Text("Help.Browse.Range", _offset + 1, Math.Min(_lineCount, _offset + _visibleRows), _lineCount),

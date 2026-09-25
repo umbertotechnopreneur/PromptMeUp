@@ -298,9 +298,11 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
                 ?? throw new InvalidOperationException("An actionable help section needs opening guidance.")), TerminalTheme.Primary);
         }
         var closeSelected = _focus == HelpFocus.Close;
-        var actions = new Grid().AddColumn();
-        actions.AddRow(FullscreenFooter.Button(
-            TerminalTheme.IconPrefix(_options, "↩️", "x") + text.Text("Help.Browse.Close"), TerminalTheme.Warning, closeSelected));
+        var actions = TerminalActionBar.Create(
+        [
+            new TerminalAction(TerminalTheme.IconPrefix(_options, "↩️", "x") + text.Text("Help.Browse.Close"),
+                TerminalTheme.Warning, closeSelected)
+        ]);
         var footerKey = _focus switch
         {
             _ when active.Open is not null && _focus != HelpFocus.Close => "Help.Browse.OpenKeys",

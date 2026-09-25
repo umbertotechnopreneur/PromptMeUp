@@ -52,22 +52,6 @@ internal static class FullscreenFooter
         return new ShortcutLine(new Segment(value).CellCount() > availableWidth ? compactValue : value);
     }
 
-    /// <summary>Gives every workspace action the same spacing, focus marker, and selection colors.</summary>
-    internal static IRenderable Button(string label, string color, bool selected) => new ActionButton(
-        $"{(selected ? ">" : " ")} [ {label} ]",
-        Style.Parse(selected ? $"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}" : color));
-
-    /// <summary>Keeps action labels on one row while preserving complete terminal characters.</summary>
-    private sealed class ActionButton(string label, Style style) : IRenderable
-    {
-        /// <summary>Accepts the available action width without requesting wrapped rows.</summary>
-        public Measurement Measure(RenderOptions options, int maxWidth) => new(0, Math.Min(new Segment(label).CellCount(), Math.Max(0, maxWidth)));
-
-        /// <summary>Clips an oversized action with the same ellipsis as sidebar labels.</summary>
-        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) =>
-            maxWidth > 0 ? Segment.SplitOverflow(new Segment(label, style), Overflow.Ellipsis, maxWidth) : [];
-    }
-
     /// <summary>Matches the horizontal margins of shared fullscreen headings and form fields.</summary>
     private static Padder Inset(IRenderable content) => new(content, new Padding(2, 0, 2, 0));
 
