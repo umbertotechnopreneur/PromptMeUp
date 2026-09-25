@@ -2,6 +2,7 @@
 
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
+using PromptMeUp.Application;
 using PromptMeUp.Infrastructure;
 using PromptMeUp.Models;
 using PromptMeUp.Services;

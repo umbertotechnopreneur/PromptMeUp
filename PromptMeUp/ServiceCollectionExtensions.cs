@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -129,6 +129,11 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<LennaWorkflow>();
         services.AddSingleton<HelpWorkflow>();
         services.AddSingleton<AboutWorkflow>();
+        services.AddSingleton<AiCommandHandler>();
+        services.AddSingleton<MemoryCommandHandler>();
+        services.AddSingleton<InformationCommandHandler>();
+        services.AddSingleton<SetupCommandHandler>();
+        services.AddSingleton<IApplicationCommandRouter, ApplicationCommandRouter>();
         services.AddSingleton<IPromptMeUpApplication, PromptMeUpApplication>();
         return services;
     }

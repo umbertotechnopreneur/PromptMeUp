@@ -47,6 +47,28 @@ public sealed class ApplicationErrorTests
                 _ => throw new NotSupportedException(method.Name)
             };
         });
+        var costsView = TestProxy.Create<ICostsView>((method, args) =>
+        {
+            Assert.Equal("Render", method.Name);
+            Assert.Same(overview, args[0]);
+            cachedCostsRendered = true;
+            return null;
+        });
+        var commands = new ApplicationCommandRouter(null!, null!,
+            new InformationCommandHandler(
+                lenna: null!,
+                about: null!,
+                help: null!,
+                statusView: null!,
+                costsView: costsView,
+                thirdPartyView: null!,
+                pricing: pricing,
+                secrets: null!,
+                activity: null!,
+                shell: shell,
+                paths: null!,
+                artifactLimits: ArtifactLimits.Default),
+            null!);
         var app = new PromptMeUpApplication(
             parser: new CommandLineParser(text),
             database: TestProxy.Create<IDatabaseService>((method, _) => method.Name == "InitializeAsync"
@@ -58,29 +80,17 @@ public sealed class ApplicationErrorTests
             prompts: TestProxy.Create<IPromptCatalogService>((method, _) => method.Name == "ListAsync"
                 ? Task.FromResult<IReadOnlyList<PromptDefinition>>([]) : throw new NotSupportedException(method.Name)),
             pricing: pricing,
-            conversationWorkflow: null!,
-            diagnostics: null!,
-            scripts: null!,
-            plans: null!,
-            filePreview: null!,
+            commands: commands,
             activity: null!,
-            setup: null!,
-            installation: null!,
             text: text,
             shell: shell,
-            statusView: null!,
-            costsView: TestProxy.Create<ICostsView>((method, args) =>
-            {
-                Assert.Equal("Render", method.Name);
-                Assert.Same(overview, args[0]);
-                cachedCostsRendered = true;
-                return null;
-            }),
             helpView: null!,
-            thirdPartyView: null!,
-            paths: null!,
             logger: NullLogger<PromptMeUpApplication>.Instance,
-            help: null!);
+            themes: null!,
+            firstRunView: null!,
+            firstRun: null!,
+            home: null!,
+            diagnosticBundles: null!);
 
         var exitCode = await app.RunAsync(["--costs"], default);
 

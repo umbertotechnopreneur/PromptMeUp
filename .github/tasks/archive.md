@@ -1,5 +1,13 @@
 ﻿# Task Archive
 
+## 2026-09-26 — Simplify command routing and terminal editor navigation
+
+- Centralized Unicode text-element navigation across the fullscreen form, memory manager, and menu editors.
+- Moved command dispatch into focused AI, memory, information, and setup/installation handlers while keeping common startup and Home routing in the application.
+- Restored the application namespace import required by the earlier service-registration extraction.
+
+Validation: repository preflight, XML method-comment check, scoped whitespace formatting, warning-free Release build, and all 1,016 tests passed. Full-solution format verification still reports existing line-ending, encoding, and whitespace issues in unrelated files. Release build output was cleaned.
+
 ## 2026-09-24 — Accept the bundled command guide in Windows CI packaging
 
 - Fixed the existing Windows installer validation used by the quality gate: allow and require the exact `docs/promptmeup-quick-reference.pdf` payload path, matching the MSIX contract.
