@@ -1104,6 +1104,13 @@ Validation: inspected the scoped diff, checked whitespace, and parsed the MSBuil
 
 Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
 
+## 2026-09-25 — Place plan and script choices near the terminal bottom
+
+- Applied the shared prompt placement to plan start and outcome confirmations, script action and save choices, and the script revision prompt.
+- Kept command authorization beside its risk and command preview; query, direct, and diagnose continue into the shared chat input when the user chooses more turns.
+
+Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.

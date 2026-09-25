@@ -39,10 +39,18 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     }
 
     /// <summary>Confirms starting or resuming guidance while each command still requires its own approval.</summary>
-    public bool ConfirmStart() => console.Prompt(new ConfirmationPrompt(text.Text("Plan.Start")) { DefaultValue = false });
+    public bool ConfirmStart()
+    {
+        TerminalPromptDock.Align(console, reservedRows: 2);
+        return console.Prompt(new ConfirmationPrompt(text.Text("Plan.Start")) { DefaultValue = false });
+    }
 
     /// <summary>Requires the user to compare observed output with the declared outcome after a successful check.</summary>
-    public bool ConfirmOutcome(PlanStep step) => console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Plan.Outcome", step.Expected))) { DefaultValue = false });
+    public bool ConfirmOutcome(PlanStep step)
+    {
+        TerminalPromptDock.Align(console, reservedRows: 2);
+        return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Plan.Outcome", step.Expected))) { DefaultValue = false });
+    }
 
     /// <summary>Returns a compact zero-based visual marker while preserving a text-only fallback.</summary>
     private string StepIndicator(int index) => shell.Options.NoEmoji

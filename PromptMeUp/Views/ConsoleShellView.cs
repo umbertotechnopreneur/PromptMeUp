@@ -265,8 +265,11 @@ public sealed class ConsoleShellView : IConsoleShellView
     }
 
     /// <summary>Reads one required text value using a localized passive-view prompt.</summary>
-    public string ReadText(string prompt) =>
-        _console.Prompt(new TextPrompt<string>(Markup.Escape(prompt)));
+    public string ReadText(string prompt)
+    {
+        TerminalPromptDock.Align(_console, reservedRows: 2);
+        return _console.Prompt(new TextPrompt<string>(Markup.Escape(prompt)));
+    }
 
     /// <summary>Renders product, runtime, source, and safety details as a compact frameless About section.</summary>
     public void RenderVersion(string applicationVersion, string runtimeVersion, string runtimeIdentifier)

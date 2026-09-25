@@ -69,6 +69,7 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
             actions.Add(ScriptAction.Validate);
         }
         actions.Add(ScriptAction.Revise);
+        TerminalPromptDock.Align(console, reservedRows: actions.Count + 3);
         return console.Prompt(new SelectionPrompt<ScriptAction>()
             .Title(text.Text("Script.Action"))
             .UseConverter(action => text.Text("Script." + action))
@@ -76,5 +77,9 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
     }
 
     /// <summary>Confirms the concrete destination after the full source has been displayed.</summary>
-    public bool ConfirmSave(string path) => console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Script.Confirm", path))) { DefaultValue = false });
+    public bool ConfirmSave(string path)
+    {
+        TerminalPromptDock.Align(console, reservedRows: 2);
+        return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Script.Confirm", path))) { DefaultValue = false });
+    }
 }
