@@ -16,6 +16,13 @@ Validation: PowerShell syntax and scoped diff checks passed. No local builds, in
 
 Validation: repository preflight, formatting verification, XML method-comment check, MSIX script syntax, and Release build with warnings treated as errors passed. The publish inventory contains exactly one guide at `docs/promptmeup-quick-reference.pdf`; the build copy matches the source SHA-256. Both branded PDF pages were rendered and visually inspected. Automated tests and CLI smoke tests were not run; regression sources compiled. No MSIX was produced or installed during this task. Release build output was cleaned after validation.
 
+## 2026-09-24 — Replace the installed Debug MSIX at version 1.0.0.0
+
+- Removed the existing current-user PromptMeUp package after the owner's explicit authorization and installed the newly signed x64 Debug MSIX from commit `bd27f53`.
+- Preserved the owner-selected package version `1.0.0.0`; no version component was changed.
+
+Validation: `Get-AppxPackage` reports version 1.0.0.0, x64 architecture, `Ok` status, and a Developer signature for `UmbertoGiacobbiDotBiz.PromptMeUp_1.0.0.0_x64__aa9ddh7dsmn36`.
+
 ## 2026-09-24 — Prepare a redacted email support bundle
 
 - Added `hm --prepare-logs` as a standalone local command available before onboarding and database initialization.
