@@ -54,17 +54,21 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         RenderFlag(language);
         var selected = SupportedLanguages.All.Single(item => item.Code == language);
         console.MarkupLine(Markup.Escape(text.Text("Oobe.Detected", selected.NativeName)));
-        var choice = await ChooseAsync([text.Text("Oobe.KeepLanguage", selected.NativeName),
-            text.Text("Oobe.ChangeLanguage"), text.Text("Oobe.Exit")], ct).ConfigureAwait(false);
-        if (choice == 2)
+        var choice = await ChooseAsync<LanguageChoice>(
+        [
+            new(LanguageChoice.Keep, text.Text("Oobe.KeepLanguage", selected.NativeName), Tone: TerminalMenuTone.Positive),
+            new(LanguageChoice.Change, text.Text("Oobe.ChangeLanguage")),
+            new(LanguageChoice.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+        ], ct).ConfigureAwait(false);
+        if (choice == LanguageChoice.Exit)
         {
             return new(FirstRunAction.Exit, language);
         }
-        if (choice == 1)
+        if (choice == LanguageChoice.Change)
         {
             var languages = SupportedLanguages.All.OrderByDescending(item => item.Code == language).ToArray();
-            var index = await ChooseAsync(languages.Select(item => item.NativeName).ToArray(), ct).ConfigureAwait(false);
-            language = languages[index].Code;
+            language = await ChooseAsync(languages.Select(item => new TerminalMenuChoice<string>(
+                item.Code, item.NativeName)).ToArray(), ct).ConfigureAwait(false);
             text.SetLanguage(language);
             RenderFlag(language);
         }
@@ -76,13 +80,24 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     {
         Step(2, "Connect", "KeyHelp");
         RenderConnectionIntro(protectedStorage);
-        var labels = configured
-            ? new[] { text.Text("Oobe.VerifyExisting"), text.Text("Oobe.ReplaceKey"), text.Text("Oobe.Back"), text.Text("Oobe.Exit") }
-            : new[] { text.Text("Oobe.EnterKey"), text.Text("Oobe.Back"), text.Text("Oobe.Exit") };
-        var choice = await ChooseAsync(labels, ct).ConfigureAwait(false);
-        if (choice == labels.Length - 1) { return new(FirstRunAction.Exit, null); }
-        if (choice == labels.Length - 2) { return new(FirstRunAction.Back, null); }
-        if (configured && choice == 0) { return new(FirstRunAction.Next, null); }
+        TerminalMenuChoice<CredentialChoice>[] choices = configured
+            ?
+            [
+                new(CredentialChoice.VerifyExisting, text.Text("Oobe.VerifyExisting"), Tone: TerminalMenuTone.Positive),
+                new(CredentialChoice.EnterKey, text.Text("Oobe.ReplaceKey")),
+                new(CredentialChoice.Back, text.Text("Oobe.Back"), Tone: TerminalMenuTone.Muted),
+                new(CredentialChoice.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+            ]
+            :
+            [
+                new(CredentialChoice.EnterKey, text.Text("Oobe.EnterKey"), Tone: TerminalMenuTone.Positive),
+                new(CredentialChoice.Back, text.Text("Oobe.Back"), Tone: TerminalMenuTone.Muted),
+                new(CredentialChoice.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+            ];
+        var choice = await ChooseAsync(choices, ct).ConfigureAwait(false);
+        if (choice == CredentialChoice.Exit) { return new(FirstRunAction.Exit, null); }
+        if (choice == CredentialChoice.Back) { return new(FirstRunAction.Back, null); }
+        if (choice == CredentialChoice.VerifyExisting) { return new(FirstRunAction.Next, null); }
         var key = await new TextPrompt<string>($"{Markup.Escape(text.Text("Oobe.KeyLabel").PadLeft(18))}  ")
             .Secret('•').AllowEmpty()
             .Validate(value => string.IsNullOrWhiteSpace(value) || (!value.Contains('*') && OpenAiKeyPolicy.IsPlausible(value.Trim()))
@@ -130,9 +145,12 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         Write(errorKey, TerminalTheme.Warning);
         Link(text.Text("Oobe.Portal"), "https://platform.openai.com/api-keys");
         Link(text.Text("Oobe.Billing"), "https://platform.openai.com/settings/organization/billing/overview");
-        var choice = await ChooseAsync([text.Text("Oobe.Retry"), text.Text("Oobe.ReplaceKey"), text.Text("Oobe.Exit")], ct)
-            .ConfigureAwait(false);
-        return choice switch { 0 => FirstRunAction.Next, 1 => FirstRunAction.Back, _ => FirstRunAction.Exit };
+        return await ChooseAsync<FirstRunAction>(
+        [
+            new(FirstRunAction.Next, text.Text("Oobe.Retry"), Tone: TerminalMenuTone.Positive),
+            new(FirstRunAction.Back, text.Text("Oobe.ReplaceKey"), Tone: TerminalMenuTone.Muted),
+            new(FirstRunAction.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+        ], ct).ConfigureAwait(false);
     }
 
     /// <summary>Collects the optional name, independent learning consent, command mode, and reviewed skills.</summary>
@@ -262,8 +280,11 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     }
 
     /// <summary>Offers the installed PDF after setup, with finishing selected by default.</summary>
-    public async Task<bool> ChooseGuideAsync(CancellationToken ct) =>
-        await ChooseAsync([text.Text("Guide.Finish"), text.Text("Guide.Open")], ct).ConfigureAwait(false) == 1;
+    public Task<bool> ChooseGuideAsync(CancellationToken ct) => ChooseAsync<bool>(
+    [
+        new(false, text.Text("Guide.Finish"), Tone: TerminalMenuTone.Positive),
+        new(true, text.Text("Guide.Open"))
+    ], ct);
 
     /// <summary>Shows three practical starting points in an open two-column command grid.</summary>
     private void RenderStarterCommands()
@@ -324,34 +345,30 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
             + (showAddress ? $" [{TerminalTheme.Muted}]{Markup.Escape(url)}[/]" : string.Empty));
 
     /// <summary>Shows keyboard choices with the terminal's visible focus marker.</summary>
-    private async Task<int> ChooseAsync(string[] labels, CancellationToken ct)
+    private async Task<T> ChooseAsync<T>(IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct)
     {
-        var choices = labels.Select((label, index) => new TerminalMenuChoice<int>(index, label,
-            Tone: ActionTone(label))).ToArray();
-        var selected = await TerminalChoiceMenu.SelectAsync(console, choices, ct).ConfigureAwait(false);
-        console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + labels[selected])}[/]");
-        return selected;
-    }
-
-    /// <summary>Uses semantic colors for positive, negative, and navigation choices.</summary>
-    private TerminalMenuTone ActionTone(string label)
-    {
-        if (label == text.Text("Oobe.Exit") || label == text.Text("Common.No"))
-        {
-            return TerminalMenuTone.Caution;
-        }
-        return label == text.Text("Oobe.Back") ? TerminalMenuTone.Muted : TerminalMenuTone.Positive;
+        var selected = await TerminalChoiceMenu.SelectChoiceAsync(console, choices, ct).ConfigureAwait(false);
+        console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + selected.Label)}[/]");
+        return selected.Value;
     }
 
     /// <summary>Places the intended default first without implicitly accepting consent.</summary>
     private async Task<bool> YesNoAsync(string title, bool initial, CancellationToken ct)
     {
         Write(title, TerminalTheme.Accent);
-        var choices = initial ? new[] { "Common.Yes", "Common.No" } : new[] { "Common.No", "Common.Yes" };
-        var selected = await ChooseAsync(choices.Select(key => text.Text(key)).ToArray(), ct).ConfigureAwait(false);
+        TerminalMenuChoice<bool>[] choices = initial
+            ? [new(true, text.Text("Common.Yes"), Tone: TerminalMenuTone.Positive),
+                new(false, text.Text("Common.No"), Tone: TerminalMenuTone.Caution)]
+            : [new(false, text.Text("Common.No"), Tone: TerminalMenuTone.Caution),
+                new(true, text.Text("Common.Yes"), Tone: TerminalMenuTone.Positive)];
+        var selected = await ChooseAsync(choices, ct).ConfigureAwait(false);
         console.WriteLine();
-        return choices[selected] == "Common.Yes";
+        return selected;
     }
+
+    private enum LanguageChoice { Keep, Change, Exit }
+
+    private enum CredentialChoice { VerifyExisting, EnterKey, Back, Exit }
 
     /// <summary>Validates a nickname without echoing rejected text.</summary>
     private ValidationResult ValidateName(string value)

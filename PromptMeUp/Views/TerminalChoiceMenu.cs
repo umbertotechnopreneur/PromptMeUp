@@ -42,9 +42,16 @@ internal static class TerminalChoiceMenu
     internal static async Task<T> SelectAsync<T>(IAnsiConsole console,
         IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct, string? title = null)
     {
-        ArgumentNullException.ThrowIfNull(console);
-        var selected = await CreateSingle(choices, title).ShowAsync(console, ct).ConfigureAwait(false);
+        var selected = await SelectChoiceAsync(console, choices, ct, title).ConfigureAwait(false);
         return selected.Value;
+    }
+
+    /// <summary>Returns the complete choice when a flow needs to show the selected label afterward.</summary>
+    internal static Task<TerminalMenuChoice<T>> SelectChoiceAsync<T>(IAnsiConsole console,
+        IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct, string? title = null)
+    {
+        ArgumentNullException.ThrowIfNull(console);
+        return CreateSingle(choices, title).ShowAsync(console, ct);
     }
 
     /// <summary>Shows the same single-choice menu in a synchronous console workflow.</summary>
