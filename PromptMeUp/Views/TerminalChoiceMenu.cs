@@ -38,14 +38,6 @@ internal static class TerminalChoiceMenu
         return grid;
     }
 
-    /// <summary>Shows one selected value without interpreting choice text as terminal markup.</summary>
-    internal static async Task<T> SelectAsync<T>(IAnsiConsole console,
-        IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct, string? title = null)
-    {
-        var selected = await SelectChoiceAsync(console, choices, ct, title).ConfigureAwait(false);
-        return selected.Value;
-    }
-
     /// <summary>Returns the complete choice when a flow needs to show the selected label afterward.</summary>
     internal static Task<TerminalMenuChoice<T>> SelectChoiceAsync<T>(IAnsiConsole console,
         IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct, string? title = null)
