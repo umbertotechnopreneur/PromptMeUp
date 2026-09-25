@@ -40,9 +40,10 @@ internal sealed class ThemeSeparator(string? title = null, string? titleColor = 
         }
 
         var character = options.Capabilities.Unicode ? "─" : "-";
+        var stops = GradientStops();
         for (var index = 0; index < available; index++)
         {
-            yield return new Segment(character, new Style(GradientColor(index, available)));
+            yield return new Segment(character, new Style(GradientColor(index, available, stops)));
         }
     }
 
@@ -51,22 +52,25 @@ internal sealed class ThemeSeparator(string? title = null, string? titleColor = 
     {
         ArgumentOutOfRangeException.ThrowIfNegative(width);
         var result = new StringBuilder(width * 15);
+        var stops = GradientStops();
         for (var index = 0; index < width; index++)
         {
-            var color = GradientColor(index, width);
+            var color = GradientColor(index, width, stops);
             result.Append($"[#{color.R:X2}{color.G:X2}{color.B:X2}]─[/]");
         }
         return result.ToString();
     }
 
-    /// <summary>Interpolates the theme's main accent, information blue, and single secondary accent.</summary>
-    private static Color GradientColor(int index, int length)
+    /// <summary>Reads the three active theme stops once per rendered separator.</summary>
+    private static Color[] GradientStops() =>
+    [
+        ParseColor(TerminalTheme.Accent), ParseColor(TerminalTheme.Info),
+        ParseColor(TerminalTheme.AccentSecondary)
+    ];
+
+    /// <summary>Interpolates the theme's main accent, information color, and secondary accent.</summary>
+    private static Color GradientColor(int index, int length, Color[] stops)
     {
-        var stops = new[]
-        {
-            ParseColor(TerminalTheme.Accent), ParseColor(TerminalTheme.Info),
-            ParseColor(TerminalTheme.AccentSecondary)
-        };
         var position = length <= 1 ? 0d : index / (double)(length - 1) * 2d;
         var stop = Math.Min((int)position, 1);
         var fraction = position - stop;
