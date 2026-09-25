@@ -49,6 +49,13 @@ internal static partial class UiTextCatalog
             German: "Was möchtest du tun?",
             Spanish: "¿Qué quieres hacer?",
             Vietnamese: "Bạn muốn làm gì?"));
+        entries.Add("Home.StarPrompt", new(
+            English: "If you like PromptMeUp, give it a star on GitHub.",
+            Italian: "Se ti piace PromptMeUp, lascia una stella su GitHub.",
+            French: "Si PromptMeUp vous plaît, laissez-lui une étoile sur GitHub.",
+            German: "Wenn dir PromptMeUp gefällt, gib dem Projekt einen Stern auf GitHub.",
+            Spanish: "Si te gusta PromptMeUp, dale una estrella en GitHub.",
+            Vietnamese: "Nếu bạn thích PromptMeUp, hãy tặng dự án một ngôi sao trên GitHub."));
         entries.Add("Home.Hint", new(
             English: "Press a number. No Enter needed. Esc or 0 exits.",
             Italian: "Premi un numero, senza Invio. Esc oppure 0 per uscire.",

@@ -19,10 +19,16 @@ public interface IHomeView
 /// <summary>Replaces the no-argument text wall with a compact keyboard menu and a shared ASCII banner.</summary>
 public sealed class HomeView(IAnsiConsole console, ILocalizationService text, IConsoleShellView shell) : IHomeView
 {
+    private const string WebsiteUrl = "https://umbertogiacobbi.biz";
+    private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
+
     /// <summary>Waits for a single numbered key without requiring Enter or clearing terminal history.</summary>
     public async Task<HomeAction> ChooseAsync(CancellationToken ct)
     {
         WelcomeBanner.Render(console);
+        console.MarkupLine($"[{TerminalTheme.Muted}]Copyright (c) 2026 [link={WebsiteUrl}]Umberto Giacobbi[/] · [link={RepositoryUrl}]GitHub[/][/] ");
+        console.WriteLine();
+        console.MarkupLine($"[{TerminalTheme.Accent}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "⭐", "*"))}[/][{TerminalTheme.Info} link={RepositoryUrl}]{Markup.Escape(text.Text("Home.StarPrompt"))}[/]");
         TerminalTheme.WriteRule(console,
             TerminalTheme.IconPrefix(shell.Options, "✨", "*") + text.Text("Home.Question"), TerminalTheme.Accent);
         var rows = new[]
