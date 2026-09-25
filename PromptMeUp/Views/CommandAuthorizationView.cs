@@ -85,7 +85,9 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         });
         if (!authorized)
         {
-            _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.Cancelled"))}[/]");
+            _console.Write(new TerminalActivityRow(_text.Text("Command.Cancelled"),
+                TerminalActivityState.Cancelled, useSymbols: !_shell.Options.NoEmoji));
+            _console.WriteLine();
         }
 
         return authorized;
@@ -97,8 +99,11 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         ArgumentNullException.ThrowIfNull(result);
         var succeeded = result.ExitCode == 0 && !result.TimedOut;
         var outputColor = succeeded ? TerminalTheme.Success : TerminalTheme.Warning;
-        var resultIcon = TerminalTheme.IconPrefix(_shell.Options, succeeded ? "✅" : "⚠", succeeded ? "+" : "!");
-        TerminalTheme.WriteRule(_console, $"{resultIcon}{_text.Text("Command.Output")}", outputColor);
+        TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.Tool);
+        _console.Write(new TerminalActivityRow(_text.Text("Command.Output"),
+            succeeded ? TerminalActivityState.Completed : TerminalActivityState.Failed,
+            TimeSpan.FromMilliseconds(result.ElapsedMilliseconds), !_shell.Options.NoEmoji));
+        _console.WriteLine();
         if (!string.IsNullOrWhiteSpace(result.StandardOutput))
         {
             _console.MarkupLine($"[{TerminalTheme.Muted}]STDOUT[/]");
@@ -113,12 +118,9 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         if (!string.IsNullOrWhiteSpace(result.StandardError))
         {
             var errorIcon = TerminalTheme.IconPrefix(_shell.Options, "⚠", "!");
-            var labelDecoration = _shell.Options.NoAnimation
-                ? Decoration.Bold
-                : Decoration.Bold | Decoration.SlowBlink;
             _console.Markup($"[bold {TerminalTheme.Error}]{Markup.Escape(errorIcon)}[/]");
             _console.Write(new Text("STDERR", new Style(
-                foreground: Style.Parse(TerminalTheme.Error).Foreground, decoration: labelDecoration)));
+                foreground: Style.Parse(TerminalTheme.Error).Foreground, decoration: Decoration.Bold)));
             _console.WriteLine();
             foreach (var line in result.StandardError.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
             {

@@ -20,7 +20,8 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
     {
         ArgumentNullException.ThrowIfNull(presentation);
         var language = text.Text("Script.Language." + presentation.Language.Language);
-        TerminalTheme.WriteRule(console, text.Text("Script.Help", language), TerminalTheme.Accent);
+        TerminalSession.For(console).ModeKey = "Terminal.Mode.Script";
+        TerminalTurnHeader.Write(console, text, TerminalTurnKind.Script, language);
         console.Write(new Text(presentation.Artifact.Explanation, Style.Parse(TerminalTheme.Primary)));
         console.WriteLine();
         console.Write(new Text(

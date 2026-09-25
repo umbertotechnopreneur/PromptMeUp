@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Diagnostics;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
@@ -63,7 +64,11 @@ public sealed class ConsoleShellView : IConsoleShellView
     public ConsoleRenderOptions Options { get; private set; } = new(false, false);
 
     /// <summary>Applies terminal compatibility preferences for the current invocation.</summary>
-    public void Configure(ConsoleRenderOptions options) => Options = options;
+    public void Configure(ConsoleRenderOptions options)
+    {
+        Options = options;
+        TerminalSession.For(_console).Reset(options);
+    }
 
     /// <summary>Draws a compact product and invocation header while preserving prior terminal output.</summary>
     public void RenderHeader(string command, AppSettings? settings, bool hasApiKey)
@@ -136,30 +141,42 @@ public sealed class ConsoleShellView : IConsoleShellView
         _console.WriteLine();
     }
 
-    /// <summary>Runs one operation with an honest indeterminate Spectre progress display when animation is supported.</summary>
+    /// <summary>Shows one quiet working row and retains the operation's measured outcome in scrollback.</summary>
     public async Task<T> RunWithStatusAsync<T>(string message, Func<Task<T>> action)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         ArgumentNullException.ThrowIfNull(action);
-        if (Options.NoAnimation || Console.IsOutputRedirected)
+        var session = TerminalSession.For(_console);
+        session.State = TerminalActivityState.Working;
+        var elapsed = Stopwatch.StartNew();
+        var outcome = TerminalActivityState.Completed;
+        var row = new TerminalActivityRow(message, TerminalActivityState.Working, useSymbols: !Options.NoEmoji);
+        try
         {
-            return await action().ConfigureAwait(false);
-        }
-
-        return await _console.Progress()
-            .AutoClear(true)
-            .HideCompleted(true)
-            .Columns(new StackedProgressColumn())
-            .StartAsync(async context =>
+            if (!_console.Profile.Capabilities.Interactive || Console.IsOutputRedirected)
             {
-                var task = context.AddTask(Markup.Escape(message), autoStart: true);
-                task.IsIndeterminate = true;
-                var result = await action().ConfigureAwait(false);
-                task.IsIndeterminate = false;
-                task.Value = task.MaxValue;
-                return result;
-            })
-            .ConfigureAwait(false);
+                _console.Write(row);
+                _console.WriteLine();
+                return await action().ConfigureAwait(false);
+            }
+            return await _console.Live(row).AutoClear(true).StartAsync(_ => action()).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = TerminalActivityState.Cancelled;
+            throw;
+        }
+        catch
+        {
+            outcome = TerminalActivityState.Failed;
+            throw;
+        }
+        finally
+        {
+            session.State = outcome;
+            _console.Write(new TerminalActivityRow(message, outcome, elapsed.Elapsed, !Options.NoEmoji));
+            _console.WriteLine();
+        }
     }
 
     /// <summary>Displays the shared project banner on exit unless help has already shown it.</summary>
@@ -518,37 +535,4 @@ public sealed class ConsoleShellView : IConsoleShellView
         _ => value.ToString("N0")
     };
 
-    private sealed class StackedProgressColumn : ProgressColumn
-    {
-        private readonly SpinnerColumn _spinner = new(Spinner.Known.Dots12)
-        {
-            Style = Style.Parse(TerminalTheme.Accent)
-        };
-        private readonly TaskDescriptionColumn _description = new();
-        private readonly ProgressBarColumn _progressBar = new()
-        {
-            CompletedStyle = Style.Parse(TerminalTheme.Success),
-            IndeterminateStyle = Style.Parse(TerminalTheme.Info),
-            RemainingStyle = Style.Parse(TerminalTheme.Divider)
-        };
-
-        /// <summary>Stacks the active progress bar beneath its spinner and status description.</summary>
-        public override IRenderable Render(RenderOptions options, ProgressTask task, TimeSpan deltaTime)
-        {
-            var layout = new Grid();
-            layout.AddColumn(new GridColumn().NoWrap());
-            layout.AddColumn();
-            layout.AddRow(
-                _spinner.Render(options, task, deltaTime),
-                _description.Render(options, task, deltaTime));
-            layout.AddRow(
-                new Text(string.Empty),
-                _progressBar.Render(options, task, deltaTime));
-            return layout;
-        }
-
-        /// <summary>Keeps the stacked progress surface aligned with the shared 80%-width visual rhythm.</summary>
-        public override int? GetColumnWidth(RenderOptions options) =>
-            Math.Max(20, (int)Math.Floor(options.ConsoleSize.Width * 0.8d));
-    }
 }

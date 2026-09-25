@@ -18,7 +18,8 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     /// <summary>Displays ordered progress and the explicit resume command without executing any step.</summary>
     public void Render(ExecutionPlan plan)
     {
-        TerminalTheme.WriteRule(console, text.Text("Plan.Help"), TerminalTheme.Accent);
+        TerminalSession.For(console).ModeKey = "Terminal.Mode.Plan";
+        TerminalTurnHeader.Write(console, text, TerminalTurnKind.Plan);
         console.Write(new Rows(
             new Text(plan.Goal, Style.Parse(TerminalTheme.Primary)),
             new Text(plan.Directory, Style.Parse(TerminalTheme.Muted))));

@@ -1403,3 +1403,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Added TerminalTable with themed headings, configurable cell padding, optional rounded borders, and optional row separators.
 - Converted plan, script differences, file previews, saved memories, model pricing, and dependency licenses to the shared table factory.
 - Validation: repository preflight, XML comments, solution formatting, and Release build passed. Automated tests and interactive rendering were not run for this visual change.
+
+## 2026-09-26 — Shared waterfall identities and activity rows
+
+- Added reusable TerminalTurnHeader and TerminalActivityRow controls, safe cell-aware text fitting, and console-local presentation state.
+- Unified user, assistant, plan, script, and command-output identities. Replaced the animated two-line progress display with a quiet working row and measured completion, cancellation, or failure.
+- Removed blinking stderr labels; retained all command previews and authorization behavior.
+- Validation: XML comments, complete solution formatting, and Release build passed with zero warnings and errors.

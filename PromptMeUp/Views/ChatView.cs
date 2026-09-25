@@ -101,12 +101,8 @@ public sealed class ChatView : IChatView
     public void RenderUser(string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        var icon = TerminalTheme.IconPrefix(_shell.Options, "👤", ">");
-        var label = $"{icon}{_text.Text("Chat.You")} › ";
-        _console.WriteLine();
-        _console.Write(new Paragraph()
-            .Append(label, Style.Parse($"bold {TerminalTheme.Accent}"))
-            .Append(text, Style.Parse(TerminalTheme.Primary)));
+        TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.User);
+        _console.Write(new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)));
         _console.WriteLine();
     }
 
@@ -116,17 +112,7 @@ public sealed class ChatView : IChatView
         ArgumentNullException.ThrowIfNull(markdown);
         cancellationToken.ThrowIfCancellationRequested();
         var (heading, body) = SeparateLeadingHeading(markdown);
-        var icon = TerminalTheme.IconPrefix(_shell.Options, "🤖", "AI");
-        _console.WriteLine();
-        _console.Markup($"[bold {TerminalTheme.Success}]{Markup.Escape(icon)}{Markup.Escape(_text.Text("Chat.Assistant"))}[/]");
-        if (!string.IsNullOrWhiteSpace(heading))
-        {
-            _console.MarkupLine($" [{TerminalTheme.Muted}]·[/] [bold {TerminalTheme.Primary}]{Markup.Escape(heading)}[/]");
-        }
-        else
-        {
-            _console.WriteLine();
-        }
+        TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.Assistant, heading);
 
         if (!string.IsNullOrWhiteSpace(body))
         {
@@ -141,7 +127,6 @@ public sealed class ChatView : IChatView
         }
 
         _console.WriteLine();
-        _console.Write(new ThemeSeparator());
     }
 
     /// <summary>Notifies the user when old active-context messages were pruned but remain in the session ledger.</summary>

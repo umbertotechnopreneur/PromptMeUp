@@ -53,9 +53,8 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                     {
                         EraseDraft();
-                        console.Write(new Paragraph()
-                            .Append(SafeDisplay(_label) + " ", Style.Parse($"bold {TerminalTheme.Accent}"))
-                            .Append(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
+                        TerminalTurnHeader.Write(console, text, TerminalTurnKind.User);
+                        console.Write(new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
                         console.WriteLine();
                         return buffer.Text;
                     }
