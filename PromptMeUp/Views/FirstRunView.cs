@@ -207,20 +207,10 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     /// <summary>Lists only inspected, usable skill packages and returns exactly the user's checked names.</summary>
     private async Task<string[]> SelectSkillsAsync(SettingsSkillState[] available, CancellationToken ct)
     {
-        var selected = await new MultiSelectionPrompt<SettingsSkillState>()
-            .Title($"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Oobe.SkillsPrompt"))}[/]")
-            .NotRequired()
-            .InstructionsText(text.Text("Oobe.SkillsInstructions"))
-            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-            .AddChoices(available)
-            .UseConverter(item =>
-            {
-                var skill = item.Skill;
-                var icon = shell.Options.NoEmoji ? "* " : Markup.Escape(skill.Icon) + " ";
-                return $"{icon}[bold {TerminalTheme.Primary}]{Markup.Escape(SkillLabel(skill))}[/] "
-                    + $"[{TerminalTheme.Muted}]· {Markup.Escape(skill.Name)}[/]";
-            })
-            .ShowAsync(console, ct).ConfigureAwait(false);
+        var choices = available.Select(item => new TerminalMenuChoice<SettingsSkillState>(
+            item, Icon(item.Skill.Icon, "*") + SkillLabel(item.Skill), item.Skill.Name)).ToArray();
+        var selected = await TerminalChoiceMenu.SelectManyAsync(console, choices, ct,
+            text.Text("Oobe.SkillsPrompt"), text.Text("Oobe.SkillsInstructions")).ConfigureAwait(false);
         var names = selected.Select(item => item.Skill.Name).ToArray();
         console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(text.Text("Oobe.SkillsSelected", names.Length))}[/]");
         foreach (var item in selected)
@@ -243,12 +233,11 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     {
         console.WriteLine();
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Home.DesktopHelp"))}[/]");
-        var selected = await new MultiSelectionPrompt<string>()
-            .Title($"[bold {TerminalTheme.Accent}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "🖥️", ">") + text.Text("Home.Desktop"))}[/]")
-            .NotRequired().InstructionsText(text.Text("Home.CheckboxHelp"))
-            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-            .AddChoices(text.Text("Home.Desktop"))
-            .ShowAsync(console, ct).ConfigureAwait(false);
+        var label = text.Text("Home.Desktop");
+        var selected = await TerminalChoiceMenu.SelectManyAsync(console,
+            [new TerminalMenuChoice<string>(label, label)], ct,
+            TerminalTheme.IconPrefix(shell.Options, "🖥️", ">") + label,
+            text.Text("Home.CheckboxHelp")).ConfigureAwait(false);
         return selected.Count > 0;
     }
 
@@ -337,20 +326,21 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     /// <summary>Shows keyboard choices with the terminal's visible focus marker.</summary>
     private async Task<int> ChooseAsync(string[] labels, CancellationToken ct)
     {
-        var selected = await new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
-            .AddChoices(Enumerable.Range(0, labels.Length)).UseConverter(index => ActionLabel(labels[index]))
-            .ShowAsync(console, ct).ConfigureAwait(false);
+        var choices = labels.Select((label, index) => new TerminalMenuChoice<int>(index, label,
+            Tone: ActionTone(label))).ToArray();
+        var selected = await TerminalChoiceMenu.SelectAsync(console, choices, ct).ConfigureAwait(false);
         console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + labels[selected])}[/]");
         return selected;
     }
 
     /// <summary>Uses semantic colors for positive, negative, and navigation choices.</summary>
-    private string ActionLabel(string label)
+    private TerminalMenuTone ActionTone(string label)
     {
-        var color = label == text.Text("Oobe.Exit") || label == text.Text("Common.No")
-            ? TerminalTheme.Warning
-            : label == text.Text("Oobe.Back") ? TerminalTheme.Muted : TerminalTheme.Success;
-        return $"[{color}]{Markup.Escape(label)}[/]";
+        if (label == text.Text("Oobe.Exit") || label == text.Text("Common.No"))
+        {
+            return TerminalMenuTone.Caution;
+        }
+        return label == text.Text("Oobe.Back") ? TerminalMenuTone.Muted : TerminalMenuTone.Positive;
     }
 
     /// <summary>Places the intended default first without implicitly accepting consent.</summary>
