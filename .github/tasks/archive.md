@@ -1390,4 +1390,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Replaced the inline setup mark with a reusable terminal component.
 - Added a detailed woven mark for wide terminals, retained a compact variant at medium widths, and hid the decoration when space is limited.
 - Colored the mark with the existing theme accents and kept the OpenAI label aligned beneath it.
-- Validation: repository preflight, XML comment check, scoped formatting verification, and Release build passed with zero warnings and errors. Automated tests and an interactive UI preview were not run because they were not requested. Repository-wide formatting remains blocked by pre-existing encoding and line-ending findings in unrelated files.
+- Validation: repository preflight, XML comment check, scoped formatting verification, and Release build passed with zero warnings and errors. Automated tests and an interactive UI preview were not run because they were not requested.
+
+## 2026-09-26 — Normalize solution formatting
+
+- Normalized C# files to the repository UTF-8 BOM and CRLF policy.
+- Reflowed the context status pattern in the shared prompt bar to the formatter's canonical layout without changing behavior.
+- Validation: complete solution formatting verification, repository preflight, XML comment check, and Release build passed with zero warnings and errors. Automated tests were not run because they were not requested.

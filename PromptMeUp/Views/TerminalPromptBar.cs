@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 
 using System.Globalization;
 using PromptMeUp.Services;
@@ -96,8 +96,11 @@ internal sealed class TerminalPromptBar(
     {
         statusRow = string.Empty;
         breakdownRow = string.Empty;
-        if (status is not { HasContextBreakdown: true, ActiveContextTokens: { } used, ContextBudgetTokens: > 0,
-                SessionCostKnown: true })
+        if (status is not
+            {
+                HasContextBreakdown: true, ActiveContextTokens: { } used, ContextBudgetTokens: > 0,
+                SessionCostKnown: true
+            })
         {
             return false;
         }
