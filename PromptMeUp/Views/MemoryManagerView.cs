@@ -994,11 +994,10 @@ public sealed class MemoryManagerView : IMemoryManagerView
     }
 
     /// <summary>Creates a localized, high-contrast selection menu without interpreting stored note markup.</summary>
-    private MenuChoice Prompt(string title, IReadOnlyList<MenuChoice> choices) => _console.Prompt(new SelectionPrompt<MenuChoice>()
-        .Title(Markup.Escape(title)).PageSize(Math.Clamp(_console.Profile.Height - 6, 3, 10))
-        .MoreChoicesText(Markup.Escape(_text.Text("MemoryManager.More")))
-        .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"))
-        .UseConverter(choice => Markup.Escape(choice.Label)).AddChoices(choices));
+    private MenuChoice Prompt(string title, IReadOnlyList<MenuChoice> choices) => TerminalChoiceMenu.Select(
+        _console, choices.Select(choice => new TerminalMenuChoice<MenuChoice>(choice, choice.Label)).ToArray(),
+        title, pageSize: Math.Clamp(_console.Profile.Height - 6, 3, 10),
+        moreChoicesText: _text.Text("MemoryManager.More"));
 
     /// <summary>Keeps sidebar previews concise while the complete content remains in the editor.</summary>
     private static string PreviewLabel(string value)
