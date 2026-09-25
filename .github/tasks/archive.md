@@ -1111,6 +1111,13 @@ Validation: inspected the scoped diff and checked whitespace. Automated tests an
 
 Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
 
+## 2026-09-25 — Brighten all built-in theme accents
+
+- Increased accent and information color saturation across all 13 themes, brightened dividers, and matched each selection background to its accent.
+- Kept background, primary text, and status meanings unchanged; updated the built-in default cyan palette and two affected theme descriptions.
+
+Validation: parsed all 13 JSON palettes, reviewed the scoped diff, and calculated text, divider, and selection contrast ratios; all exceed the catalog thresholds. Automated tests and builds were not run because they were not requested for this change.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.

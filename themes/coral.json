@@ -9,13 +9,13 @@
     "background": "#281710",
     "primary": "#FFF6EF",
     "muted": "#DECABD",
-    "accent": "#FFB394",
-    "info": "#A7DCEB",
-    "divider": "#AB917D",
+    "accent": "#FF9E70",
+    "info": "#75D8EF",
+    "divider": "#C6A089",
     "success": "#B6E5A1",
     "warning": "#FFE298",
     "error": "#FFA5A5",
-    "selectionBackground": "#FFB394",
+    "selectionBackground": "#FF9E70",
     "selectionForeground": "#281710"
   }
 }
