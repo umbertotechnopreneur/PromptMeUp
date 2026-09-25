@@ -38,7 +38,7 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
         console.WriteLine();
         if (presentation.Original is not null && presentation.Original != presentation.Artifact.Source)
         {
-            var diff = new Table().Border(TableBorder.Simple).AddColumn("-").AddColumn("+");
+            var diff = TerminalTable.Create("−", "+");
             var before = presentation.Original.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
             var after = presentation.Artifact.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
             for (var index = 0; index < Math.Max(before.Length, after.Length); index++)

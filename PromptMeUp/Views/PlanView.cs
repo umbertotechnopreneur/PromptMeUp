@@ -23,7 +23,7 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
             new Text(plan.Goal, Style.Parse(TerminalTheme.Primary)),
             new Text(plan.Directory, Style.Parse(TerminalTheme.Muted))));
         console.WriteLine();
-        var table = new Table().Border(TableBorder.Simple).AddColumn("#").AddColumn(text.Text("Plan.Step")).AddColumn(text.Text("Plan.Status"));
+        var table = TerminalTable.Create("#", text.Text("Plan.Step"), text.Text("Plan.Status"));
         for (var index = 0; index < plan.Steps.Count; index++)
         {
             var step = plan.Steps[index];

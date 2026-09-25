@@ -35,11 +35,7 @@ public sealed class MemoryView : IMemoryView
             return;
         }
 
-        var table = new Table()
-            .Border(TableBorder.Simple)
-            .BorderStyle(Style.Parse(TerminalTheme.Accent))
-            .AddColumn(new TableColumn(new Text("ID", Style.Parse(TerminalTheme.Muted))))
-            .AddColumn(new TableColumn(new Text(_text.Text("Memory.Note"), Style.Parse(TerminalTheme.Muted))));
+        var table = TerminalTable.Create("ID", _text.Text("Memory.Note"));
         foreach (var memory in memories)
         {
             table.AddRow(

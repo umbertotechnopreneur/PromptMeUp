@@ -82,7 +82,7 @@ internal static class ModelPricingTable
         /// <summary>Builds an open table without fixed or nonwrapping columns.</summary>
         private IRenderable CreateTable(bool separateTier)
         {
-            var table = new Table().Border(TableBorder.None);
+            var table = TerminalTable.Create(showBorder: false);
             table.AddColumn(Header("Costs.Model"));
             if (separateTier)
             {
@@ -142,7 +142,7 @@ internal static class ModelPricingTable
 
         /// <summary>Creates one localized high-contrast column heading.</summary>
         private TableColumn Header(string key) =>
-            new(new Markup($"[bold {TerminalTheme.Primary}]{Markup.Escape(text.Text(key))}[/]"));
+            TerminalTable.Column(text.Text(key));
 
         /// <summary>Marks the selected model while keeping model identifiers readable in every theme.</summary>
         private IRenderable ModelLabel(string model)

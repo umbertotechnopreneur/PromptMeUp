@@ -1397,3 +1397,9 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Normalized C# files to the repository UTF-8 BOM and CRLF policy.
 - Reflowed the context status pattern in the shared prompt bar to the formatter's canonical layout without changing behavior.
 - Validation: complete solution formatting verification, repository preflight, XML comment check, and Release build passed with zero warnings and errors. Automated tests were not run because they were not requested.
+
+## 2026-09-26 — Shared themed terminal tables
+
+- Added TerminalTable with themed headings, configurable cell padding, optional rounded borders, and optional row separators.
+- Converted plan, script differences, file previews, saved memories, model pricing, and dependency licenses to the shared table factory.
+- Validation: repository preflight, XML comments, solution formatting, and Release build passed. Automated tests and interactive rendering were not run for this visual change.

@@ -1,5 +1,7 @@
 ﻿## Task
 
+- [ ] Refine the shared terminal UI with themed tables, turn headers, compact activity rows, a responsive session strip, quiet states, on-demand details, and turn navigation that preserves inline scrollback. Deliver focused checkpoint commits.
+
 - [ ] Remove temporary publish and payload directories from `artifacts/msix/debug/1.0.0.0-startup-fix-20260924/` and the superseded `1.0.0.1-startup-fix-20260924/` build. Preserve the final signed 1.0.0.0 package and diagnostic records. Standard .NET cleanup succeeded; recursive cleanup was not retried after the earlier policy rejection.
 
 - [ ] Remove `artifacts/msix/debug/1.0.0.0-oobe-20260924-021718/publish` and `x64/payload`, preserving the signed MSIX, checksums, package metadata, and installation record. Standard .NET cleanup succeeded; automatic approval review blocked recursive deletion.

@@ -333,10 +333,8 @@ public sealed class ThirdPartyView(
             TerminalTheme.IconPrefix(shell.Options, "⚖", "=") + text.Text("ThirdParty.Title"),
             TerminalTheme.Accent);
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("ThirdParty.Subtitle"))}[/]");
-        var table = new Table().Border(TableBorder.None);
-        table.AddColumn(text.Text("ThirdParty.Package"));
-        table.AddColumn(text.Text("ThirdParty.Version"));
-        table.AddColumn(text.Text("ThirdParty.License"));
+        var table = TerminalTable.Create(text.Text("ThirdParty.Package"), text.Text("ThirdParty.Version"),
+            text.Text("ThirdParty.License"));
         foreach (var package in Packages)
         {
             table.AddRow(Markup.Escape(package.Package), Markup.Escape(package.Version), Markup.Escape(package.License));
