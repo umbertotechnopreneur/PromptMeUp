@@ -19,17 +19,16 @@ internal static class TerminalChoiceMenu
         IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct, string? title = null)
     {
         ArgumentNullException.ThrowIfNull(console);
-        Validate(choices);
-        var prompt = new SelectionPrompt<TerminalMenuChoice<T>>()
-            .HighlightStyle(FocusStyle())
-            .UseConverter(Format)
-            .AddChoices(choices);
-        if (!string.IsNullOrWhiteSpace(title))
-        {
-            prompt.Title(Title(title));
-        }
-        var selected = await prompt.ShowAsync(console, ct).ConfigureAwait(false);
+        var selected = await CreateSingle(choices, title).ShowAsync(console, ct).ConfigureAwait(false);
         return selected.Value;
+    }
+
+    /// <summary>Shows the same single-choice menu in a synchronous console workflow.</summary>
+    internal static T Select<T>(IAnsiConsole console, IReadOnlyList<TerminalMenuChoice<T>> choices,
+        string? title = null)
+    {
+        ArgumentNullException.ThrowIfNull(console);
+        return console.Prompt(CreateSingle(choices, title)).Value;
     }
 
     /// <summary>Shows optional checkboxes and returns only explicitly checked values.</summary>
@@ -45,7 +44,7 @@ internal static class TerminalChoiceMenu
             .Title(Title(title))
             .InstructionsText(Markup.Escape(instructions))
             .HighlightStyle(FocusStyle())
-            .UseConverter(Format)
+            .UseConverter(choice => Format(choice))
             .AddChoices(choices);
         if (allowEmpty)
         {
@@ -53,6 +52,22 @@ internal static class TerminalChoiceMenu
         }
         var selected = await prompt.ShowAsync(console, ct).ConfigureAwait(false);
         return selected.Select(choice => choice.Value).ToArray();
+    }
+
+    /// <summary>Builds one single-choice prompt with shared spacing and focus styling.</summary>
+    private static SelectionPrompt<TerminalMenuChoice<T>> CreateSingle<T>(
+        IReadOnlyList<TerminalMenuChoice<T>> choices, string? title)
+    {
+        Validate(choices);
+        var prompt = new SelectionPrompt<TerminalMenuChoice<T>>()
+            .HighlightStyle(FocusStyle())
+            .UseConverter(choice => Format(choice))
+            .AddChoices(choices);
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            prompt.Title(Title(title));
+        }
+        return prompt;
     }
 
     /// <summary>Checks that a menu can display at least one non-empty choice.</summary>

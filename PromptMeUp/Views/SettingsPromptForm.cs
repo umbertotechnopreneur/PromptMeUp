@@ -38,11 +38,14 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
                 .Append(new PromptAction("save", 0, TerminalTheme.IconPrefix(options, "💾", "+") + text.Text("Form.Save")))
                 .Append(new PromptAction("cancel", 0, TerminalTheme.IconPrefix(options, "↩️", "x") + text.Text("Form.Cancel")))
                 .ToArray();
-            var selected = console.Prompt(new SelectionPrompt<PromptAction>()
-                .Title(Markup.Escape(text.Text(page.HelpKey ?? "Form.Help")))
-                .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"))
-                .UseConverter(action => Markup.Escape(action.Label))
-                .AddChoices(actions));
+            var menuChoices = actions.Select(action => new TerminalMenuChoice<PromptAction>(action, action.Label,
+                Tone: action.Kind switch
+                {
+                    "save" => TerminalMenuTone.Positive,
+                    "cancel" => TerminalMenuTone.Caution,
+                    _ => TerminalMenuTone.Primary
+                })).ToArray();
+            var selected = TerminalChoiceMenu.Select(console, menuChoices, text.Text(page.HelpKey ?? "Form.Help"));
             switch (selected.Kind)
             {
                 case "field":
@@ -114,11 +117,9 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
             {
                 throw new InvalidOperationException("A choice field needs at least one available value.");
             }
-            value = console.Prompt(new SelectionPrompt<FormChoice>()
-                .Title(Markup.Escape(FullscreenForm.FieldLabel(field, text)))
-                .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-                .UseConverter(choice => Markup.Escape(choice.Label))
-                .AddChoices(choices.OrderBy(choice => choice.Value == field.Read() ? 0 : 1))).Value;
+            var ordered = choices.OrderBy(choice => choice.Value == field.Read() ? 0 : 1)
+                .Select(choice => new TerminalMenuChoice<FormChoice>(choice, choice.Label)).ToArray();
+            value = TerminalChoiceMenu.Select(console, ordered, FullscreenForm.FieldLabel(field, text)).Value;
         }
         else
         {
