@@ -6,7 +6,7 @@ using Spectre.Console.Rendering;
 namespace PromptMeUp.Views;
 
 /// <summary>Describes one terminal action without coupling its presentation to a command handler.</summary>
-internal sealed record TerminalAction(string Label, string Color, bool Selected = false, bool Enabled = true);
+internal sealed record TerminalAction(string Label, string Color, bool Selected = false);
 
 /// <summary>Renders consistently spaced, keyboard-focused actions without an enclosing frame.</summary>
 internal static class TerminalActionBar
@@ -32,7 +32,7 @@ internal static class TerminalActionBar
     /// <summary>Renders one action with a visible focus marker and the current theme selection colors.</summary>
     private sealed class Button(TerminalAction action, bool showBrackets) : IRenderable
     {
-        private readonly string _label = (action.Selected && action.Enabled ? ">" : " ")
+        private readonly string _label = (action.Selected ? ">" : " ")
             + (showBrackets ? $" [ {action.Label} ]" : $" {action.Label}");
 
         /// <summary>Accepts the available width without requesting a wrapped action row.</summary>
@@ -42,10 +42,9 @@ internal static class TerminalActionBar
         /// <summary>Clips an oversized label while retaining complete terminal cells.</summary>
         public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
         {
-            var color = action.Enabled ? action.Color : TerminalTheme.Muted;
-            var style = Style.Parse(action.Selected && action.Enabled
+            var style = Style.Parse(action.Selected
                 ? $"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"
-                : color);
+                : action.Color);
             return maxWidth > 0
                 ? Segment.SplitOverflow(new Segment(_label, style), Overflow.Ellipsis, maxWidth)
                 : [];
