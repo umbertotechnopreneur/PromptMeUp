@@ -19,6 +19,7 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     public void Render(ExecutionPlan plan)
     {
         TerminalSession.For(console).ModeKey = "Terminal.Mode.Plan";
+        TerminalSession.For(console).HasPromptDock = false;
         TerminalTurnHeader.Write(console, text, TerminalTurnKind.Plan);
         console.Write(new Rows(
             new Text(plan.Goal, Style.Parse(TerminalTheme.Primary)),
@@ -47,7 +48,7 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     {
         using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         TerminalPromptDock.Align(console, reservedRows: 2);
-        return console.Prompt(new ConfirmationPrompt(text.Text("Plan.Start")) { DefaultValue = false });
+        return TerminalConversationPrompt.Confirm(console, text, text.Text("Plan.Start"));
     }
 
     /// <summary>Requires the user to compare observed output with the declared outcome after a successful check.</summary>
@@ -55,7 +56,7 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     {
         using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         TerminalPromptDock.Align(console, reservedRows: 2);
-        return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Plan.Outcome", step.Expected))) { DefaultValue = false });
+        return TerminalConversationPrompt.Confirm(console, text, text.Text("Plan.Outcome", step.Expected));
     }
 
     /// <summary>Returns a compact zero-based visual marker while preserving a text-only fallback.</summary>

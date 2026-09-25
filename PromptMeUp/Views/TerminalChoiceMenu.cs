@@ -132,7 +132,7 @@ internal static class TerminalChoiceMenu
     }
 
     /// <summary>Maps semantic menu emphasis to the existing theme palette.</summary>
-    private static string Color(TerminalMenuTone tone) => tone switch
+    internal static string Color(TerminalMenuTone tone) => tone switch
     {
         TerminalMenuTone.Positive => TerminalTheme.Success,
         TerminalMenuTone.Muted => TerminalTheme.Muted,

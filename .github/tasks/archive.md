@@ -1425,3 +1425,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Kept complete output inline when an interactive viewer is unavailable. Command errors retain their first error line and exit status; previews and authorization remain fully visible.
 - Reused the Markdown parser for original answers and expanded history instead of adding a second renderer.
 - Validation: Release build and XML check passed; 77 focused rendering, context, input, and component tests passed. Interactive desktop behavior remains to be checked.
+
+## 2026-09-26 — Shared conversation decisions and screen behavior
+
+- Added inline conversation menus with session metrics and history shortcuts for plan, script, command suggestions, and explicit approvals.
+- Preserved default-negative approvals and command selection as a separate step from authorization. Details viewers run after the inline menu releases its rendering scope.
+- Documented reusable controls, optional borders, keyboard navigation, inline/fullscreen behavior, and local retention limits in `docs/terminal-ui.md`.
+- Validation: Release build, XML comments, complete solution formatting, and 152 focused UI, localization, workflow, and authorization tests passed.

@@ -21,6 +21,7 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
         ArgumentNullException.ThrowIfNull(presentation);
         var language = text.Text("Script.Language." + presentation.Language.Language);
         TerminalSession.For(console).ModeKey = "Terminal.Mode.Script";
+        TerminalSession.For(console).HasPromptDock = false;
         TerminalTurnHeader.Write(console, text, TerminalTurnKind.Script, language);
         console.Write(new Text(presentation.Artifact.Explanation, Style.Parse(TerminalTheme.Primary)));
         console.WriteLine();
@@ -85,13 +86,13 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
                 ScriptAction.Execute => TerminalMenuTone.Caution,
                 _ => TerminalMenuTone.Primary
             })).ToArray();
-        return TerminalChoiceMenu.Select(console, choices, text.Text("Script.Action"));
+        return TerminalConversationPrompt.Select(console, text, choices, text.Text("Script.Action"));
     }
 
     /// <summary>Confirms the concrete destination after the full source has been displayed.</summary>
     public bool ConfirmSave(string path)
     {
         TerminalPromptDock.Align(console, reservedRows: 2);
-        return console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Script.Confirm", path))) { DefaultValue = false });
+        return TerminalConversationPrompt.Confirm(console, text, text.Text("Script.Confirm", path));
     }
 }

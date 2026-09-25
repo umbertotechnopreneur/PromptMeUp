@@ -80,11 +80,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     /// <summary>Asks for explicit approval with a default-negative prompt in the normal view.</summary>
     private bool Confirm()
     {
-        var authorized = _console.Prompt(new ConfirmationPrompt(
-            Markup.Escape(_text.Text("Command.Authorize")))
-        {
-            DefaultValue = false
-        });
+        var authorized = TerminalConversationPrompt.Confirm(_console, _text, _text.Text("Command.Authorize"));
         if (!authorized)
         {
             _console.Write(new TerminalActivityRow(_text.Text("Command.Cancelled"),

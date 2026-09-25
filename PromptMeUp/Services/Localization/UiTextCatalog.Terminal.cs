@@ -45,5 +45,9 @@ internal static partial class UiTextCatalog
             "Enter: weiter · Ctrl+PgUp/PgDn: Beiträge · Esc: schließen",
             "Intro: continuar · Ctrl+PgUp/PgDn: turnos · Esc: cerrar",
             "Enter: tiếp tục · Ctrl+PgUp/PgDn: lượt · Esc: đóng"));
+        entries.Add("Terminal.ChoiceKeys", new(
+            "↑/↓ choose {0}/{1} · Enter confirm · Esc cancel", "↑/↓ scegli {0}/{1} · Invio conferma · Esc annulla",
+            "↑/↓ choisir {0}/{1} · Entrée confirmer · Esc annuler", "↑/↓ wählen {0}/{1} · Enter bestätigen · Esc abbrechen",
+            "↑/↓ elegir {0}/{1} · Intro confirmar · Esc cancelar", "↑/↓ chọn {0}/{1} · Enter xác nhận · Esc hủy"));
     }
 }
