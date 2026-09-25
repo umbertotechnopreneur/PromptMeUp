@@ -70,10 +70,15 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
         }
         actions.Add(ScriptAction.Revise);
         TerminalPromptDock.Align(console, reservedRows: actions.Count + 3);
-        return console.Prompt(new SelectionPrompt<ScriptAction>()
-            .Title(text.Text("Script.Action"))
-            .UseConverter(action => text.Text("Script." + action))
-            .AddChoices(actions.ToArray()));
+        var choices = actions.Select(action => new TerminalMenuChoice<ScriptAction>(
+            action, text.Text("Script." + action), Tone: action switch
+            {
+                ScriptAction.Save => TerminalMenuTone.Positive,
+                ScriptAction.DoNothing => TerminalMenuTone.Muted,
+                ScriptAction.Execute => TerminalMenuTone.Caution,
+                _ => TerminalMenuTone.Primary
+            })).ToArray();
+        return TerminalChoiceMenu.Select(console, choices, text.Text("Script.Action"));
     }
 
     /// <summary>Confirms the concrete destination after the full source has been displayed.</summary>

@@ -39,11 +39,9 @@ public sealed class ThemeView(IAnsiConsole console, ILocalizationService text,
             }
 
             shell.RenderNotice(text.Text("Form.Unavailable"));
-            var choice = console.Prompt(new SelectionPrompt<TerminalThemeDefinition>()
-                .Title(Markup.Escape(text.Text("Theme.Select")))
-                .UseConverter(theme => Markup.Escape(Name(theme)))
-                .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-                .AddChoices(themes.Themes.OrderBy(theme => theme.Id == current ? 0 : 1)));
+            var choices = themes.Themes.OrderBy(theme => theme.Id == current ? 0 : 1)
+                .Select(theme => new TerminalMenuChoice<TerminalThemeDefinition>(theme, Name(theme))).ToArray();
+            var choice = TerminalChoiceMenu.Select(console, choices, text.Text("Theme.Select"));
             TerminalTheme.Apply(choice);
             TerminalTheme.WriteSection(console, text.Text("Theme.Title"), text.Text("Theme.Preview"));
             shell.RenderSuccess(Name(choice));

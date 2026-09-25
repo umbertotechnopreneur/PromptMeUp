@@ -56,10 +56,10 @@ internal static class TerminalChoiceMenu
 
     /// <summary>Shows the same single-choice menu in a synchronous console workflow.</summary>
     internal static T Select<T>(IAnsiConsole console, IReadOnlyList<TerminalMenuChoice<T>> choices,
-        string? title = null)
+        string? title = null, int? pageSize = null, string? moreChoicesText = null)
     {
         ArgumentNullException.ThrowIfNull(console);
-        return console.Prompt(CreateSingle(choices, title)).Value;
+        return console.Prompt(CreateSingle(choices, title, pageSize, moreChoicesText)).Value;
     }
 
     /// <summary>Shows optional checkboxes and returns only explicitly checked values.</summary>
@@ -87,7 +87,8 @@ internal static class TerminalChoiceMenu
 
     /// <summary>Builds one single-choice prompt with shared spacing and focus styling.</summary>
     private static SelectionPrompt<TerminalMenuChoice<T>> CreateSingle<T>(
-        IReadOnlyList<TerminalMenuChoice<T>> choices, string? title)
+        IReadOnlyList<TerminalMenuChoice<T>> choices, string? title,
+        int? pageSize = null, string? moreChoicesText = null)
     {
         Validate(choices);
         var prompt = new SelectionPrompt<TerminalMenuChoice<T>>()
@@ -97,6 +98,15 @@ internal static class TerminalChoiceMenu
         if (!string.IsNullOrWhiteSpace(title))
         {
             prompt.Title(Title(title));
+        }
+        if (pageSize is { } size)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(size, 3);
+            prompt.PageSize(size);
+        }
+        if (!string.IsNullOrWhiteSpace(moreChoicesText))
+        {
+            prompt.MoreChoicesText(Markup.Escape(moreChoicesText));
         }
         return prompt;
     }
