@@ -31,6 +31,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var hint = text.Text(
             showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
             KeyPrefix("Enter"), KeyPrefix("Newline"), KeyPrefix("Arrows"), KeyPrefix("Escape"));
+        TerminalPromptDock.Align(console, reservedRows: showHint ? 4 : 2);
         console.MarkupLine($"[{TerminalTheme.Muted}]{hint}[/]");
         console.Cursor.Hide();
         try
@@ -85,6 +86,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         else if (_paintedRows > 0)
         {
             console.WriteLine();
+            TerminalPromptDock.Align(console, reservedRows: 3);
         }
         var width = Math.Max(1, size.Width - 1);
         var lines = buffer.Text.Split('\n');

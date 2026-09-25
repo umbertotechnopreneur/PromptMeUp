@@ -1097,6 +1097,13 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 
 Validation: inspected the scoped diff, checked whitespace, and parsed the MSBuild targets XML. Automated tests and builds were not run because they were not requested for this change.
 
+## 2026-09-25 — Place chat input near the terminal bottom
+
+- Added a reusable opt-out prompt placement helper that adds normal scrollback lines rather than replacing the terminal buffer.
+- Positioned chat input near the bottom when the editor opens and after terminal resize; non-interactive output retains its existing flow.
+
+Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.
