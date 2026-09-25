@@ -14,7 +14,7 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
     IConsoleShellView shell, ILocalizationService text, IDesktopLauncherService desktop, ILogger<FirstRunWorkflow> logger,
     CommandGuideWorkflow guide)
 {
-    /// <summary>Completes four guided steps without opening the general settings screen.</summary>
+    /// <summary>Completes three guided steps without opening the general settings screen.</summary>
     public async Task<int> RunAsync(AppSettings current, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(current);
@@ -52,7 +52,7 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
         return 0;
     }
 
-    /// <summary>Collects and persists the four resumable onboarding steps inside the selected terminal surface.</summary>
+    /// <summary>Collects and persists three resumable onboarding steps in ordinary terminal scrollback.</summary>
     private async Task<FirstRunResult> RunStepsAsync(AppSettings current, CancellationToken ct)
     {
         view.RenderWelcome();
@@ -89,47 +89,38 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
                 shell.RenderSuccess(text.Text("Oobe.Connected"));
                 step = 3;
             }
-            if (step == 3)
-            {
-                logger.LogInformation("Onboarding step opened. Step=3, Name=Personalization");
-                var name = await view.ReadNameAsync(current.PreferredName, ct).ConfigureAwait(false);
-                logger.LogInformation("Onboarding step answered. Step=3, Action={Action}", name.Action);
-                if (name.Action == FirstRunAction.Exit) { return new(false, current.PreferredName); }
-                if (name.Action == FirstRunAction.Back) { step = 2; continue; }
-                current = current with { PreferredName = name.Value, UpdatedAt = DateTimeOffset.UtcNow };
-                await settings.SaveAsync(current, ct).ConfigureAwait(false);
-                step = 4;
-            }
-            logger.LogInformation("Onboarding step opened. Step=4, Name=Privacy");
+            logger.LogInformation("Onboarding step opened. Step=3, Name=Personalization");
             var overview = await features.ReadAsync(ct).ConfigureAwait(false);
-            var memory = await view.ReadMemoryAsync(overview.Settings, ct).ConfigureAwait(false);
-            logger.LogInformation("Onboarding step answered. Step=4, Action={Action}", memory.Action);
-            if (memory.Action == FirstRunAction.Exit) { return new(false, current.PreferredName); }
-            if (memory.Action == FirstRunAction.Back) { step = 3; continue; }
-            if (!verified) { throw new InvalidOperationException("Onboarding requires a verified OpenAI connection."); }
             if (overview.CatalogUnavailable)
             {
                 throw new InvalidOperationException(text.Text("Lab.Invalid"));
             }
+            var selection = await view.ReadPreferencesAsync(current.PreferredName, overview, ct).ConfigureAwait(false);
+            logger.LogInformation("Onboarding step answered. Step=3, Action={Action}", selection.Action);
+            if (selection.Action == FirstRunAction.Exit) { return new(false, current.PreferredName); }
+            if (selection.Action == FirstRunAction.Back) { step = 3; continue; }
+            if (!verified) { throw new InvalidOperationException("Onboarding requires a verified OpenAI connection."); }
+            var selectedSkills = selection.Value.EnabledSkills.ToHashSet(StringComparer.Ordinal);
             var preferences = overview.Settings with
             {
-                Enabled = memory.Value.Enabled,
-                CaptureObservations = memory.Value.Enabled && memory.Value.Capture,
-                AutomaticSkills = false,
+                Enabled = selection.Value.Enabled,
+                CaptureObservations = selection.Value.Enabled && selection.Value.Capture,
+                AutomaticSkills = selection.Value.Enabled && selectedSkills.Count > 0,
                 MaintenanceReminder = false
             };
-            // Skill activation remains an explicit later decision, including when replaying onboarding after reset.
-            var skills = overview.Skills.Select(item => new SettingsSkillChange(item.Skill, item.Enabled, false)
+            var skills = overview.Skills.Select(item => new SettingsSkillChange(item.Skill, item.Enabled,
+                selection.Value.Enabled && selectedSkills.Contains(item.Skill.Name))
             {
                 ExpectedApprovalFingerprint = item.ApprovalFingerprint
             }).ToArray();
             await features.SaveAsync(new(overview.Settings, preferences, skills,
-                CaptureConsent: memory.Value.Capture, ClearLearningConsent: true), ct).ConfigureAwait(false);
+                CaptureConsent: selection.Value.Capture, ClearLearningConsent: true), ct).ConfigureAwait(false);
             current = current with
             {
+                PreferredName = selection.Value.Name,
                 SetupCompleted = true,
                 AiEnabled = true,
-                DirectModeEnabled = !memory.Value.ConfirmCommands,
+                DirectModeEnabled = !selection.Value.ConfirmCommands,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
             await settings.SaveAsync(current, ct).ConfigureAwait(false);

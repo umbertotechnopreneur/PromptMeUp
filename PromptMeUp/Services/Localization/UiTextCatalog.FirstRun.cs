@@ -38,12 +38,12 @@ internal static partial class UiTextCatalog
             Spanish: "Ayuda en tu terminal. Haz preguntas, entiende las respuestas y encuentra los comandos que necesitas.",
             Vietnamese: "Trợ giúp ngay trong terminal. Đặt câu hỏi, hiểu câu trả lời và tìm lệnh bạn cần."));
         entries.Add("Oobe.Journey", new(
-            English: "Four short steps, then you are ready to go.",
-            Italian: "Quattro piccoli passaggi, poi puoi cominciare.",
-            French: "Quatre étapes courtes, puis vous pourrez commencer.",
-            German: "Vier kurze Schritte, dann kann es losgehen.",
-            Spanish: "Cuatro pasos breves y podrás empezar.",
-            Vietnamese: "Bốn bước ngắn, rồi bạn có thể bắt đầu."));
+            English: "Three short steps, then we can get started.",
+            Italian: "Tre passaggi insieme, poi possiamo cominciare.",
+            French: "Trois étapes courtes, puis nous pourrons commencer.",
+            German: "Drei kurze Schritte, dann können wir loslegen.",
+            Spanish: "Tres pasos breves y podremos empezar.",
+            Vietnamese: "Ba bước ngắn, rồi chúng ta có thể bắt đầu."));
         entries.Add("Oobe.InteractiveRequired", new(
             English: "Open a terminal and run hm to complete the welcome. Use hm --help for help.",
             Italian: "Apri un terminale ed esegui hm per completare il benvenuto. Usa hm --help per assistenza.",
@@ -52,12 +52,12 @@ internal static partial class UiTextCatalog
             Spanish: "Abre un terminal y ejecuta hm para completar la bienvenida. Ayuda: hm --help.",
             Vietnamese: "Mở terminal và chạy hm để hoàn tất thiết lập. Trợ giúp: hm --help."));
         entries.Add("Oobe.Step", new(
-            English: "Step {0} of 4",
-            Italian: "Passaggio {0} di 4",
-            French: "Étape {0} sur 4",
-            German: "Schritt {0} von 4",
-            Spanish: "Paso {0} de 4",
-            Vietnamese: "Bước {0} trên 4"));
+            English: "Step {0} of 3",
+            Italian: "Passaggio {0} di 3",
+            French: "Étape {0} sur 3",
+            German: "Schritt {0} von 3",
+            Spanish: "Paso {0} de 3",
+            Vietnamese: "Bước {0} trên 3"));
         entries.Add("Oobe.Language", new(
             English: "Let's speak your language",
             Italian: "Parliamo la tua lingua",
@@ -107,13 +107,6 @@ internal static partial class UiTextCatalog
             German: "Zurück",
             Spanish: "Atrás",
             Vietnamese: "Quay lại"));
-        entries.Add("Oobe.Continue", new(
-            English: "Continue",
-            Italian: "Continua",
-            French: "Continuer",
-            German: "Weiter",
-            Spanish: "Continuar",
-            Vietnamese: "Tiếp tục"));
         entries.Add("Oobe.Connect", new(
             English: "Connect OpenAI",
             Italian: "Colleghiamo OpenAI",
@@ -122,12 +115,12 @@ internal static partial class UiTextCatalog
             Spanish: "Conectemos OpenAI",
             Vietnamese: "Kết nối OpenAI"));
         entries.Add("Oobe.KeyHelp", new(
-            English: "An API key is a secret code that lets PromptMeUp use your OpenAI account. It is not your ChatGPT password.",
-            Italian: "La chiave API è un codice segreto che permette a PromptMeUp di usare il tuo account OpenAI. Non è la password di ChatGPT.",
-            French: "Une clé API est un code secret qui permet à PromptMeUp d’utiliser votre compte OpenAI. Ce n’est pas votre mot de passe ChatGPT.",
-            German: "Ein API-Schlüssel ist ein geheimer Code, mit dem PromptMeUp dein OpenAI-Konto nutzt. Er ist nicht dein ChatGPT-Passwort.",
-            Spanish: "Una clave API es un código secreto que permite a PromptMeUp usar tu cuenta de OpenAI. No es tu contraseña de ChatGPT.",
-            Vietnamese: "Khóa API là mã bí mật cho phép PromptMeUp dùng tài khoản OpenAI của bạn. Đây không phải mật khẩu ChatGPT."));
+            English: "To talk with me, connect your OpenAI API key. This is separate from your ChatGPT password.",
+            Italian: "Per parlare con me, collega la tua chiave API OpenAI. È diversa dalla password di ChatGPT.",
+            French: "Pour discuter avec moi, connectez votre clé API OpenAI. Elle est distincte de votre mot de passe ChatGPT.",
+            German: "Um mit mir zu sprechen, verbinde deinen OpenAI-API-Schlüssel. Das ist nicht dein ChatGPT-Passwort.",
+            Spanish: "Para hablar conmigo, conecta tu clave API de OpenAI. No es tu contraseña de ChatGPT.",
+            Vietnamese: "Để trò chuyện với tôi, hãy kết nối khóa API OpenAI. Khóa này khác mật khẩu ChatGPT."));
         entries.Add("Oobe.Vault", new(
             English: "Your key appears only as dots. After verification, Windows Credential Manager keeps it for your Windows account. It is sent to OpenAI to authenticate, never to the app's author.",
             Italian: "La chiave appare solo come pallini. Dopo la verifica viene custodita da Gestione credenziali di Windows per il tuo account. Viene inviata a OpenAI per autenticarti, mai all’autore dell’app.",
@@ -282,20 +275,27 @@ internal static partial class UiTextCatalog
             German: "Wie darf ich dich nennen?",
             Spanish: "¿Cómo quieres que te llame?",
             Vietnamese: "Bạn muốn được gọi là gì?"));
+        entries.Add("Oobe.Personalize", new(
+            English: "Let's make this yours",
+            Italian: "Facciamolo tuo",
+            French: "Personnalisons votre expérience",
+            German: "Machen wir es zu deinem Begleiter",
+            Spanish: "Hagámoslo tuyo",
+            Vietnamese: "Cá nhân hóa theo cách của bạn"));
         entries.Add("Oobe.TwoLeft", new(
-            English: "The connection is ready. Let's make this yours.",
-            Italian: "La connessione è pronta. Ora rendiamolo un po’ tuo.",
-            French: "La connexion est prête. Personnalisons la suite.",
-            German: "Die Verbindung steht. Jetzt wird es persönlich.",
-            Spanish: "La conexión está lista. Vamos a personalizarlo.",
-            Vietnamese: "Kết nối đã sẵn sàng. Giờ hãy cá nhân hóa một chút."));
+            English: "The connection is ready. Tell me how you'd like to work together.",
+            Italian: "La connessione è pronta. Dimmi come vuoi che lavoriamo insieme.",
+            French: "La connexion est prête. Dites-moi comment vous souhaitez travailler avec moi.",
+            German: "Die Verbindung steht. Sag mir, wie wir zusammenarbeiten sollen.",
+            Spanish: "La conexión está lista. Dime cómo quieres que trabajemos juntos.",
+            Vietnamese: "Kết nối đã sẵn sàng. Hãy cho tôi biết bạn muốn chúng ta làm việc cùng nhau thế nào."));
         entries.Add("Oobe.NameHelp", new(
-            English: "A name or nickname is enough. This is optional: leave it blank to skip.",
-            Italian: "Basta un nome o un soprannome. È facoltativo: lascia vuoto per saltare.",
-            French: "Un prénom ou un surnom suffit. C’est facultatif : laissez vide pour passer.",
-            German: "Ein Name oder Spitzname genügt. Freiwillig: zum Überspringen leer lassen.",
-            Spanish: "Basta un nombre o apodo. Es opcional: déjalo vacío para omitirlo.",
-            Vietnamese: "Chỉ cần tên hoặc biệt danh. Không bắt buộc: để trống để bỏ qua."));
+            English: "A first name or nickname is enough. Press Enter to move on; leave it blank if you prefer.",
+            Italian: "Mi basta un nome o un soprannome. Premi Invio per continuare; se preferisci, lascia vuoto.",
+            French: "Un prénom ou un surnom suffit. Appuyez sur Entrée pour continuer ou laissez vide.",
+            German: "Ein Vorname oder Spitzname reicht. Drücke Enter, um fortzufahren; leer lassen geht auch.",
+            Spanish: "Basta un nombre o apodo. Pulsa Intro para continuar o déjalo vacío.",
+            Vietnamese: "Chỉ cần tên hoặc biệt danh. Nhấn Enter để tiếp tục hoặc để trống nếu muốn."));
         entries.Add("Oobe.NameLabel", new(
             English: "Name or nickname",
             Italian: "Nome o soprannome",
@@ -310,41 +310,83 @@ internal static partial class UiTextCatalog
             German: "Wähle, was gespeichert werden darf",
             Spanish: "Elige qué puede recordar",
             Vietnamese: "Chọn điều có thể được ghi nhớ"));
-        entries.Add("Oobe.AlmostThere", new(
-            English: "Last step. Nearly there!",
-            Italian: "Ultimo passaggio. Ci siamo quasi!",
-            French: "Dernière étape. On y est presque !",
-            German: "Letzter Schritt. Fast geschafft!",
-            Spanish: "Último paso. ¡Ya casi está!",
-            Vietnamese: "Bước cuối. Sắp xong rồi!"));
+        entries.Add("Oobe.SkillTitle", new(
+            English: "Skills for your kind of work",
+            Italian: "Skill per quello che fai",
+            French: "Des skills pour vos tâches",
+            German: "Skills für deine Aufgaben",
+            Spanish: "Skills para tus tareas",
+            Vietnamese: "Skills cho công việc của bạn"));
+        entries.Add("Oobe.SkillHelp", new(
+            English: "A skill is reusable guidance for a specific task. For matching requests, its instructions go to OpenAI. Choose included skills here; review imported ones with hm --skills.",
+            Italian: "Una skill è una guida riutilizzabile per un compito preciso. Per richieste pertinenti, le sue istruzioni vanno a OpenAI. Scegli qui le skill incluse; rivedi quelle importate con hm --skills.",
+            French: "Une skill guide une tâche précise. Pour les demandes pertinentes, ses instructions vont à OpenAI. Choisissez les skills incluses ici ; vérifiez les imports avec hm --skills.",
+            German: "Ein Skill ist eine Anleitung für eine Aufgabe. Bei passenden Anfragen gehen seine Anweisungen an OpenAI. Wähle hier mitgelieferte Skills; Importe prüfst du mit hm --skills.",
+            Spanish: "Una skill es una guía para una tarea concreta. En solicitudes pertinentes, sus instrucciones van a OpenAI. Elige aquí las skills incluidas; revisa las importadas con hm --skills.",
+            Vietnamese: "Skill là hướng dẫn cho tác vụ cụ thể. Với yêu cầu phù hợp, hướng dẫn được gửi đến OpenAI. Chọn skills có sẵn tại đây; xem skills nhập vào bằng hm --skills."));
+        entries.Add("Oobe.EnableSkills", new(
+            English: "Would you like to enable some skills now?",
+            Italian: "Vuoi attivare qualche skill adesso?",
+            French: "Voulez-vous activer des skills maintenant ?",
+            German: "Möchtest du jetzt Skills aktivieren?",
+            Spanish: "¿Quieres activar algunas skills ahora?",
+            Vietnamese: "Bạn muốn bật một số skills ngay bây giờ?"));
+        entries.Add("Oobe.SkillsPrompt", new(
+            English: "Choose the skills I may use",
+            Italian: "Scegli le skill che potrò usare",
+            French: "Choisissez les skills que je peux utiliser",
+            German: "Wähle die Skills, die ich nutzen darf",
+            Spanish: "Elige las skills que puedo usar",
+            Vietnamese: "Chọn skills mà tôi được phép dùng"));
+        entries.Add("Oobe.SkillsInstructions", new(
+            English: "Space selects; Enter confirms. Leave all unchecked to enable none.",
+            Italian: "Spazio seleziona; Invio conferma. Lascia tutto vuoto per non attivarne nessuna.",
+            French: "Espace sélectionne ; Entrée confirme. Ne cochez rien pour n'en activer aucune.",
+            German: "Leertaste wählt aus; Enter bestätigt. Ohne Auswahl bleibt alles aus.",
+            Spanish: "Espacio selecciona; Intro confirma. No marques ninguna para dejarlas desactivadas.",
+            Vietnamese: "Nhấn Space để chọn; Enter để xác nhận. Không chọn gì nếu không muốn bật skill nào."));
+        entries.Add("Oobe.SkillsSelected", new(
+            English: "Skills selected: {0}. You can review them with hm --skills.",
+            Italian: "Skill selezionate: {0}. Puoi rivederle con hm --skills.",
+            French: "Skills sélectionnées : {0}. Vérifiez-les avec hm --skills.",
+            German: "Ausgewählte Skills: {0}. Du kannst sie mit hm --skills prüfen.",
+            Spanish: "Skills seleccionadas: {0}. Revísalas con hm --skills.",
+            Vietnamese: "Skills đã chọn: {0}. Bạn có thể xem lại bằng hm --skills."));
+        entries.Add("Oobe.SkillsEmpty", new(
+            English: "There are no usable skills to enable yet. You can add or review them later with hm --skills.",
+            Italian: "Non ci sono ancora skill utilizzabili. Potrai aggiungerle o rivederle con hm --skills.",
+            French: "Aucune skill utilisable pour le moment. Vous pourrez en ajouter ou les revoir avec hm --skills.",
+            German: "Noch keine nutzbaren Skills vorhanden. Mit hm --skills kannst du später welche hinzufügen oder prüfen.",
+            Spanish: "Aún no hay skills utilizables. Podrás añadirlas o revisarlas con hm --skills.",
+            Vietnamese: "Chưa có skills nào dùng được. Bạn có thể thêm hoặc xem lại sau bằng hm --skills."));
+        entries.Add("Oobe.CommandMode", new(
+            English: "How should I handle commands?",
+            Italian: "Come gestiamo i comandi?",
+            French: "Comment gérer les commandes ?",
+            German: "Wie soll ich Befehle behandeln?",
+            Spanish: "¿Cómo gestionamos los comandos?",
+            Vietnamese: "Tôi nên xử lý lệnh thế nào?"));
         entries.Add("Oobe.MemoryHelp", new(
-            English: "Memories keep useful preferences and details for future conversations. Enabling them does not start recording chats or activate individual skills.",
-            Italian: "Le memorie conservano preferenze e dettagli utili alle conversazioni future. Abilitarle non avvia la raccolta delle chat e non attiva le singole skills.",
-            French: "Les mémoires conservent des préférences et détails utiles aux échanges futurs. Les activer ne démarre pas la collecte des chats ni les skills individuels.",
-            German: "Erinnerungen speichern nützliche Vorlieben und Details für spätere Gespräche. Ihre Aktivierung startet weder die Chat-Erfassung noch einzelne Skills.",
-            Spanish: "Las memorias guardan preferencias y detalles útiles para futuras conversaciones. Activarlas no inicia la recopilación de chats ni activa skills individuales.",
-            Vietnamese: "Bộ nhớ lưu sở thích và chi tiết hữu ích cho các cuộc trò chuyện sau. Bật bộ nhớ không tự thu thập chat hay bật từng skill."));
+            English: "Memories let me keep details you choose to save. This also unlocks skills; you'll choose which ones next. Chat collection stays off unless you opt in.",
+            Italian: "I ricordi mi aiutano a tenere i dettagli che scegli di salvare. Questa scelta rende disponibili anche le skill: deciderai quali attivare tra poco. La raccolta delle chat resta spenta finché non la autorizzi.",
+            French: "Les souvenirs gardent les détails que vous choisissez d'enregistrer. Ce choix ouvre aussi les skills, à sélectionner ensuite. La collecte des chats reste désactivée sans votre accord.",
+            German: "Erinnerungen bewahren Details auf, die du selbst speicherst. Damit werden auch Skills verfügbar; du wählst sie gleich aus. Ohne Zustimmung werden Chats nicht gesammelt.",
+            Spanish: "Los recuerdos guardan los detalles que eliges conservar. Esto también permite elegir skills después. La recopilación de chats sigue apagada sin tu permiso.",
+            Vietnamese: "Bộ nhớ giữ các chi tiết bạn chọn lưu. Tùy chọn này cũng mở skills để bạn chọn tiếp. Chat không được thu thập nếu bạn không đồng ý."));
         entries.Add("Oobe.EnableMemory", new(
-            English: "Enable memories?",
-            Italian: "Abilitare le memorie?",
-            French: "Activer les mémoires ?",
-            German: "Erinnerungen aktivieren?",
-            Spanish: "¿Activar las memorias?",
-            Vietnamese: "Bật bộ nhớ?"));
-        entries.Add("Oobe.DreamHelp", new(
-            English: "Dreaming means revisiting past chats to learn and propose useful details to remember. You review the proposals before they become memories.",
-            Italian: "Far “sognare” l’AI significa rileggere le chat passate per apprendere e proporre dettagli utili da ricordare. Rivedi tu le proposte prima che diventino memorie.",
-            French: "Faire « rêver » l’IA signifie relire les chats passés pour apprendre et proposer des détails utiles à retenir. Vous examinez les propositions avant leur mémorisation.",
-            German: "Beim „Träumen“ liest die KI frühere Chats, um zu lernen und nützliche Erinnerungen vorzuschlagen. Du prüfst die Vorschläge, bevor sie gespeichert werden.",
-            Spanish: "Hacer «soñar» a la IA significa releer chats anteriores para aprender y proponer detalles útiles. Tú revisas las propuestas antes de guardarlas como memorias.",
-            Vietnamese: "Cho AI “mơ” nghĩa là đọc lại các chat cũ để học và đề xuất chi tiết hữu ích cần nhớ. Bạn duyệt đề xuất trước khi chúng thành bộ nhớ."));
+            English: "Enable memories and make skills available?",
+            Italian: "Attivare i ricordi e rendere disponibili le skill?",
+            French: "Activer les souvenirs et rendre les skills disponibles ?",
+            German: "Erinnerungen aktivieren und Skills verfügbar machen?",
+            Spanish: "¿Activar los recuerdos y habilitar las skills?",
+            Vietnamese: "Bật bộ nhớ và cho phép dùng skills?"));
         entries.Add("Oobe.RecordingHelp", new(
-            English: "Chat collection for learning is off by default. Opting in stores redacted chat excerpts locally, with recognizable secrets obscured. During dreaming, relevant excerpts are sent to OpenAI. You can manage this with hm --learning.",
-            Italian: "La raccolta delle chat per l’apprendimento è disattivata di default. Se la abiliti, gli estratti delle chat vengono salvati localmente, con i segreti riconoscibili oscurati. Durante il sogno, gli estratti necessari vengono inviati a OpenAI. Gestisci questa funzione con hm --learning.",
-            French: "La collecte pour l’apprentissage est désactivée par défaut. Si vous l’activez, des extraits de chats sont conservés localement avec les secrets reconnaissables masqués. Pendant le rêve, les extraits utiles sont envoyés à OpenAI. Gestion : hm --learning.",
-            German: "Die Chat-Erfassung zum Lernen ist standardmäßig aus. Bei Zustimmung werden Chatauszüge lokal mit unkenntlich gemachten erkennbaren Geheimnissen gespeichert. Beim Träumen werden relevante Auszüge an OpenAI gesendet. Verwaltung: hm --learning.",
-            Spanish: "La recopilación para aprender está desactivada por defecto. Al activarla se guardan extractos locales con los secretos reconocibles ocultos. Al soñar, los extractos necesarios se envían a OpenAI. Se gestiona con hm --learning.",
-            Vietnamese: "Thu thập chat để học mặc định tắt. Nếu bật, các đoạn chat được lưu cục bộ với bí mật nhận diện được đã che đi. Khi mơ, các đoạn cần thiết được gửi đến OpenAI. Quản lý bằng hm --learning."));
+            English: "If you opt in, redacted chat excerpts are saved locally. When you ask me to review them for memories, relevant excerpts go to OpenAI. Manage this with hm --learning.",
+            Italian: "Se acconsenti, salvo sul computer estratti delle chat con i segreti riconoscibili oscurati. Solo quando chiedi di rivederli per proporre ricordi, gli estratti utili vanno a OpenAI. Gestisci tutto con hm --learning.",
+            French: "Si vous acceptez, des extraits de chat expurgés restent sur votre appareil. Si vous demandez leur analyse pour proposer des souvenirs, les extraits utiles sont envoyés à OpenAI. Gestion : hm --learning.",
+            German: "Wenn du zustimmst, speichere ich bereinigte Chatauszüge lokal. Erst wenn du eine Analyse für Erinnerungen anforderst, gehen relevante Auszüge an OpenAI. Verwaltung: hm --learning.",
+            Spanish: "Si aceptas, guardo extractos de chat depurados en tu equipo. Cuando pides revisarlos para proponer recuerdos, los fragmentos útiles van a OpenAI. Gestión: hm --learning.",
+            Vietnamese: "Nếu đồng ý, các đoạn chat đã che bí mật được lưu cục bộ. Khi bạn yêu cầu xem lại để đề xuất ký ức, những đoạn liên quan sẽ được gửi đến OpenAI. Quản lý bằng hm --learning."));
         entries.Add("Oobe.EnableRecording", new(
             English: "Save redacted chat excerpts locally for learning?",
             Italian: "Salvare localmente gli estratti redatti delle chat per l’apprendimento?",
@@ -374,12 +416,12 @@ internal static partial class UiTextCatalog
             Spanish: "¿Continuar y borrar esos datos de aprendizaje?",
             Vietnamese: "Tiếp tục và xóa dữ liệu học đó?"));
         entries.Add("Oobe.DirectNotice", new(
-            English: "By default, eligible commands can run after a cancellable five-second countdown and safety checks. You can require confirmation instead.",
-            Italian: "Di default, i comandi idonei possono partire dopo i controlli di sicurezza e un conto alla rovescia annullabile di cinque secondi. Puoi invece richiedere la conferma.",
-            French: "Par défaut, les commandes admissibles peuvent démarrer après les contrôles et un compte à rebours annulable de cinq secondes. Vous pouvez exiger une confirmation.",
-            German: "Standardmäßig können geeignete Befehle nach Sicherheitsprüfungen und einem abbrechbaren Fünf-Sekunden-Countdown starten. Du kannst stattdessen eine Bestätigung verlangen.",
-            Spanish: "Por defecto, los comandos aptos pueden ejecutarse tras los controles y una cuenta atrás cancelable de cinco segundos. Puedes exigir confirmación.",
-            Vietnamese: "Mặc định, lệnh đủ điều kiện có thể chạy sau kiểm tra an toàn và đếm ngược năm giây có thể hủy. Bạn có thể yêu cầu xác nhận thay thế."));
+            English: "Eligible commands can run after safety checks and a cancellable five-second countdown. Choose Yes if you'd rather confirm each one.",
+            Italian: "I comandi idonei possono partire dopo i controlli di sicurezza e cinque secondi annullabili. Scegli Sì se vuoi confermare ogni comando.",
+            French: "Les commandes admissibles peuvent démarrer après les contrôles et cinq secondes annulables. Choisissez Oui pour confirmer chaque commande.",
+            German: "Geeignete Befehle können nach Sicherheitsprüfungen und fünf abbrechbaren Sekunden starten. Wähle Ja, um jeden Befehl zu bestätigen.",
+            Spanish: "Los comandos aptos pueden iniciarse tras las comprobaciones y cinco segundos cancelables. Elige Sí para confirmar cada comando.",
+            Vietnamese: "Lệnh phù hợp có thể chạy sau khi kiểm tra và đếm ngược năm giây có thể hủy. Chọn Có nếu muốn xác nhận từng lệnh."));
         entries.Add("Oobe.ConfirmCommands", new(
             English: "Require confirmation before running commands?",
             Italian: "Richiedere conferma prima di eseguire i comandi?",
@@ -395,26 +437,26 @@ internal static partial class UiTextCatalog
             Spanish: "¡Lo conseguimos! Todo listo.",
             Vietnamese: "Xong rồi! Mọi thứ đã sẵn sàng."));
         entries.Add("Oobe.Thanks", new(
-            English: "Thanks for setting up PromptMeUp.",
-            Italian: "Grazie per aver configurato PromptMeUp.",
-            French: "Merci d’avoir configuré PromptMeUp.",
-            German: "Danke, dass du PromptMeUp eingerichtet hast.",
-            Spanish: "Gracias por configurar PromptMeUp.",
-            Vietnamese: "Cảm ơn bạn đã thiết lập PromptMeUp."));
+            English: "You're all set. I'll be here whenever you need a hand.",
+            Italian: "Ci siamo. Sono qui ogni volta che ti serve una mano.",
+            French: "Tout est prêt. Je suis là quand vous avez besoin d'un coup de main.",
+            German: "Alles ist bereit. Ich bin da, wenn du Hilfe brauchst.",
+            Spanish: "Todo listo. Estaré aquí cuando necesites una mano.",
+            Vietnamese: "Mọi thứ đã sẵn sàng. Tôi luôn ở đây khi bạn cần giúp đỡ."));
         entries.Add("Oobe.ThanksName", new(
-            English: "Thanks, {0}, for setting up PromptMeUp.",
-            Italian: "Grazie, {0}, per aver configurato PromptMeUp.",
-            French: "Merci, {0}, d’avoir configuré PromptMeUp.",
-            German: "Danke, {0}, dass du PromptMeUp eingerichtet hast.",
-            Spanish: "Gracias, {0}, por configurar PromptMeUp.",
-            Vietnamese: "Cảm ơn {0} đã thiết lập PromptMeUp."));
+            English: "All set, {0}. I'll be here whenever you need a hand.",
+            Italian: "Ci siamo, {0}. Sono qui ogni volta che ti serve una mano.",
+            French: "Tout est prêt, {0}. Je suis là quand vous avez besoin d'un coup de main.",
+            German: "Alles bereit, {0}. Ich bin da, wenn du Hilfe brauchst.",
+            Spanish: "Todo listo, {0}. Estaré aquí cuando necesites una mano.",
+            Vietnamese: "Xong rồi, {0}. Tôi luôn ở đây khi bạn cần giúp đỡ."));
         entries.Add("Oobe.StartUsing", new(
-            English: "Use hm from any folder in your terminal once its command alias or PATH is configured. For help: hm --help.",
-            Italian: "Puoi usare hm da qualsiasi cartella del terminale quando l’alias o il PATH è configurato. Per assistenza: hm --help.",
-            French: "Utilisez hm depuis tout dossier du terminal une fois son alias ou le PATH configuré. Aide : hm --help.",
-            German: "Nutze hm nach Einrichtung des Befehlsalias oder PATH aus jedem Terminalordner. Hilfe: hm --help.",
-            Spanish: "Usa hm desde cualquier carpeta del terminal cuando el alias o PATH esté configurado. Ayuda: hm --help.",
-            Vietnamese: "Dùng hm từ mọi thư mục trong terminal sau khi cấu hình bí danh lệnh hoặc PATH. Trợ giúp: hm --help."));
+            English: "Once hm is on your PATH or available as an alias, try one of these. More help: hm --help.",
+            Italian: "Quando hm è nel PATH o disponibile come alias, prova una di queste. Per il resto: hm --help.",
+            French: "Une fois hm dans le PATH ou disponible comme alias, essayez l'une de ces commandes. Aide : hm --help.",
+            German: "Sobald hm im PATH oder als Alias verfügbar ist, probiere einen dieser Befehle. Hilfe: hm --help.",
+            Spanish: "Cuando hm esté en el PATH o disponible como alias, prueba una de estas opciones. Ayuda: hm --help.",
+            Vietnamese: "Khi hm có trong PATH hoặc dùng được qua bí danh, hãy thử một trong các lệnh này. Trợ giúp: hm --help."));
         entries.Add("Oobe.TryFirst", new(
             English: "Try your first useful task",
             Italian: "Prova subito qualcosa di utile",
@@ -429,6 +471,13 @@ internal static partial class UiTextCatalog
             German: "Frage nach einem Befehl oder einer klaren Erklärung.",
             Spanish: "Pide un comando o una explicación clara.",
             Vietnamese: "Yêu cầu một lệnh hoặc lời giải thích rõ ràng."));
+        entries.Add("Oobe.TryAskCommand", new(
+            English: "How do I list large files?",
+            Italian: "Come trovo i file grandi?",
+            French: "Comment trouver les gros fichiers ?",
+            German: "Wie finde ich große Dateien?",
+            Spanish: "¿Cómo encuentro archivos grandes?",
+            Vietnamese: "Làm sao tìm tệp lớn?"));
         entries.Add("Oobe.TryChat", new(
             English: "Open a conversation and ask follow-up questions.",
             Italian: "Apri una conversazione e fai domande successive.",
@@ -443,26 +492,12 @@ internal static partial class UiTextCatalog
             German: "Füge einen Fehler oder ein Protokoll ein und analysiere es Schritt für Schritt.",
             Spanish: "Pega un error o registro y analízalo paso a paso.",
             Vietnamese: "Dán lỗi hoặc nhật ký và phân tích từng bước."));
-        entries.Add("Oobe.Recovery", new(
-            English: "If something goes wrong, use hm --status to check your setup, hm --prepare-logs to create a support package, or hm --help to find another way forward.",
-            Italian: "Se qualcosa non va, usa hm --status per controllare la configurazione, hm --prepare-logs per creare un pacchetto di supporto oppure hm --help per trovare un’altra strada.",
-            French: "En cas de problème, utilisez hm --status pour vérifier la configuration, hm --prepare-logs pour créer un dossier d’assistance ou hm --help pour trouver une autre solution.",
-            German: "Wenn etwas nicht funktioniert, prüfe die Einrichtung mit hm --status, erstelle mit hm --prepare-logs ein Supportpaket oder finde mit hm --help einen anderen Weg.",
-            Spanish: "Si algo falla, usa hm --status para revisar la configuración, hm --prepare-logs para crear un paquete de soporte o hm --help para buscar otra opción.",
-            Vietnamese: "Nếu có sự cố, dùng hm --status để kiểm tra thiết lập, hm --prepare-logs để tạo gói hỗ trợ hoặc hm --help để tìm hướng khác."));
-        entries.Add("Oobe.Skills", new(
-            English: "Skills are reusable instructions for specific tasks. They are available but disabled by default. Explore them with hm --skills.",
-            Italian: "Le skills sono istruzioni riutilizzabili per attività specifiche. Sono disponibili ma disattivate di default. Scoprile con hm --skills.",
-            French: "Les skills sont des instructions réutilisables pour des tâches précises. Ils sont disponibles mais désactivés par défaut. Découvrez-les avec hm --skills.",
-            German: "Skills sind wiederverwendbare Anweisungen für bestimmte Aufgaben. Sie sind verfügbar, aber standardmäßig deaktiviert. Entdecke sie mit hm --skills.",
-            Spanish: "Las skills son instrucciones reutilizables para tareas concretas. Están disponibles pero desactivadas por defecto. Descúbrelas con hm --skills.",
-            Vietnamese: "Skills là hướng dẫn dùng lại cho tác vụ cụ thể. Có sẵn nhưng mặc định tắt. Khám phá bằng hm --skills."));
         entries.Add("Oobe.ChangeLater", new(
-            English: "You can change your preferences at any time with hm --setup.",
-            Italian: "Puoi cambiare le tue preferenze quando vuoi con hm --setup.",
-            French: "Modifiez vos préférences à tout moment avec hm --setup.",
-            German: "Ändere deine Einstellungen jederzeit mit hm --setup.",
-            Spanish: "Cambia tus preferencias cuando quieras con hm --setup.",
-            Vietnamese: "Bạn có thể đổi tùy chọn bất cứ lúc nào bằng hm --setup."));
+            English: "Your choices stay yours: hm --setup · hm --skills · hm --status.",
+            Italian: "Le scelte restano tue: hm --setup · hm --skills · hm --status.",
+            French: "Vos choix restent les vôtres : hm --setup · hm --skills · hm --status.",
+            German: "Deine Entscheidungen bleiben deine: hm --setup · hm --skills · hm --status.",
+            Spanish: "Tus decisiones siguen siendo tuyas: hm --setup · hm --skills · hm --status.",
+            Vietnamese: "Các lựa chọn vẫn là của bạn: hm --setup · hm --skills · hm --status."));
     }
 }

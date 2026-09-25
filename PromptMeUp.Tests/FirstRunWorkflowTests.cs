@@ -46,9 +46,8 @@ public sealed class FirstRunWorkflowTests
             "RenderWelcome" => null,
             "ChooseLanguageAsync" => Task.FromResult(new FirstRunInput<string>(FirstRunAction.Next, "it")),
             "ReadKeyAsync" => Task.FromResult(new FirstRunInput<string?>(FirstRunAction.Next, SyntheticKey())),
-            "ReadNameAsync" => Task.FromResult(new FirstRunInput<string>(FirstRunAction.Next, "Luca")),
-            "ReadMemoryAsync" => Task.FromResult(new FirstRunInput<FirstRunMemoryChoice>(FirstRunAction.Next,
-                new(memories, capture, true))),
+            "ReadPreferencesAsync" => Task.FromResult(new FirstRunInput<FirstRunPreferences>(FirstRunAction.Next,
+                new("Luca", memories, capture, true, []))),
             "ChooseDesktopAsync" => Task.FromResult(addDesktop),
             "RenderReady" => MarkReady(args, () => ready = true),
             "ChooseGuideAsync" => Task.FromResult(false),
@@ -62,7 +61,7 @@ public sealed class FirstRunWorkflowTests
         Assert.True(ready);
         Assert.Equal(addDesktop, desktopCreated);
         Assert.Contains("Onboarding completed.", diagnostics.Messages);
-        Assert.Equal(4, diagnostics.Messages.Count(message => message.StartsWith("Onboarding step opened.", StringComparison.Ordinal)));
+        Assert.Equal(3, diagnostics.Messages.Count(message => message.StartsWith("Onboarding step opened.", StringComparison.Ordinal)));
         Assert.DoesNotContain(SyntheticKey(), string.Join('\n', diagnostics.Messages), StringComparison.Ordinal);
         Assert.DoesNotContain("Luca", string.Join('\n', diagnostics.Messages), StringComparison.Ordinal);
         var saved = await fixture.Database.LoadSettingsAsync(default);

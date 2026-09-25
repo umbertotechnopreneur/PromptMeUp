@@ -3,6 +3,7 @@
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -14,8 +15,8 @@ public interface IFirstRunView
     Task<FirstRunInput<string>> ChooseLanguageAsync(string language, CancellationToken ct);
     Task<FirstRunInput<string?>> ReadKeyAsync(bool configured, bool protectedStorage, CancellationToken ct);
     Task<FirstRunAction> ReadConnectionFailureAsync(string errorKey, CancellationToken ct);
-    Task<FirstRunInput<string>> ReadNameAsync(string current, CancellationToken ct);
-    Task<FirstRunInput<FirstRunMemoryChoice>> ReadMemoryAsync(SkillsAndMemorySettings current, CancellationToken ct);
+    Task<FirstRunInput<FirstRunPreferences>> ReadPreferencesAsync(string currentName,
+        SettingsFeatureOverview overview, CancellationToken ct);
     Task<bool> ChooseDesktopAsync(CancellationToken ct);
     void RenderReady(string name, string guidePath);
     Task<bool> ChooseGuideAsync(CancellationToken ct);
@@ -74,12 +75,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     public async Task<FirstRunInput<string?>> ReadKeyAsync(bool configured, bool protectedStorage, CancellationToken ct)
     {
         Step(2, "Connect", "KeyHelp");
-        Write(protectedStorage ? "Vault" : "SessionStorage", TerminalTheme.Muted);
-        Link(text.Text("Oobe.Portal"), "https://platform.openai.com/api-keys");
-        Link(text.Text("Oobe.Guide"), "https://developers.openai.com/api/docs/quickstart#create-and-export-an-api-key");
-        console.WriteLine();
-        Write("Example", TerminalTheme.Muted);
-        Write("Cost", TerminalTheme.Muted);
+        RenderConnectionIntro(protectedStorage);
         var labels = configured
             ? new[] { text.Text("Oobe.VerifyExisting"), text.Text("Oobe.ReplaceKey"), text.Text("Oobe.Back"), text.Text("Oobe.Exit") }
             : new[] { text.Text("Oobe.EnterKey"), text.Text("Oobe.Back"), text.Text("Oobe.Exit") };
@@ -97,6 +93,37 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
             ? new(FirstRunAction.Back, null) : new(FirstRunAction.Next, key.Trim());
     }
 
+    /// <summary>Places the key guidance beside a compact OpenAI ASCII mark on wide terminals.</summary>
+    private void RenderConnectionIntro(bool protectedStorage)
+    {
+        var content = new Rows(
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Oobe." + (protectedStorage ? "Vault" : "SessionStorage")))}[/]"),
+            new Text(" "),
+            new Markup($"[underline {TerminalTheme.Info} link=https://platform.openai.com/api-keys]"
+                + $"{Markup.Escape(text.Text("Oobe.Portal"))}[/]"),
+            new Markup($"[underline {TerminalTheme.Info} link=https://developers.openai.com/api/docs/quickstart#create-and-export-an-api-key]"
+                + $"{Markup.Escape(text.Text("Oobe.Guide"))}[/]"),
+            new Text(" "),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Oobe.Example"))}[/]"),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Oobe.Cost"))}[/]"));
+        if (console.Profile.Width >= 110)
+        {
+            var logo = new Rows(
+                new Text("     .-==-.     \n   .'/ /\\ \\'.   \n  / / /  \\ \\ \\  \n | | | /\\ | | | \n  \\ \\ \\/ / / /  \n   '.\\_\\/_.''   \n     '-..-'     ", Style.Parse(TerminalTheme.Info)),
+                new Text("     OpenAI", Style.Parse("bold " + TerminalTheme.Primary)));
+            var grid = new Grid()
+                .AddColumn(new GridColumn { Width = console.Profile.Width - 38 })
+                .AddColumn(new GridColumn { Width = 28 });
+            grid.AddRow(content, logo);
+            console.Write(grid);
+        }
+        else
+        {
+            console.Write(content);
+        }
+        console.WriteLine();
+    }
+
     /// <summary>Shows a secret-free failure and allows retrying without retyping the key.</summary>
     public async Task<FirstRunAction> ReadConnectionFailureAsync(string errorKey, CancellationToken ct)
     {
@@ -108,41 +135,107 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         return choice switch { 0 => FirstRunAction.Next, 1 => FirstRunAction.Back, _ => FirstRunAction.Exit };
     }
 
-    /// <summary>Collects an optional nickname without accepting recognizable credentials.</summary>
-    public async Task<FirstRunInput<string>> ReadNameAsync(string current, CancellationToken ct)
+    /// <summary>Collects the optional name, independent learning consent, command mode, and reviewed skills.</summary>
+    public async Task<FirstRunInput<FirstRunPreferences>> ReadPreferencesAsync(string currentName,
+        SettingsFeatureOverview overview, CancellationToken ct)
     {
-        Step(3, "Name", "TwoLeft");
+        ArgumentNullException.ThrowIfNull(overview);
+        Step(3, "Personalize", "TwoLeft");
+        Section("👋", "Name");
         Write("NameHelp");
         var prompt = new TextPrompt<string>($"{Markup.Escape(text.Text("Oobe.NameLabel").PadLeft(18))}  ")
             .AllowEmpty().Validate(ValidateName);
-        if (!string.IsNullOrEmpty(current)) { prompt.DefaultValue(current); }
+        if (!string.IsNullOrEmpty(currentName)) { prompt.DefaultValue(currentName); }
         var name = await prompt.ShowAsync(console, ct).ConfigureAwait(false);
-        console.WriteLine();
-        return new(FirstRunAction.Next, PreferredNamePolicy.Normalize(name, redactor));
-    }
+        name = PreferredNamePolicy.Normalize(name, redactor);
 
-    /// <summary>Separates memory activation from explicit consent to collect redacted learning material.</summary>
-    public async Task<FirstRunInput<FirstRunMemoryChoice>> ReadMemoryAsync(SkillsAndMemorySettings current, CancellationToken ct)
-    {
-        Step(4, "Memory", "AlmostThere");
+        Section("🧠", "Memory");
         Write("MemoryHelp");
-        var enabled = await YesNoAsync("EnableMemory", current.Enabled, ct).ConfigureAwait(false);
-        Write("DreamHelp");
-        Write("RecordingHelp", TerminalTheme.Muted);
-        Write("HistoryNotice", TerminalTheme.Muted);
-        var capture = enabled && await YesNoAsync("EnableRecording", false, ct).ConfigureAwait(false);
-        if (!enabled) { Write("RecordingOff", TerminalTheme.Muted); }
-        if ((current.Enabled && !enabled) || (current.CaptureObservations && !capture))
+        var enabled = await YesNoAsync("EnableMemory", overview.Settings.Enabled, ct).ConfigureAwait(false);
+        var capture = false;
+        if (enabled)
+        {
+            Write("RecordingHelp", TerminalTheme.Muted);
+            capture = await YesNoAsync("EnableRecording", false, ct).ConfigureAwait(false);
+        }
+        else
+        {
+            Write("RecordingOff", TerminalTheme.Muted);
+        }
+        if ((overview.Settings.Enabled && !enabled) || (overview.Settings.CaptureObservations && !capture))
         {
             Write("ClearLearning", TerminalTheme.Warning);
             if (!await YesNoAsync("ConfirmClear", false, ct).ConfigureAwait(false))
             {
-                return new(FirstRunAction.Back, new(enabled, capture, false));
+                return new(FirstRunAction.Back, new(name, enabled, capture, false, []));
             }
         }
+
+        var selectedSkills = Array.Empty<string>();
+        if (enabled)
+        {
+            Section("🧩", "SkillTitle");
+            Write("SkillHelp");
+            var available = overview.Skills.Where(item => item.Skill.Origin == "bundled"
+                && item.Skill.UnavailableReason is null).ToArray();
+            if (available.Length == 0)
+            {
+                Write("SkillsEmpty", TerminalTheme.Muted);
+            }
+            else if (await YesNoAsync("EnableSkills", false, ct).ConfigureAwait(false))
+            {
+                selectedSkills = await SelectSkillsAsync(available, ct).ConfigureAwait(false);
+            }
+        }
+
+        Section("🛡", "CommandMode");
         Write("DirectNotice", TerminalTheme.Muted);
         var confirmCommands = await YesNoAsync("ConfirmCommands", false, ct).ConfigureAwait(false);
-        return new(FirstRunAction.Next, new(enabled, capture, confirmCommands));
+        Write("HistoryNotice", TerminalTheme.Muted);
+        return new(FirstRunAction.Next, new(name, enabled, capture, confirmCommands, selectedSkills));
+    }
+
+    /// <summary>Separates related onboarding choices with a short theme gradient and an explicit icon.</summary>
+    private void Section(string emoji, string key)
+    {
+        console.WriteLine();
+        console.Write(new ThemeSeparator(Icon(emoji, ">") + text.Text("Oobe." + key),
+            TerminalTheme.Accent, Math.Min(console.Profile.Width, 88)));
+        console.WriteLine();
+    }
+
+    /// <summary>Lists only inspected, usable skill packages and returns exactly the user's checked names.</summary>
+    private async Task<string[]> SelectSkillsAsync(SettingsSkillState[] available, CancellationToken ct)
+    {
+        var selected = await new MultiSelectionPrompt<SettingsSkillState>()
+            .Title($"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Oobe.SkillsPrompt"))}[/]")
+            .NotRequired()
+            .InstructionsText(text.Text("Oobe.SkillsInstructions"))
+            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
+            .AddChoices(available)
+            .UseConverter(item =>
+            {
+                var skill = item.Skill;
+                var icon = shell.Options.NoEmoji ? "* " : Markup.Escape(skill.Icon) + " ";
+                return $"{icon}[bold {TerminalTheme.Primary}]{Markup.Escape(SkillLabel(skill))}[/] "
+                    + $"[{TerminalTheme.Muted}]· {Markup.Escape(skill.Name)}[/]";
+            })
+            .ShowAsync(console, ct).ConfigureAwait(false);
+        var names = selected.Select(item => item.Skill.Name).ToArray();
+        console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(text.Text("Oobe.SkillsSelected", names.Length))}[/]");
+        foreach (var item in selected)
+        {
+            console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(Icon(item.Skill.Icon, "*") + SkillLabel(item.Skill))}[/]");
+        }
+        return names;
+    }
+
+    /// <summary>Uses translated bundled names while preserving each skill's stable package identity.</summary>
+    private string SkillLabel(SkillDefinition skill)
+    {
+        var key = "Lab.SkillName." + skill.Name;
+        var label = text.Text(key);
+        return label == key ? skill.Name : label;
     }
 
     /// <summary>Offers an unchecked desktop shortcut option after the privacy choices.</summary>
@@ -166,12 +259,15 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         TerminalTheme.WriteRule(console, Icon("🎉", "*") + text.Text("Oobe.Ready"), TerminalTheme.Success);
         console.MarkupLine($"[bold {TerminalTheme.Primary}]{Markup.Escape(string.IsNullOrEmpty(name)
             ? text.Text("Oobe.Thanks") : text.Text("Oobe.ThanksName", name))}[/]");
-        Write("StartUsing");
+        Write("StartUsing", TerminalTheme.Muted);
         RenderStarterCommands();
-        Link(Icon("📄", ">") + text.Text("Guide.Title"), new Uri(guidePath).AbsoluteUri);
-        console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Guide.Description"))}[/]");
-        Write("Recovery", TerminalTheme.Muted);
-        Write("Skills", TerminalTheme.Muted);
+        console.WriteLine();
+        console.Write(new ThemeSeparator(Icon("📄", ">") + text.Text("Guide.Title"),
+            TerminalTheme.Accent, Math.Min(console.Profile.Width, 88)));
+        console.WriteLine();
+        Link(text.Text("Guide.Title"), new Uri(guidePath).AbsoluteUri, showAddress: false);
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Guide.Description"))}[/]");
+        console.WriteLine();
         Write("ChangeLater", TerminalTheme.Muted);
         console.WriteLine();
     }
@@ -184,15 +280,17 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     private void RenderStarterCommands()
     {
         console.WriteLine();
-        console.MarkupLine($"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Oobe.TryFirst"))}[/]");
+        console.Write(new ThemeSeparator(Icon("🚀", ">") + text.Text("Oobe.TryFirst"),
+            TerminalTheme.Accent, Math.Min(console.Profile.Width, 88)));
+        console.WriteLine();
         var grid = new Grid()
-            .AddColumn(new GridColumn().RightAligned())
+            .AddColumn(new GridColumn().LeftAligned())
             .AddColumn(new GridColumn());
-        foreach (var example in new[]
+        foreach (var example in new (string Command, string Description)[]
         {
-            (Command: "hm \"How do I list the largest files here?\"", Description: "TryAsk"),
-            (Command: "hm --chat", Description: "TryChat"),
-            (Command: "hm --diagnose", Description: "TryDiagnose")
+            ($"hm \"{text.Text("Oobe.TryAskCommand")}\"", "TryAsk"),
+            ("hm --chat", "TryChat"),
+            ("hm --diagnose", "TryDiagnose")
         })
         {
             grid.AddRow(
@@ -200,13 +298,11 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
                 new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Oobe." + example.Description))}[/]"));
         }
         console.Write(grid);
-        console.WriteLine();
     }
 
     /// <summary>Renders one numbered section beneath the completed steps without clearing scrollback.</summary>
     private void Step(int number, string title, string hint)
     {
-        console.WriteLine();
         var icon = number switch { 1 => "🌍", 2 => "🔑", 3 => "👋", _ => "🧠" };
         TerminalTheme.WriteRule(console,
             Icon(icon, ">") + text.Text("Oobe.Step", number) + " · " + text.Text("Oobe." + title), TerminalTheme.Accent);
@@ -225,15 +321,18 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         {
             copy = copy.Replace(command, $"[bold {TerminalTheme.Info}]{command}[/]", StringComparison.Ordinal);
         }
-        console.MarkupLine($"[{color ?? TerminalTheme.Primary}]{copy}[/]");
+        var line = new Grid().AddColumn(new GridColumn { Width = Math.Min(console.Profile.Width, 104) });
+        line.AddRow(new Markup($"[{color ?? TerminalTheme.Primary}]{copy}[/]"));
+        console.Write(line);
     }
 
     /// <summary>Respects the user's emoji preference and the shared one-space icon convention.</summary>
     private string Icon(string emoji, string fallback) => TerminalTheme.IconPrefix(shell.Options, emoji, fallback);
 
     /// <summary>Renders a terminal hyperlink together with its copyable address.</summary>
-    private void Link(string label, string url) =>
-        console.MarkupLine($"[underline {TerminalTheme.Info} link={url}]{Markup.Escape(label)}[/] [{TerminalTheme.Muted}]{url}[/]");
+    private void Link(string label, string url, bool showAddress = true) =>
+        console.MarkupLine($"[underline {TerminalTheme.Info} link={url}]{Markup.Escape(label)}[/]"
+            + (showAddress ? $" [{TerminalTheme.Muted}]{Markup.Escape(url)}[/]" : string.Empty));
 
     /// <summary>Shows keyboard choices with the terminal's visible focus marker.</summary>
     private async Task<int> ChooseAsync(string[] labels, CancellationToken ct)
