@@ -1118,6 +1118,14 @@ Validation: inspected the scoped diff and checked whitespace. Automated tests an
 
 Validation: parsed all 13 JSON palettes, reviewed the scoped diff, and calculated text, divider, and selection contrast ratios; all exceed the catalog thresholds. Automated tests and builds were not run because they were not requested for this change.
 
+## 2026-09-25 — Add a bottom prompt bar to AI conversation input
+
+- Added a reusable, theme-aware prompt bar with optional separators, current model, context usage meter, session cost, and measured system/user/assistant/free context categories when the terminal has room. The guide is labeled as part of system tokens; no tool-token count is fabricated.
+- The multi-line editor redraws the bar while typing and removes it on submit, leaving accepted turns in normal scrollback.
+- Chat and its query/diagnostic continuations use the current local session snapshot; diagnostic evidence input begins with the selected model.
+
+Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.

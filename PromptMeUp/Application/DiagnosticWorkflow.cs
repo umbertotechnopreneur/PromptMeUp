@@ -38,7 +38,7 @@ public sealed class DiagnosticWorkflow(
             {
                 throw new InvalidOperationException(text.Text("Error.InteractiveRequired"));
             }
-            evidence = input.Sanitize(chat.ReadMessage(maximum), maximum);
+            evidence = input.Sanitize(chat.ReadMessage(maximum, status: ShellRuntimeStatus.FromSettings(settings)), maximum);
         }
         await conversation.RunQueryAsync(evidence, settings, false, cancellationToken, "diagnose-system").ConfigureAwait(false);
     }

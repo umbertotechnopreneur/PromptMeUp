@@ -15,9 +15,10 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
     private int _paintedRows;
     private (int Width, int Height) _paintedSize;
     private string _label = string.Empty;
+    private ShellRuntimeStatus? _status;
 
     /// <summary>Collects bounded pasted or typed text, preserving line breaks until a separate Enter key submits it.</summary>
-    internal string Read(string label, int maximumCharacters, bool showHint = true)
+    internal string Read(string label, int maximumCharacters, ShellRuntimeStatus? status = null, bool showHint = true)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
         using var pasteMode = new TerminalPasteScope(console);
@@ -28,11 +29,12 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var buffer = new ChatInputBuffer(maximumCharacters);
         var reader = new TerminalInputReader(console.Input, maximumCharacters, win32Encoding: OperatingSystem.IsWindows());
         _label = label;
+        _status = status;
         var hint = text.Text(
             showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
             KeyPrefix("Enter"), KeyPrefix("Newline"), KeyPrefix("Arrows"), KeyPrefix("Escape"));
-        TerminalPromptDock.Align(console, reservedRows: showHint ? 4 : 2);
         console.MarkupLine($"[{TerminalTheme.Muted}]{hint}[/]");
+        TerminalPromptDock.Align(console, reservedRows: 6);
         console.Cursor.Hide();
         try
         {
@@ -68,6 +70,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         {
             console.Cursor.Show();
             _label = string.Empty;
+            _status = null;
         }
     }
 
@@ -86,13 +89,23 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         else if (_paintedRows > 0)
         {
             console.WriteLine();
-            TerminalPromptDock.Align(console, reservedRows: 3);
+            TerminalPromptDock.Align(console, reservedRows: 6);
         }
         var width = Math.Max(1, size.Width - 1);
+        var bar = new TerminalPromptBar(text, _status,
+            showBorders: size.Height >= 8, showStatus: size.Height >= 4,
+            showBreakdown: size.Height >= 8);
+        var header = bar.Header(width);
+        var footer = bar.Footer(width);
+        foreach (var row in header)
+        {
+            WriteRow(row);
+        }
         var lines = buffer.Text.Split('\n');
-        var inputRows = Math.Min(lines.Length, Math.Clamp(size.Height - 2, 1, 6));
         var nearLimit = (long)buffer.Text.Length * 5 >= (long)maximumCharacters * 4;
         var showStatus = size.Height > 1 && (lines.Length > 1 || nearLimit || error is not null);
+        var inputRows = Math.Min(lines.Length,
+            Math.Clamp(size.Height - header.Count - footer.Count - (showStatus ? 1 : 0) - 1, 1, 6));
         var rowCount = inputRows + (showStatus ? 1 : 0);
         var current = buffer.Text.AsSpan(0, buffer.Cursor).Count('\n');
         var lineStart = buffer.Cursor == 0 ? 0 : buffer.Text.LastIndexOf('\n', buffer.Cursor - 1) + 1;
@@ -116,7 +129,11 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
             var statusColor = error is not null ? TerminalTheme.Error : nearLimit ? TerminalTheme.Warning : TerminalTheme.Muted;
             WriteRow($"[{statusColor}]{Markup.Escape(Clip(status, width))}[/]");
         }
-        _paintedRows = rowCount;
+        foreach (var row in footer)
+        {
+            WriteRow(row);
+        }
+        _paintedRows = header.Count + rowCount + footer.Count;
         _paintedSize = size;
     }
 

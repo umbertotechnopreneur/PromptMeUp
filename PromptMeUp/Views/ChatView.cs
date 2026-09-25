@@ -12,7 +12,7 @@ public interface IChatView
 
     void RenderMemoryHint();
 
-    string ReadMessage(int maximumCharacters, string? userName = null);
+    string ReadMessage(int maximumCharacters, string? userName = null, ShellRuntimeStatus? status = null);
 
     void RenderUser(string text);
 
@@ -76,12 +76,12 @@ public sealed class ChatView : IChatView
     }
 
     /// <summary>Reads one bounded message while showing the full editing guide only on the first prompt.</summary>
-    public string ReadMessage(int maximumCharacters, string? userName = null)
+    public string ReadMessage(int maximumCharacters, string? userName = null, ShellRuntimeStatus? status = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
         var name = string.IsNullOrWhiteSpace(userName) ? _text.Text("Chat.You") : userName.Trim();
         var label = $"{TerminalTheme.IconPrefix(_shell.Options, "👤", ">")}{name} >";
-        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters, showHint: !_inputHintShown);
+        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters, status, showHint: !_inputHintShown);
         _inputHintShown = true;
         return input;
     }
