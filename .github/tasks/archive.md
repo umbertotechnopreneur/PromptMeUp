@@ -1368,3 +1368,11 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Added shared single-choice, multiple-choice, and numbered menu rendering. First-run setup, compact settings setup, and the home menu now use the same choice presentation while preserving their keyboard flows.
 - Recorded focused checkpoint commits `5abc25a`, `77636b1`, `8a54361`, and `c5a2966`.
 - Validation: scoped source review and `git diff --check`. No build, automated tests, or interactive UI check was run because they were not requested.
+
+## 2026-09-25 — Refine shared terminal controls and audit their callers
+
+- Replaced translation-dependent onboarding choices with typed actions and explicit menu tones.
+- Removed the button state that only looked disabled while keyboard handling remained active.
+- Routed simple script, theme, skills, navigation, and memory prompts through `TerminalChoiceMenu`, retaining the memory pager settings.
+- Removed the unused asynchronous menu wrapper. The fullscreen menu keeps its separate navigation and inline-editor implementation.
+- Validation: scoped caller review and `git diff HEAD~5..HEAD --check` passed. Build, automated tests, and interactive UI checks were not run because they were not requested.
