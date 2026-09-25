@@ -10,14 +10,18 @@ public sealed class ThemeCatalogServiceTests
 {
     private const string ValidTheme = """
         {
-          "version": 1,
+          "version": 4,
           "id": "cyan",
           "name": "Readable test palette",
+          "author": "Theme author",
+          "website": "https://example.com/theme",
+          "description": "A readable palette.",
           "colors": {
             "background": "#101010",
             "primary": "#FFFFFF",
             "muted": "#CCCCCC",
             "accent": "#99EEFF",
+            "accentSecondary": "#FF99CC",
             "info": "#99CCFF",
             "divider": "#AAAAAA",
             "success": "#99FFBB",
@@ -41,7 +45,7 @@ public sealed class ThemeCatalogServiceTests
         Assert.Equal(13, catalog.Themes.Count);
         Assert.All(catalog.Themes, theme =>
         {
-            Assert.Equal(3, theme.Version);
+            Assert.Equal(4, theme.Version);
             Assert.False(string.IsNullOrWhiteSpace(theme.Author));
             Assert.False(string.IsNullOrWhiteSpace(theme.Description));
             Assert.Equal("https://github.com/umbertotechnopreneur/PromptMeUp", theme.Website);
@@ -54,7 +58,7 @@ public sealed class ThemeCatalogServiceTests
     [InlineData("{")]
     [InlineData("null")]
     [InlineData("[]")]
-    [InlineData("{\"version\":1,\"id\":\"cyan\",\"name\":\"Missing colors\"}")]
+    [InlineData("{\"version\":4,\"id\":\"cyan\",\"name\":\"Missing colors\"}")]
     public void Catalog_MalformedDefinition_FailsClearly(string json)
     {
         using var fixture = new RegressionFixture();
@@ -67,7 +71,7 @@ public sealed class ThemeCatalogServiceTests
 
     /// <summary>Rejects ambiguous duplicate keys at both the definition and palette object levels.</summary>
     [Theory]
-    [InlineData("\"version\": 1,", "\"version\": 1, \"version\": 1,")]
+    [InlineData("\"version\": 4,", "\"version\": 4, \"version\": 4,")]
     [InlineData("\"primary\": \"#FFFFFF\",", "\"primary\": \"#FFFFFF\", \"primary\": \"#000000\",")]
     public void Catalog_DuplicateProperty_IsRejected(string original, string replacement)
     {
@@ -89,7 +93,7 @@ public sealed class ThemeCatalogServiceTests
         switch (scenario)
         {
             case "version":
-                definition["version"] = 4;
+                definition["version"] = 5;
                 break;
             case "unknown":
                 definition["unexpected"] = true;
@@ -108,6 +112,7 @@ public sealed class ThemeCatalogServiceTests
     [InlineData("primary")]
     [InlineData("muted")]
     [InlineData("accent")]
+    [InlineData("accentSecondary")]
     [InlineData("info")]
     [InlineData("success")]
     [InlineData("warning")]
@@ -153,8 +158,8 @@ public sealed class ThemeCatalogServiceTests
         var catalog = new ThemeCatalogService(fixture.Paths.DataDirectory);
 
         Assert.Equal("Readable test palette", catalog.Resolve("cyan").Name);
-        Assert.Null(catalog.Resolve("cyan").Author);
-        Assert.Null(catalog.Resolve("cyan").Description);
+        Assert.Equal("Theme author", catalog.Resolve("cyan").Author);
+        Assert.Equal("A readable palette.", catalog.Resolve("cyan").Description);
         Assert.Throws<InvalidOperationException>(() => catalog.Resolve("missing"));
     }
 
@@ -170,9 +175,6 @@ public sealed class ThemeCatalogServiceTests
     {
         using var fixture = new RegressionFixture();
         var definition = JsonNode.Parse(ValidTheme)!;
-        definition["version"] = 2;
-        definition["author"] = "Theme author";
-        definition["description"] = "A readable palette.";
         if (value is null)
         {
             definition.AsObject().Remove(property);
