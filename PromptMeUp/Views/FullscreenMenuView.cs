@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
 using PromptMeUp.Services;
-using System.Globalization;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -554,21 +553,21 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         }
         else if (key.Key == ConsoleKey.LeftArrow && _caret > 0)
         {
-            _caret = PreviousElement(value, _caret);
+            _caret = TerminalTextElements.Previous(value, _caret);
         }
         else if (key.Key == ConsoleKey.RightArrow && _caret < value.Length)
         {
-            _caret = NextElement(value, _caret);
+            _caret = TerminalTextElements.Next(value, _caret);
         }
         else if (key.Key == ConsoleKey.Backspace && _caret > 0)
         {
-            var previous = PreviousElement(value, _caret);
+            var previous = TerminalTextElements.Previous(value, _caret);
             SetDraft(item, value.Remove(previous, _caret - previous));
             _caret = previous;
         }
         else if (key.Key == ConsoleKey.Delete && _caret < value.Length)
         {
-            var next = NextElement(value, _caret);
+            var next = TerminalTextElements.Next(value, _caret);
             SetDraft(item, value.Remove(_caret, next - _caret));
         }
         else if (!char.IsControl(key.KeyChar) && (key.Modifiers & ConsoleModifiers.Control) == 0)
@@ -616,14 +615,6 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         var nextEnd = value.IndexOf('\n', nextStart);
         _caret = Math.Min(nextStart + column, nextEnd < 0 ? value.Length : nextEnd);
     }
-
-    /// <summary>Finds the preceding Unicode text element for cursor movement and deletion.</summary>
-    private static int PreviousElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).LastOrDefault(start => start < index);
-
-    /// <summary>Finds the following Unicode text element without splitting a composed character.</summary>
-    private static int NextElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
 
     /// <summary>Initializes the active field draft after section or command navigation.</summary>
     private void EnsureDraft(IReadOnlyList<FullscreenMenuGroup> groups)
