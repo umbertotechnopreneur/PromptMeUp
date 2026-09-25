@@ -31,9 +31,9 @@ public sealed class TerminalViewTests
         }
     }
 
-    /// <summary>Verifies that the localized chat guide explains every slash command without panel borders.</summary>
+    /// <summary>Verifies the chat intro stays short while help preserves the full localized command guide.</summary>
     [Fact]
-    public void ChatIntro_ExplainsEveryCommandWithoutCards()
+    public void ChatIntro_OffersCompactShortcutsAndFullHelpWithoutCards()
     {
         var (console, output) = CreateConsole();
         var text = new LocalizationService();
@@ -43,6 +43,13 @@ public sealed class TerminalViewTests
         var view = new ChatView(console, text, new PoorMarkdownRenderer(console), shell);
 
         view.RenderIntro();
+
+        var intro = output.ToString();
+        Assert.Contains("/help", intro, StringComparison.Ordinal);
+        Assert.DoesNotContain("/clear", intro, StringComparison.Ordinal);
+        Assert.DoesNotContain("/remember", intro, StringComparison.Ordinal);
+
+        view.RenderCommandGuide();
 
         var rendered = output.ToString();
         Assert.Contains("/run <comando>", rendered, StringComparison.Ordinal);

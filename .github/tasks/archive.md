@@ -1134,6 +1134,13 @@ Validation: inspected the scoped diff and checked whitespace. Automated tests an
 
 Validation: preflight, XML comment check, Debug build, and interactive UI preview passed. Automated tests were not requested. The auto-review rejected `dotnet format --verify-no-changes` because the owner had not explicitly authorized a formatter.
 
+## 2026-09-25 — Keep chat startup compact with on-demand help
+
+- Reduced the initial chat command list to the essential `/run`, `/status`, `/exit`, and `/help` shortcuts so the conversation and bottom prompt bar have more room in an 80-column terminal.
+- Added `/help` as a local command that shows the complete localized chat and memory guide without an AI request. Removed the obsolete intro parameter while keeping the full guide available on demand.
+
+Validation: XML comment check and Debug build passed. Launched the Italian chat, confirmed the compact introduction and full `/help` output, then exited without contacting the AI provider. Automated tests were not requested; Debug outputs were cleaned after the preview.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.

@@ -148,7 +148,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 captureObservation: promptId == "query-system").ConfigureAwait(false);
             if (startChat)
             {
-                _chatView.RenderIntro(includeMemoryHints: !renderQuery);
+                _chatView.RenderIntro();
                 session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
             }
             else
@@ -223,6 +223,11 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 {
                     _shell.RenderMuted(_text.Text("Chat.Exit"));
                     return AuditSessionOutcome.Completed;
+                }
+                if (input.Equals("/help", StringComparison.OrdinalIgnoreCase))
+                {
+                    _chatView.RenderCommandGuide();
+                    continue;
                 }
                 if (input.Equals("/clear", StringComparison.OrdinalIgnoreCase))
                 {

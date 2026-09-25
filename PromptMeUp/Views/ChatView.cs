@@ -8,7 +8,9 @@ namespace PromptMeUp.Views;
 
 public interface IChatView
 {
-    void RenderIntro(bool includeMemoryHints = true);
+    void RenderIntro();
+
+    void RenderCommandGuide();
 
     void RenderMemoryHint();
 
@@ -42,14 +44,26 @@ public sealed class ChatView : IChatView
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
     }
 
-    /// <summary>Draws the chat heading and its small slash-command vocabulary without clearing prior output.</summary>
-    public void RenderIntro(bool includeMemoryHints = true)
+    /// <summary>Starts chat with its essential shortcuts, leaving the full command guide on demand.</summary>
+    public void RenderIntro()
     {
         _inputHintShown = false;
         var icon = TerminalTheme.IconPrefix(_shell.Options, "💬", ">");
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("Chat.Title")}", TerminalTheme.Accent);
+        var shortcuts = new[] { _text.Text("Chat.Command.RunSyntax"), "/status", "/exit", "/help" };
+        _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.CommandsHeading"))}[/] " +
+            string.Join($" [{TerminalTheme.Divider}]·[/] ", shortcuts.Select(shortcut =>
+                $"[bold {TerminalTheme.Info}]{Markup.Escape(shortcut)}[/]")));
+        _console.WriteLine();
+    }
+
+    /// <summary>Shows every chat command and the session-summary explanation when the user asks for help.</summary>
+    public void RenderCommandGuide()
+    {
+        _console.WriteLine();
         _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.CommandsHeading"))}[/]");
         _console.WriteLine();
+        RenderCommandHint("/help", "Chat.Command.Help");
         RenderCommandHint(_text.Text("Chat.Command.RunSyntax"), "Chat.Command.Run");
         RenderCommandHint("/clear", "Chat.Command.Clear");
         RenderCommandHint("/costs", "Chat.Command.Costs");
@@ -59,10 +73,7 @@ public sealed class ChatView : IChatView
         _console.WriteLine();
         _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.DisplayHint"))}[/]");
         _console.WriteLine();
-        if (includeMemoryHints)
-        {
-            RenderMemoryHint();
-        }
+        RenderMemoryHint();
     }
 
     /// <summary>Shows a compact reminder of saved-memory commands available inside chat.</summary>
