@@ -161,6 +161,14 @@ Validation: preflight, restore, XML method-comment check, scoped source search, 
 - Preserved the signed MSIX, checksum, package metadata, and installation record under ignored `artifacts/msix/debug/0.1.8.5/x64`. Debug application-runtime and solution cleanup passed.
 - Automated tests, CLI smoke tests, and interactive UI checks were not run for this installation. Recursive deletion of this build's temporary publish and payload directories was blocked by policy and remains in the task list.
 
+## 2026-09-25 — Test and install the fullscreen refinements Debug build
+
+- Passed all 986 automated tests in Debug from source commit `1f6180d` on `codex/refinements-to-version-1.0-beta`.
+- Built a self-contained x64 Debug publish with embedded symbols and a build-time `0.1.8.4` version override. Exported notices for 27 packages, then created, signed, and verified the local MSIX.
+- Installed `UmbertoGiacobbiDotBiz.PromptMeUp` `0.1.8.4` directly over `0.1.8.3`. Verified healthy registration, the package checksum, matching published and installed `hm.dll` hashes, and a successful `hm --version` call through the execution alias outside the read-only sandbox.
+- Preserved the signed MSIX, checksum, metadata, and installation record under ignored `artifacts/msix/debug/0.1.8.4/x64`. Cleaned the application and test Debug outputs and removed this build's temporary publish and payload directories.
+- The initial solution-wide runtime clean failed because the test project's restored assets lack `net10.0/win-x64`; separate app-runtime and test-default cleans succeeded. No interactive fullscreen UI check was performed.
+
 ## 2026-09-25 — Refine shared fullscreen screens for the 1.0 beta
 
 - Create checkpoint `72b9403` for the prior banner and installation details, then work on the owner-requested `codex/refinements-to-version-1.0-beta` branch.
@@ -1353,3 +1361,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - [x] Move legacy skill settings into the global settings table, remove the obsolete table from the local database, and add an idempotent startup migration for older databases.
 
 - [x] Make --reset clear setup and direct-mode flags only, and make --reset all delete/recreate the full SQLite database.
+
+## 2026-09-25 — Share terminal action bars and choice menus
+
+- Extracted reusable terminal action bars with theme-aware focus and optional button brackets, then applied them to fullscreen forms, menus, help, memories, and About.
+- Added shared single-choice, multiple-choice, and numbered menu rendering. First-run setup, compact settings setup, and the home menu now use the same choice presentation while preserving their keyboard flows.
+- Recorded focused checkpoint commits `5abc25a`, `77636b1`, `8a54361`, and `c5a2966`.
+- Validation: scoped source review and `git diff --check`. No build, automated tests, or interactive UI check was run because they were not requested.
