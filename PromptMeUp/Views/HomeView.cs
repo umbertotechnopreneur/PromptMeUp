@@ -36,17 +36,22 @@ public sealed class HomeView(IAnsiConsole console, ILocalizationService text, IC
             ("💬", "Chat"), ("📝", "Script"), ("🔎", "Diagnose"), ("🧠", "Memories"),
             ("🧩", "Skills"), ("⚙️", "Settings"), ("❓", "Help")
         };
+        var showDescriptions = console.Profile.Height >= 32;
         var grid = new Grid().AddColumn(new GridColumn().RightAligned().NoWrap()).AddColumn();
         for (var index = 0; index < rows.Length; index++)
         {
             var (emoji, key) = rows[index];
             var title = TerminalTheme.IconPrefix(shell.Options, emoji, ">") + text.Text("Home." + key);
             var copy = $"[bold {TerminalTheme.Primary}]{Markup.Escape(title)}[/]";
-            if (console.Profile.Height >= 32)
+            if (showDescriptions)
             {
                 copy += $"\n[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Home." + key + "Hint"))}[/]";
             }
             grid.AddRow(new Markup($"[bold {TerminalTheme.Accent}]{index + 1}[/]"), new Markup(copy));
+            if (showDescriptions && index < rows.Length - 1)
+            {
+                grid.AddEmptyRow();
+            }
         }
         grid.AddEmptyRow();
         grid.AddRow(new Markup($"[{TerminalTheme.Warning}]0[/]"), new Markup($"[{TerminalTheme.Warning}]{Markup.Escape(text.Text("Home.Exit"))}[/]"));
