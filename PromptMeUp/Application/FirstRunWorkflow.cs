@@ -19,9 +19,7 @@ public sealed class FirstRunWorkflow(ISettingsService settings, IEnvironmentSecr
     {
         ArgumentNullException.ThrowIfNull(current);
         logger.LogInformation("Onboarding started. Language={Language}, ProtectedStorage={ProtectedStorage}", current.Language, OperatingSystem.IsWindows());
-        var result = view is IFirstRunViewport viewport
-            ? await viewport.RunStepsAsync(() => RunStepsAsync(current, ct)).ConfigureAwait(false)
-            : await RunStepsAsync(current, ct).ConfigureAwait(false);
+        var result = await RunStepsAsync(current, ct).ConfigureAwait(false);
         if (!result.Completed)
         {
             return 0;

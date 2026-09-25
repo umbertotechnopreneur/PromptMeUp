@@ -21,47 +21,10 @@ public interface IFirstRunView
     Task<bool> ChooseGuideAsync(CancellationToken ct);
 }
 
-/// <summary>Hosts first-run steps in a disposable viewport when the terminal can redraw them safely.</summary>
-internal interface IFirstRunViewport
-{
-    Task<T> RunStepsAsync<T>(Func<Task<T>> interaction);
-}
-
 /// <summary>Renders an open, scrolling welcome with accessible keyboard actions.</summary>
 public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text,
-    ISensitiveDataRedactor redactor, IConsoleShellView shell) : IFirstRunView, IFirstRunViewport
+    ISensitiveDataRedactor redactor, IConsoleShellView shell) : IFirstRunView
 {
-    private bool _collapsibleSteps;
-    private int _lastStep;
-
-    /// <summary>Uses an alternate buffer so completed prompts can collapse without erasing terminal history.</summary>
-    Task<T> IFirstRunViewport.RunStepsAsync<T>(Func<Task<T>> interaction)
-    {
-        ArgumentNullException.ThrowIfNull(interaction);
-        if (!FullscreenViewport.CanUse(console))
-        {
-            return interaction();
-        }
-
-        T result = default!;
-        FullscreenViewport.Run(console, () =>
-        {
-            _collapsibleSteps = true;
-            _lastStep = 0;
-            console.Cursor.Show();
-            try
-            {
-                result = interaction().GetAwaiter().GetResult();
-            }
-            finally
-            {
-                _collapsibleSteps = false;
-                _lastStep = 0;
-            }
-        });
-        return Task.FromResult(result);
-    }
-
     /// <summary>Introduces the product before asking for the first preference.</summary>
     public void RenderWelcome()
     {
@@ -155,7 +118,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         if (!string.IsNullOrEmpty(current)) { prompt.DefaultValue(current); }
         var name = await prompt.ShowAsync(console, ct).ConfigureAwait(false);
         console.WriteLine();
-        return new(await NavigationAsync(ct).ConfigureAwait(false), PreferredNamePolicy.Normalize(name, redactor));
+        return new(FirstRunAction.Next, PreferredNamePolicy.Normalize(name, redactor));
     }
 
     /// <summary>Separates memory activation from explicit consent to collect redacted learning material.</summary>
@@ -179,7 +142,7 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         }
         Write("DirectNotice", TerminalTheme.Muted);
         var confirmCommands = await YesNoAsync("ConfirmCommands", false, ct).ConfigureAwait(false);
-        return new(await NavigationAsync(ct).ConfigureAwait(false), new(enabled, capture, confirmCommands));
+        return new(FirstRunAction.Next, new(enabled, capture, confirmCommands));
     }
 
     /// <summary>Offers an unchecked desktop shortcut option after the privacy choices.</summary>
@@ -240,41 +203,15 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         console.WriteLine();
     }
 
-    /// <summary>Renders one numbered section and collapses earlier prompts only inside a disposable viewport.</summary>
+    /// <summary>Renders one numbered section beneath the completed steps without clearing scrollback.</summary>
     private void Step(int number, string title, string hint)
     {
-        if (_collapsibleSteps && _lastStep > 0)
-        {
-            console.WriteAnsi(writer =>
-            {
-                writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
-                writer.EraseInDisplay(2);
-                writer.CursorHome();
-            });
-            RenderCompletedSteps(number);
-        }
-        else
-        {
-            console.WriteLine();
-        }
-
+        console.WriteLine();
         var icon = number switch { 1 => "🌍", 2 => "🔑", 3 => "👋", _ => "🧠" };
         TerminalTheme.WriteRule(console,
             Icon(icon, ">") + text.Text("Oobe.Step", number) + " · " + text.Text("Oobe." + title), TerminalTheme.Accent);
         Write(hint, TerminalTheme.Muted);
         console.WriteLine();
-        _lastStep = number;
-    }
-
-    /// <summary>Leaves one compact status header for each completed step above the active prompt.</summary>
-    private void RenderCompletedSteps(int activeStep)
-    {
-        var titles = new[] { "Language", "Connect", "Name", "Memory" };
-        for (var index = 1; index < activeStep; index++)
-        {
-            var heading = text.Text("Oobe.Step", index) + " · " + text.Text("Oobe." + titles[index - 1]);
-            console.MarkupLine($"[bold {TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + heading)}[/]");
-        }
     }
 
     /// <summary>Writes escaped localized text in the shared palette.</summary>
@@ -299,11 +236,13 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         console.MarkupLine($"[underline {TerminalTheme.Info} link={url}]{Markup.Escape(label)}[/] [{TerminalTheme.Muted}]{url}[/]");
 
     /// <summary>Shows keyboard choices with the terminal's visible focus marker.</summary>
-    private Task<int> ChooseAsync(string[] labels, CancellationToken ct)
+    private async Task<int> ChooseAsync(string[] labels, CancellationToken ct)
     {
-        return new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
+        var selected = await new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
             .AddChoices(Enumerable.Range(0, labels.Length)).UseConverter(index => ActionLabel(labels[index]))
-            .ShowAsync(console, ct);
+            .ShowAsync(console, ct).ConfigureAwait(false);
+        console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + labels[selected])}[/]");
+        return selected;
     }
 
     /// <summary>Uses semantic colors for positive, negative, and navigation choices.</summary>
@@ -323,14 +262,6 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         var selected = await ChooseAsync(choices.Select(key => text.Text(key)).ToArray(), ct).ConfigureAwait(false);
         console.WriteLine();
         return choices[selected] == "Common.Yes";
-    }
-
-    /// <summary>Offers consistent unboxed continuation, back, and exit actions.</summary>
-    private async Task<FirstRunAction> NavigationAsync(CancellationToken ct)
-    {
-        var selected = await ChooseAsync([text.Text("Oobe.Continue"), text.Text("Oobe.Back"), text.Text("Oobe.Exit")], ct)
-            .ConfigureAwait(false);
-        return selected switch { 0 => FirstRunAction.Next, 1 => FirstRunAction.Back, _ => FirstRunAction.Exit };
     }
 
     /// <summary>Validates a nickname without echoing rejected text.</summary>
