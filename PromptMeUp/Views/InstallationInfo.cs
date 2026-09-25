@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Globalization;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
@@ -45,14 +44,14 @@ internal sealed class InstallationInfo(ILocalizationService text, BuildInformati
         var details = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
         var narrowDetails = new List<IRenderable>();
         AddDetail(details, narrowDetails, "Footer.Version", buildInformation.Version);
-        AddDetail(details, narrowDetails, "About.BuildDate",
-            buildInformation.BuiltAtUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture));
+        AddDetail(details, narrowDetails, "About.BuildDate", buildInformation.BuildTimestamp);
+        AddDetail(details, narrowDetails, "About.BuildCommit", buildInformation.GitCommit);
         AddDetail(details, narrowDetails, "About.BuildMachine", buildInformation.MachineName);
         AddDetail(details, narrowDetails, "About.Author", "Umberto Giacobbi");
         AddDetail(details, narrowDetails, "About.License", "MIT");
         AddDetail(details, narrowDetails, "About.Platforms", "Windows / Linux / macOS");
         return new Rows(
-            width >= 52 ? details : new Rows(narrowDetails),
+            width >= 65 ? details : new Rows(narrowDetails),
             new Text(text.Text("About.Repository"), Style.Parse(TerminalTheme.Muted)),
             new Markup($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"),
             new Text(" "),

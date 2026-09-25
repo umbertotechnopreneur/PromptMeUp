@@ -1089,6 +1089,14 @@ Validation: repository preflight, restore, format verification, XML comment chec
 
 Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
 
+## 2026-09-25 — Show build timestamp and Git commit in version details
+
+- Stamp the full source commit into assembly metadata when building, alongside the existing UTC compilation timestamp.
+- Show the ISO 8601 timestamp with its embedded `+00:00` offset and the full Git commit in the shared About/OOBE installation details and `hm --version`.
+- Keep labels translated in all six languages and use a single-column layout for the new CLI details.
+
+Validation: inspected the scoped diff, checked whitespace, and parsed the MSBuild targets XML. Automated tests and builds were not run because they were not requested for this change.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.

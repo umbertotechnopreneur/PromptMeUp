@@ -273,6 +273,7 @@ public sealed class ConsoleShellView : IConsoleShellView
     {
         const string websiteUrl = "https://umbertogiacobbi.biz";
         const string motto = "Yet another CLI AI assistant :-)";
+        var buildInformation = BuildInformationReader.Read();
         var icon = TerminalTheme.IconPrefix(Options, "✨", "*");
         var details = TerminalTheme.PairGrid(
         [
@@ -281,6 +282,11 @@ public sealed class ConsoleShellView : IConsoleShellView
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "🖥", "OS")}{_text.Text("Shell.Platform")}", runtimeIdentifier),
             TerminalTheme.CompactMetric($"{TerminalTheme.IconPrefix(Options, "⚖", "=")}{_text.Text("About.License")}", "MIT", TerminalTheme.Success)
         ], preferredPairs: 2, width: _console.Profile.Width);
+        var buildDetails = TerminalTheme.PairGrid(
+        [
+            TerminalTheme.CompactMetric(_text.Text("About.BuildDate"), buildInformation.BuildTimestamp),
+            TerminalTheme.CompactMetric(_text.Text("About.BuildCommit"), buildInformation.GitCommit)
+        ], preferredPairs: 1, width: _console.Profile.Width);
         var links = new Grid();
         links.AddColumn(new GridColumn().RightAligned().NoWrap());
         links.AddColumn(new GridColumn().LeftAligned());
@@ -294,6 +300,7 @@ public sealed class ConsoleShellView : IConsoleShellView
         _console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(motto)}[/]");
         _console.WriteLine();
         _console.Write(details);
+        _console.Write(buildDetails);
         _console.WriteLine();
         _console.Write(links);
         _console.WriteLine();

@@ -2,6 +2,7 @@
 
 using System.Globalization;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using PromptMeUp.Models;
 
 namespace PromptMeUp.Services;
@@ -18,12 +19,17 @@ public static class BuildInformationReader
         var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToArray();
         var machineName = GetRequiredValue(metadata, "BuildMachine");
         var timestamp = GetRequiredValue(metadata, "BuildDateUtc");
+        var gitCommit = GetRequiredValue(metadata, "GitCommit");
         if (!DateTimeOffset.TryParseExact(timestamp, "O", CultureInfo.InvariantCulture, DateTimeStyles.None,
                 out var builtAtUtc) || builtAtUtc.Offset != TimeSpan.Zero)
         {
             throw new InvalidOperationException("The application build timestamp must be an ISO 8601 UTC value.");
         }
-        return new BuildInformation(version, machineName, builtAtUtc);
+        if (!Regex.IsMatch(gitCommit, "^[0-9a-f]{40}$", RegexOptions.CultureInvariant))
+        {
+            throw new InvalidOperationException("The application Git commit must be a full lowercase SHA-1 hash.");
+        }
+        return new BuildInformation(version, machineName, builtAtUtc, gitCommit);
     }
 
     /// <summary>Rejects missing, empty, or duplicate metadata rather than substituting runtime information.</summary>

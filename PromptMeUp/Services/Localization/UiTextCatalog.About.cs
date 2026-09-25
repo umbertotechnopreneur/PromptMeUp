@@ -78,12 +78,19 @@ internal static partial class UiTextCatalog
             Spanish: "Un asistente de terminal ligero y portátil. Convierte tus peticiones en lenguaje natural en comandos que puedes revisar antes de ejecutarlos.",
             Vietnamese: "Trợ lý dòng lệnh gọn nhẹ, có thể mang theo. Biến yêu cầu bằng ngôn ngữ tự nhiên thành các lệnh để bạn xem xét trước khi chạy."));
         entries.Add("About.BuildDate", new(
-            English: "Build date",
-            Italian: "Data di compilazione",
-            French: "Date de compilation",
-            German: "Erstellungsdatum",
-            Spanish: "Fecha de compilación",
+            English: "Built at",
+            Italian: "Compilato il",
+            French: "Compilé le",
+            German: "Kompiliert am",
+            Spanish: "Compilado el",
             Vietnamese: "Thời điểm biên dịch"));
+        entries.Add("About.BuildCommit", new(
+            English: "Git commit",
+            Italian: "Commit Git",
+            French: "Commit Git",
+            German: "Git-Commit",
+            Spanish: "Commit Git",
+            Vietnamese: "Commit Git"));
         entries.Add("About.BuildMachine", new(
             English: "Build machine",
             Italian: "Macchina di compilazione",
