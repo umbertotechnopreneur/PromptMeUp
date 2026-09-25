@@ -3,6 +3,7 @@
 using System.Globalization;
 using PromptMeUp.Services;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -98,13 +99,14 @@ internal sealed class TerminalPromptBar(
         [
             (text.Text("Shell.ContextSystem"), "S", status.SystemInstructionTokens, TerminalTheme.Warning),
             (text.Text("Shell.ContextUser"), "U", status.UserMessageTokens, TerminalTheme.Info),
+            (text.Text("Shell.ContextTool"), "T", status.ToolOutputTokens, TerminalTheme.Accent),
             (text.Text("Shell.ContextAssistant"), "A", status.AssistantMessageTokens, TerminalTheme.Success),
             (text.Text("Shell.ContextFree"), "·", free, TerminalTheme.Muted),
             (text.Text("Shell.ContextGuideIncluded"), "G⊂S", status.GuideTokens, TerminalTheme.Warning)
         ];
-        foreach (var count in new[] { 5, 4, 3, 2 })
+        foreach (var compact in new[] { false, true })
         {
-            foreach (var compact in new[] { false, true })
+            foreach (var count in new[] { 6, 5, 4, 3, 2 })
             {
                 var selected = metrics.Take(count).ToArray();
                 var plain = string.Join("  │  ", selected.Select(metric =>

@@ -4,7 +4,7 @@ namespace PromptMeUp.Services;
 
 internal static partial class UiTextCatalog
 {
-    /// <summary>Adds the six-language context legend, keeping the guide explicitly within the system category.</summary>
+    /// <summary>Adds the six-language context legend, separating command output while keeping the guide within system.</summary>
     private static void AddContextBreakdownEntries(Dictionary<string, LocalizedText> entries)
     {
         entries.Add("Shell.ContextSystem", new(
@@ -21,6 +21,13 @@ internal static partial class UiTextCatalog
             German: "Nutzereingaben",
             Spanish: "Mensajes del usuario",
             Vietnamese: "Lời nhắc người dùng"));
+        entries.Add("Shell.ContextTool", new(
+            English: "Tool output",
+            Italian: "Output tool",
+            French: "Résultat d’outil",
+            German: "Tool-Ausgabe",
+            Spanish: "Salida de herramientas",
+            Vietnamese: "Đầu ra công cụ"));
         entries.Add("Shell.ContextAssistant", new(
             English: "AI replies",
             Italian: "Risposte AI",

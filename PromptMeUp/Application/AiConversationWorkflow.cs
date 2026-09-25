@@ -273,7 +273,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                             settings,
                             offerChatContinuation: false,
                             "chat-system",
-                            cancellationToken).ConfigureAwait(false);
+                            cancellationToken,
+                            isToolOutput: true).ConfigureAwait(false);
                     }
                     continue;
                 }
@@ -310,10 +311,12 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         string promptId,
         CancellationToken cancellationToken,
         bool classifyDisplayIntent = false,
-        bool captureObservation = false)
+        bool captureObservation = false,
+        bool isToolOutput = false)
     {
         var response = await SendTurnAsync(
-            sessionId, userText, memory, settings, promptId, cancellationToken, classifyDisplayIntent, captureObservation).ConfigureAwait(false);
+            sessionId, userText, memory, settings, promptId, cancellationToken, classifyDisplayIntent, captureObservation,
+            isToolOutput).ConfigureAwait(false);
         return await OfferSuggestedActionsAsync(
             sessionId, response, memory, settings, offerChatContinuation, promptId, cancellationToken).ConfigureAwait(false);
     }
@@ -402,7 +405,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                         memory,
                         settings,
                         promptId,
-                        cancellationToken).ConfigureAwait(false);
+                        cancellationToken,
+                        isToolOutput: true).ConfigureAwait(false);
                     continue;
                 default:
                     throw new InvalidOperationException("The command suggestion view returned an unsupported action.");
@@ -462,7 +466,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         string promptId,
         CancellationToken cancellationToken,
         bool classifyDisplayIntent = false,
-        bool captureObservation = false)
+        bool captureObservation = false,
+        bool isToolOutput = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
         memory.SummaryRenderedSinceLastResult = false;
@@ -482,7 +487,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         {
             _shell.RenderWarning(warning);
         }
-        var update = memory.Memory.Add("user", userText);
+        var update = memory.Memory.Add("user", userText, isToolOutput);
         await AuditPruningAsync(sessionId, update.PrunedMessages, cancellationToken).ConfigureAwait(false);
         var response = await _shell.RunWithStatusAsync(
             _text.Text("Status.Thinking"),
@@ -726,6 +731,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             SystemInstructionTokens = response.ContextUsage.SystemInstructionTokens,
             GuideTokens = response.ContextUsage.GuideTokens,
             UserMessageTokens = response.ContextUsage.UserMessageTokens,
+            ToolOutputTokens = response.ContextUsage.ToolOutputTokens,
             AssistantMessageTokens = response.ContextUsage.AssistantMessageTokens,
             HasContextBreakdown = response.ContextUsage.InputBudgetTokens > 0,
             TurnCostUsd = response.RequestCount > 1 ? response.TurnCostUsd : response.EstimatedCostUsd,
@@ -958,6 +964,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             SystemInstructionTokens = context.SystemInstructionTokens,
             GuideTokens = context.GuideTokens,
             UserMessageTokens = context.UserMessageTokens,
+            ToolOutputTokens = context.ToolOutputTokens,
             AssistantMessageTokens = context.AssistantMessageTokens,
             HasContextBreakdown = true,
             MemoryTokens = memory.Envelope.Tokens,

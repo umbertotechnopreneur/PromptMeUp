@@ -78,6 +78,8 @@ public sealed record ShellRuntimeStatus(
 
     public long UserMessageTokens { get; init; }
 
+    public long ToolOutputTokens { get; init; }
+
     public long AssistantMessageTokens { get; init; }
 
     public bool HasContextBreakdown { get; init; }

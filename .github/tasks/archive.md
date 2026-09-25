@@ -1126,6 +1126,14 @@ Validation: parsed all 13 JSON palettes, reviewed the scoped diff, and calculate
 
 Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
 
+## 2026-09-25 — Show command-result tokens in the chat context bar
+
+- Mark command-result follow-ups locally while preserving their user role in OpenAI requests. Estimate their text tokens separately from human prompts and carry the breakdown into both the active chat bar and the session summary.
+- Give tool output its own colored share and six-language label. At narrow terminal widths, prioritize full labels for system, user, tool, and assistant over abbreviated extra metrics.
+- Built the Debug solution without warnings or errors and launched the updated Italian chat at 80 columns. The bottom bar displayed the four named context categories; no AI request or command was submitted.
+
+Validation: preflight, XML comment check, Debug build, and interactive UI preview passed. Automated tests were not requested. The auto-review rejected `dotnet format --verify-no-changes` because the owner had not explicitly authorized a formatter.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.

@@ -398,8 +398,8 @@ public sealed class ConsoleShellView : IConsoleShellView
         {
             var cells = AllocateContextBarCells(status, width);
             var useSymbols = UseContextBarSymbols();
-            char[] glyphs = useSymbols ? ['S', 'U', 'A', '.'] : ['━', '━', '━', '─'];
-            var colors = new[] { TerminalTheme.Warning, TerminalTheme.Info, TerminalTheme.Success, TerminalTheme.Muted };
+            char[] glyphs = useSymbols ? ['S', 'U', 'T', 'A', '.'] : ['━', '━', '━', '━', '─'];
+            var colors = new[] { TerminalTheme.Warning, TerminalTheme.Info, TerminalTheme.Accent, TerminalTheme.Success, TerminalTheme.Muted };
             var bar = new Paragraph();
             for (var index = 0; index < cells.Length; index++)
             {
@@ -434,12 +434,13 @@ public sealed class ConsoleShellView : IConsoleShellView
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(status.ContextBudgetTokens);
         ArgumentOutOfRangeException.ThrowIfNegative(status.SystemInstructionTokens);
         ArgumentOutOfRangeException.ThrowIfNegative(status.UserMessageTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(status.ToolOutputTokens);
         ArgumentOutOfRangeException.ThrowIfNegative(status.AssistantMessageTokens);
         ArgumentOutOfRangeException.ThrowIfNegative(status.GuideTokens);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(status.GuideTokens, status.SystemInstructionTokens);
-        var used = (decimal)status.SystemInstructionTokens + status.UserMessageTokens + status.AssistantMessageTokens;
+        var used = (decimal)status.SystemInstructionTokens + status.UserMessageTokens + status.ToolOutputTokens + status.AssistantMessageTokens;
         var capacity = Math.Max(status.ContextBudgetTokens, used);
-        decimal[] tokens = [status.SystemInstructionTokens, status.UserMessageTokens, status.AssistantMessageTokens, capacity - used];
+        decimal[] tokens = [status.SystemInstructionTokens, status.UserMessageTokens, status.ToolOutputTokens, status.AssistantMessageTokens, capacity - used];
         var exact = tokens.Select(value => value * width / capacity).ToArray();
         var cells = exact.Select(value => (int)decimal.Floor(value)).ToArray();
 
@@ -466,6 +467,7 @@ public sealed class ConsoleShellView : IConsoleShellView
         [
             TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextSystem", "S", useSymbols), FormatContextTokens(status.SystemInstructionTokens), TerminalTheme.Warning),
             TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextUser", "U", useSymbols), FormatContextTokens(status.UserMessageTokens), TerminalTheme.Info),
+            TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextTool", "T", useSymbols), FormatContextTokens(status.ToolOutputTokens), TerminalTheme.Accent),
             TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextAssistant", "A", useSymbols), FormatContextTokens(status.AssistantMessageTokens), TerminalTheme.Success),
             TerminalTheme.CompactMetric(ContextLegendLabel("Shell.ContextFree", ".", useSymbols), free, TerminalTheme.Muted),
             TerminalTheme.CompactMetric(_text.Text("Shell.ContextGuideIncluded"), FormatContextTokens(status.GuideTokens), TerminalTheme.Warning)
