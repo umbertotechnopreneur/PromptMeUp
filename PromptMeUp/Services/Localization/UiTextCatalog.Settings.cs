@@ -120,12 +120,12 @@ internal static partial class UiTextCatalog
             Spanish: "Define el tiempo de espera de los comandos y cuánta salida conservar.",
             Vietnamese: "Đặt thời gian chờ của lệnh và lượng đầu ra cần giữ lại."));
         entries.Add("Settings.PersonalizationHelp", new(
-            English: "Add personal instructions and choose whether to share location context.",
-            Italian: "Aggiungi istruzioni personali e scegli se condividere il contesto della posizione.",
-            French: "Ajoutez des instructions personnelles et choisissez de partager ou non le contexte de localisation.",
-            German: "Ergänzen Sie persönliche Anweisungen und wählen Sie, ob Standortkontext geteilt wird.",
-            Spanish: "Añade instrucciones personales y elige si compartes el contexto de ubicación.",
-            Vietnamese: "Thêm hướng dẫn cá nhân và chọn có chia sẻ ngữ cảnh vị trí hay không."));
+            English: "Choose your name, personal instructions, location context, and color theme.",
+            Italian: "Scegli come chiamarti, aggiungi istruzioni personali e regola posizione e tema colori.",
+            French: "Choisissez votre nom, vos instructions personnelles, le partage de votre position et le thème de couleurs.",
+            German: "Legen Sie Ihren Namen, persönliche Anweisungen, den Standortkontext und das Farbthema fest.",
+            Spanish: "Elige tu nombre, instrucciones personales, contexto de ubicación y tema de color.",
+            Vietnamese: "Chọn tên, hướng dẫn cá nhân, ngữ cảnh vị trí và giao diện màu."));
         entries.Add("Settings.ThemeHelp", new(
             English: "Preview a color palette; it becomes permanent only when you save settings.",
             Italian: "Visualizza una palette colori; diventa permanente solo quando salvi le impostazioni.",

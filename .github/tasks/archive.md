@@ -1480,3 +1480,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Moved the theme picker and palette preview into Personalization. The `--theme` shortcut opens that combined section.
 - Arranged the four welcome links as centered labels above linked addresses in four columns, with full-address rows on narrow terminals.
 - Validation: repository preflight, XML comments, formatting verification, and Release build passed. Automated tests and CLI smoke tests were not run.
+
+## 2026-09-27 — Verify the settings merge and terminal layouts
+
+- Updated the settings navigation tests for the eleven visible sections after moving Theme into Personalization.
+- Made the section shortcut range follow the actual page count and updated the Personalization help in all six languages to include the color theme.
+- Ran 1,031 tests successfully. Checked the fresh-install welcome at 80 and 160 columns, About, and the `--theme` settings screen in an interactive terminal.
+- Validation: preflight, XML comments, formatting verification, and warning-free Release build passed.
