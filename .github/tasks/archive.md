@@ -1473,3 +1473,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Published and signed the x64 Debug package at version 1.0.0.0 without changing the product version.
 - Replaced the equal-version test installation after Windows rejected an in-place update; preserved the local database and verified the installed payload, package registration, command alias, and About launch.
 - Cleaned the Debug build output. Temporary package staging and a local-data backup remain under ignored artifacts because automatic approval review blocked recursive cleanup.
+
+## 2026-09-26 — About title, settings appearance, and welcome links
+
+- Rendered the installation heading as plain text in the unboxed About separator, while keeping styled markup in the card header.
+- Moved the theme picker and palette preview into Personalization. The `--theme` shortcut opens that combined section.
+- Arranged the four welcome links as centered labels above linked addresses in four columns, with full-address rows on narrow terminals.
+- Validation: repository preflight, XML comments, formatting verification, and Release build passed. Automated tests and CLI smoke tests were not run.
