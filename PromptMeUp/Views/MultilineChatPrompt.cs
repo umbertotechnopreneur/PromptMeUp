@@ -58,6 +58,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                         EraseDraft();
                         TerminalHistoryView.Show(console, text, key, reader);
                         console.Cursor.Hide();
+                        TerminalPromptDock.Align(console, reservedRows: ReservedRows());
                         continue;
                     }
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)

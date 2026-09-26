@@ -86,8 +86,11 @@ public sealed class ConsoleShellView : IConsoleShellView
         var dividerWidth = Math.Max(1, width - (icon.Length + "P R O M P T M E U P".Length) - 1);
         _console.WriteLine();
         _console.MarkupLine($"{title} {ThemeSeparator.Markup(dividerWidth)}");
-        _console.MarkupLine($"  [bold {TerminalTheme.Info}]{Markup.Escape(_text.Text("Shell.OpeningKicker"))}[/]");
-        _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Tagline"))}[/]");
+        if (_projectBannerSchedule.TryMarkOpeningTipRenderedToday())
+        {
+            _console.MarkupLine($"  [bold {TerminalTheme.Info}]{Markup.Escape(_text.Text("Shell.OpeningKicker"))}[/]");
+            _console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(_text.Text("Tagline"))}[/]");
+        }
         _console.WriteLine();
     }
 
@@ -175,8 +178,11 @@ public sealed class ConsoleShellView : IConsoleShellView
         finally
         {
             session.State = outcome;
-            _console.Write(new TerminalActivityRow(message, outcome, elapsed.Elapsed, !Options.NoEmoji));
-            _console.WriteLine();
+            if (typeof(T) != typeof(CommandExecutionResult) || outcome != TerminalActivityState.Completed)
+            {
+                _console.Write(new TerminalActivityRow(message, outcome, elapsed.Elapsed, !Options.NoEmoji));
+                _console.WriteLine();
+            }
         }
     }
 
@@ -234,8 +240,8 @@ public sealed class ConsoleShellView : IConsoleShellView
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         _console.WriteLine();
-        _console.MarkupLine(
-            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}[/][{TerminalTheme.Primary}]{Markup.Escape(message)}[/]");
+        ConversationText.Write(_console, new Markup(
+            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}[/][{TerminalTheme.Primary}]{Markup.Escape(message)}[/]"));
         _console.WriteLine();
     }
 
@@ -255,8 +261,8 @@ public sealed class ConsoleShellView : IConsoleShellView
             return $"[bold {color}]{Markup.Escape(label)}[/]";
         });
         _console.WriteLine();
-        _console.MarkupLine(
-            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}[/][{TerminalTheme.Primary}]{_text.Text("Lab.Active", string.Join(", ", names))}[/]");
+        ConversationText.Write(_console, new Markup(
+            $"[bold {TerminalTheme.Info}]{TerminalTheme.IconPrefix(Options, "ℹ", "i")}[/][{TerminalTheme.Primary}]{_text.Text("Lab.Active", string.Join(", ", names))}[/]"));
         _console.WriteLine();
     }
 

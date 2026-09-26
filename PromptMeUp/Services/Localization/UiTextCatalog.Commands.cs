@@ -98,6 +98,27 @@ internal static partial class UiTextCatalog
             German: "Diesen exakten Befehl jetzt autorisieren?",
             Spanish: "¿Autorizar ahora este comando exacto?",
             Vietnamese: "Cấp quyền chạy chính xác lệnh này ngay bây giờ?"));
+        entries.Add("Command.Copy", new(
+            English: "Copy command without running it",
+            Italian: "Copia il comando senza eseguirlo",
+            French: "Copier la commande sans l’exécuter",
+            German: "Befehl kopieren, ohne ihn auszuführen",
+            Spanish: "Copiar el comando sin ejecutarlo",
+            Vietnamese: "Sao chép lệnh mà không chạy"));
+        entries.Add("Command.Copied", new(
+            English: "Command copied. Nothing was executed.",
+            Italian: "Comando copiato. Non è stato eseguito nulla.",
+            French: "Commande copiée. Rien n’a été exécuté.",
+            German: "Befehl kopiert. Nichts wurde ausgeführt.",
+            Spanish: "Comando copiado. No se ejecutó nada.",
+            Vietnamese: "Đã sao chép lệnh. Không có lệnh nào được chạy."));
+        entries.Add("Command.CopyFailed", new(
+            English: "Could not copy the command. Nothing was executed.",
+            Italian: "Impossibile copiare il comando. Non è stato eseguito nulla.",
+            French: "Impossible de copier la commande. Rien n’a été exécuté.",
+            German: "Befehl konnte nicht kopiert werden. Nichts wurde ausgeführt.",
+            Spanish: "No se pudo copiar el comando. No se ejecutó nada.",
+            Vietnamese: "Không thể sao chép lệnh. Không có lệnh nào được chạy."));
         entries.Add("Command.Cancelled", new(
             English: "Command cancelled; nothing was executed.",
             Italian: "Comando annullato; non è stato eseguito nulla.",

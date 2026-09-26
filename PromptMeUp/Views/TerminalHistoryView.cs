@@ -29,6 +29,9 @@ internal static class TerminalHistoryView
         var offset = 0;
         var lineCount = 0;
         FullscreenFrame? frame = null;
+        TerminalTurn? renderedTurn = null;
+        FullscreenFrame? renderedFrame = null;
+        SegmentLine[] lines = [];
 
         void Paint()
         {
@@ -36,8 +39,13 @@ internal static class TerminalHistoryView
             var width = Math.Max(1, console.Profile.Width - 1);
             var height = Math.Max(1, console.Profile.Height - 1);
             var turn = history.Turns[history.SelectedIndex!.Value];
-            var options = new RenderOptions(console.Profile.Capabilities, new Size(width, height));
-            var lines = Segment.SplitLines(turn.Content.Render(options, width)).ToArray();
+            if (renderedTurn != turn || renderedFrame != frame)
+            {
+                var options = new RenderOptions(console.Profile.Capabilities, new Size(width, height));
+                lines = Segment.SplitLines(turn.Content.Render(options, width)).ToArray();
+                renderedTurn = turn;
+                renderedFrame = frame;
+            }
             lineCount = lines.Length;
             var bodyRows = Math.Max(1, height - 4);
             offset = Math.Clamp(offset, 0, Math.Max(0, lineCount - bodyRows));
@@ -96,7 +104,11 @@ internal static class TerminalHistoryView
     /// <summary>Replaces one alternate-buffer row, including the unused cells of a previous longer line.</summary>
     private static void WriteRow(IAnsiConsole console, IRenderable content, int width, bool last = false)
     {
-        console.WriteAnsi(writer => writer.EraseInLine(2));
+        console.WriteAnsi(writer =>
+        {
+            writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
+            writer.EraseInLine(2);
+        });
         console.Write(new SegmentRow(Segment.Truncate(content.GetSegments(console), width)));
         if (!last) console.WriteLine();
     }
@@ -109,6 +121,9 @@ internal static class TerminalHistoryView
 
         /// <summary>Emits the visible slice of one prewrapped content row.</summary>
         public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) =>
-            Segment.Truncate(segments.Where(segment => !segment.IsLineBreak && !segment.IsControlCode), Math.Max(0, maxWidth));
+            Segment.Truncate(segments.Where(segment => !segment.IsLineBreak && !segment.IsControlCode), Math.Max(0, maxWidth))
+                .Select(segment => new Segment(segment.Text, new Style(
+                    segment.Style.Foreground == Color.Default ? Style.Parse(TerminalTheme.Primary).Foreground : segment.Style.Foreground,
+                    Style.Parse(TerminalTheme.Background).Foreground, segment.Style.Decoration), segment.Link));
     }
 }

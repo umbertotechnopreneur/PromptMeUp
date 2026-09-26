@@ -37,7 +37,7 @@ internal static class TerminalConversationPrompt
                     .Select(row => new Markup(row)));
             }
             rows.Add(new Markup($"[bold {TerminalTheme.Info}]{Markup.Escape(TerminalText.Clip(title, width))}[/]"));
-            var visible = Math.Clamp(console.Profile.Height - rows.Count - 4, 1, Math.Min(7, choices.Count));
+            var visible = Math.Clamp(console.Profile.Height - rows.Count - 5, 1, Math.Min(7, choices.Count));
             var first = Math.Clamp(selected - visible / 2, 0, choices.Count - visible);
             for (var index = first; index < first + visible; index++)
             {
@@ -50,9 +50,9 @@ internal static class TerminalConversationPrompt
                 rows.Add(new Markup($"[{style}]{Markup.Escape(TerminalText.Clip((index == selected ? "> " : "  ") + label, width))}[/]"));
             }
             var hint = text.Text("Terminal.ChoiceKeys", selected + 1, choices.Count);
-            if (FullscreenViewport.CanUse(console) && session.History.Turns.Count > 0)
-                hint += " · " + text.Text("Terminal.NavigationKeys");
             rows.Add(new Text(TerminalText.Clip(hint, width), Style.Parse(TerminalTheme.Muted)));
+            if (FullscreenViewport.CanUse(console) && session.History.Turns.Count > 0)
+                rows.Add(new Text(TerminalText.Clip(text.Text("Terminal.NavigationKeys"), width), Style.Parse(TerminalTheme.Muted)));
             return new Rows(rows);
         }
 
@@ -66,7 +66,7 @@ internal static class TerminalConversationPrompt
                     var key = input.ReadKey(() => context.UpdateTarget(Render()));
                     if (key is not { } pressed) continue;
                     if (TerminalHistoryView.IsShortcut(pressed)) return pressed;
-                    if (pressed.Key == ConsoleKey.Enter) return pressed;
+                    if (pressed.Key == ConsoleKey.Enter && pressed.Modifiers == 0) return pressed;
                     if (pressed.Key == ConsoleKey.Escape) throw new InteractiveFlowCanceledException();
                     if (numbered && choices.Count <= 10 && pressed.Modifiers == 0
                         && pressed.KeyChar is >= '0' and <= '9' && pressed.KeyChar - '0' < choices.Count)

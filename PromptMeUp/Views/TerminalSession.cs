@@ -23,6 +23,15 @@ internal sealed class TerminalSession
     /// <summary>Finds the console-local presentation state without coupling views to application services.</summary>
     internal static TerminalSession For(IAnsiConsole console) => Sessions.GetValue(console, _ => new TerminalSession());
 
+    /// <summary>Changes workflow identity without showing metrics left over from a different workflow.</summary>
+    internal void SetMode(ConversationDisplayMode mode, bool hasPromptDock = false)
+    {
+        var next = "Terminal.Mode." + mode;
+        if (ModeKey != next) LastStatus = null;
+        ModeKey = next;
+        HasPromptDock = hasPromptDock;
+    }
+
     /// <summary>Starts a new top-level invocation without changing terminal scrollback.</summary>
     internal void Reset(ConsoleRenderOptions options)
     {

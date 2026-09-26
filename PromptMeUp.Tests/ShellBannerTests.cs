@@ -48,6 +48,19 @@ public sealed class ShellBannerTests
         Assert.DoesNotContain(Compact(directory), compact, StringComparison.Ordinal);
     }
 
+    /// <summary>Verifies wrapped direct notices retain the same two-cell left margin as conversation text.</summary>
+    [Fact]
+    public void Notice_WrappedLinesKeepTwoCellIndent()
+    {
+        var (_, output, text, shell) = CreateConsole(48, noEmoji: true);
+
+        shell.RenderNotice(text.Text("Direct.Active"));
+
+        var lines = output.ToString().Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
+        Assert.True(lines.Length > 1);
+        Assert.All(lines, line => Assert.StartsWith("  ", line, StringComparison.Ordinal));
+    }
+
     /// <summary>Verifies active context and operating budgets remain distinct from last-call and cumulative usage.</summary>
     [Theory]
     [InlineData(48, true)]

@@ -22,18 +22,22 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     private readonly ILocalizationService _text;
     private readonly IPoorMarkdownRenderer _markdown;
     private readonly IConsoleShellView _shell;
+    private readonly ICommandClipboard _clipboard;
+    private string? _previewedCommand;
 
     /// <summary>Creates the mandatory preview and authorization gate for shell commands.</summary>
     public CommandAuthorizationView(
         IAnsiConsole console,
         ILocalizationService text,
         IPoorMarkdownRenderer markdown,
-        IConsoleShellView shell)
+        IConsoleShellView shell,
+        ICommandClipboard clipboard)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _text = text ?? throw new ArgumentNullException(nameof(text));
         _markdown = markdown ?? throw new ArgumentNullException(nameof(markdown));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
+        _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
     }
 
     /// <summary>Renders the same exact command, risk assessment and output notice for both interaction views.</summary>
@@ -41,6 +45,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ArgumentNullException.ThrowIfNull(assessment);
+        _previewedCommand = command;
         var color = RiskColor(assessment.Level);
         TerminalTheme.WriteSection(
             _console,
@@ -48,7 +53,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
             command,
             TerminalTheme.Info);
         _console.MarkupLine(
-            $"[bold {color}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/]");
+            $" [bold {color}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/]");
         _console.WriteLine();
         var reviewIcon = TerminalTheme.IconPrefix(_shell.Options, assessment.UsedAi ? "🤖" : "🛡", assessment.UsedAi ? "AI" : "!");
         _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(reviewIcon)}{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
@@ -57,10 +62,10 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         _console.WriteLine();
         if (!string.IsNullOrWhiteSpace(assessment.Advisory))
         {
-            _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(assessment.Advisory)}[/]");
+            ConversationText.Write(_console, new Markup($"[{TerminalTheme.Warning}]{Markup.Escape(assessment.Advisory)}[/]"));
         }
 
-        _console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.SendOutput"))}[/]");
+        ConversationText.Write(_console, new Markup($"[{TerminalTheme.Warning}]{Markup.Escape(_text.Text("Command.SendOutput"))}[/]"));
         _console.WriteLine();
     }
 
@@ -80,7 +85,19 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     /// <summary>Asks for explicit approval with a default-negative prompt in the normal view.</summary>
     private bool Confirm()
     {
-        var authorized = TerminalConversationPrompt.Confirm(_console, _text, _text.Text("Command.Authorize"));
+        var choice = TerminalConversationPrompt.Select(_console, _text,
+        [
+            new TerminalMenuChoice<CommandDecision>(CommandDecision.Cancel, _text.Text("Common.No"), Tone: TerminalMenuTone.Muted),
+            new TerminalMenuChoice<CommandDecision>(CommandDecision.Execute, _text.Text("Common.Yes"), Tone: TerminalMenuTone.Caution),
+            new TerminalMenuChoice<CommandDecision>(CommandDecision.Copy, _text.Text("Command.Copy"))
+        ], _text.Text("Command.Authorize"));
+        if (choice == CommandDecision.Copy)
+        {
+            var copied = _previewedCommand is not null && _clipboard.TryCopy(_previewedCommand);
+            _console.MarkupLine($"  [{(copied ? TerminalTheme.Success : TerminalTheme.Warning)}]{Markup.Escape(_text.Text(copied ? "Command.Copied" : "Command.CopyFailed"))}[/]");
+            return false;
+        }
+        var authorized = choice == CommandDecision.Execute;
         if (!authorized)
         {
             _console.Write(new TerminalActivityRow(_text.Text("Command.Cancelled"),
@@ -90,6 +107,8 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
 
         return authorized;
     }
+
+    private enum CommandDecision { Cancel, Execute, Copy }
 
     /// <summary>Shows bounded stdout, stderr, timeout, and exit metadata after an authorized command finishes.</summary>
     public void RenderExecutionResult(CommandExecutionResult result)

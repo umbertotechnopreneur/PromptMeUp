@@ -71,6 +71,24 @@ public sealed class TerminalComponentsTests
         Assert.Single(history.Turns);
     }
 
+    /// <summary>Prevents context and cost from a previous workflow leaking into another mode's prompt.</summary>
+    [Fact]
+    public void Session_ChangesModeWithoutReusingUnrelatedMetrics()
+    {
+        var console = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(new StringWriter()) });
+        var session = TerminalSession.For(console);
+        session.LastStatus = ShellRuntimeStatus.FromSettings(AppSettings.Default);
+        session.History.Add(TerminalTurnKind.User, "question", new Text("question"), 8);
+        session.SetMode(ConversationDisplayMode.Plan);
+        Assert.Null(session.LastStatus);
+        Assert.False(session.HasPromptDock);
+        Assert.Single(session.History.Turns);
+        session.SetMode(ConversationDisplayMode.Chat, hasPromptDock: true);
+        Assert.True(session.HasPromptDock);
+        session.Reset(new ConsoleRenderOptions(true, true));
+        Assert.Empty(session.History.Turns);
+    }
+
     /// <summary>Preserves full output in redirected terminals where no details hotkey can be used.</summary>
     [Fact]
     public void Disclosure_NoninteractiveConsole_KeepsCompleteLiteralOutput()

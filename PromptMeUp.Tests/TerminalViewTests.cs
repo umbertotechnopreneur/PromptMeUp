@@ -166,7 +166,7 @@ public sealed class TerminalViewTests
         text.SetLanguage("it");
         var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false));
-        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell);
+        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell, new CommandClipboard());
 
         view.RenderExecutionResult(new CommandExecutionResult(
             Command: "git branch --all",
@@ -183,6 +183,52 @@ public sealed class TerminalViewTests
         Assert.Contains("Troncato:", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╭", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╮", rendered, StringComparison.Ordinal);
+    }
+
+    /// <summary>Verifies the copy choice transfers the exact previewed command and never authorizes execution.</summary>
+    [Fact]
+    public async Task CommandPreview_CopyChoice_DoesNotAuthorizeExecution()
+    {
+        var keys = new Queue<ConsoleKeyInfo>(
+        [
+            new('\0', ConsoleKey.DownArrow, false, false, false),
+            new('\0', ConsoleKey.DownArrow, false, false, false),
+            new('\r', ConsoleKey.Enter, false, false, false)
+        ]);
+        var input = TestProxy.Create<IAnsiConsoleInput>((method, _) => method.Name switch
+        {
+            "IsKeyAvailable" => keys.Count > 0,
+            "ReadKey" => keys.Dequeue(),
+            "ReadKeyAsync" => Task.FromResult<ConsoleKeyInfo?>(keys.Dequeue()),
+            _ => throw new NotSupportedException(method.Name)
+        });
+        var rendering = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.Yes,
+            Interactive = InteractionSupport.Yes,
+            Out = new AnsiConsoleOutput(new StringWriter())
+        });
+        var console = TestProxy.Create<IAnsiConsole>((method, args) =>
+            method.Name == "get_Input" ? input : method.Invoke(rendering, args));
+        var text = new LocalizationService();
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
+        shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: true));
+        string? copied = null;
+        var clipboard = TestProxy.Create<ICommandClipboard>((method, args) =>
+        {
+            if (method.Name != "TryCopy") throw new NotSupportedException(method.Name);
+            copied = (string?)args![0];
+            return true;
+        });
+        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell, clipboard);
+        const string command = "git status --short && echo café";
+        view.RenderPreview(command, new CommandRiskAssessment(5, CommandRiskLevel.Low, "Safe preview.", false, null));
+
+        var authorized = await view.AuthorizeAsync(CommandExecutionMode.Confirm, CancellationToken.None);
+
+        Assert.False(authorized);
+        Assert.Equal(command, copied);
+        Assert.Empty(keys);
     }
 
     /// <summary>Creates a deterministic colorless Spectre console backed by an in-memory writer.</summary>

@@ -1432,3 +1432,11 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Preserved default-negative approvals and command selection as a separate step from authorization. Details viewers run after the inline menu releases its rendering scope.
 - Documented reusable controls, optional borders, keyboard navigation, inline/fullscreen behavior, and local retention limits in `docs/terminal-ui.md`.
 - Validation: Release build, XML comments, complete solution formatting, and 152 focused UI, localization, workflow, and authorization tests passed.
+
+## 2026-09-26 — Terminal UI refinement audit and command-flow polish
+
+- Reused the fullscreen viewport and input controls in About, cached expanded turn rendering, and cleared stale session metrics when switching between chat, plan, and script.
+- Aligned wrapped direct-mode notices, active skills, and command-review warnings in the shared conversation column.
+- Showed the opening command tip once per local day, independently of the daily project footer.
+- Added a default-safe command authorization choice that copies the exact previewed command to the Windows clipboard without running it.
+- Validation: Release build, repository preflight, XML comments, formatting verification, and 1,030 tests passed. Interactive desktop rendering and clipboard integration remain unverified.

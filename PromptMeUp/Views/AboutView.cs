@@ -23,12 +23,13 @@ public sealed class AboutView(
     private int _offset;
     private int _lineCount;
     private int _visibleRows;
-    private (int Width, int Height, string Theme)? _lastFrame;
+    private FullscreenFrame? _lastFrame;
+    private readonly FullscreenInput _input = new(console, text);
 
     /// <summary>Uses a disposable fullscreen buffer when supported and ordinary scrolling output otherwise.</summary>
     public void Render()
     {
-        if (!FullscreenHelpView.CanUse(console))
+        if (!FullscreenViewport.CanUse(console))
         {
             TerminalTheme.WriteRule(console, text.Text("About.Title"));
             console.Write(CreateContent());
@@ -39,25 +40,18 @@ public sealed class AboutView(
 
         _offset = 0;
         _lastFrame = null;
+        _input.Reset();
         try
         {
-            console.AlternateScreen(() =>
-            {
-                console.Cursor.Hide();
-                try
-                {
-                    RunLoop();
-                }
-                finally
-                {
-                    console.WriteAnsi(writer => writer.ResetStyle());
-                    console.Cursor.Show();
-                }
-            });
+            FullscreenViewport.Run(console, RunLoop);
         }
         catch (InteractiveFlowCanceledException)
         {
             // Escape closes this read-only page without canceling the surrounding application.
+        }
+        finally
+        {
+            _input.Reset();
         }
     }
 
@@ -75,7 +69,7 @@ public sealed class AboutView(
         while (true)
         {
             PaintScreen();
-            var key = ReadKey();
+            var key = _input.ReadKey(PaintScreen) ?? throw new IOException(text.Text("Form.EndOfInput"));
             if (key.Key is ConsoleKey.Enter or ConsoleKey.Escape or ConsoleKey.Q)
             {
                 return;
@@ -94,44 +88,10 @@ public sealed class AboutView(
         }
     }
 
-    /// <summary>Keeps shutdown cancellable and repaints the viewport when it is resized while waiting for input.</summary>
-    private ConsoleKeyInfo ReadKey()
-    {
-        var pending = ReadKeyAsync();
-        var dimensions = (console.Profile.Width, console.Profile.Height);
-        while (!pending.IsCompleted)
-        {
-            Task.WhenAny(pending, Task.Delay(100)).GetAwaiter().GetResult();
-            var current = (console.Profile.Width, console.Profile.Height);
-            if (current != dimensions)
-            {
-                dimensions = current;
-                PaintScreen();
-            }
-        }
-        return pending.GetAwaiter().GetResult()
-            ?? throw new IOException(text.Text("Form.EndOfInput"));
-    }
-
-    /// <summary>Reads through the host wrapper so Escape and application cancellation retain their normal behavior.</summary>
-    private async Task<ConsoleKeyInfo?> ReadKeyAsync() =>
-        await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
-
     /// <summary>Fits styled content between the shared fullscreen header and footer without erasing terminal history.</summary>
     private void PaintScreen()
     {
-        var frame = (console.Profile.Width, console.Profile.Height, TerminalTheme.Current.Id);
-        console.WriteAnsi(writer =>
-        {
-            if (_lastFrame != frame)
-            {
-                // This erase is confined to the temporary alternate buffer.
-                writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
-                writer.EraseInDisplay(2);
-            }
-            writer.CursorHome();
-        });
-        _lastFrame = frame;
+        _lastFrame = FullscreenViewport.BeginFrame(console, _lastFrame);
         var width = Math.Max(1, console.Profile.Width - 1);
         var height = Math.Max(1, console.Profile.Height - 1);
         if (console.Profile.Width < 60 || console.Profile.Height < 20)

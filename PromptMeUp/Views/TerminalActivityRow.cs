@@ -13,7 +13,7 @@ internal sealed class TerminalActivityRow(string label, TerminalActivityState st
     TimeSpan? elapsed = null, bool useSymbols = true) : IRenderable
 {
     /// <summary>Lets the parent allocate a single row at the available terminal width.</summary>
-    public Measurement Measure(RenderOptions options, int maxWidth) => new(1, Math.Max(1, maxWidth));
+    public Measurement Measure(RenderOptions options, int maxWidth) => new(Math.Min(1, Math.Max(0, maxWidth)), Math.Max(0, maxWidth));
 
     /// <summary>Keeps the status and duration visible while clipping only the activity label.</summary>
     public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)

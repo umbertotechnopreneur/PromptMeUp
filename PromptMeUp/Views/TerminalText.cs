@@ -9,8 +9,8 @@ namespace PromptMeUp.Views;
 /// <summary>Provides safe display text and terminal-cell sizing for shared inline controls.</summary>
 internal static class TerminalText
 {
-    /// <summary>Removes terminal control sequences while retaining readable lines and expanded tabs.</summary>
-    internal static string Safe(string value) => new(value.Replace("\r\n", "\n", StringComparison.Ordinal)
+    /// <summary>Removes terminal control characters while retaining readable lines and expanded tabs.</summary>
+    internal static string Safe(string value) => new(value.ReplaceLineEndings("\n")
         .Replace("\t", "    ", StringComparison.Ordinal)
         .Where(character => character == '\n' || !char.IsControl(character)).ToArray());
 

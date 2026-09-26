@@ -21,7 +21,7 @@ internal sealed class CommandCountdownView(
         {
             throw new InvalidOperationException(text.Text("Error.InteractiveRequired"));
         }
-        console.MarkupLine($"[{TerminalTheme.Warning}]{Markup.Escape(text.Text("Direct.Keys"))}[/]");
+        ConversationText.Write(console, new Markup($"[{TerminalTheme.Warning}]{Markup.Escape(text.Text("Direct.Keys"))}[/]"));
         console.WriteLine();
         return await console.Progress().AutoClear(false).HideCompleted(false)
             .Columns(new TaskDescriptionColumn(), new ProgressBarColumn
@@ -79,5 +79,5 @@ internal sealed class CommandCountdownView(
 
     /// <summary>Formats a high-contrast localized countdown label.</summary>
     private string Description(int seconds) =>
-        $"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Direct.Countdown", seconds))}[/]";
+        $"  [bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Direct.Countdown", seconds))}[/]";
 }

@@ -41,8 +41,10 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IProjectBannerSchedule>(provider => new ProjectBannerSchedule(
             Path.Combine(paths.DataDirectory, "project-banner-date.txt"),
+            Path.Combine(paths.DataDirectory, "opening-tip-date.txt"),
             TimeProvider.System,
             provider.GetRequiredService<ILogger<ProjectBannerSchedule>>()));
+        services.AddSingleton<ICommandClipboard, CommandClipboard>();
         services.AddSingleton<IThemeCatalogService>(_ => new ThemeCatalogService(Path.Combine(AppContext.BaseDirectory, "themes")));
         services.AddSingleton<IEnvironmentSecretService, EnvironmentSecretService>();
         services.AddSingleton<ISensitiveDataRedactor, SensitiveDataRedactor>();

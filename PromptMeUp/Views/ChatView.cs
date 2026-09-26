@@ -48,7 +48,7 @@ public sealed class ChatView : IChatView
     public void RenderIntro()
     {
         _inputHintShown = false;
-        TerminalSession.For(_console).HasPromptDock = true;
+        TerminalSession.For(_console).SetMode(ConversationDisplayMode.Chat, hasPromptDock: true);
         var icon = TerminalTheme.IconPrefix(_shell.Options, "💬", ">");
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("Chat.Title")}", TerminalTheme.Accent);
         var shortcuts = new[] { _text.Text("Chat.Command.RunSyntax"), "/status", "/exit", "/help" };
