@@ -315,7 +315,8 @@ public sealed class MemoryManagerView : IMemoryManagerView
         var height = frame.Height - 1;
         var width = frame.Width - 1;
         var bodyRows = height - FullscreenHeader.Height - FullscreenFooter.Height();
-        var contentWidth = width - FullscreenWorkspace.SidebarWidth(frame.Width) - 4;
+        var sidebarWidth = MemorySidebarWidth(frame.Width);
+        var contentWidth = width - sidebarWidth - 4;
         var entry = entries[_navigator.SelectedIndex];
         _navigator.IsFocused = _focus == EditorFocus.Sections;
         var renderOptions = new RenderOptions(_console.Profile.Capabilities, new Size(width, height));
@@ -331,7 +332,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _actionIndex = Math.Clamp(_actionIndex, 0, actions.Count - 1);
         var buttons = TerminalActionBar.Create(actions.Select((action, index) => new TerminalAction(
             _text.Text(action.LabelKey), action.Color, _focus == EditorFocus.Actions && index == _actionIndex)).ToArray());
-        var notice = Notice(entry, proposals, feedback, feedbackIsError);
+        var notice = Notice(entry, proposals, feedback, feedbackIsError, width);
         var hintKey = _editing ? "MemoryManager.EditorKeys"
             : _focus == EditorFocus.Sections ? "Form.SectionsFooter"
             : _focus == EditorFocus.Editor ? "MemoryManager.DetailKeys"
@@ -342,8 +343,14 @@ public sealed class MemoryManagerView : IMemoryManagerView
             FullscreenFooter.Shortcuts(_text.Text(hintKey), _text.Text(hintKey + "Compact"), width - 4));
         _console.Write(FullscreenWorkspace.Create(_text.Text("Settings.Memories"), _shell.Options, frame.Width,
             body, _navigator.Render(entries, NavigationLabel, bodyRows, _text.Text("Form.Sections"),
-                _console.Profile.Capabilities.Unicode), footer, FullscreenFooter.NoticeRows));
+                _console.Profile.Capabilities.Unicode), footer, FullscreenFooter.NoticeRows,
+            sidebarWidth: sidebarWidth));
     }
+
+    /// <summary>Gives saved-note previews enough room to remain distinguishable on ordinary terminals.</summary>
+    private static int MemorySidebarWidth(int terminalWidth) => terminalWidth >= 76
+        ? Math.Min(34, terminalWidth / 3 + 4)
+        : FullscreenWorkspace.SidebarWidth(terminalWidth);
 
     /// <summary>Builds stable create, suggestions, and saved-note entries for the numbered sidebar.</summary>
     private IReadOnlyList<NavigationEntry> Entries(IReadOnlyList<PersistentMemory> memories, MemoryProposalWorkspace proposals) =>
@@ -780,7 +787,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
 
     /// <summary>Chooses a stable footer notice from validation, confirmation, persistence, or page guidance.</summary>
     private (string Text, string Color) Notice(NavigationEntry entry, MemoryProposalWorkspace proposals,
-        string? feedback, bool feedbackIsError)
+        string? feedback, bool feedbackIsError, int width)
     {
         if (_error is not null)
         {
@@ -803,9 +810,11 @@ public sealed class MemoryManagerView : IMemoryManagerView
         }
         if (entry.Kind == NavigationKind.Proposals && proposals.Proposals.Count == 0)
         {
-            return (_text.Text("Lab.None"), TerminalTheme.Muted);
+            return (_text.Text("MemoryManager.NoProposalsHint"), TerminalTheme.Muted);
         }
-        return (_text.Text(entry.Kind == NavigationKind.Proposals ? "Lab.Proposals" : "MemoryManager.NoteHelp"), TerminalTheme.Muted);
+        var key = entry.Kind == NavigationKind.Proposals ? "Lab.Proposals"
+            : width < 100 ? "MemoryManager.NoteHelpCompact" : "MemoryManager.NoteHelp";
+        return (_text.Text(key), TerminalTheme.Muted);
     }
 
     /// <summary>Returns the current draft for the selected note or proposal.</summary>

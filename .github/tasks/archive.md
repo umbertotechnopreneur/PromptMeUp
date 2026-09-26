@@ -1460,3 +1460,10 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Added vertical space around shared inline choices and around the confirmed selection in terminal scrollback.
 - Replaced the mechanical conversation-continuation hint, menu heading, and chat choice with shorter, natural wording in all six supported languages. Simplified the suggested-command safety hint without changing the authorization flow.
 - Validation: repository preflight, XML comments, formatting verification, and Release build passed. Automated tests and interactive rendering were not run for this copy and spacing change.
+
+## 2026-09-26 — Saved-memory layout check in an interactive terminal
+
+- Widened only the saved-memory sidebar when space permits so notes with similar starts remain distinguishable.
+- Added a compact editing hint for narrow terminals and replaced the repeated empty-proposals footer with useful guidance.
+- Checked empty, single-note, multiple-note, and empty-proposal views in an 80-column interactive Windows terminal. Also reviewed settings, skills, and learning layouts for similar issues.
+- Validation: 1,031 tests, formatting verification, repository preflight, XML comments, and Debug and Release builds passed.

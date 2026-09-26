@@ -105,6 +105,20 @@ internal static partial class UiTextCatalog
             German: "Bis zu 1.000 Zeichen. Enter bearbeitet dieses Textfeld; Strg+Enter übernimmt die Änderung.",
             Spanish: "Hasta 1.000 caracteres. Intro edita esta área de texto; Ctrl+Intro acepta el cambio.",
             Vietnamese: "Tối đa 1.000 ký tự. Enter sửa vùng văn bản; Ctrl+Enter chấp nhận thay đổi."));
+        entries.Add("MemoryManager.NoteHelpCompact", new(
+            English: "Enter: edit · Ctrl+Enter: accept the edit",
+            Italian: "Invio: modifica · Ctrl+Invio: conferma",
+            French: "Entrée : modifier · Ctrl+Entrée : valider",
+            German: "Enter: ändern · Strg+Enter: übernehmen",
+            Spanish: "Intro: editar · Ctrl+Intro: aceptar",
+            Vietnamese: "Enter: sửa · Ctrl+Enter: xác nhận"));
+        entries.Add("MemoryManager.NoProposalsHint", new(
+            English: "New suggestions will appear here when available.",
+            Italian: "Le nuove proposte compariranno qui.",
+            French: "Les nouvelles suggestions apparaîtront ici.",
+            German: "Neue Vorschläge erscheinen hier.",
+            Spanish: "Las nuevas sugerencias aparecerán aquí.",
+            Vietnamese: "Đề xuất mới sẽ xuất hiện tại đây."));
         entries.Add("MemoryManager.EditorKeys", new(
             "Type: edit | Enter: new line | Ctrl+Enter: apply | Esc: discard",
             "Scrivi: modifica | Invio: nuova riga | Ctrl+Invio: applica | Esc: scarta",
