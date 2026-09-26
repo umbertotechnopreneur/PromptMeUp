@@ -1487,3 +1487,12 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Made the section shortcut range follow the actual page count and updated the Personalization help in all six languages to include the color theme.
 - Ran 1,031 tests successfully. Checked the fresh-install welcome at 80 and 160 columns, About, and the `--theme` settings screen in an interactive terminal.
 - Validation: preflight, XML comments, formatting verification, and warning-free Release build passed.
+
+## 2026-09-27 — Refine shared settings and welcome layouts
+
+- Grouped Personalization into Profile and Appearance, shortened field labels in all six languages, and made theme metadata optional without changing saved preferences.
+- Shared label/value alignment between editable controls, wrapped metadata, and palette samples through `TerminalFormRow`. Group headings preserve the focused field in compact viewports.
+- Added `TerminalLinkGrid` with four, two, or one centered columns, always displaying complete addresses even without terminal hyperlink support.
+- Unified the welcome, home, and About wordmark with active theme colors and a compact variant; preserved artwork columns when centering.
+- Fixed the saved-memory footer's section count. Added regressions for theme disclosure, small grouped forms, link layouts, and centered artwork.
+- Validation: 1,043 tests, repository preflight, XML comments, formatting verification, and a warning-free Release build passed. Checked settings at 160×45 and 60×20, including opening, scrolling, and closing theme details; checked the welcome at 120 columns and About at 120×40 in Windows ConPTY. Release output was cleaned after validation.

@@ -1,6 +1,6 @@
 ﻿## Task
 
-- [ ] Refine shared settings grouping, theme disclosure, welcome links, and product branding; verify compact terminal layouts and checkpoint the focused changes.
+- [ ] Remove the disposable welcome profile under `artifacts/smoke/layout-refinement-20260927/`. Release build output was cleaned; automatic approval review blocked removal of this smoke-test directory.
 
 - [ ] Remove temporary publish and payload directories from `artifacts/msix/debug/1.0.0.0-startup-fix-20260924/` and the superseded `1.0.0.1-startup-fix-20260924/` build. Preserve the final signed 1.0.0.0 package and diagnostic records. Standard .NET cleanup succeeded; recursive cleanup was not retried after the earlier policy rejection.
 
