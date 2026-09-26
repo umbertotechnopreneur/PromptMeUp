@@ -35,7 +35,7 @@ internal sealed class WelcomeBanner(bool compact = false) : IRenderable
     public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) =>
         CreateContent(options, maxWidth).Render(options, maxWidth);
 
-    /// <summary>Keeps the product name readable when the full nine-letter wordmark cannot fit.</summary>
+    /// <summary>Keeps the product name readable when the full wordmark cannot fit.</summary>
     private IRenderable CreateContent(RenderOptions options, int maxWidth)
     {
         const string word = "PROMPTMEUP";
@@ -48,7 +48,7 @@ internal sealed class WelcomeBanner(bool compact = false) : IRenderable
         var rows = new List<IRenderable>();
         for (var row = 0; row < 7; row++)
         {
-            var line = string.Join(' ', word.Select(letter => Glyphs[letter][row])).TrimEnd();
+            var line = string.Join(' ', word.Select(letter => Glyphs[letter][row]));
             if (options.Capabilities.Unicode)
             {
                 line = line.Replace('#', '█');
