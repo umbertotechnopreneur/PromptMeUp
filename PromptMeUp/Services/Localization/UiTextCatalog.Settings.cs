@@ -7,6 +7,32 @@ internal static partial class UiTextCatalog
     /// <summary>Adds the shared settings workspace labels and section guidance in all six languages.</summary>
     private static void AddSettingsEntries(Dictionary<string, LocalizedText> entries)
     {
+        entries.Add("Settings.ProfileGroup", new(
+            English: "Profile", Italian: "Profilo", French: "Profil", German: "Profil", Spanish: "Perfil", Vietnamese: "Hồ sơ"));
+        entries.Add("Settings.AppearanceGroup", new(
+            English: "Appearance", Italian: "Aspetto", French: "Apparence", German: "Darstellung", Spanish: "Apariencia", Vietnamese: "Giao diện"));
+        entries.Add("Settings.ProfileName", new(
+            English: "Name", Italian: "Nome", French: "Nom", German: "Name", Spanish: "Nombre", Vietnamese: "Tên"));
+        entries.Add("Settings.PersonalInstructions", new(
+            English: "Personal instructions", Italian: "Istruzioni personali", French: "Instructions personnelles",
+            German: "Persönliche Anweisungen", Spanish: "Instrucciones personales", Vietnamese: "Hướng dẫn cá nhân"));
+        entries.Add("Settings.ShareLocation", new(
+            English: "Share location", Italian: "Condividi posizione", French: "Partager la position",
+            German: "Standort teilen", Spanish: "Compartir ubicación", Vietnamese: "Chia sẻ vị trí"));
+        entries.Add("Settings.ThemeDetails", new(
+            English: "Theme details", Italian: "Dettagli del tema", French: "Détails du thème",
+            German: "Theme-Details", Spanish: "Detalles del tema", Vietnamese: "Chi tiết giao diện"));
+        entries.Add("Settings.DetailsHidden", new(
+            English: "Hidden", Italian: "Nascosti", French: "Masqués", German: "Ausgeblendet", Spanish: "Ocultos", Vietnamese: "Ẩn"));
+        entries.Add("Settings.DetailsShown", new(
+            English: "Visible", Italian: "Visibili", French: "Visibles", German: "Sichtbar", Spanish: "Visibles", Vietnamese: "Hiện"));
+        entries.Add("Settings.ThemeDetailsHelp", new(
+            English: "Show the theme's author, website, description, and file.",
+            Italian: "Mostra autore, sito web, descrizione e file del tema.",
+            French: "Afficher l’auteur, le site, la description et le fichier du thème.",
+            German: "Autor, Website, Beschreibung und Datei des Themes anzeigen.",
+            Spanish: "Muestra el autor, el sitio web, la descripción y el archivo del tema.",
+            Vietnamese: "Hiện tác giả, trang web, mô tả và tệp giao diện."));
         entries.Add("Settings.Title", new(
             English: "Settings",
             Italian: "Impostazioni",

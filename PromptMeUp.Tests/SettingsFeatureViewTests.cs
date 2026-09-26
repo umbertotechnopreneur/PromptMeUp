@@ -13,6 +13,30 @@ namespace PromptMeUp.Tests;
 public sealed class SettingsFeatureViewTests
 {
     private const int SectionCount = 11;
+    private const int PersonalizationFieldCount = 5;
+    private const int SkillsSectionIndex = 6;
+
+    /// <summary>Theme attribution is opt-in and viewing it never changes the saved preferences.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Collect_ThemeDetails_AreOptionalAndDoNotChangeTheDraft(bool expanded)
+    {
+        var input = expanded ? Choose(4).Concat(Choose(1)) : [];
+        var harness = Create(input.Concat(Choose(PersonalizationFieldCount + SectionCount)));
+        var state = State(SettingsSection.Theme, null);
+        state = state with { Settings = state.Settings with { SetupCompleted = true } };
+
+        var submission = harness.View.Collect(state);
+
+        Assert.NotNull(submission);
+        Assert.Equal(state.Settings with { UpdatedAt = submission.Settings.UpdatedAt }, submission.Settings);
+        var output = Plain(harness.Output);
+        Assert.Contains(harness.Text.Text("Settings.ProfileGroup"), output, StringComparison.Ordinal);
+        Assert.Contains(harness.Text.Text("Settings.AppearanceGroup"), output, StringComparison.Ordinal);
+        Assert.Equal(expanded, output.Contains(harness.Text.Text("Theme.Metadata.Path"), StringComparison.Ordinal));
+        Assert.Empty(harness.Keys);
+    }
 
     /// <summary>Viewing and saving unchanged tabs neither opens child menus nor submits feature edits.</summary>
     [Theory]
@@ -77,7 +101,7 @@ public sealed class SettingsFeatureViewTests
     public void Collect_FeatureEdit_PreservesPersonalizationDraft()
     {
         var typed = "Draft name".Select(character => new ConsoleKeyInfo(character, (ConsoleKey)0, false, false, false)).Append(Key(ConsoleKey.Enter));
-        var harness = Create(Choose(0).Concat(typed).Concat(Choose(3 + 7))
+        var harness = Create(Choose(0).Concat(typed).Concat(Choose(PersonalizationFieldCount + SkillsSectionIndex))
             .Concat(Choose(0)).Concat(Choose(1)).Concat(Choose(2 + SectionCount)));
         var state = State(SettingsSection.Personalization, new(new(), 0, 0));
 

@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Reflection;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Views;
@@ -9,6 +10,24 @@ namespace PromptMeUp.Tests;
 
 public sealed class GlobalMemoryViewTests
 {
+    /// <summary>The fullscreen shortcut range follows the visible entries instead of leaking a format placeholder.</summary>
+    [Fact]
+    public void FullscreenFooter_UsesTheMemoryEntryCount()
+    {
+        var harness = Create("it", []);
+        harness.Console.Profile.Height = 35;
+        var view = new MemoryManagerView(harness.Console, harness.Text, harness.Shell);
+        var memories = new[] { Note(false), Note(true) with { Id = new string('b', 32) } };
+        var entries = typeof(MemoryManagerView).GetMethod("Entries", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(view, [memories, MemoryProposalWorkspace.Disabled]);
+
+        typeof(MemoryManagerView).GetMethod("PaintScreen", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(view, [memories, MemoryProposalWorkspace.Disabled, entries, null, false]);
+
+        Assert.Contains("1–3:", harness.Output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", harness.Output.ToString(), StringComparison.Ordinal);
+    }
+
     /// <summary>The unified workspace creates one global saved note directly from its central editor.</summary>
     [Fact]
     public void Choose_CreateNote_ReturnsReviewedText()

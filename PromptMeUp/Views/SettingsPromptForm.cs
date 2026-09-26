@@ -81,18 +81,22 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
     /// <summary>Shows aligned draft values with blank rows while keeping secret contents hidden.</summary>
     private void RenderFields(IReadOnlyList<FormField> fields)
     {
-        var grid = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
+        string? group = null;
         foreach (var field in fields)
         {
+            if (field.GroupKey is not null && field.GroupKey != group)
+            {
+                console.Write(new ThemeSeparator(text.Text(field.GroupKey)));
+            }
+            group = field.GroupKey;
             var value = field.Secret
                 ? field.Display?.Invoke() ?? text.Text("Form.SecretInput")
-                : field.Choices?.Invoke().FirstOrDefault(choice => choice.Value == field.Read())?.Label ?? field.Read();
-            grid.AddRow(
+                : field.Display?.Invoke() ?? field.Choices?.Invoke().FirstOrDefault(choice => choice.Value == field.Read())?.Label ?? field.Read();
+            console.Write(new TerminalFormRow(
                 new Text(FullscreenForm.FieldLabel(field, text), Style.Parse(TerminalTheme.Muted)),
-                new Text(SafeText(value), Style.Parse(field.ValueColor?.Invoke() ?? TerminalTheme.FieldValue)));
-            grid.AddRow(new Text(" "), new Text(" "));
+                _ => new Text(SafeText(value), Style.Parse(field.ValueColor?.Invoke() ?? TerminalTheme.FieldValue))));
+            console.WriteLine();
         }
-        console.Write(grid);
     }
 
     /// <summary>Uses the same choice and validation rules as the fullscreen editor without echoing credentials.</summary>

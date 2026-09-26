@@ -123,6 +123,7 @@ public sealed class FullscreenSetupView : ISetupView
     private IReadOnlyList<FormPage> CreateSetupPages(SetupDraft draft, SetupViewState state)
     {
         IReadOnlyList<PersistentMemory> savedMemories = state.SavedMemories;
+        var showThemeDetails = false;
         var ai = new List<FormField>
         {
             Toggle("Setup.AiEnabled", () => draft.Settings.AiEnabled,
@@ -193,28 +194,39 @@ public sealed class FullscreenSetupView : ISetupView
             ]) { HelpKey = "Settings.CommandsHelp" },
             new("Settings.Personalization",
             [
-                new("preferred-name", "Setup.PreferredName", () => draft.Settings.PreferredName,
+                new("preferred-name", "Settings.ProfileName", () => draft.Settings.PreferredName,
                     value => draft.Settings = draft.Settings with { PreferredName = PreferredNamePolicy.Normalize(value, _redactor) })
                 {
                     Validate = ValidatePreferredName,
+                    GroupKey = "Settings.ProfileGroup",
                     HelpKey = "Setup.PreferredNameHelp",
                     MaxLength = PreferredNamePolicy.MaximumLength,
                     DefaultToCurrentValue = false
                 },
-                new("custom-instruction", "Setup.Custom", () => draft.Settings.CustomInstruction,
+                new("custom-instruction", "Settings.PersonalInstructions", () => draft.Settings.CustomInstruction,
                     value => draft.Settings = draft.Settings with { CustomInstruction = _protection.Protect(value).SanitizedText })
                 {
                     Validate = ValidatePreamble,
+                    GroupKey = "Settings.ProfileGroup",
                     HelpKey = "Form.PreambleHelp"
                 },
-                Toggle("Setup.Location", () => draft.Settings.IncludeWindowsLocation,
-                    value => draft.Settings = draft.Settings with { IncludeWindowsLocation = value }),
-                new("theme", "Theme.Select", () => draft.Settings.Theme, value => SetTheme(draft, value))
+                Toggle("Settings.ShareLocation", () => draft.Settings.IncludeWindowsLocation,
+                    value => draft.Settings = draft.Settings with { IncludeWindowsLocation = value })
+                    with { GroupKey = "Settings.ProfileGroup", HelpKey = "Setup.Location" },
+                new("theme", "Settings.Theme", () => draft.Settings.Theme, value => SetTheme(draft, value))
                 {
+                    GroupKey = "Settings.AppearanceGroup",
                     Choices = () => _themes.Themes.Select(theme => new FormChoice(theme.Id, ThemeName(theme))).ToArray(),
                     HelpKey = "Theme.Preview"
+                },
+                new("theme-details", "Settings.ThemeDetails", () => showThemeDetails ? "shown" : "hidden",
+                    value => showThemeDetails = value == "shown")
+                {
+                    GroupKey = "Settings.AppearanceGroup",
+                    Choices = () => [new("hidden", _text.Text("Settings.DetailsHidden")), new("shown", _text.Text("Settings.DetailsShown"))],
+                    HelpKey = "Settings.ThemeDetailsHelp"
                 }
-            ]) { HelpKey = "Settings.PersonalizationHelp", Overview = () => CreateThemeOverview(draft) },
+            ]) { HelpKey = "Settings.PersonalizationHelp", Overview = () => CreateThemeOverview(draft, showThemeDetails) },
             new("Settings.Skills", CreateSkillsFields(draft))
             {
                 HelpKey = "Settings.FeaturesDraftHelp",
@@ -544,38 +556,38 @@ public sealed class FullscreenSetupView : ISetupView
         new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)),
         new Text(value, Style.Parse("bold " + TerminalTheme.FieldValue)));
 
-    /// <summary>Shows the selected file's full attribution and live palette samples without accessing the filesystem.</summary>
-    private IRenderable CreateThemeOverview(SetupDraft draft)
+    /// <summary>Keeps palette samples compact and reveals full theme attribution only when requested.</summary>
+    private IRenderable CreateThemeOverview(SetupDraft draft, bool showDetails)
     {
-        var theme = _themes.Resolve(draft.Settings.Theme);
-        var metadata = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
-        AddThemeMetadata(metadata, "Theme.Metadata.Path", theme.SourcePath);
-        AddThemeMetadata(metadata, "Theme.Metadata.Author", theme.Author);
-        AddThemeMetadata(metadata, "Theme.Metadata.Website", theme.Website, link: theme.Website);
-        AddThemeMetadata(metadata, "Theme.Metadata.Description", theme.Description);
-        var samples = new Grid().AddColumn(new GridColumn().NoWrap()).AddColumn();
-        samples.AddRow(
-            new Text(_text.Text("Theme.Semantic.Success"), Style.Parse("bold " + TerminalTheme.Success)),
-            new Text(_text.Text("Theme.Semantic.SuccessHelp"), Style.Parse(TerminalTheme.Primary)));
-        samples.AddRow(
-            new Text(_text.Text("Theme.Semantic.Warning"), Style.Parse("bold " + TerminalTheme.Warning)),
-            new Text(_text.Text("Theme.Semantic.WarningHelp"), Style.Parse(TerminalTheme.Primary)));
-        samples.AddRow(
-            new Text(_text.Text("Theme.Semantic.Error"), Style.Parse("bold " + TerminalTheme.Error)),
-            new Text(_text.Text("Theme.Semantic.ErrorHelp"), Style.Parse(TerminalTheme.Primary)));
-        return new Rows(metadata, new Text(_text.Text("Settings.ThemePreview"), Style.Parse(TerminalTheme.Muted)),
-            new Text(" "), samples);
+        var rows = new List<IRenderable>();
+        if (showDetails)
+        {
+            var theme = _themes.Resolve(draft.Settings.Theme);
+            rows.Add(new ThemeSeparator(_text.Text("Settings.ThemeDetails")));
+            AddThemeMetadata(rows, "Theme.Metadata.Author", theme.Author);
+            AddThemeMetadata(rows, "Theme.Metadata.Website", theme.Website, link: theme.Website);
+            AddThemeMetadata(rows, "Theme.Metadata.Description", theme.Description);
+            AddThemeMetadata(rows, "Theme.Metadata.Path", theme.SourcePath);
+            rows.Add(new ThemeSeparator(_text.Text("Settings.ThemePreview")));
+        }
+        foreach (var (key, color) in new[] { ("Success", TerminalTheme.Success), ("Warning", TerminalTheme.Warning), ("Error", TerminalTheme.Error) })
+        {
+            rows.Add(new TerminalFormRow(
+                new Text(_text.Text("Theme.Semantic." + key), Style.Parse("bold " + color)),
+                _ => new Text(_text.Text("Theme.Semantic." + key + "Help"), Style.Parse(TerminalTheme.Primary))));
+        }
+        return new Rows(rows);
     }
 
     /// <summary>Wraps complete metadata values and gives validated website URLs a terminal hyperlink.</summary>
-    private void AddThemeMetadata(Grid grid, string labelKey, string? value, string? link = null)
+    private void AddThemeMetadata(List<IRenderable> rows, string labelKey, string? value, string? link = null)
     {
         var display = value is null ? _text.Text("Theme.Metadata.Unavailable")
             : new string(value.Select(character => char.IsControl(character) ? ' ' : character).ToArray());
         IRenderable renderedValue = link is null ? new Text(display, Style.Parse(TerminalTheme.FieldValue))
             : new ThemeLink(display, link);
-        grid.AddRow(new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)), renderedValue);
-        grid.AddEmptyRow();
+        rows.Add(new TerminalFormRow(new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)), _ => renderedValue));
+        rows.Add(new Text(" "));
     }
 
     /// <summary>Attaches a validated hyperlink while retaining literal, wrapped website text.</summary>

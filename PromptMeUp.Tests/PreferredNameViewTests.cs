@@ -20,7 +20,7 @@ public sealed class PreferredNameViewTests
         var input = new List<ConsoleKeyInfo> { Key(ConsoleKey.Enter) };
         input.AddRange(Type(entered));
         input.Add(Key(ConsoleKey.Enter));
-        input.AddRange(Enumerable.Repeat(Key(ConsoleKey.DownArrow), 15));
+        input.AddRange(Enumerable.Repeat(Key(ConsoleKey.DownArrow), 16));
         input.Add(Key(ConsoleKey.Enter));
         var (console, output, keys) = CreateConsole(input);
         var text = new LocalizationService();
@@ -47,7 +47,7 @@ public sealed class PreferredNameViewTests
         Assert.Equal(current, original.PreferredName);
         Assert.False(submission.TestConnection);
         Assert.Empty(keys);
-        Assert.Contains(text.Text("Setup.PreferredName"), output.ToString(), StringComparison.Ordinal);
+        Assert.Contains(text.Text("Settings.ProfileName"), output.ToString(), StringComparison.Ordinal);
         Assert.Contains("sent to OpenAI", output.ToString(), StringComparison.Ordinal);
         Assert.Contains("Leave empty to disable", output.ToString(), StringComparison.Ordinal);
         if (entered.Contains('\r'))
