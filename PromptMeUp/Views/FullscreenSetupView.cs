@@ -54,7 +54,12 @@ public sealed class FullscreenSetupView : ISetupView
         {
             TerminalTheme.Apply(_themes.Resolve(draft.Settings.Theme));
             var pages = CreateSetupPages(draft, state);
-            var initialTitleKey = state.InitialSection == SettingsSection.About ? "About.MenuLabel" : "Settings." + state.InitialSection;
+            var initialTitleKey = state.InitialSection switch
+            {
+                SettingsSection.About => "About.MenuLabel",
+                SettingsSection.Theme => "Settings.Personalization",
+                _ => "Settings." + state.InitialSection
+            };
             var initialPage = pages.ToList().FindIndex(page => page.TitleKey == initialTitleKey);
             if (initialPage < 0)
             {
@@ -203,16 +208,13 @@ public sealed class FullscreenSetupView : ISetupView
                     HelpKey = "Form.PreambleHelp"
                 },
                 Toggle("Setup.Location", () => draft.Settings.IncludeWindowsLocation,
-                    value => draft.Settings = draft.Settings with { IncludeWindowsLocation = value })
-            ]) { HelpKey = "Settings.PersonalizationHelp" },
-            new("Settings.Theme",
-            [
+                    value => draft.Settings = draft.Settings with { IncludeWindowsLocation = value }),
                 new("theme", "Theme.Select", () => draft.Settings.Theme, value => SetTheme(draft, value))
                 {
                     Choices = () => _themes.Themes.Select(theme => new FormChoice(theme.Id, ThemeName(theme))).ToArray(),
                     HelpKey = "Theme.Preview"
                 }
-            ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) },
+            ]) { HelpKey = "Settings.PersonalizationHelp", Overview = () => CreateThemeOverview(draft) },
             new("Settings.Skills", CreateSkillsFields(draft))
             {
                 HelpKey = "Settings.FeaturesDraftHelp",
