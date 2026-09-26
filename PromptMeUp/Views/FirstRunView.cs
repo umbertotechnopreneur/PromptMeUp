@@ -37,35 +37,16 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         RenderWelcomeLinks();
     }
 
-    /// <summary>Centers the welcome links in four columns, retaining copyable full URLs on narrow terminals.</summary>
+    /// <summary>Shares the adaptive label-above-address layout across welcome terminal widths.</summary>
     private void RenderWelcomeLinks()
     {
-        var links = new (string Label, string Display, string Url)[]
-        {
-            (Icon("🔒", ">") + text.Text("Oobe.Privacy"), "umbertogiacobbi.biz/privacy", "https://umbertogiacobbi.biz/privacy/"),
-            (text.Text("Oobe.Terms"), "umbertogiacobbi.biz/terms", "https://umbertogiacobbi.biz/terms/"),
-            (Icon("🔗", ">") + "GitHub", "github.com/…/PromptMeUp", "https://github.com/umbertotechnopreneur/PromptMeUp"),
-            (Icon("❤️", "<3") + "Made with love by Umberto", "umbertogiacobbi.biz", "https://umbertogiacobbi.biz")
-        };
-        if (console.Profile.Width < 132)
-        {
-            foreach (var link in links)
-            {
-                Link(link.Label, link.Url);
-            }
-            return;
-        }
-
-        var table = TerminalTable.Create().HideHeaders().Expand();
-        foreach (var _ in links)
-        {
-            table.AddColumn(new TableColumn(string.Empty).Centered());
-        }
-        table.AddRow(links.Select(link => (IRenderable)new Markup(
-            $"[bold {TerminalTheme.Info} link={link.Url}]{Markup.Escape(link.Label)}[/]")).ToArray());
-        table.AddRow(links.Select(link => (IRenderable)new Markup(
-            $"[underline {TerminalTheme.Muted} link={link.Url}]{Markup.Escape(link.Display)}[/]")).ToArray());
-        console.Write(table);
+        console.Write(new TerminalLinkGrid(
+        [
+            new(Icon("🔒", ">") + text.Text("Oobe.Privacy"), "https://umbertogiacobbi.biz/privacy/"),
+            new(text.Text("Oobe.Terms"), "https://umbertogiacobbi.biz/terms/"),
+            new(Icon("🔗", ">") + "GitHub", "https://github.com/umbertotechnopreneur/PromptMeUp"),
+            new(Icon("❤️", "<3") + "Made with love by Umberto", "https://umbertogiacobbi.biz")
+        ]));
     }
 
     /// <summary>Explains how to resume when terminal input is redirected.</summary>

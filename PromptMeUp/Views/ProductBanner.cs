@@ -7,7 +7,7 @@ using Spectre.Console.Rendering;
 namespace PromptMeUp.Views;
 
 /// <summary>Combines the shared terminal artwork and localized slogan using the active theme.</summary>
-internal sealed class ProductBanner(ILocalizationService text) : IRenderable
+internal sealed class ProductBanner(ILocalizationService text, bool compact = false) : IRenderable
 {
     /// <summary>Measures the banner and slogan within their containing view.</summary>
     public Measurement Measure(RenderOptions options, int maxWidth) =>
@@ -19,8 +19,7 @@ internal sealed class ProductBanner(ILocalizationService text) : IRenderable
 
     /// <summary>Centers the wordmark and short slogan while allowing narrow terminals to wrap the text.</summary>
     private IRenderable CreateContent() => new Rows(
-        Align.Center(new HelpMeBanner()),
+        Align.Center(new WelcomeBanner(compact)),
         new Text(" "),
-        Align.Center(new Text("PromptMeUp", Style.Parse("bold " + TerminalTheme.Primary))),
         Align.Center(new Text(text.Text("About.Slogan"), Style.Parse(TerminalTheme.Info))));
 }
