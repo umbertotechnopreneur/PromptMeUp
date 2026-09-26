@@ -12,7 +12,7 @@ namespace PromptMeUp.Tests;
 
 public sealed class SettingsFeatureViewTests
 {
-    private const int SectionCount = 12;
+    private const int SectionCount = 11;
 
     /// <summary>Viewing and saving unchanged tabs neither opens child menus nor submits feature edits.</summary>
     [Theory]
@@ -39,7 +39,7 @@ public sealed class SettingsFeatureViewTests
     [Fact]
     public void Collect_InlineSkillsAndMemory_SaveOneDraftWithExplicitConsent()
     {
-        var keys = Choose(0).Concat(Choose(1)).Concat(Choose(2 + 8))
+        var keys = Choose(0).Concat(Choose(1)).Concat(Choose(2 + 7))
             .Concat(Choose(1)).Concat(Choose(1)).Concat(Choose(4 + SectionCount))
             .Concat(Choose(3)).Concat(Choose(1)).Concat(Choose(4 + SectionCount));
         var harness = Create(keys);
