@@ -37,10 +37,12 @@ internal static class TerminalConversationPrompt
                     .Select(row => new Markup(row)));
             }
             rows.Add(new Markup($"[bold {TerminalTheme.Info}]{Markup.Escape(TerminalText.Clip(title, width))}[/]"));
-            var visible = Math.Clamp(console.Profile.Height - rows.Count - 5, 1, Math.Min(7, choices.Count));
+            rows.Add(new Text(" "));
+            var visible = Math.Clamp((console.Profile.Height - rows.Count - 3) / 2, 1, Math.Min(7, choices.Count));
             var first = Math.Clamp(selected - visible / 2, 0, choices.Count - visible);
             for (var index = first; index < first + visible; index++)
             {
+                if (index > first) rows.Add(new Text(" "));
                 var choice = choices[index];
                 var label = (numbered ? $"{index}  " : string.Empty) + choice.Label;
                 if (!string.IsNullOrWhiteSpace(choice.Detail)) label += " · " + choice.Detail;
@@ -49,6 +51,7 @@ internal static class TerminalConversationPrompt
                     : TerminalChoiceMenu.Color(choice.Tone);
                 rows.Add(new Markup($"[{style}]{Markup.Escape(TerminalText.Clip((index == selected ? "> " : "  ") + label, width))}[/]"));
             }
+            rows.Add(new Text(" "));
             var hint = text.Text("Terminal.ChoiceKeys", selected + 1, choices.Count);
             rows.Add(new Text(TerminalText.Clip(hint, width), Style.Parse(TerminalTheme.Muted)));
             if (FullscreenViewport.CanUse(console) && session.History.Turns.Count > 0)
@@ -56,7 +59,7 @@ internal static class TerminalConversationPrompt
             return new Rows(rows);
         }
 
-        TerminalPromptDock.Align(console, reservedRows: Math.Min(console.Profile.Height - 1, choices.Count + 5));
+        TerminalPromptDock.Align(console, reservedRows: Math.Min(console.Profile.Height - 1, choices.Count * 2 + 6));
         while (true)
         {
             var action = console.Live(Render()).AutoClear(true).Start(context =>
@@ -91,7 +94,9 @@ internal static class TerminalConversationPrompt
                 TerminalHistoryView.Show(console, text, action, reader);
                 continue;
             }
+            console.WriteLine();
             console.Write(new Text(choices[selected].Label, Style.Parse(TerminalTheme.Info)));
+            console.WriteLine();
             console.WriteLine();
             return choices[selected].Value;
         }

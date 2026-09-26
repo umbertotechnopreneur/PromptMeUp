@@ -1440,3 +1440,9 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - Showed the opening command tip once per local day, independently of the daily project footer.
 - Added a default-safe command authorization choice that copies the exact previewed command to the Windows clipboard without running it.
 - Validation: Release build, repository preflight, XML comments, formatting verification, and 1,030 tests passed. Interactive desktop rendering and clipboard integration remain unverified.
+
+## 2026-09-26 — Clearer conversation follow-up choices
+
+- Added vertical space around shared inline choices and around the confirmed selection in terminal scrollback.
+- Replaced the mechanical conversation-continuation hint, menu heading, and chat choice with shorter, natural wording in all six supported languages. Simplified the suggested-command safety hint without changing the authorization flow.
+- Validation: repository preflight, XML comments, formatting verification, and Release build passed. Automated tests and interactive rendering were not run for this copy and spacing change.
