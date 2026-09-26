@@ -24,3 +24,5 @@
 - [ ] Remove temporary source, publish, and payload directories under `artifacts/msix/install-20260917-memory` after preserving the signed MSIX and verification records. Installation and standard .NET cleanup succeeded; automatic approval review blocked recursive directory deletion.
 
 - [ ] Remove ignored local package, IDE, and smoke-test directories. Standard .NET cleanup completed; recursive directory deletion was blocked by the execution policy.
+
+- [ ] Remove the temporary `publish`, `x64/payload`, and `appdata-backup` directories under `artifacts/msix/debug/1.0.0.0-layout-5a68a80-20260926/`, preserving the signed MSIX. Automatic approval review blocked recursive cleanup after installation; the backup contains local test data and must remain ignored.
