@@ -27,6 +27,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
     private readonly Dictionary<string, string> _drafts = new(StringComparer.Ordinal);
     private readonly HashSet<string> _dirty = new(StringComparer.Ordinal);
     private string? _selectedKey;
+    private bool _showEmptyProposals;
     private string? _submittedKey;
     private EditorFocus _focus;
     private int _actionIndex;
@@ -60,6 +61,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         {
             _selectedKey = ProposalsKey;
         }
+        _showEmptyProposals = selectProposals || _selectedKey == ProposalsKey;
         ReconcileDrafts(memories, proposals, feedback, feedbackIsError);
         MemoryManagerSelection selection;
         try
@@ -91,6 +93,8 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _caret = 0;
         _error = null;
         _detailOffset = 0;
+        _selectedKey = null;
+        _showEmptyProposals = false;
     }
 
     /// <summary>Runs the setup-shaped editor in one alternate-buffer lifecycle.</summary>
@@ -101,7 +105,8 @@ public sealed class MemoryManagerView : IMemoryManagerView
         var selected = entries.ToList().FindIndex(entry => string.Equals(entry.Key, _selectedKey, StringComparison.Ordinal));
         if (selected < 0)
         {
-            selected = memories.Count > 0 ? 2 : 0;
+            selected = entries.ToList().FindIndex(entry => entry.Kind == NavigationKind.Memory);
+            if (selected < 0) selected = 0;
         }
         _navigator.Reset(selected, entries.Count, focused: true);
         _selectedKey = entries[selected].Key;
@@ -344,7 +349,10 @@ public sealed class MemoryManagerView : IMemoryManagerView
     private IReadOnlyList<NavigationEntry> Entries(IReadOnlyList<PersistentMemory> memories, MemoryProposalWorkspace proposals) =>
     [
         new(NavigationKind.Create, CreateKey, _text.Text("MemoryManager.Create"), "✨"),
-        new(NavigationKind.Proposals, ProposalsKey, _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})", "💭"),
+        .. (proposals.Proposals.Count > 0 || _showEmptyProposals
+            ? [new NavigationEntry(NavigationKind.Proposals, ProposalsKey,
+                _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})", "💭")]
+            : Array.Empty<NavigationEntry>()),
         .. memories.Select(memory => new NavigationEntry(NavigationKind.Memory, MemoryKey(memory.Id),
             PreviewLabel(memory.Text), "📚", memory.Id))
     ];
@@ -679,13 +687,28 @@ public sealed class MemoryManagerView : IMemoryManagerView
             AddPair(metadata, _text.Text("MemoryManager.Updated"), memory.UpdatedAt.ToLocalTime().ToString("g", _text.Culture));
             rows.Add(metadata);
         }
+        else if (memories.Count == 0)
+        {
+            rows.Add(new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Muted)));
+            rows.Add(new Text(" "));
+        }
         var draft = _editing ? _input : CurrentDraft(entry, memories, proposals);
         rows.Add(Line((_focus == EditorFocus.Editor ? "> " : string.Empty) + _text.Text("Memory.Note"), TerminalTheme.Accent));
         rows.Add(new Text(" "));
-        rows.Add(new EditorInput(width => EditorValue(draft, width),
-            Style.Parse((_focus == EditorFocus.Editor ? "bold underline " : string.Empty) + TerminalTheme.FieldValue)));
-        rows.Add(new Text(" "));
-        rows.Add(new Text(SafeText(draft), Style.Parse(TerminalTheme.Primary)));
+        if (_editing || entry.Kind == NavigationKind.Create)
+        {
+            rows.Add(new EditorInput(width => EditorValue(draft, width),
+                Style.Parse((_focus == EditorFocus.Editor ? "bold underline " : string.Empty) + TerminalTheme.FieldValue)));
+            if (draft.Contains('\n'))
+            {
+                rows.Add(new Text(" "));
+                rows.Add(new Text(SafeText(draft), Style.Parse(TerminalTheme.Primary)));
+            }
+        }
+        else
+        {
+            rows.Add(new Text(SafeText(draft), Style.Parse(TerminalTheme.Primary)));
+        }
         return new Rows(rows);
     }
 
@@ -862,11 +885,11 @@ public sealed class MemoryManagerView : IMemoryManagerView
         while (true)
         {
             TerminalTheme.WriteSection(_console, _text.Text("Settings.Memories"), _text.Text("MemoryManager.Help"));
-            var choices = new List<MenuChoice>
+            var choices = new List<MenuChoice> { new(CreateKey, _text.Text("MemoryManager.Create")) };
+            if (proposals.Proposals.Count > 0 || _showEmptyProposals)
             {
-                new(CreateKey, _text.Text("MemoryManager.Create")),
-                new(ProposalsKey, _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})")
-            };
+                choices.Add(new(ProposalsKey, _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})"));
+            }
             choices.AddRange(memories.Select(memory => new MenuChoice(MemoryKey(memory.Id), PreviewLabel(memory.Text))));
             choices.Add(new("close", _text.Text("Help.Browse.Close")));
             var selected = Prompt(_text.Text("MemoryManager.Choose"), choices);

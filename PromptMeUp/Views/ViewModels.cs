@@ -19,6 +19,10 @@ public sealed record SetupViewState(
 
     public Action? OpenMemories { get; init; }
 
+    public IReadOnlyList<PersistentMemory> SavedMemories { get; init; } = [];
+
+    public Func<IReadOnlyList<PersistentMemory>>? RefreshSavedMemories { get; init; }
+
     public bool SaveSucceeded { get; init; }
 }
 

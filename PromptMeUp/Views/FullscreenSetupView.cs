@@ -117,6 +117,7 @@ public sealed class FullscreenSetupView : ISetupView
     /// <summary>Groups every preference into stable sidebar sections that share one local draft.</summary>
     private IReadOnlyList<FormPage> CreateSetupPages(SetupDraft draft, SetupViewState state)
     {
+        IReadOnlyList<PersistentMemory> savedMemories = state.SavedMemories;
         var ai = new List<FormField>
         {
             Toggle("Setup.AiEnabled", () => draft.Settings.AiEnabled,
@@ -224,11 +225,13 @@ public sealed class FullscreenSetupView : ISetupView
             },
             new("Settings.Memories", [])
             {
-                Open = () => OpenSavedMenu(state.OpenMemories ?? throw new InvalidOperationException("Memory navigation must be configured.")),
+                Open = () =>
+                {
+                    OpenSavedMenu(state.OpenMemories ?? throw new InvalidOperationException("Memory navigation must be configured."));
+                    savedMemories = state.RefreshSavedMemories?.Invoke() ?? savedMemories;
+                },
                 HelpKey = "MemoryManager.OpenHint",
-                Overview = () => new Rows(
-                    new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
-                    new Text(" "), new Text(_text.Text("Settings.SavedMemoriesNotice"), Style.Parse(TerminalTheme.Warning)))
+                Overview = () => CreateSavedMemoriesOverview(savedMemories)
             },
             new("Settings.Privacy", [])
             {
@@ -241,6 +244,55 @@ public sealed class FullscreenSetupView : ISetupView
                 Overview = () => _about.CreateContent()
             }
         ], state.SaveSucceeded);
+    }
+
+    /// <summary>Shows a bounded preview of actual saved notes in the settings workspace.</summary>
+    private IRenderable CreateSavedMemoriesOverview(IReadOnlyList<PersistentMemory> memories)
+    {
+        var rows = new List<IRenderable>
+        {
+            new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
+            new Text(" "),
+            new Text(_text.Text("MemoryManager.SavedCount", memories.Count), Style.Parse("bold " + TerminalTheme.Accent)),
+            new Text(" ")
+        };
+        if (memories.Count == 0)
+        {
+            rows.Add(new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Muted)));
+        }
+        else
+        {
+            var showUpdated = _console.Profile.Width >= 92;
+            var paneWidth = _console.Profile.Width - FullscreenWorkspace.SidebarWidth(_console.Profile.Width) - 6;
+            var previewWidth = Math.Clamp(paneWidth - (showUpdated ? 25 : 7), 12, 56);
+            var table = showUpdated
+                ? TerminalTable.Create("#", _text.Text("Memory.Note"), _text.Text("MemoryManager.Updated"))
+                : TerminalTable.Create("#", _text.Text("Memory.Note"));
+            for (var index = 0; index < Math.Min(5, memories.Count); index++)
+            {
+                var memory = memories[index];
+                var number = new Text((index + 1).ToString(_text.Culture), Style.Parse(TerminalTheme.Accent));
+                var note = new Text(TerminalText.Clip(TerminalText.Safe(memory.Text).ReplaceLineEndings(" ↵ "), previewWidth),
+                    Style.Parse(TerminalTheme.Primary));
+                if (showUpdated)
+                {
+                    table.AddRow(number, note,
+                        new Text(memory.UpdatedAt.ToLocalTime().ToString("g", _text.Culture), Style.Parse(TerminalTheme.Muted)));
+                }
+                else
+                {
+                    table.AddRow(number, note);
+                }
+            }
+            rows.Add(table);
+            if (memories.Count > 5)
+            {
+                rows.Add(new Text(_text.Text("MemoryManager.MoreCount", memories.Count - 5), Style.Parse(TerminalTheme.Muted)));
+            }
+        }
+        rows.Add(new Text(" "));
+        rows.Add(new Text(_text.Text("Settings.SavedMemoriesNotice"), Style.Parse(TerminalTheme.Warning)));
+        return new Rows(rows);
     }
 
     /// <summary>Adds a clear success acknowledgement to every section when the saved editor immediately reopens.</summary>

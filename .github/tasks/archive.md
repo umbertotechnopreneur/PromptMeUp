@@ -1,5 +1,12 @@
 ﻿# Task Archive
 
+## 2026-09-26 — Make saved memories useful at a glance
+
+- Reused the shared borderless terminal table to preview saved notes directly in Settings, with a compact layout on narrow terminals and refreshed content after editing.
+- Removed empty suggestion navigation from normal memory browsing, opened on the first saved note, and removed duplicate note text from the editor detail.
+
+Validation: repository preflight, XML method-comment check, full-solution format verification, and warning-free Release build passed. Automated tests and live-terminal interaction were not run.
+
 ## 2026-09-26 — Restore responsive inline command choices
 
 - Replaced the live renderer around conversational menus with bounded in-place redraws, preserving keyboard selection, turn-history shortcuts, and terminal scrollback.
