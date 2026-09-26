@@ -26,18 +26,18 @@ internal sealed class InstallationInfo(ILocalizationService text, BuildInformati
     /// <summary>Expands the optional card to the available width and keeps the unboxed variant suitable for About.</summary>
     private IRenderable CreateContent(int width)
     {
-        var title = $"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("About.Installation"))}[/]";
+        var title = text.Text("About.Installation");
         var body = CreateBody(renderCard ? Math.Max(1, width - 4) : width);
         return renderCard
             ? new Panel(body)
             {
-                Header = new PanelHeader(title),
+                Header = new PanelHeader($"[bold {TerminalTheme.Accent}]{Markup.Escape(title)}[/]"),
                 Border = BoxBorder.Rounded,
                 BorderStyle = Style.Parse(TerminalTheme.Divider),
                 Padding = new Padding(1, 0, 1, 0),
                 Expand = true
             }
-            : new Rows(new ThemeSeparator(title), new Text(" "), body);
+            : new Rows(new ThemeSeparator(title, TerminalTheme.Accent), new Text(" "), body);
     }
 
     /// <summary>Uses aligned label-value rows with a stacked layout when the available content width is narrow.</summary>
