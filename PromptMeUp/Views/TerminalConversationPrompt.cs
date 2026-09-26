@@ -19,6 +19,13 @@ internal static class TerminalConversationPrompt
         {
             return TerminalChoiceMenu.Select(console, choices, title);
         }
+        return SelectInteractive(console, text, choices, title, numbered);
+    }
+
+    /// <summary>Reads an inline decision without holding a live renderer while input is pending.</summary>
+    internal static T SelectInteractive<T>(IAnsiConsole console, ILocalizationService text,
+        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false)
+    {
         using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         using var paste = new TerminalPasteScope(console);
         var reader = new TerminalInputReader(console.Input, 1024, win32Encoding: OperatingSystem.IsWindows());
@@ -26,7 +33,7 @@ internal static class TerminalConversationPrompt
         var session = TerminalSession.For(console);
         var selected = 0;
 
-        IRenderable Render()
+        IReadOnlyList<IRenderable> Render()
         {
             var width = Math.Max(1, console.Profile.Width - 1);
             var rows = new List<IRenderable>();
@@ -56,49 +63,93 @@ internal static class TerminalConversationPrompt
             rows.Add(new Text(TerminalText.Clip(hint, width), Style.Parse(TerminalTheme.Muted)));
             if (FullscreenViewport.CanUse(console) && session.History.Turns.Count > 0)
                 rows.Add(new Text(TerminalText.Clip(text.Text("Terminal.NavigationKeys"), width), Style.Parse(TerminalTheme.Muted)));
-            return new Rows(rows);
+            return rows;
         }
 
         TerminalPromptDock.Align(console, reservedRows: Math.Min(console.Profile.Height - 1, choices.Count * 2 + 6));
-        while (true)
+        var paintedRows = 0;
+        var paintedSize = (Width: console.Profile.Width, Height: console.Profile.Height);
+
+        void EraseMenu()
         {
-            var action = console.Live(Render()).AutoClear(true).Start(context =>
+            if (paintedRows == 0) return;
+            if (paintedSize != (console.Profile.Width, console.Profile.Height))
             {
-                while (true)
-                {
-                    var key = input.ReadKey(() => context.UpdateTarget(Render()));
-                    if (key is not { } pressed) continue;
-                    if (TerminalHistoryView.IsShortcut(pressed)) return pressed;
-                    if (pressed.Key == ConsoleKey.Enter && pressed.Modifiers == 0) return pressed;
-                    if (pressed.Key == ConsoleKey.Escape) throw new InteractiveFlowCanceledException();
-                    if (numbered && choices.Count <= 10 && pressed.Modifiers == 0
-                        && pressed.KeyChar is >= '0' and <= '9' && pressed.KeyChar - '0' < choices.Count)
-                    {
-                        selected = pressed.KeyChar - '0';
-                        return new ConsoleKeyInfo('\r', ConsoleKey.Enter, false, false, false);
-                    }
-                    selected = pressed.Key switch
-                    {
-                        ConsoleKey.UpArrow => (selected + choices.Count - 1) % choices.Count,
-                        ConsoleKey.DownArrow => (selected + 1) % choices.Count,
-                        ConsoleKey.Tab => (selected + (pressed.Modifiers.HasFlag(ConsoleModifiers.Shift) ? choices.Count - 1 : 1)) % choices.Count,
-                        ConsoleKey.Home => 0,
-                        ConsoleKey.End => choices.Count - 1,
-                        _ => selected
-                    };
-                    context.UpdateTarget(Render());
-                }
-            });
-            if (TerminalHistoryView.IsShortcut(action))
-            {
-                TerminalHistoryView.Show(console, text, action, reader);
-                continue;
+                console.WriteLine();
+                paintedRows = 0;
+                return;
             }
-            console.WriteLine();
+            console.WriteAnsi(writer =>
+            {
+                writer.CursorUp(paintedRows);
+                writer.Write("\r");
+                for (var row = 0; row < paintedRows; row++)
+                {
+                    writer.EraseInLine(2);
+                    if (row + 1 < paintedRows) writer.CursorDown(1);
+                }
+                if (paintedRows > 1) writer.CursorUp(paintedRows - 1);
+            });
+            paintedRows = 0;
+        }
+
+        void PaintMenu()
+        {
+            EraseMenu();
+            paintedSize = (console.Profile.Width, console.Profile.Height);
+            foreach (var row in Render())
+            {
+                console.Write(row);
+                console.WriteLine();
+                paintedRows++;
+            }
+        }
+
+        console.Cursor.Hide();
+        try
+        {
+            PaintMenu();
+            while (true)
+            {
+                var pressed = input.ReadKey(PaintMenu);
+                if (pressed is not { } key) continue;
+                if (TerminalHistoryView.IsShortcut(key))
+                {
+                    EraseMenu();
+                    TerminalHistoryView.Show(console, text, key, reader);
+                    TerminalPromptDock.Align(console, reservedRows: Math.Min(console.Profile.Height - 1, choices.Count * 2 + 6));
+                    PaintMenu();
+                    continue;
+                }
+                if (key.Key == ConsoleKey.Escape) throw new InteractiveFlowCanceledException();
+                if (numbered && choices.Count <= 10 && key.Modifiers == 0
+                    && key.KeyChar is >= '0' and <= '9' && key.KeyChar - '0' < choices.Count)
+                {
+                    selected = key.KeyChar - '0';
+                    break;
+                }
+                if (key.Key == ConsoleKey.Enter && key.Modifiers == 0) break;
+                selected = key.Key switch
+                {
+                    ConsoleKey.UpArrow => (selected + choices.Count - 1) % choices.Count,
+                    ConsoleKey.DownArrow => (selected + 1) % choices.Count,
+                    ConsoleKey.Tab => (selected + (key.Modifiers.HasFlag(ConsoleModifiers.Shift) ? choices.Count - 1 : 1)) % choices.Count,
+                    ConsoleKey.Home => 0,
+                    ConsoleKey.End => choices.Count - 1,
+                    _ => selected
+                };
+                PaintMenu();
+            }
+            EraseMenu();
             console.Write(new Text(choices[selected].Label, Style.Parse(TerminalTheme.Info)));
             console.WriteLine();
             console.WriteLine();
             return choices[selected].Value;
+        }
+        finally
+        {
+            EraseMenu();
+            console.Cursor.Show();
         }
     }
 

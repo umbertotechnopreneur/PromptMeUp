@@ -1,5 +1,12 @@
 ﻿# Task Archive
 
+## 2026-09-26 — Restore responsive inline command choices
+
+- Replaced the live renderer around conversational menus with bounded in-place redraws, preserving keyboard selection, turn-history shortcuts, and terminal scrollback.
+- Added a regression case for selecting a suggested command with Arrow Down and Enter.
+
+Validation: repository preflight, XML method-comment check, full-solution format verification, and warning-free Release build passed. Automated tests and live-terminal interaction were not run.
+
 ## 2026-09-26 — Simplify command routing and terminal editor navigation
 
 - Centralized Unicode text-element navigation across the fullscreen form, memory manager, and menu editors.

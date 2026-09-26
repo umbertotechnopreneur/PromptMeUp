@@ -231,6 +231,43 @@ public sealed class TerminalViewTests
         Assert.Empty(keys);
     }
 
+    /// <summary>Verifies that the inline command menu consumes arrow and Enter keys without a live renderer.</summary>
+    [Fact]
+    public void ConversationMenu_AcceptsKeyboardChoice()
+    {
+        var keys = new Queue<ConsoleKeyInfo>(
+        [
+            new('\0', ConsoleKey.DownArrow, false, false, false),
+            new('\r', ConsoleKey.Enter, false, false, false)
+        ]);
+        var input = TestProxy.Create<IAnsiConsoleInput>((method, _) => method.Name switch
+        {
+            "IsKeyAvailable" => keys.Count > 0,
+            "ReadKey" => keys.Dequeue(),
+            "ReadKeyAsync" => Task.FromResult<ConsoleKeyInfo?>(keys.Dequeue()),
+            _ => throw new NotSupportedException(method.Name)
+        });
+        var output = new StringWriter();
+        var rendering = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.Yes,
+            Interactive = InteractionSupport.Yes,
+            Out = new AnsiConsoleOutput(output)
+        });
+        var console = TestProxy.Create<IAnsiConsole>((method, args) =>
+            method.Name == "get_Input" ? input : method.Invoke(rendering, args));
+
+        var selected = TerminalConversationPrompt.SelectInteractive(console, new LocalizationService(),
+        [
+            new TerminalMenuChoice<int>(0, "Stop"),
+            new TerminalMenuChoice<int>(1, "Inspect git status", "git status")
+        ], "Choose a command", numbered: true);
+
+        Assert.Equal(1, selected);
+        Assert.Empty(keys);
+        Assert.Contains("Inspect git status", output.ToString(), StringComparison.Ordinal);
+    }
+
     /// <summary>Creates a deterministic colorless Spectre console backed by an in-memory writer.</summary>
     private static (IAnsiConsole Console, StringWriter Output) CreateConsole()
     {
