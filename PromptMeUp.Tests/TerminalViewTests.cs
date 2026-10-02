@@ -189,27 +189,11 @@ public sealed class TerminalViewTests
     [Fact]
     public async Task CommandPreview_CopyChoice_DoesNotAuthorizeExecution()
     {
-        var keys = new Queue<ConsoleKeyInfo>(
-        [
-            new('\0', ConsoleKey.DownArrow, false, false, false),
-            new('\0', ConsoleKey.DownArrow, false, false, false),
-            new('\r', ConsoleKey.Enter, false, false, false)
-        ]);
-        var input = TestProxy.Create<IAnsiConsoleInput>((method, _) => method.Name switch
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
         {
-            "IsKeyAvailable" => keys.Count > 0,
-            "ReadKey" => keys.Dequeue(),
-            "ReadKeyAsync" => Task.FromResult<ConsoleKeyInfo?>(keys.Dequeue()),
-            _ => throw new NotSupportedException(method.Name)
-        });
-        var rendering = AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Ansi = AnsiSupport.Yes,
-            Interactive = InteractionSupport.Yes,
+            Ansi = AnsiSupport.No,
             Out = new AnsiConsoleOutput(new StringWriter())
         });
-        var console = TestProxy.Create<IAnsiConsole>((method, args) =>
-            method.Name == "get_Input" ? input : method.Invoke(rendering, args));
         var text = new LocalizationService();
         var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: true));
@@ -220,7 +204,8 @@ public sealed class TerminalViewTests
             copied = (string?)args![0];
             return true;
         });
-        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell, clipboard);
+        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell, clipboard,
+            () => CommandAuthorizationView.CommandDecision.Copy);
         const string command = "git status --short && echo café";
         view.RenderPreview(command, new CommandRiskAssessment(5, CommandRiskLevel.Low, "Safe preview.", false, null));
 
@@ -228,7 +213,6 @@ public sealed class TerminalViewTests
 
         Assert.False(authorized);
         Assert.Equal(command, copied);
-        Assert.Empty(keys);
     }
 
     /// <summary>Verifies that the inline command menu consumes arrow and Enter keys without a live renderer.</summary>

@@ -34,7 +34,9 @@ public sealed class TerminalLinkGridTests
 
         console.Write(new TerminalLinkGrid(links));
 
-        var lines = output.ToString().ReplaceLineEndings("\n").TrimEnd('\n').Split('\n');
+        var visibleOutput = System.Text.RegularExpressions.Regex.Replace(
+            output.ToString(), @"\x1B(?:\[[0-?]*[ -/]*[@-~]|\].*?(?:\x1B\\|\x07))", string.Empty);
+        var lines = visibleOutput.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n');
         Assert.Equal(4 / columns * 3 - 1, lines.Length);
         Assert.All(lines, line => Assert.InRange(new Segment(line).CellCount(), 0, width));
         foreach (var link in links)
@@ -43,6 +45,6 @@ public sealed class TerminalLinkGridTests
             Assert.True(labelRow >= 0);
             Assert.Contains(link.Url, lines[labelRow + 1], StringComparison.Ordinal);
         }
-        Assert.DoesNotContain("…", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("…", visibleOutput, StringComparison.Ordinal);
     }
 }

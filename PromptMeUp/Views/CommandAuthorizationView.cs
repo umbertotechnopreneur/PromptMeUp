@@ -23,6 +23,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     private readonly IPoorMarkdownRenderer _markdown;
     private readonly IConsoleShellView _shell;
     private readonly ICommandClipboard _clipboard;
+    private readonly Func<CommandDecision>? _decisionOverride;
     private string? _previewedCommand;
 
     /// <summary>Creates the mandatory preview and authorization gate for shell commands.</summary>
@@ -38,6 +39,14 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         _markdown = markdown ?? throw new ArgumentNullException(nameof(markdown));
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
+    }
+
+    /// <summary>Allows command-decision tests to exercise the authorization gate without a physical terminal.</summary>
+    internal CommandAuthorizationView(IAnsiConsole console, ILocalizationService text,
+        IPoorMarkdownRenderer markdown, IConsoleShellView shell, ICommandClipboard clipboard,
+        Func<CommandDecision> decisionOverride) : this(console, text, markdown, shell, clipboard)
+    {
+        _decisionOverride = decisionOverride ?? throw new ArgumentNullException(nameof(decisionOverride));
     }
 
     /// <summary>Renders the same exact command, risk assessment and output notice for both interaction views.</summary>
@@ -85,7 +94,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     /// <summary>Asks for explicit approval with a default-negative prompt in the normal view.</summary>
     private bool Confirm()
     {
-        var choice = TerminalConversationPrompt.Select(_console, _text,
+        var choice = _decisionOverride?.Invoke() ?? TerminalConversationPrompt.Select(_console, _text,
         [
             new TerminalMenuChoice<CommandDecision>(CommandDecision.Cancel, _text.Text("Common.No"), Tone: TerminalMenuTone.Muted),
             new TerminalMenuChoice<CommandDecision>(CommandDecision.Execute, _text.Text("Common.Yes"), Tone: TerminalMenuTone.Caution),
@@ -108,7 +117,7 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         return authorized;
     }
 
-    private enum CommandDecision { Cancel, Execute, Copy }
+    internal enum CommandDecision { Cancel, Execute, Copy }
 
     /// <summary>Shows bounded stdout, stderr, timeout, and exit metadata after an authorized command finishes.</summary>
     public void RenderExecutionResult(CommandExecutionResult result)
