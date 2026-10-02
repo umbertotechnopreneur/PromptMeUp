@@ -1,5 +1,13 @@
 ﻿# Task Archive
 
+## 2026-10-02 — Resolve the SDK exactly in CI
+
+- Selected the published .NET SDK 10.0.401 in the shared `global.json`.
+- Changed SDK roll-forward from `latestPatch` to `patch`: setup-dotnet installs the declared version rather than querying the failing `10.0.4xx` channel, while local SDK resolution still allows a newer patch when the declared one is absent.
+- The quality, CodeQL, and release workflows share this configuration, so no duplicated workflow version pins are needed.
+
+Validation: reviewed the pinned setup-dotnet resolver and Microsoft's SDK release metadata; local SDK selection and scoped diff checks passed. Remote checks are pending. No application code or product/package version changed.
+
 ## 2026-10-02 — Review maintainability, performance, and resource lifetime
 
 Implementation follow-up: failed SQLite acquisition now disposes its connection, diagnostic logs use a fixed byte snapshot, and chat display/history share one parsed Markdown document. Skill selection batches approval lookups and skips catalog inspection when neither automatic nor explicit selection is active. Content fingerprints remain checked against freshly inspected packages. Expanded dense preference-routing conditions and corrected the editor's grapheme-column documentation.
