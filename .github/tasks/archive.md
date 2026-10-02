@@ -1,5 +1,35 @@
 ﻿# Task Archive
 
+## 2026-10-02 — Resolve the SDK exactly in CI
+
+- Selected the published .NET SDK 10.0.401 in the shared `global.json`.
+- Changed SDK roll-forward from `latestPatch` to `patch`: setup-dotnet installs the declared version rather than querying the failing `10.0.4xx` channel, while local SDK resolution still allows a newer patch when the declared one is absent.
+- The quality, CodeQL, and release workflows share this configuration, so no duplicated workflow version pins are needed.
+
+Validation: reviewed the pinned setup-dotnet resolver and Microsoft's SDK release metadata; local SDK selection and scoped diff checks passed. Remote checks are pending. No application code or product/package version changed.
+
+## 2026-10-02 — Review maintainability, performance, and resource lifetime
+
+Implementation follow-up: failed SQLite acquisition now disposes its connection, diagnostic logs use a fixed byte snapshot, and chat display/history share one parsed Markdown document. Skill selection batches approval lookups and skips catalog inspection when neither automatic nor explicit selection is active. Content fingerprints remain checked against freshly inspected packages. Expanded dense preference-routing conditions and corrected the editor's grapheme-column documentation.
+
+Added regression cases for growing logs, UTF-8 truncation, long lines, cancellation, shared answer/history content, bounded approval lookup, and changed/revoked skills. Preflight, XML method-comment checks, scoped diff checks, the Debug build, and all 1,055 tests passed. Debug build output was cleaned after validation. Live-terminal checks and profiling were not run; no measured performance gain is claimed.
+
+- Reviewed checkpoint `adb1704` across terminal input/rendering, conversation orchestration, SQLite ownership, skills discovery, process capture, and diagnostic bounds.
+- Documented failed SQLite acquisition cleanup, repeated provider and local work, history storage growth, and a concurrent-growth gap in diagnostic log bounds.
+- Separated confirmed source findings from possible retained-resource paths and allocation peaks that require runtime evidence.
+- Prepared the detailed report in the owner's PromptMeUp notes with source references, small proposed checkpoints, and a measurement plan.
+
+Validation: static source inspection and report-reference review only. No build, automated tests, application launch, benchmark, heap capture, or provider call was performed. Findings are not fixes.
+
+## 2026-10-02 — Share fullscreen editing and organize chat internals
+
+- Added one Unicode-aware editor buffer for settings, grouped menus, and saved memories while preserving their separate save and cancel rules.
+- Let fullscreen views receive Escape before the global input wrapper cancels the flow; Settings now discards an active field edit first.
+- Moved local chat commands and session-status rendering into focused files of the existing conversation workflow, without changing provider or authorization calls.
+- Replaced a few formulaic comments with short explanations of terminal and privacy constraints. Added focused regression cases for text boundaries, size limits, and Escape delivery.
+
+Validation: repository preflight, XML method-comment check, and scoped diff check passed. Automated tests, build, formatting verification, and live-terminal checks were not run.
+
 ## 2026-09-28 — Illustrate a practical restart investigation
 
 - Added a four-step ImageGen banner and readable captions to the README, with a read-only Windows investigation goal for `hm --plan`.

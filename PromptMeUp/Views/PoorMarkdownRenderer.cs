@@ -12,6 +12,8 @@ public interface IPoorMarkdownRenderer
     void Render(string markdown);
 
     void RenderAnimated(string markdown, CancellationToken cancellationToken);
+
+    void Render(MarkdownDocument document, bool animate, CancellationToken cancellationToken);
 }
 
 public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
@@ -23,17 +25,29 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
         _console = console ?? throw new ArgumentNullException(nameof(console));
 
     /// <summary>Renders a safe, readable Markdown subset with headings, lists, emphasis, links, and fenced code.</summary>
-    public void Render(string markdown) => RenderCore(markdown, animate: false, CancellationToken.None);
+    /// <param name="markdown">Source text to parse and render.</param>
+    /// <exception cref="ArgumentNullException">The source is missing.</exception>
+    public void Render(string markdown) => Render(Parse(markdown), animate: false, CancellationToken.None);
 
     /// <summary>Renders the readable Markdown subset progressively without ever exposing raw formatting markers.</summary>
+    /// <param name="markdown">Source text to parse and render.</param>
+    /// <param name="cancellationToken">Cancels output between blocks and animation chunks.</param>
+    /// <exception cref="ArgumentNullException">The source is missing.</exception>
+    /// <exception cref="OperationCanceledException">Rendering was cancelled.</exception>
     public void RenderAnimated(string markdown, CancellationToken cancellationToken) =>
-        RenderCore(markdown, animate: true, cancellationToken);
+        Render(Parse(markdown), animate: true, cancellationToken);
 
-    /// <summary>Renders sanitized Markdown either immediately or with a bounded teletype presentation.</summary>
-    private void RenderCore(string markdown, bool animate, CancellationToken cancellationToken)
+    /// <summary>Writes previously parsed blocks while retaining their individual animation policy.</summary>
+    /// <param name="document">Parsed content shared with the history view.</param>
+    /// <param name="animate">Whether ordinary prose should use the teletype presentation.</param>
+    /// <param name="cancellationToken">Cancels output between blocks and animation chunks.</param>
+    /// <exception cref="ArgumentNullException">The document is missing.</exception>
+    /// <exception cref="OperationCanceledException">Rendering was cancelled.</exception>
+    public void Render(MarkdownDocument document, bool animate, CancellationToken cancellationToken)
     {
-        var animationChunkSize = Math.Max(1, (int)Math.Ceiling(markdown.Length / 450d));
-        foreach (var block in Parse(markdown))
+        ArgumentNullException.ThrowIfNull(document);
+        var animationChunkSize = Math.Max(1, (int)Math.Ceiling(document.SourceLength / 450d));
+        foreach (var block in document.Blocks)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ConversationText.Write(_console, block.Content, animate && block.Animate, animationChunkSize, cancellationToken);
@@ -41,10 +55,22 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
     }
 
     /// <summary>Builds the same formatted content for a read-only history or disclosure viewport.</summary>
-    internal static IRenderable Content(string markdown) => new Rows(Parse(markdown).Select(block => block.Content));
+    /// <param name="markdown">Source text to retain as renderable blocks.</param>
+    /// <exception cref="ArgumentNullException">The source is missing.</exception>
+    internal static IRenderable Content(string markdown) => Parse(markdown);
+
+    /// <summary>Parses once for both the visible answer and its retained history entry.</summary>
+    /// <param name="markdown">Source text to sanitize and parse with the current theme.</param>
+    /// <exception cref="ArgumentNullException">The source is missing.</exception>
+    public static MarkdownDocument Parse(string markdown)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+        return new MarkdownDocument(ParseBlocks(markdown), markdown.Length);
+    }
 
     /// <summary>Parses one sanitized Markdown subset into reusable blocks without writing to the terminal.</summary>
-    private static IReadOnlyList<MarkdownBlock> Parse(string markdown)
+    /// <param name="markdown">Non-null source text supplied by the parser entry point.</param>
+    private static IReadOnlyList<MarkdownBlock> ParseBlocks(string markdown)
     {
         var blocks = new List<MarkdownBlock>();
         if (string.IsNullOrWhiteSpace(markdown))
@@ -202,8 +228,5 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
     /// <summary>Recognizes bold spans, inline code, and Markdown HTTP links without enabling arbitrary markup.</summary>
     [GeneratedRegex(@"\*\*(?<bold>.+?)\*\*|`(?<code>[^`\r\n]+)`|\[(?<linkText>[^\]\r\n]+)\]\((?<url>https?://[^\s)]+)\)", RegexOptions.IgnoreCase)]
     private static partial Regex InlinePattern();
-
-    /// <summary>Preserves animation policy independently of a block's reusable formatted content.</summary>
-    private sealed record MarkdownBlock(IRenderable Content, bool Animate);
 
 }

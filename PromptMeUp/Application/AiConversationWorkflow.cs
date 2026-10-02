@@ -26,7 +26,7 @@ public interface IAiConversationWorkflow
     Task RunConnectionTestAsync(AppSettings settings, CancellationToken cancellationToken);
 }
 
-public sealed class AiConversationWorkflow : IAiConversationWorkflow
+public sealed partial class AiConversationWorkflow : IAiConversationWorkflow
 {
     private static readonly JsonSerializerOptions MemoryJsonOptions = new()
     {
@@ -54,7 +54,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     private readonly ReminderService? _reminders;
     private readonly MemoryManagerWorkflow? _memoryManagerWorkflow;
 
-    /// <summary>Creates the focused query, chat, connection-test, and session-lifecycle workflow.</summary>
+    /// <summary>Connects query and chat sessions to the model, local data, and terminal output.</summary>
     public AiConversationWorkflow(
         IConversationMemoryService memoryService,
         IOpenAiService openAi,
@@ -427,26 +427,6 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             && string.Equals(candidate.Command, selected.Command, StringComparison.Ordinal))
         ?? throw new InvalidOperationException("The selected command was not part of the current model response.");
 
-    /// <summary>Recognizes the exact or argument-bearing run directive without accepting similarly prefixed prompts.</summary>
-    internal static bool TryParseRunCommand(string input, out string command)
-    {
-        ArgumentNullException.ThrowIfNull(input);
-        if (input.Equals("/run", StringComparison.OrdinalIgnoreCase))
-        {
-            command = string.Empty;
-            return true;
-        }
-
-        if (input.StartsWith("/run ", StringComparison.OrdinalIgnoreCase))
-        {
-            command = input[4..].Trim();
-            return true;
-        }
-
-        command = string.Empty;
-        return false;
-    }
-
     /// <summary>Runs the YAML diagnostic prompt and renders its localized response status.</summary>
     public async Task RunConnectionTestAsync(AppSettings settings, CancellationToken cancellationToken)
     {
@@ -511,6 +491,16 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
     }
 
     /// <summary>Classifies direct user requests before answering so supported global preferences persist only after a successful turn.</summary>
+    /// <param name="sessionId">Session receiving the provider and preference audit records.</param>
+    /// <param name="memory">Current conversation context and session presentation state.</param>
+    /// <param name="settings">Preferences used for the request.</param>
+    /// <param name="promptId">Versioned conversational prompt to use.</param>
+    /// <param name="envelope">Selected memories and skills for this turn.</param>
+    /// <param name="userText">Direct user request, without recalled or generated content.</param>
+    /// <param name="classifyDisplayIntent">Whether this request may change display preferences.</param>
+    /// <param name="cancellationToken">Cancels provider and persistence operations.</param>
+    /// <exception cref="OpenAiRequestException">The provider or preference contract failed.</exception>
+    /// <exception cref="OperationCanceledException">The turn was cancelled.</exception>
     private async Task<AiResponse> SendWithDisplayIntentAsync(
         string sessionId,
         ConversationState memory,
@@ -527,7 +517,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 cancellationToken).ConfigureAwait(false);
         }
 
-        // Recalled notes, earlier answers, and generated command output cannot request display changes.
+        // Past chat and tool output don't get to change display preferences.
         var classification = await _openAi.SendAsync("chat-display-intent", sessionId,
             [new ChatMessage("user", userText)], settings with { ReasoningEffort = "low", OutputDetail = "compact" },
             _text.Language, cancellationToken).ConfigureAwait(false);
@@ -547,13 +537,17 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             };
         }
 
-        // Apply mixed requests only after the answer succeeds, so a failed turn cannot silently change visibility.
+        // Save a display change only after the answer succeeds.
         var confirmation = await ApplyDisplayIntentAsync(sessionId, memory, settings, intent, cancellationToken).ConfigureAwait(false);
-        return response with
+        if (!intent.ContinueChat)
         {
-            Text = !intent.ContinueChat ? confirmation
-                : confirmation.Length == 0 ? response.Text : $"{confirmation}\n\n{response.Text}"
-        };
+            return response with { Text = confirmation };
+        }
+        if (confirmation.Length == 0)
+        {
+            return response;
+        }
+        return response with { Text = $"{confirmation}\n\n{response.Text}" };
     }
 
     /// <summary>Persists validated global preferences while retaining command-suggestion visibility for this chat only.</summary>
@@ -699,51 +693,6 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         return completed;
     }
 
-    /// <summary>Renders provider-confirmed context, input, output, costs, and cache counters at an allowed workflow point.</summary>
-    private void RenderTurnSnapshot(AiResponse response, AppSettings settings, decimal runningCost, SessionSummaryTiming timing)
-    {
-        if (SessionSummaryPolicy.ShouldRender(settings, timing))
-        {
-            _shell.RenderRuntimeStatus(CreateTurnSnapshot(response, settings, runningCost));
-        }
-    }
-
-    /// <summary>Builds the immutable provider-confirmed session snapshot shown after a query, chat turn, or connection test.</summary>
-    internal static ShellRuntimeStatus CreateTurnSnapshot(AiResponse response, AppSettings settings, decimal runningCost)
-    {
-        ArgumentNullException.ThrowIfNull(response);
-        ArgumentNullException.ThrowIfNull(settings);
-        decimal? promptCost = response.CostBreakdown is null
-            ? null
-            : response.CostBreakdown.InputUsd + response.CostBreakdown.CachedInputUsd + response.CostBreakdown.CacheWriteUsd;
-        return new ShellRuntimeStatus(
-            "OpenAI",
-            response.Model,
-            settings.ReasoningEffort,
-            promptCost,
-            response.CostBreakdown?.OutputUsd,
-            runningCost,
-            response.ContextUsage.InputTokens + response.ContextUsage.OutputTokens,
-            response.Usage.InputTokens,
-            response.Usage.OutputTokens,
-            response.ContextUsage.ContextWindowTokens,
-            false,
-            response.Usage.CachedInputTokens,
-            response.Usage.CacheWriteTokens)
-        {
-            ActiveContextTokens = response.ContextUsage.InputTokens,
-            ContextBudgetTokens = response.ContextUsage.InputBudgetTokens,
-            SystemInstructionTokens = response.ContextUsage.SystemInstructionTokens,
-            GuideTokens = response.ContextUsage.GuideTokens,
-            UserMessageTokens = response.ContextUsage.UserMessageTokens,
-            ToolOutputTokens = response.ContextUsage.ToolOutputTokens,
-            AssistantMessageTokens = response.ContextUsage.AssistantMessageTokens,
-            HasContextBreakdown = response.ContextUsage.InputBudgetTokens > 0,
-            TurnCostUsd = response.RequestCount > 1 ? response.TurnCostUsd : response.EstimatedCostUsd,
-            HasTurnCost = true
-        };
-    }
-
     /// <summary>Records context-pruning activity only when the active memory actually changed.</summary>
     private async Task AuditPruningAsync(string sessionId, int prunedMessages, CancellationToken cancellationToken)
     {
@@ -758,110 +707,6 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             "memory_pruned",
             new { prunedMessages },
             cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>Keeps explicit skills and memory administration out of chat context and automatic provider requests.</summary>
-    private async Task<bool> HandleSkillsAndMemoryCommandAsync(string input, AppSettings settings, CancellationToken ct)
-    {
-        var parts = input.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
-        var command = parts.FirstOrDefault()?.ToLowerInvariant() switch
-        {
-            "/skills" => AppCommand.Skills,
-            "/learning" => AppCommand.Learning,
-            "/proposals" => AppCommand.Proposals,
-            "/dream" => AppCommand.Dream,
-            "/heartbeat" => AppCommand.Heartbeat,
-            _ => (AppCommand?)null
-        };
-        if (command is null)
-        {
-            return false;
-        }
-        if (parts.Length != 1 || command == AppCommand.Proposals && _memoryManagerWorkflow is null
-            || command != AppCommand.Proposals && _skillsAndMemoryWorkflow is null)
-        {
-            _shell.RenderError(_text.Text("Lab.Invalid"));
-            return true;
-        }
-        try
-        {
-            if (command == AppCommand.Proposals)
-            {
-                await _memoryManagerWorkflow!.RunAsync(ct, selectProposals: true).ConfigureAwait(false);
-            }
-            else
-            {
-                await _skillsAndMemoryWorkflow!.RunAsync(command.Value, settings, ct).ConfigureAwait(false);
-            }
-        }
-        catch (InteractiveFlowCanceledException) when (!ct.IsCancellationRequested)
-        {
-            _shell.RenderNotice(_text.Text("Common.Cancelled"));
-        }
-        catch (InvalidOperationException exception)
-        {
-            _shell.RenderError(exception.Message);
-        }
-        return true;
-    }
-
-    /// <summary>Handles explicit note commands locally so neither note administration nor invalid syntax reaches the provider.</summary>
-    private async Task<bool> HandleMemoryCommandAsync(string input, CancellationToken cancellationToken)
-    {
-        var parts = input.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0)
-        {
-            return false;
-        }
-        var command = parts[0].ToLowerInvariant();
-        if (command is not ("/remember" or "/memories" or "/forget"))
-        {
-            return false;
-        }
-        try
-        {
-            switch (command)
-            {
-                case "/memories" when parts.Length == 1:
-                    _memoryView.Render(await _persistentMemory.ListAsync(cancellationToken).ConfigureAwait(false));
-                    break;
-                case "/remember" when parts.Length == 2:
-                    var note = parts[1].Trim();
-                    var scope = note.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
-                    if (string.Equals(scope.FirstOrDefault(), "global", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(scope.FirstOrDefault(), "project", StringComparison.OrdinalIgnoreCase))
-                    {
-                        note = scope.Length == 2 ? scope[1].Trim() : string.Empty;
-                    }
-                    var saved = await _persistentMemory.RememberAsync(note, true, cancellationToken).ConfigureAwait(false);
-                    _shell.RenderSuccess(_text.Text("Memory.Saved", saved.Id));
-                    break;
-                case "/forget" when parts.Length == 2:
-                    if (_skillsAndMemoryWorkflow is not null && !_skillsAndMemoryWorkflow.ConfirmMemoryForget())
-                    {
-                        _shell.RenderNotice(_text.Text("Common.Cancelled"));
-                        break;
-                    }
-                    var removed = await _persistentMemory.ForgetAsync(parts[1].Trim(), cancellationToken).ConfigureAwait(false);
-                    if (removed)
-                    {
-                        _shell.RenderSuccess(_text.Text("Memory.Forgotten"));
-                    }
-                    else
-                    {
-                        _shell.RenderWarning(_text.Text("Memory.NotFound"));
-                    }
-                    break;
-                default:
-                    _shell.RenderError(_text.Text("Memory.Syntax"));
-                    break;
-            }
-        }
-        catch (MemoryValidationException exception)
-        {
-            _shell.RenderError(exception.Message);
-        }
-        return true;
     }
 
     /// <summary>Loads selected notes once into a bounded low-trust YAML envelope without adding them to conversation history.</summary>
@@ -935,86 +780,6 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         memory.PromptId = promptId;
         memory.Envelope = envelope;
         return envelope;
-    }
-
-    /// <summary>Applies visibility policy to a fresh snapshot without changing conversation memory.</summary>
-    private async Task RenderActiveSnapshotAsync(
-        string sessionId,
-        ConversationState memory,
-        AppSettings settings,
-        CancellationToken cancellationToken,
-        bool force = false)
-    {
-        var snapshot = await CreateSessionSnapshotAsync(sessionId, memory, settings, cancellationToken).ConfigureAwait(false);
-        if (memory.ShowSessionSummaryDuringWork || force || IsContextWarning(snapshot))
-        {
-            _shell.RenderRuntimeStatus(snapshot);
-            memory.SummaryRenderedSinceLastResult = true;
-        }
-    }
-
-    /// <summary>Combines current local context with one authoritative ledger read, including failed calls and risk reviews.</summary>
-    private async Task<ShellRuntimeStatus> CreateSessionSnapshotAsync(
-        string sessionId, ConversationState memory, AppSettings settings, CancellationToken cancellationToken)
-    {
-        var context = await _openAi.EstimateContextAsync(
-            memory.PromptId, CombineMessages(memory.Envelope, memory.Memory.Snapshot().Messages), settings, _text.Language,
-            cancellationToken, memory.Guide).ConfigureAwait(false);
-        var accounting = await _database.GetSessionAccountingAsync(sessionId, cancellationToken).ConfigureAwait(false);
-        var status = memory.LastResponse is null
-            ? ShellRuntimeStatus.FromSettings(settings)
-            : CreateTurnSnapshot(memory.LastResponse, settings, accounting.EstimatedCostUsd ?? 0m);
-        return status with
-        {
-            RunningCostUsd = accounting.EstimatedCostUsd ?? 0m,
-            SessionCostKnown = accounting.EstimatedCostUsd.HasValue,
-            ActiveContextTokens = context.InputTokens,
-            ContextWindowTokens = context.ContextWindowTokens,
-            ContextBudgetTokens = context.InputBudgetTokens,
-            SystemInstructionTokens = context.SystemInstructionTokens,
-            GuideTokens = context.GuideTokens,
-            UserMessageTokens = context.UserMessageTokens,
-            ToolOutputTokens = context.ToolOutputTokens,
-            AssistantMessageTokens = context.AssistantMessageTokens,
-            HasContextBreakdown = true,
-            MemoryTokens = memory.Envelope.Tokens,
-            MemoryCount = memory.Envelope.Count,
-            SessionInputTokens = accounting.Usage.InputTokens,
-            SessionOutputTokens = accounting.Usage.OutputTokens,
-            HasSessionUsage = true,
-            ConversationMode = memory.PromptId switch
-            {
-                "diagnose-system" => ConversationDisplayMode.Diagnose,
-                "explain-system" => ConversationDisplayMode.Explain,
-                _ => ConversationDisplayMode.Chat
-            }
-        };
-    }
-
-    /// <summary>Overrides hidden summaries at eighty percent of the effective operating context budget.</summary>
-    internal static bool IsContextWarning(ShellRuntimeStatus status) => status.ContextBudgetTokens > 0
-        && status.ActiveContextTokens is { } used && (decimal)used * 100 >= (decimal)status.ContextBudgetTokens * 80;
-
-    /// <summary>Refreshes local totals at exit with a bounded shutdown-independent read and never hides the original flow failure.</summary>
-    private async Task RenderFinalSnapshotAsync(string sessionId, ConversationState memory, AppSettings settings)
-    {
-        if (memory.SummaryRenderedSinceLastResult)
-        {
-            return;
-        }
-        ShellRuntimeStatus snapshot;
-        using var finalRead = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        try
-        {
-            snapshot = await CreateSessionSnapshotAsync(sessionId, memory, settings, finalRead.Token).ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogWarning("Final session snapshot unavailable. ErrorType={ErrorType}", exception.GetType().Name);
-            _shell.RenderWarning(_text.Text("Chat.SessionSummaryUnavailable"));
-            snapshot = ShellRuntimeStatus.FromSettings(settings) with { SessionCostKnown = false };
-        }
-        _shell.RenderRuntimeStatus(snapshot);
     }
 
     /// <summary>Prepends recalled data exactly once while keeping the latest user message last for provider accounting.</summary>

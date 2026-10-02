@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 
 using PromptMeUp.Views;
+using PromptMeUp.Services;
 using Spectre.Console;
 
 namespace PromptMeUp.Tests;
@@ -32,6 +33,26 @@ public sealed class InteractiveConsoleTests
 
         await Assert.ThrowsAsync<InteractiveFlowCanceledException>(
             () => input.ReadKeyAsync(intercept: true, CancellationToken.None));
+    }
+
+    /// <summary>Fullscreen views receive Escape so they can cancel the active field before closing.</summary>
+    [Fact]
+    public void FullscreenInput_Escape_ReachesTheView()
+    {
+        var escape = new ConsoleKeyInfo('\u001b', ConsoleKey.Escape, false, false, false);
+        var input = new EscapeAwareConsoleInput(
+            new StubConsoleInput(_ => Task.FromResult<ConsoleKeyInfo?>(escape)),
+            CancellationToken.None);
+        var rendering = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Out = new AnsiConsoleOutput(new StringWriter())
+        });
+        var console = TestProxy.Create<IAnsiConsole>((method, args) =>
+            method.Name == "get_Input" ? input : method.Invoke(rendering, args));
+
+        var actual = new FullscreenInput(console, new LocalizationService()).ReadKey(() => { });
+
+        Assert.Equal(ConsoleKey.Escape, actual?.Key);
     }
 
     /// <summary>Verifies that global shutdown interrupts a prompt even when its local token is not cancelled.</summary>

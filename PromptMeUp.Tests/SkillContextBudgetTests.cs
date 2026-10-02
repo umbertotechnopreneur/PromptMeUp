@@ -153,6 +153,32 @@ public sealed class SkillContextBudgetTests
         Assert.Equal(bundled.Fingerprint, await store.GetAsync("skill:" + bundled.Name, default));
     }
 
+    /// <summary>Batch approval lookup never approves changed content and sees a revocation on the next selection.</summary>
+    [Fact]
+    public async Task Select_ChangedOrRevokedPackage_IsExcluded()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var text = new LocalizationService();
+        var store = Store(fixture, text);
+        var catalog = Catalog(fixture, store, text);
+        await store.SaveSettingsAsync(new(Enabled: true), new(), default);
+        var skill = Package(fixture, catalog, "budget-approved", "Use this short reference.");
+        await catalog.EnableAsync(skill, true, default);
+        await catalog.SelectForQuestionsAsync(skill, default);
+        Assert.Equal(skill.Fingerprint, Assert.Single(await catalog.SelectAsync("question", default)).Fingerprint);
+
+        await File.AppendAllTextAsync(Path.Combine(skill.Directory, "SKILL.md"), "\nChanged after approval.");
+        Assert.Empty(await catalog.SelectAsync("question", default));
+
+        var changed = catalog.Inspect(skill.Directory);
+        await catalog.EnableAsync(changed, true, default);
+        Assert.Equal(changed.Fingerprint, Assert.Single(await catalog.SelectAsync("question", default)).Fingerprint);
+
+        await catalog.EnableAsync(changed, false, default);
+        Assert.Empty(await catalog.SelectAsync("question", default));
+    }
+
     /// <summary>Builds either a plain over-budget body or a smaller body that exceeds the limit only after JSON escaping.</summary>
     private static string OversizedInstructions(bool escaped) => escaped
         ? string.Concat(Enumerable.Repeat(Markup, 210))

@@ -709,14 +709,26 @@ public sealed class SqliteDatabaseService : IDatabaseService
     }
 
     /// <summary>Opens one pooled connection with foreign keys and a bounded busy timeout enabled.</summary>
+    /// <param name="cancellationToken">Cancels connection acquisition and setup.</param>
+    /// <exception cref="OperationCanceledException">Acquisition or setup was cancelled.</exception>
+    /// <exception cref="SqliteException">The database could not be opened or configured.</exception>
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
     {
         var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;";
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-        return connection;
+        try
+        {
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;";
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            return connection;
+        }
+        catch
+        {
+            // We still own this connection until all setup succeeds.
+            await connection.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     /// <summary>Reads the schema marker before any initialization DDL can alter the database.</summary>
