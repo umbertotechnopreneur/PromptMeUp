@@ -1,5 +1,13 @@
 ﻿# Task Archive
 
+## 2026-09-28 — Illustrate a practical restart investigation
+
+- Added a four-step ImageGen banner and readable captions to the README, with a read-only Windows investigation goal for `hm --plan`.
+- Reused the illustration on the product website with English, Italian, and Vietnamese captions and a responsive four/two/one-column layout.
+- Kept the copy aligned with implemented behavior: Plan shows checks and expected results; chat provides further interpretation. Recorded image provenance and the full generation prompt.
+
+Validation: inspected the generated artwork, reviewed the scoped diffs and Plan workflow, and checked matching image copies. Builds, automated tests, browser rendering, and publication were not performed.
+
 ## 2026-09-26 — Make saved memories useful at a glance
 
 - Reused the shared borderless terminal table to preview saved notes directly in Settings, with a compact layout on narrow terminals and refreshed content after editing.

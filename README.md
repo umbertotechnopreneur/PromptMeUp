@@ -14,6 +14,29 @@ Git, Bash, or PowerShell: describe what you want to do. `hm` is here to help. Av
 
 *Actual app screenshot supplied by the author, shown in Italian. Cropped and framed; the personal path is hidden. Select it to view at full size.*
 
+## Your PC restarted unexpectedly. Why?
+
+You could spend hours hunting through Windows logs. Or give PromptMeUp (pmUp) a clear goal and use Plan mode to work through the investigation one step at a time.
+
+![Four-step diagnostic workflow: an unexpected restart, a goal described in conversation, ordered terminal checks, and output examined for clues](docs/assets/meup/promptmeup-reboot-plan-v1.png)
+
+<table>
+<tr>
+<td width="25%" valign="top"><strong>1. Something went wrong</strong><br />Your PC restarted unexpectedly. You want to find out why.</td>
+<td width="25%" valign="top"><strong>2. Describe your goal</strong><br />Ask Plan to investigate the last restart using Windows logs.</td>
+<td width="25%" valign="top"><strong>3. Follow the checks</strong><br />Review the proposed PowerShell commands and run the checks you approve.</td>
+<td width="25%" valign="top"><strong>4. Read the clues</strong><br />Compare each output with its expected result. Ask in chat if you need help interpreting it.</td>
+</tr>
+</table>
+
+```powershell
+hm --plan "Help me investigate why my Windows PC restarted unexpectedly. Start with read-only checks of the last restart and relevant event logs."
+```
+
+Plan saves your progress, so you can pause and resume. It shows commands and their expected results; you still review each action before it runs. For an output you don't understand, open `hm --chat` and share the relevant lines, removing private details first. Logs can provide clues, but they may not reveal a definite cause.
+
+*Conceptual illustration generated with ImageGen, not an app screenshot.*
+
 ## Get started
 
 There is no public download yet. To build locally, install the **.NET 10 SDK**, **Git**, and **PowerShell 7**. AI features use your own OpenAI API account.
