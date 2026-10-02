@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 
 using System.Globalization;
 
@@ -87,7 +87,8 @@ internal sealed class TerminalEditorBuffer
         return true;
     }
 
-    /// <summary>Keeps the same visual column when moving between lines of composed characters.</summary>
+    /// <summary>Keeps the grapheme index when changing lines; wide glyphs still count as one character.</summary>
+    /// <param name="direction">Negative to move up, positive to move down.</param>
     private void MoveLine(int direction)
     {
         var start = LineStart(Caret);

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 
 using PromptMeUp.Models;
 using PromptMeUp.Services;
@@ -29,6 +29,10 @@ public sealed partial class AiConversationWorkflow
     }
 
     /// <summary>Keeps skill and proposal commands local to the app, outside provider context.</summary>
+    /// <param name="input">Direct user input to check for a local command.</param>
+    /// <param name="settings">Current application preferences.</param>
+    /// <param name="ct">Cancels the selected workflow.</param>
+    /// <exception cref="OperationCanceledException">Application shutdown cancelled the workflow.</exception>
     private async Task<bool> HandleSkillsAndMemoryCommandAsync(string input, AppSettings settings, CancellationToken ct)
     {
         var parts = input.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
@@ -45,12 +49,16 @@ public sealed partial class AiConversationWorkflow
         {
             return false;
         }
-        if (parts.Length != 1 || command == AppCommand.Proposals && _memoryManagerWorkflow is null
-            || command != AppCommand.Proposals && _skillsAndMemoryWorkflow is null)
+        var hasArguments = parts.Length != 1;
+        var handlerAvailable = command == AppCommand.Proposals
+            ? _memoryManagerWorkflow is not null
+            : _skillsAndMemoryWorkflow is not null;
+        if (hasArguments || !handlerAvailable)
         {
             _shell.RenderError(_text.Text("Lab.Invalid"));
             return true;
         }
+
         try
         {
             if (command == AppCommand.Proposals)

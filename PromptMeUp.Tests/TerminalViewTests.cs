@@ -104,6 +104,33 @@ public sealed class TerminalViewTests
         Assert.Equal(rendered, StripAnsi(output.ToString()));
     }
 
+    /// <summary>Shares the exact parsed document between the displayed answer and retained history.</summary>
+    [Fact]
+    public void ChatAnswer_ReusesParsedDocumentForHistory()
+    {
+        var (console, output) = CreateConsole();
+        var text = new LocalizationService();
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
+        shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false));
+        var renderer = new PoorMarkdownRenderer(console);
+        MarkdownDocument? displayed = null;
+        var capture = TestProxy.Create<IPoorMarkdownRenderer>((method, arguments) =>
+        {
+            displayed = Assert.IsType<MarkdownDocument>(arguments[0]);
+            renderer.Render(displayed, (bool)arguments[1]!, (CancellationToken)arguments[2]!);
+            return null;
+        });
+        var view = new ChatView(console, text, capture, shell);
+
+        view.RenderAssistant("## Result\nA **formatted** answer.\n```sh\necho '[red]'\n```", false, default);
+
+        Assert.Same(displayed, Assert.Single(TerminalSession.For(console).History.Turns).Content);
+        var rendered = StripAnsi(output.ToString());
+        Assert.Contains("A formatted answer.", rendered);
+        Assert.Contains("echo '[red]'", rendered);
+        Assert.DoesNotContain("**", rendered);
+    }
+
     /// <summary>Verifies that status data uses frameless localized label-value rows.</summary>
     [Fact]
     public void StatusView_RendersFramelessLabelValueGrid()

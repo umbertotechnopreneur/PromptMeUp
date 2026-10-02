@@ -110,25 +110,25 @@ public sealed class ChatView : IChatView
     }
 
     /// <summary>Renders a model response through the Markdown renderer so formatting never degrades into raw source text.</summary>
+    /// <param name="markdown">Completed response, including an optional leading heading.</param>
+    /// <param name="animate">Whether to animate prose when console settings permit it.</param>
+    /// <param name="cancellationToken">Cancels rendering without discarding retained history.</param>
+    /// <exception cref="ArgumentNullException">The response is missing.</exception>
+    /// <exception cref="OperationCanceledException">Rendering was cancelled.</exception>
     public void RenderAssistant(string markdown, bool animate, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(markdown);
         cancellationToken.ThrowIfCancellationRequested();
         var (heading, body) = SeparateLeadingHeading(markdown);
+        var document = PoorMarkdownRenderer.Parse(body);
         TerminalSession.For(_console).History.Add(TerminalTurnKind.Assistant, heading ?? string.Empty,
-            PoorMarkdownRenderer.Content(body), markdown.Length);
+            document, markdown.Length);
         TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.Assistant, heading);
 
         if (!string.IsNullOrWhiteSpace(body))
         {
-            if (animate && !_shell.Options.NoAnimation && !Console.IsOutputRedirected)
-            {
-                _markdown.RenderAnimated(body, cancellationToken);
-            }
-            else
-            {
-                _markdown.Render(body);
-            }
+            var shouldAnimate = animate && !_shell.Options.NoAnimation && !Console.IsOutputRedirected;
+            _markdown.Render(document, shouldAnimate, cancellationToken);
         }
 
         _console.WriteLine();

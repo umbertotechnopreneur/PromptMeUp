@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 
 using Microsoft.Extensions.Logging;
 using PromptMeUp.Models;

@@ -56,6 +56,53 @@ public sealed partial class SkillsAndMemoryStore(AppPaths paths, ISensitiveDataR
         return await command.ExecuteScalarAsync(ct).ConfigureAwait(false) as string;
     }
 
+    /// <summary>Reads only the requested package approvals in one database round trip.</summary>
+    /// <param name="skillNames">At most 128 package names from the current catalog.</param>
+    /// <param name="cancellationToken">Cancels the approval lookup.</param>
+    /// <exception cref="ArgumentNullException">The name list is missing.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Too many package names were supplied.</exception>
+    /// <exception cref="InvalidOperationException">A preference key is invalid.</exception>
+    /// <exception cref="SqliteException">The database could not be read.</exception>
+    /// <exception cref="OperationCanceledException">The lookup was cancelled.</exception>
+    internal async Task<IReadOnlyDictionary<string, string>> GetSkillApprovalsAsync(
+        IReadOnlyList<string> skillNames, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(skillNames);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(skillNames.Count, 128);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var approvals = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (skillNames.Count == 0)
+        {
+            return approvals;
+        }
+
+        var keys = skillNames.Select(name => "skill:" + name).Distinct(StringComparer.Ordinal).ToArray();
+        foreach (var key in keys)
+        {
+            ValidatePreference(key, string.Empty);
+        }
+
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        var parameters = new string[keys.Length];
+        for (var index = 0; index < keys.Length; index++)
+        {
+            parameters[index] = "$skill" + index;
+            command.Parameters.AddWithValue(parameters[index], keys[index]);
+        }
+        command.CommandText = "SELECT name, value FROM skills_and_memory_settings "
+            + "WHERE scope_key = $scope AND name IN (" + string.Join(", ", parameters) + ");";
+        command.Parameters.AddWithValue("$scope", PersistentMemoryService.GlobalScope);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            approvals.Add(reader.GetString(0)["skill:".Length..], reader.GetString(1));
+        }
+        return approvals;
+    }
+
     /// <summary>Saves a small preference; values cannot contain recognizable credentials.</summary>
     public async Task SetAsync(string key, string value, CancellationToken ct)
     {

@@ -491,6 +491,16 @@ public sealed partial class AiConversationWorkflow : IAiConversationWorkflow
     }
 
     /// <summary>Classifies direct user requests before answering so supported global preferences persist only after a successful turn.</summary>
+    /// <param name="sessionId">Session receiving the provider and preference audit records.</param>
+    /// <param name="memory">Current conversation context and session presentation state.</param>
+    /// <param name="settings">Preferences used for the request.</param>
+    /// <param name="promptId">Versioned conversational prompt to use.</param>
+    /// <param name="envelope">Selected memories and skills for this turn.</param>
+    /// <param name="userText">Direct user request, without recalled or generated content.</param>
+    /// <param name="classifyDisplayIntent">Whether this request may change display preferences.</param>
+    /// <param name="cancellationToken">Cancels provider and persistence operations.</param>
+    /// <exception cref="OpenAiRequestException">The provider or preference contract failed.</exception>
+    /// <exception cref="OperationCanceledException">The turn was cancelled.</exception>
     private async Task<AiResponse> SendWithDisplayIntentAsync(
         string sessionId,
         ConversationState memory,
@@ -529,11 +539,15 @@ public sealed partial class AiConversationWorkflow : IAiConversationWorkflow
 
         // Save a display change only after the answer succeeds.
         var confirmation = await ApplyDisplayIntentAsync(sessionId, memory, settings, intent, cancellationToken).ConfigureAwait(false);
-        return response with
+        if (!intent.ContinueChat)
         {
-            Text = !intent.ContinueChat ? confirmation
-                : confirmation.Length == 0 ? response.Text : $"{confirmation}\n\n{response.Text}"
-        };
+            return response with { Text = confirmation };
+        }
+        if (confirmation.Length == 0)
+        {
+            return response;
+        }
+        return response with { Text = $"{confirmation}\n\n{response.Text}" };
     }
 
     /// <summary>Persists validated global preferences while retaining command-suggestion visibility for this chat only.</summary>

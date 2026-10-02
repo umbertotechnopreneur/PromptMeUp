@@ -8,6 +8,25 @@ namespace PromptMeUp.Tests;
 
 public sealed class SkillsAndMemoryStoreTests
 {
+    /// <summary>Limits an approval snapshot to the requested skills without duplicating rows or exposing other preferences.</summary>
+    [Fact]
+    public async Task GetSkillApprovals_ReadsOnlyRequestedNames()
+    {
+        using var fixture = new RegressionFixture();
+        await fixture.Database.InitializeAsync(default);
+        var store = CreateStore(fixture);
+        await store.SetAsync("skill:alpha", "approved-alpha", default);
+        await store.SetAsync("skill:beta", "approved-beta", default);
+        await store.SetAsync("selected-skill", "beta", default);
+
+        var approvals = await store.GetSkillApprovalsAsync(["alpha", "alpha", "missing"], default);
+
+        var approval = Assert.Single(approvals);
+        Assert.Equal("alpha", approval.Key);
+        Assert.Equal("approved-alpha", approval.Value);
+        Assert.Empty(await store.GetSkillApprovalsAsync([], default));
+    }
+
     /// <summary>Another instance's revoked consent cannot be restored by either unrelated toggle from an older settings screen.</summary>
     [Theory]
     [InlineData(false, false)]

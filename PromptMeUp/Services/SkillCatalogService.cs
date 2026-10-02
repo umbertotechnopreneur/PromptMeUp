@@ -217,6 +217,11 @@ public sealed class SkillCatalogService(AppPaths paths, SkillsAndMemoryStore sto
         skill.UnavailableReason is null && await store.GetAsync("skill:" + skill.Name, ct).ConfigureAwait(false) == skill.Fingerprint;
 
     /// <summary>Selects enabled packages after resolving localized instructions and budgeting their complete serialized context.</summary>
+    /// <param name="query">Current user request used to rank available skills.</param>
+    /// <param name="ct">Cancels preference reads and instruction loading.</param>
+    /// <param name="warnings">Optional destination for oversized manual-selection notices.</param>
+    /// <exception cref="InvalidOperationException">A skill package or required preference is invalid.</exception>
+    /// <exception cref="OperationCanceledException">Selection was cancelled.</exception>
     public async Task<IReadOnlyList<SkillDefinition>> SelectAsync(string query, CancellationToken ct, ICollection<string>? warnings = null)
     {
         var settings = await store.SettingsAsync(ct).ConfigureAwait(false);
@@ -225,15 +230,29 @@ public sealed class SkillCatalogService(AppPaths paths, SkillsAndMemoryStore sto
             return [];
         }
         var explicitName = await store.GetAsync("selected-skill", ct).ConfigureAwait(false);
+        if (!settings.AutomaticSkills && string.IsNullOrEmpty(explicitName))
+        {
+            return [];
+        }
+
         var words = query.Split([' ', '\n', '.', ',', ':', '/', '\\'], StringSplitOptions.RemoveEmptyEntries)
             .Where(word => word.Length >= 3).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var candidates = List()
+            .Select(skill => (Skill: skill, Score: SelectionScore(skill, explicitName, settings.AutomaticSkills, words)))
+            .Where(candidate => candidate.Score > 0)
+            .OrderByDescending(candidate => candidate.Score)
+            .ThenBy(candidate => candidate.Skill.Name, StringComparer.Ordinal)
+            .ToArray();
+        var approvals = await store.GetSkillApprovalsAsync(
+            candidates.Select(candidate => candidate.Skill.Name).ToArray(), ct).ConfigureAwait(false);
         var selected = new List<SkillDefinition>();
         var template = (await prompts.GetAsync("skill-context", ct).ConfigureAwait(false)).ResolveText(text.Language);
-        foreach (var candidate in List().Select(skill => (Skill: skill, Score: string.Equals(skill.Name, explicitName, StringComparison.OrdinalIgnoreCase) ? int.MaxValue
-                     : settings.AutomaticSkills ? words.Count(word => (skill.Name + " " + skill.Description).Contains(word, StringComparison.OrdinalIgnoreCase)) : 0))
-                 .Where(item => item.Score > 0).OrderByDescending(item => item.Score).ThenBy(item => item.Skill.Name, StringComparer.Ordinal))
+        foreach (var candidate in candidates)
         {
-            if (!await IsEnabledAsync(candidate.Skill, ct).ConfigureAwait(false))
+            ct.ThrowIfCancellationRequested();
+            // Batch the approvals, but still match each freshly inspected package's content.
+            if (candidate.Skill.UnavailableReason is not null
+                || approvals.GetValueOrDefault(candidate.Skill.Name) != candidate.Skill.Fingerprint)
             {
                 continue;
             }
@@ -248,6 +267,26 @@ public sealed class SkillCatalogService(AppPaths paths, SkillsAndMemoryStore sto
             }
         }
         return selected;
+    }
+
+    /// <summary>Ranks a manual selection first, then uses description matches only when automatic selection is enabled.</summary>
+    /// <param name="skill">Freshly inspected package to rank.</param>
+    /// <param name="explicitName">Optional package chosen explicitly by the user.</param>
+    /// <param name="automatic">Whether description matching is enabled.</param>
+    /// <param name="words">Distinct query terms with at least three characters.</param>
+    private static int SelectionScore(SkillDefinition skill, string? explicitName, bool automatic, IReadOnlyList<string> words)
+    {
+        if (string.Equals(skill.Name, explicitName, StringComparison.OrdinalIgnoreCase))
+        {
+            return int.MaxValue;
+        }
+        if (!automatic)
+        {
+            return 0;
+        }
+
+        var description = skill.Name + " " + skill.Description;
+        return words.Count(word => description.Contains(word, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Builds exactly the localized context used during selection, without rewriting its approved instructions.</summary>
