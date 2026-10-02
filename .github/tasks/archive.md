@@ -1,5 +1,14 @@
 ﻿# Task Archive
 
+## 2026-10-02 — Share fullscreen editing and organize chat internals
+
+- Added one Unicode-aware editor buffer for settings, grouped menus, and saved memories while preserving their separate save and cancel rules.
+- Let fullscreen views receive Escape before the global input wrapper cancels the flow; Settings now discards an active field edit first.
+- Moved local chat commands and session-status rendering into focused files of the existing conversation workflow, without changing provider or authorization calls.
+- Replaced a few formulaic comments with short explanations of terminal and privacy constraints. Added focused regression cases for text boundaries, size limits, and Escape delivery.
+
+Validation: repository preflight, XML method-comment check, and scoped diff check passed. Automated tests, build, formatting verification, and live-terminal checks were not run.
+
 ## 2026-09-28 — Illustrate a practical restart investigation
 
 - Added a four-step ImageGen banner and readable captions to the README, with a read-only Windows investigation goal for `hm --plan`.

@@ -95,10 +95,15 @@ internal sealed class FullscreenInput(IAnsiConsole console, ILocalizationService
     /// <summary>Forgets a completed surface's key task before the next independent interaction starts.</summary>
     internal void Reset() => _pendingRead = null;
 
-    /// <summary>Uses the cancellation-aware input wrapper supplied by the application host.</summary>
+    /// <summary>Lets each fullscreen view handle Escape while preserving global shutdown cancellation.</summary>
     private async Task<ConsoleKeyInfo?> ReadKeyAsync()
     {
-        if (reader is null) return await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
+        if (reader is null)
+        {
+            return console.Input is EscapeAwareConsoleInput wrapped
+                ? await wrapped.ReadRawKeyAsync(true, CancellationToken.None).ConfigureAwait(false)
+                : await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
+        }
         while (true)
         {
             var input = await reader.ReadAsync().ConfigureAwait(false);
