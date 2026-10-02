@@ -98,6 +98,27 @@ internal static partial class UiTextCatalog
             German: "Diesen exakten Befehl jetzt autorisieren?",
             Spanish: "¿Autorizar ahora este comando exacto?",
             Vietnamese: "Cấp quyền chạy chính xác lệnh này ngay bây giờ?"));
+        entries.Add("Command.Copy", new(
+            English: "Copy command without running it",
+            Italian: "Copia il comando senza eseguirlo",
+            French: "Copier la commande sans l’exécuter",
+            German: "Befehl kopieren, ohne ihn auszuführen",
+            Spanish: "Copiar el comando sin ejecutarlo",
+            Vietnamese: "Sao chép lệnh mà không chạy"));
+        entries.Add("Command.Copied", new(
+            English: "Command copied. Nothing was executed.",
+            Italian: "Comando copiato. Non è stato eseguito nulla.",
+            French: "Commande copiée. Rien n’a été exécuté.",
+            German: "Befehl kopiert. Nichts wurde ausgeführt.",
+            Spanish: "Comando copiado. No se ejecutó nada.",
+            Vietnamese: "Đã sao chép lệnh. Không có lệnh nào được chạy."));
+        entries.Add("Command.CopyFailed", new(
+            English: "Could not copy the command. Nothing was executed.",
+            Italian: "Impossibile copiare il comando. Non è stato eseguito nulla.",
+            French: "Impossible de copier la commande. Rien n’a été exécuté.",
+            German: "Befehl konnte nicht kopiert werden. Nichts wurde ausgeführt.",
+            Spanish: "No se pudo copiar el comando. No se ejecutó nada.",
+            Vietnamese: "Không thể sao chép lệnh. Không có lệnh nào được chạy."));
         entries.Add("Command.Cancelled", new(
             English: "Command cancelled; nothing was executed.",
             Italian: "Comando annullato; non è stato eseguito nulla.",
@@ -211,19 +232,19 @@ internal static partial class UiTextCatalog
             Spanish: "¿Qué quieres hacer?",
             Vietnamese: "Bạn muốn làm gì?"));
         entries.Add("CommandMenu.ContinueHint", new(
-            English: "Add details or answer the assistant's question. The conversation keeps your original request and this answer.",
-            Italian: "Aggiungi dettagli o rispondi alla domanda dell'assistente. La conversazione conserva la richiesta originale e questa risposta.",
-            French: "Ajoutez des précisions ou répondez à la question de l'assistant. La conversation conserve votre demande initiale et cette réponse.",
-            German: "Ergänzen Sie Details oder beantworten Sie die Frage des Assistenten. Ihre ursprüngliche Anfrage und diese Antwort bleiben im Gespräch erhalten.",
-            Spanish: "Añade detalles o responde a la pregunta del asistente. La conversación conserva tu solicitud original y esta respuesta.",
-            Vietnamese: "Bổ sung chi tiết hoặc trả lời câu hỏi của trợ lý. Cuộc trò chuyện giữ lại yêu cầu ban đầu và câu trả lời này."));
+            English: "Want to add a detail or ask another question? We can pick up right here, or stop for now.",
+            Italian: "Vuoi aggiungere un dettaglio o fare un'altra domanda? Possiamo continuare da qui oppure fermarci.",
+            French: "Vous voulez ajouter un détail ou poser une autre question ? Nous pouvons reprendre ici ou nous arrêter pour le moment.",
+            German: "Möchten Sie etwas ergänzen oder noch etwas fragen? Wir können hier weitermachen oder es dabei belassen.",
+            Spanish: "¿Quieres añadir un detalle o hacer otra pregunta? Podemos seguir desde aquí o parar por ahora.",
+            Vietnamese: "Bạn muốn bổ sung chi tiết hay hỏi thêm? Chúng ta có thể tiếp tục từ đây hoặc dừng lại."));
         entries.Add("CommandMenu.ContinueTitle", new(
-            English: "Continue the conversation",
-            Italian: "Continua la conversazione",
-            French: "Continuer la conversation",
-            German: "Gespräch fortsetzen",
-            Spanish: "Continuar la conversación",
-            Vietnamese: "Tiếp tục cuộc trò chuyện"));
+            English: "What next?",
+            Italian: "Come vuoi proseguire?",
+            French: "Et maintenant ?",
+            German: "Wie möchten Sie weitermachen?",
+            Spanish: "¿Cómo quieres seguir?",
+            Vietnamese: "Bạn muốn tiếp tục thế nào?"));
         entries.Add("CommandMenu.DigitHint", new(
             English: "Press a number from 0 to {0}; no Enter needed.",
             Italian: "Premi un numero da 0 a {0}; non serve Invio.",
@@ -239,12 +260,12 @@ internal static partial class UiTextCatalog
             Spanish: "Terminar aquí",
             Vietnamese: "Kết thúc tại đây"));
         entries.Add("CommandMenu.Hint", new(
-            English: "Suggestions never run automatically. Select a command only to inspect its exact preview and risk check.",
-            Italian: "I suggerimenti non vengono mai eseguiti automaticamente. Seleziona un comando solo per ispezionarne anteprima esatta e rischio.",
-            French: "Les suggestions ne s'exécutent jamais automatiquement. Sélectionnez une commande uniquement pour examiner son aperçu exact et son risque.",
-            German: "Vorschläge werden nie automatisch ausgeführt. Wählen Sie einen Befehl nur zur Prüfung der exakten Vorschau und des Risikos.",
-            Spanish: "Las sugerencias nunca se ejecutan automáticamente. Elige un comando solo para inspeccionar su vista previa exacta y riesgo.",
-            Vietnamese: "Gợi ý không bao giờ tự chạy. Chỉ chọn lệnh để xem trước chính xác và kiểm tra rủi ro."));
+            English: "Suggested commands won't run on their own. Choose one to see the exact command and its risks before you decide.",
+            Italian: "Nessun comando parte da solo. Scegline uno per vedere il comando esatto e i rischi prima di decidere.",
+            French: "Les commandes suggérées ne se lancent pas seules. Choisissez-en une pour voir la commande exacte et ses risques avant de décider.",
+            German: "Kein vorgeschlagener Befehl startet von selbst. Wählen Sie einen aus, um den genauen Befehl und seine Risiken zu sehen, bevor Sie entscheiden.",
+            Spanish: "Los comandos sugeridos no se ejecutan solos. Elige uno para ver el comando exacto y sus riesgos antes de decidir.",
+            Vietnamese: "Lệnh được gợi ý không tự chạy. Chọn một lệnh để xem nội dung chính xác và rủi ro trước khi quyết định."));
         entries.Add("CommandMenu.InvalidNumber", new(
             English: "Choose a number from 0 to {0}.",
             Italian: "Scegli un numero da 0 a {0}.",
@@ -267,12 +288,12 @@ internal static partial class UiTextCatalog
             Spanish: "Escribe un número del 0 al {0} y pulsa Intro.",
             Vietnamese: "Nhập một số từ 0 đến {0}, rồi nhấn Enter."));
         entries.Add("CommandMenu.StartChat", new(
-            English: "Clarify the request or continue in chat",
-            Italian: "Chiarisci la richiesta o continua in chat",
-            French: "Préciser la demande ou continuer le chat",
-            German: "Anfrage präzisieren oder im Chat fortfahren",
-            Spanish: "Aclarar la solicitud o continuar en el chat",
-            Vietnamese: "Làm rõ yêu cầu hoặc tiếp tục chat"));
+            English: "Continue chatting",
+            Italian: "Continua in chat",
+            French: "Continuer la discussion",
+            German: "Im Chat weitermachen",
+            Spanish: "Seguir conversando",
+            Vietnamese: "Tiếp tục trò chuyện"));
         entries.Add("CommandMenu.Title", new(
             English: "Suggested next step",
             Italian: "Prossimo passo suggerito",

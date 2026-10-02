@@ -36,11 +36,15 @@ public sealed class ConversationMemory
     }
 
     /// <summary>Adds one user, assistant, or tool-output message and prunes the oldest complete turns when needed.</summary>
-    public ConversationMemoryUpdate Add(string role, string content)
+    public ConversationMemoryUpdate Add(string role, string content, bool isToolOutput = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
         var normalizedRole = NormalizeRole(role);
+        if (isToolOutput && normalizedRole != "user")
+        {
+            throw new ArgumentException("Tool output must use the provider's user role.", nameof(role));
+        }
         if (normalizedRole == "user" && content.Length > _settings.MaxMessageCharacters)
         {
             throw new ConversationLimitException(
@@ -53,7 +57,7 @@ public sealed class ConversationMemory
         }
 
         // Assistant output has its own provider/body limits; user-input limits must never discard a completed answer.
-        _messages.Add(new ChatMessage(normalizedRole, content));
+        _messages.Add(new ChatMessage(normalizedRole, content) { IsToolOutput = isToolOutput });
         var pruned = PruneToLimits();
         _totalPrunedMessages += pruned;
         return new ConversationMemoryUpdate(pruned, Snapshot());

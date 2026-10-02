@@ -50,6 +50,9 @@ public sealed class SetupWorkflow(
                 InitialSection = initialSection,
                 Costs = pricing is null ? null : await pricing.GetOverviewAsync(cancellationToken).ConfigureAwait(false),
                 OpenMemories = () => OpenMemories(cancellationToken),
+                SavedMemories = memories is null ? [] : await memories.ListAsync(cancellationToken).ConfigureAwait(false),
+                RefreshSavedMemories = memories is null ? null
+                    : () => memories.ListAsync(cancellationToken).GetAwaiter().GetResult(),
                 FeatureOverview = featureOverview is null ? null : await featureOverview.ReadAsync(cancellationToken).ConfigureAwait(false),
                 ContextBudgetOverridden = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PROMPTMEUP_CONTEXT_TOKENS")),
                 SaveSucceeded = saved

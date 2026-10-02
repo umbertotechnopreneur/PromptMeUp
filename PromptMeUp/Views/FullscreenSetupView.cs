@@ -54,7 +54,13 @@ public sealed class FullscreenSetupView : ISetupView
         {
             TerminalTheme.Apply(_themes.Resolve(draft.Settings.Theme));
             var pages = CreateSetupPages(draft, state);
-            var initialPage = pages.ToList().FindIndex(page => page.TitleKey == "Settings." + state.InitialSection);
+            var initialTitleKey = state.InitialSection switch
+            {
+                SettingsSection.About => "About.MenuLabel",
+                SettingsSection.Theme => "Settings.Personalization",
+                _ => "Settings." + state.InitialSection
+            };
+            var initialPage = pages.ToList().FindIndex(page => page.TitleKey == initialTitleKey);
             if (initialPage < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(state), "Unsupported settings section.");
@@ -106,8 +112,9 @@ public sealed class FullscreenSetupView : ISetupView
     }
 
     /// <summary>Maps a visible form page back to the stable settings section used when reopening the editor.</summary>
-    private static SettingsSection SelectedSection(FormPage page) =>
-        page.TitleKey.StartsWith("Settings.", StringComparison.Ordinal)
+    private static SettingsSection SelectedSection(FormPage page) => page.TitleKey == "About.MenuLabel"
+        ? SettingsSection.About
+        : page.TitleKey.StartsWith("Settings.", StringComparison.Ordinal)
             && Enum.TryParse<SettingsSection>(page.TitleKey["Settings.".Length..], ignoreCase: false, out var section)
             ? section
             : SettingsSection.General;
@@ -115,6 +122,8 @@ public sealed class FullscreenSetupView : ISetupView
     /// <summary>Groups every preference into stable sidebar sections that share one local draft.</summary>
     private IReadOnlyList<FormPage> CreateSetupPages(SetupDraft draft, SetupViewState state)
     {
+        IReadOnlyList<PersistentMemory> savedMemories = state.SavedMemories;
+        var showThemeDetails = false;
         var ai = new List<FormField>
         {
             Toggle("Setup.AiEnabled", () => draft.Settings.AiEnabled,
@@ -185,31 +194,39 @@ public sealed class FullscreenSetupView : ISetupView
             ]) { HelpKey = "Settings.CommandsHelp" },
             new("Settings.Personalization",
             [
-                new("preferred-name", "Setup.PreferredName", () => draft.Settings.PreferredName,
+                new("preferred-name", "Settings.ProfileName", () => draft.Settings.PreferredName,
                     value => draft.Settings = draft.Settings with { PreferredName = PreferredNamePolicy.Normalize(value, _redactor) })
                 {
                     Validate = ValidatePreferredName,
+                    GroupKey = "Settings.ProfileGroup",
                     HelpKey = "Setup.PreferredNameHelp",
                     MaxLength = PreferredNamePolicy.MaximumLength,
                     DefaultToCurrentValue = false
                 },
-                new("custom-instruction", "Setup.Custom", () => draft.Settings.CustomInstruction,
+                new("custom-instruction", "Settings.PersonalInstructions", () => draft.Settings.CustomInstruction,
                     value => draft.Settings = draft.Settings with { CustomInstruction = _protection.Protect(value).SanitizedText })
                 {
                     Validate = ValidatePreamble,
+                    GroupKey = "Settings.ProfileGroup",
                     HelpKey = "Form.PreambleHelp"
                 },
-                Toggle("Setup.Location", () => draft.Settings.IncludeWindowsLocation,
+                Toggle("Settings.ShareLocation", () => draft.Settings.IncludeWindowsLocation,
                     value => draft.Settings = draft.Settings with { IncludeWindowsLocation = value })
-            ]) { HelpKey = "Settings.PersonalizationHelp" },
-            new("Settings.Theme",
-            [
-                new("theme", "Theme.Select", () => draft.Settings.Theme, value => SetTheme(draft, value))
+                    with { GroupKey = "Settings.ProfileGroup", HelpKey = "Setup.Location" },
+                new("theme", "Settings.Theme", () => draft.Settings.Theme, value => SetTheme(draft, value))
                 {
+                    GroupKey = "Settings.AppearanceGroup",
                     Choices = () => _themes.Themes.Select(theme => new FormChoice(theme.Id, ThemeName(theme))).ToArray(),
                     HelpKey = "Theme.Preview"
+                },
+                new("theme-details", "Settings.ThemeDetails", () => showThemeDetails ? "shown" : "hidden",
+                    value => showThemeDetails = value == "shown")
+                {
+                    GroupKey = "Settings.AppearanceGroup",
+                    Choices = () => [new("hidden", _text.Text("Settings.DetailsHidden")), new("shown", _text.Text("Settings.DetailsShown"))],
+                    HelpKey = "Settings.ThemeDetailsHelp"
                 }
-            ]) { HelpKey = "Settings.ThemeHelp", Overview = () => CreateThemeOverview(draft) },
+            ]) { HelpKey = "Settings.PersonalizationHelp", Overview = () => CreateThemeOverview(draft, showThemeDetails) },
             new("Settings.Skills", CreateSkillsFields(draft))
             {
                 HelpKey = "Settings.FeaturesDraftHelp",
@@ -222,11 +239,13 @@ public sealed class FullscreenSetupView : ISetupView
             },
             new("Settings.Memories", [])
             {
-                Open = () => OpenSavedMenu(state.OpenMemories ?? throw new InvalidOperationException("Memory navigation must be configured.")),
+                Open = () =>
+                {
+                    OpenSavedMenu(state.OpenMemories ?? throw new InvalidOperationException("Memory navigation must be configured."));
+                    savedMemories = state.RefreshSavedMemories?.Invoke() ?? savedMemories;
+                },
                 HelpKey = "MemoryManager.OpenHint",
-                Overview = () => new Rows(
-                    new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
-                    new Text(" "), new Text(_text.Text("Settings.SavedMemoriesNotice"), Style.Parse(TerminalTheme.Warning)))
+                Overview = () => CreateSavedMemoriesOverview(savedMemories)
             },
             new("Settings.Privacy", [])
             {
@@ -235,12 +254,59 @@ public sealed class FullscreenSetupView : ISetupView
             },
             new("About.MenuLabel", [])
             {
-                Open = _about.Render,
-                HelpKey = "About.OpenHint",
-                Preview = () => new Text(_text.Text("Help.About"), Style.Parse(TerminalTheme.Primary)),
-                PreviewRows = 3
+                HelpKey = "About.SettingsHint",
+                Overview = () => _about.CreateContent()
             }
         ], state.SaveSucceeded);
+    }
+
+    /// <summary>Shows a bounded preview of actual saved notes in the settings workspace.</summary>
+    private IRenderable CreateSavedMemoriesOverview(IReadOnlyList<PersistentMemory> memories)
+    {
+        var rows = new List<IRenderable>
+        {
+            new Text(_text.Text("MemoryManager.Help"), Style.Parse(TerminalTheme.Primary)),
+            new Text(" "),
+            new Text(_text.Text("MemoryManager.SavedCount", memories.Count), Style.Parse("bold " + TerminalTheme.Accent)),
+            new Text(" ")
+        };
+        if (memories.Count == 0)
+        {
+            rows.Add(new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Muted)));
+        }
+        else
+        {
+            var showUpdated = _console.Profile.Width >= 92;
+            var paneWidth = _console.Profile.Width - FullscreenWorkspace.SidebarWidth(_console.Profile.Width) - 6;
+            var previewWidth = Math.Clamp(paneWidth - (showUpdated ? 25 : 7), 12, 56);
+            var table = showUpdated
+                ? TerminalTable.Create("#", _text.Text("Memory.Note"), _text.Text("MemoryManager.Updated"))
+                : TerminalTable.Create("#", _text.Text("Memory.Note"));
+            for (var index = 0; index < Math.Min(5, memories.Count); index++)
+            {
+                var memory = memories[index];
+                var number = new Text((index + 1).ToString(_text.Culture), Style.Parse(TerminalTheme.Accent));
+                var note = new Text(TerminalText.Clip(TerminalText.Safe(memory.Text).ReplaceLineEndings(" ↵ "), previewWidth),
+                    Style.Parse(TerminalTheme.Primary));
+                if (showUpdated)
+                {
+                    table.AddRow(number, note,
+                        new Text(memory.UpdatedAt.ToLocalTime().ToString("g", _text.Culture), Style.Parse(TerminalTheme.Muted)));
+                }
+                else
+                {
+                    table.AddRow(number, note);
+                }
+            }
+            rows.Add(table);
+            if (memories.Count > 5)
+            {
+                rows.Add(new Text(_text.Text("MemoryManager.MoreCount", memories.Count - 5), Style.Parse(TerminalTheme.Muted)));
+            }
+        }
+        rows.Add(new Text(" "));
+        rows.Add(new Text(_text.Text("Settings.SavedMemoriesNotice"), Style.Parse(TerminalTheme.Warning)));
+        return new Rows(rows);
     }
 
     /// <summary>Adds a clear success acknowledgement to every section when the saved editor immediately reopens.</summary>
@@ -264,9 +330,13 @@ public sealed class FullscreenSetupView : ISetupView
         }).ToArray();
     }
 
-    /// <summary>Combines current draft status and cached usage in one passive, unboxed overview.</summary>
+    /// <summary>Introduces first-run setup with shared product details, then shows draft status and cached usage after setup.</summary>
     private IRenderable CreateGeneralOverview(SetupDraft draft, SetupViewState state)
     {
+        if (!state.Settings.SetupCompleted)
+        {
+            return _about.CreateContent(renderInstallationCard: true);
+        }
         var costs = state.Costs;
         var unavailable = _text.Text("Costs.Unavailable");
         var status = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn();
@@ -332,7 +402,7 @@ public sealed class FullscreenSetupView : ISetupView
             Toggle("Settings.CaptureConsent", () => draft.CaptureConsent, value => draft.CaptureConsent = value,
                 () => draft.NeedsCaptureConsent) with
             {
-                Overview = () => Disclosure("Lab.StartCapture", "Lab.CaptureNotice", "Lab.Retention"),
+                Overview = CreateCaptureConsentOverview,
                 HelpKey = "Settings.FeaturesDraftHelp"
             },
             ClearLearningConsent(draft)
@@ -400,9 +470,41 @@ public sealed class FullscreenSetupView : ISetupView
         return string.Equals(label, key, StringComparison.Ordinal) ? skill.Name : label;
     }
 
-    /// <summary>Retains complete privacy disclosures only while their explicit acknowledgement is focused.</summary>
-    private IRenderable Disclosure(params string[] keys) => new Rows(keys.Select(key =>
-        new Text(_text.Text(key), Style.Parse(TerminalTheme.Warning))));
+    /// <summary>Separates collection consent into readable facts about local data, OpenAI, retention, and deletion.</summary>
+    private IRenderable CreateCaptureConsentOverview()
+    {
+        var guide = new List<IRenderable>
+        {
+            new Text(_text.Text("Lab.StartCapture"), Style.Parse("bold " + TerminalTheme.Primary)),
+            new Text(" ")
+        };
+        foreach (var (titleKey, icon, keys) in new[]
+        {
+            ("Settings.PrivacyLocal", "💻", new[] { "Settings.CaptureLocalInfo" }),
+            ("Settings.PrivacyProvider", "📤", new[] { "Settings.CaptureProviderInfo" }),
+            ("Settings.CaptureRetention", "⏳", new[] { "Settings.CaptureLimitInfo", "Settings.CaptureExpiryInfo" }),
+            ("Settings.PrivacyControl", "🗑️", new[] { "Settings.CaptureDeleteInfo", "Settings.CaptureSavedInfo", "Settings.CaptureHistoryInfo" })
+        })
+        {
+            guide.Add(new Text(TerminalTheme.IconPrefix(_shell.Options, icon, "-") + _text.Text(titleKey),
+                Style.Parse("bold " + TerminalTheme.Accent)));
+            var points = new Grid().AddColumn(new GridColumn().NoWrap()).AddColumn();
+            foreach (var key in keys)
+            {
+                points.AddRow(new Text("-", Style.Parse(TerminalTheme.Accent)),
+                    new Text(_text.Text(key), Style.Parse(TerminalTheme.Primary)));
+            }
+            guide.Add(points);
+            guide.Add(new Text(" "));
+        }
+        return new Rows(guide);
+    }
+
+    /// <summary>Emphasizes the destructive choice while keeping its retention details readable.</summary>
+    private IRenderable Disclosure(string warningKey, string detailKey) => new Rows(
+        new Text(_text.Text(warningKey), Style.Parse(TerminalTheme.Warning)),
+        new Text(" "),
+        new Text(_text.Text(detailKey), Style.Parse(TerminalTheme.Primary)));
 
     /// <summary>Preserves inspected source line breaks while removing terminal controls and markup interpretation.</summary>
     private static string SafePreview(string value) => new(value.Where(character => !char.IsControl(character) || character is '\n' or '\t').ToArray());
@@ -419,9 +521,13 @@ public sealed class FullscreenSetupView : ISetupView
             new Text(_text.Text("Settings.PrivacyHelp"), Style.Parse(TerminalTheme.Muted)),
             new Text(" ")
         };
-        foreach (var key in new[] { "Local", "Provider", "Learning", "Skills", "Control" })
+        foreach (var (key, icon) in new[]
         {
-            guide.Add(new Text(_text.Text("Settings.Privacy" + key), Style.Parse("bold " + TerminalTheme.Accent)));
+            ("Local", "💻"), ("Provider", "📤"), ("Learning", "🧠"), ("Skills", "🌐"), ("Control", "🗑️")
+        })
+        {
+            guide.Add(new Text(TerminalTheme.IconPrefix(_shell.Options, icon, "-") + _text.Text("Settings.Privacy" + key),
+                Style.Parse("bold " + TerminalTheme.Accent)));
             guide.Add(new Text(_text.Text("Settings.Privacy" + key + "Info"), Style.Parse(TerminalTheme.Primary)));
             guide.Add(new Text(" "));
         }
@@ -450,38 +556,38 @@ public sealed class FullscreenSetupView : ISetupView
         new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)),
         new Text(value, Style.Parse("bold " + TerminalTheme.FieldValue)));
 
-    /// <summary>Shows the selected file's full attribution and live palette samples without accessing the filesystem.</summary>
-    private IRenderable CreateThemeOverview(SetupDraft draft)
+    /// <summary>Keeps palette samples compact and reveals full theme attribution only when requested.</summary>
+    private IRenderable CreateThemeOverview(SetupDraft draft, bool showDetails)
     {
-        var theme = _themes.Resolve(draft.Settings.Theme);
-        var metadata = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
-        AddThemeMetadata(metadata, "Theme.Metadata.Path", theme.SourcePath);
-        AddThemeMetadata(metadata, "Theme.Metadata.Author", theme.Author);
-        AddThemeMetadata(metadata, "Theme.Metadata.Website", theme.Website, link: theme.Website);
-        AddThemeMetadata(metadata, "Theme.Metadata.Description", theme.Description);
-        var samples = new Grid().AddColumn(new GridColumn().NoWrap()).AddColumn();
-        samples.AddRow(
-            new Text(_text.Text("Theme.Semantic.Success"), Style.Parse("bold " + TerminalTheme.Success)),
-            new Text(_text.Text("Theme.Semantic.SuccessHelp"), Style.Parse(TerminalTheme.Primary)));
-        samples.AddRow(
-            new Text(_text.Text("Theme.Semantic.Warning"), Style.Parse("bold " + TerminalTheme.Warning)),
-            new Text(_text.Text("Theme.Semantic.WarningHelp"), Style.Parse(TerminalTheme.Primary)));
-        samples.AddRow(
-            new Text(_text.Text("Theme.Semantic.Error"), Style.Parse("bold " + TerminalTheme.Error)),
-            new Text(_text.Text("Theme.Semantic.ErrorHelp"), Style.Parse(TerminalTheme.Primary)));
-        return new Rows(metadata, new Text(_text.Text("Settings.ThemePreview"), Style.Parse(TerminalTheme.Muted)),
-            new Text(" "), samples);
+        var rows = new List<IRenderable>();
+        if (showDetails)
+        {
+            var theme = _themes.Resolve(draft.Settings.Theme);
+            rows.Add(new ThemeSeparator(_text.Text("Settings.ThemeDetails")));
+            AddThemeMetadata(rows, "Theme.Metadata.Author", theme.Author);
+            AddThemeMetadata(rows, "Theme.Metadata.Website", theme.Website, link: theme.Website);
+            AddThemeMetadata(rows, "Theme.Metadata.Description", theme.Description);
+            AddThemeMetadata(rows, "Theme.Metadata.Path", theme.SourcePath);
+            rows.Add(new ThemeSeparator(_text.Text("Settings.ThemePreview")));
+        }
+        foreach (var (key, color) in new[] { ("Success", TerminalTheme.Success), ("Warning", TerminalTheme.Warning), ("Error", TerminalTheme.Error) })
+        {
+            rows.Add(new TerminalFormRow(
+                new Text(_text.Text("Theme.Semantic." + key), Style.Parse("bold " + color)),
+                _ => new Text(_text.Text("Theme.Semantic." + key + "Help"), Style.Parse(TerminalTheme.Primary))));
+        }
+        return new Rows(rows);
     }
 
     /// <summary>Wraps complete metadata values and gives validated website URLs a terminal hyperlink.</summary>
-    private void AddThemeMetadata(Grid grid, string labelKey, string? value, string? link = null)
+    private void AddThemeMetadata(List<IRenderable> rows, string labelKey, string? value, string? link = null)
     {
         var display = value is null ? _text.Text("Theme.Metadata.Unavailable")
             : new string(value.Select(character => char.IsControl(character) ? ' ' : character).ToArray());
         IRenderable renderedValue = link is null ? new Text(display, Style.Parse(TerminalTheme.FieldValue))
             : new ThemeLink(display, link);
-        grid.AddRow(new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)), renderedValue);
-        grid.AddEmptyRow();
+        rows.Add(new TerminalFormRow(new Text(_text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted)), _ => renderedValue));
+        rows.Add(new Text(" "));
     }
 
     /// <summary>Attaches a validated hyperlink while retaining literal, wrapped website text.</summary>

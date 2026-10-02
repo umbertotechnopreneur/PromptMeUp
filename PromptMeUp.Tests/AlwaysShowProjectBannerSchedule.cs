@@ -9,4 +9,7 @@ internal sealed class AlwaysShowProjectBannerSchedule : IProjectBannerSchedule
 {
     /// <summary>Allows each test fixture to render its expected banner.</summary>
     public bool TryMarkRenderedToday() => true;
+
+    /// <summary>Allows opening-tip rendering in test fixtures.</summary>
+    public bool TryMarkOpeningTipRenderedToday() => true;
 }

@@ -18,18 +18,22 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     /// <summary>Displays ordered progress and the explicit resume command without executing any step.</summary>
     public void Render(ExecutionPlan plan)
     {
-        TerminalTheme.WriteRule(console, text.Text("Plan.Help"), TerminalTheme.Accent);
+        TerminalSession.For(console).SetMode(ConversationDisplayMode.Plan);
+        TerminalTurnHeader.Write(console, text, TerminalTurnKind.Plan);
         console.Write(new Rows(
             new Text(plan.Goal, Style.Parse(TerminalTheme.Primary)),
             new Text(plan.Directory, Style.Parse(TerminalTheme.Muted))));
         console.WriteLine();
-        var table = new Table().Border(TableBorder.Simple).AddColumn("#").AddColumn(text.Text("Plan.Step")).AddColumn(text.Text("Plan.Status"));
+        var table = TerminalTable.Create("#", text.Text("Plan.Step"), text.Text("Plan.Status"));
         for (var index = 0; index < plan.Steps.Count; index++)
         {
             var step = plan.Steps[index];
             table.AddRow(new Text(StepIndicator(index)), new Text(step.Label + "\n" + step.Expected), new Text(text.Text("Plan." + step.Status)));
         }
         console.Write(table);
+        TerminalSession.For(console).History.Add(TerminalTurnKind.Plan, plan.Goal,
+            new Rows(new Text(TerminalText.Safe(plan.Goal)), new Text(TerminalText.Safe(plan.Directory)), table),
+            plan.Goal.Length + plan.Directory.Length + plan.Steps.Sum(step => step.Label.Length + step.Expected.Length));
         console.WriteLine();
         console.Write(new Text(text.Text("Plan.Resume"), Style.Parse(TerminalTheme.Muted)));
         console.WriteLine();
@@ -39,10 +43,20 @@ public sealed class PlanView(IAnsiConsole console, ILocalizationService text, IC
     }
 
     /// <summary>Confirms starting or resuming guidance while each command still requires its own approval.</summary>
-    public bool ConfirmStart() => console.Prompt(new ConfirmationPrompt(text.Text("Plan.Start")) { DefaultValue = false });
+    public bool ConfirmStart()
+    {
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
+        TerminalPromptDock.Align(console, reservedRows: 2);
+        return TerminalConversationPrompt.Confirm(console, text, text.Text("Plan.Start"));
+    }
 
     /// <summary>Requires the user to compare observed output with the declared outcome after a successful check.</summary>
-    public bool ConfirmOutcome(PlanStep step) => console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Plan.Outcome", step.Expected))) { DefaultValue = false });
+    public bool ConfirmOutcome(PlanStep step)
+    {
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
+        TerminalPromptDock.Align(console, reservedRows: 2);
+        return TerminalConversationPrompt.Confirm(console, text, text.Text("Plan.Outcome", step.Expected));
+    }
 
     /// <summary>Returns a compact zero-based visual marker while preserving a text-only fallback.</summary>
     private string StepIndicator(int index) => shell.Options.NoEmoji

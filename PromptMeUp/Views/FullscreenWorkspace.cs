@@ -11,12 +11,22 @@ internal static class FullscreenWorkspace
     /// <summary>Reserves the same responsive sidebar width for help, settings, and interactive menus.</summary>
     internal static int SidebarWidth(int terminalWidth) => Math.Clamp(terminalWidth / 4, 20, 30);
 
+    /// <summary>Marks the focused content area and optionally separates its heading from the body.</summary>
+    internal static IRenderable SectionHeading(string title, bool focused, bool showDivider = true)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        return new Rows(
+            new FullscreenLine($"{(focused ? "> " : "  ")}{title}", Style.Parse("bold " + TerminalTheme.Accent)),
+            showDivider ? new ThemeSeparator() : new Text(" "));
+    }
+
     /// <summary>Builds the common fullscreen shell around passive content and action renderables.</summary>
     internal static IRenderable Create(string title, ConsoleRenderOptions options, int terminalWidth,
-        IRenderable content, IRenderable? sidebar, IRenderable footer, int noticeRows)
+        IRenderable content, IRenderable? sidebar, IRenderable footer, int noticeRows, bool showRepository = false,
+        int? sidebarWidth = null)
     {
         var root = new Layout("workspace").SplitRows(
-            new Layout("header", FullscreenHeader.Create(title, options)).Size(FullscreenHeader.Height),
+            new Layout("header", FullscreenHeader.Create(title, options, showRepository)).Size(FullscreenHeader.Height),
             new Layout("body"),
             new Layout("footer", footer).Size(FullscreenFooter.Height(noticeRows)));
         if (sidebar is null)
@@ -26,7 +36,7 @@ internal static class FullscreenWorkspace
         else
         {
             root["body"].SplitColumns(
-                new Layout("sections", sidebar).Size(SidebarWidth(terminalWidth)),
+                new Layout("sections", sidebar).Size(sidebarWidth ?? SidebarWidth(terminalWidth)),
                 new Layout("content", content));
         }
         return new FormSurface(root);

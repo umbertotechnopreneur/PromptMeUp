@@ -8,5 +8,6 @@ public enum FirstRunAction { Next, Back, Exit }
 /// <summary>Returns one reviewed value and the chosen navigation action.</summary>
 public sealed record FirstRunInput<T>(FirstRunAction Action, T Value);
 
-/// <summary>Keeps memory, learning capture, and command confirmation choices independent.</summary>
-public sealed record FirstRunMemoryChoice(bool Enabled, bool Capture, bool ConfirmCommands);
+/// <summary>Keeps the reviewed personal, learning, command, and skill choices together for onboarding.</summary>
+public sealed record FirstRunPreferences(string Name, bool Enabled, bool Capture,
+    bool ConfirmCommands, IReadOnlyList<string> EnabledSkills);

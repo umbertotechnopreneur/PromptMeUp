@@ -15,9 +15,10 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
     private int _paintedRows;
     private (int Width, int Height) _paintedSize;
     private string _label = string.Empty;
+    private ShellRuntimeStatus? _status;
 
     /// <summary>Collects bounded pasted or typed text, preserving line breaks until a separate Enter key submits it.</summary>
-    internal string Read(string label, int maximumCharacters, bool showHint = true)
+    internal string Read(string label, int maximumCharacters, ShellRuntimeStatus? status = null, bool showHint = true)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
         using var pasteMode = new TerminalPasteScope(console);
@@ -28,10 +29,15 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var buffer = new ChatInputBuffer(maximumCharacters);
         var reader = new TerminalInputReader(console.Input, maximumCharacters, win32Encoding: OperatingSystem.IsWindows());
         _label = label;
+        _status = status;
+        var session = TerminalSession.For(console);
+        session.LastStatus = status;
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.Ready);
         var hint = text.Text(
             showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
             KeyPrefix("Enter"), KeyPrefix("Newline"), KeyPrefix("Arrows"), KeyPrefix("Escape"));
         console.MarkupLine($"[{TerminalTheme.Muted}]{hint}[/]");
+        TerminalPromptDock.Align(console, reservedRows: ReservedRows());
         console.Cursor.Hide();
         try
         {
@@ -47,13 +53,22 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                 }
                 else if (input.Key is { } key)
                 {
+                    if (TerminalHistoryView.IsShortcut(key) && FullscreenViewport.CanUse(console))
+                    {
+                        EraseDraft();
+                        TerminalHistoryView.Show(console, text, key, reader);
+                        console.Cursor.Hide();
+                        TerminalPromptDock.Align(console, reservedRows: ReservedRows());
+                        continue;
+                    }
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                     {
                         EraseDraft();
-                        console.Write(new Paragraph()
-                            .Append(SafeDisplay(_label) + " ", Style.Parse($"bold {TerminalTheme.Accent}"))
-                            .Append(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
+                        TerminalTurnHeader.Write(console, text, TerminalTurnKind.User);
+                        console.Write(new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
                         console.WriteLine();
+                        session.History.Add(TerminalTurnKind.User, text.Text("Terminal.Role.User"),
+                            new Text(TerminalText.Safe(buffer.Text), Style.Parse(TerminalTheme.Primary)), buffer.Text.Length);
                         return buffer.Text;
                     }
                     if (!buffer.Edit(key))
@@ -67,6 +82,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         {
             console.Cursor.Show();
             _label = string.Empty;
+            _status = null;
         }
     }
 
@@ -85,12 +101,25 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         else if (_paintedRows > 0)
         {
             console.WriteLine();
+            _paintedRows = 0;
+            TerminalPromptDock.Align(console, reservedRows: ReservedRows());
         }
         var width = Math.Max(1, size.Width - 1);
+        var bar = new TerminalPromptBar(text, _status,
+            showBorders: size.Height >= 8, showStatus: size.Height >= 4,
+            showBreakdown: size.Height >= 8, session: TerminalSession.For(console));
+        var header = bar.Header(width).ToList();
+        if (NavigationHint(width) is { } navigation) header.Add(navigation);
+        var footer = bar.Footer(width);
+        foreach (var row in header)
+        {
+            WriteRow(row);
+        }
         var lines = buffer.Text.Split('\n');
-        var inputRows = Math.Min(lines.Length, Math.Clamp(size.Height - 2, 1, 6));
         var nearLimit = (long)buffer.Text.Length * 5 >= (long)maximumCharacters * 4;
         var showStatus = size.Height > 1 && (lines.Length > 1 || nearLimit || error is not null);
+        var inputRows = Math.Min(lines.Length,
+            Math.Clamp(size.Height - header.Count - footer.Count - (showStatus ? 1 : 0) - 1, 1, 6));
         var rowCount = inputRows + (showStatus ? 1 : 0);
         var current = buffer.Text.AsSpan(0, buffer.Cursor).Count('\n');
         var lineStart = buffer.Cursor == 0 ? 0 : buffer.Text.LastIndexOf('\n', buffer.Cursor - 1) + 1;
@@ -114,8 +143,33 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
             var statusColor = error is not null ? TerminalTheme.Error : nearLimit ? TerminalTheme.Warning : TerminalTheme.Muted;
             WriteRow($"[{statusColor}]{Markup.Escape(Clip(status, width))}[/]");
         }
-        _paintedRows = rowCount;
+        foreach (var row in footer)
+        {
+            WriteRow(row);
+        }
+        _paintedRows = header.Count + rowCount + footer.Count;
         _paintedSize = size;
+    }
+
+    /// <summary>Reserves exactly the responsive strip, initial input row and optional bottom divider.</summary>
+    private int ReservedRows()
+    {
+        var height = console.Profile.Height;
+        var bar = new TerminalPromptBar(text, _status, height >= 8, height >= 4, height >= 8,
+            TerminalSession.For(console));
+        var width = Math.Max(1, console.Profile.Width - 1);
+        return bar.Header(width).Count + bar.Footer(width).Count + 1 + (NavigationHint(width) is null ? 0 : 1);
+    }
+
+    /// <summary>Shows the retained turn position and discovery keys only when the viewer is usable.</summary>
+    private string? NavigationHint(int width)
+    {
+        var history = TerminalSession.For(console).History;
+        if (history.Turns.Count == 0 || !FullscreenViewport.CanUse(console)) return null;
+        var index = history.SelectedIndex ?? history.Turns.Count - 1;
+        var label = text.Text("Terminal.TurnPosition", history.Turns[index].Number, history.Turns[^1].Number)
+            + " · " + text.Text("Terminal.NavigationKeys");
+        return $"[{TerminalTheme.Muted}]{Markup.Escape(TerminalText.Clip(label, width))}[/]";
     }
 
     /// <summary>Clears one owned row before writing its already width-bounded contents.</summary>
@@ -131,6 +185,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         if (_paintedSize != (console.Profile.Width, console.Profile.Height))
         {
             console.WriteLine();
+            _paintedRows = 0;
             return;
         }
         console.WriteAnsi(writer =>

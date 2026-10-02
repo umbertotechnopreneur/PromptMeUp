@@ -1,5 +1,7 @@
 ﻿## Task
 
+- [ ] Remove the disposable welcome profile under `artifacts/smoke/layout-refinement-20260927/`. Release build output was cleaned; automatic approval review blocked removal of this smoke-test directory.
+
 - [ ] Remove temporary publish and payload directories from `artifacts/msix/debug/1.0.0.0-startup-fix-20260924/` and the superseded `1.0.0.1-startup-fix-20260924/` build. Preserve the final signed 1.0.0.0 package and diagnostic records. Standard .NET cleanup succeeded; recursive cleanup was not retried after the earlier policy rejection.
 
 - [ ] Remove `artifacts/msix/debug/1.0.0.0-oobe-20260924-021718/publish` and `x64/payload`, preserving the signed MSIX, checksums, package metadata, and installation record. Standard .NET cleanup succeeded; automatic approval review blocked recursive deletion.
@@ -8,6 +10,8 @@
 
 - [ ] Rebuild and submit x64 and ARM64 Store MSIX packages to confirm the manifest no longer triggers the headless-app validation error; resolve any remaining Store validation findings.
 
+
+- [ ] Remove `artifacts/msix/debug/0.1.8.5/publish` and `x64/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; policy blocked recursive directory deletion.
 
 - [ ] Remove `artifacts/msix/debug/0.0.1.2211/publish`, `publish-nosymbols`, and `x64/payload` while preserving the signed MSIX and installation record. Installation and standard .NET cleanup succeeded; execution policy blocked recursive directory deletion.
 
@@ -22,3 +26,5 @@
 - [ ] Remove temporary source, publish, and payload directories under `artifacts/msix/install-20260917-memory` after preserving the signed MSIX and verification records. Installation and standard .NET cleanup succeeded; automatic approval review blocked recursive directory deletion.
 
 - [ ] Remove ignored local package, IDE, and smoke-test directories. Standard .NET cleanup completed; recursive directory deletion was blocked by the execution policy.
+
+- [ ] Remove the temporary `publish`, `x64/payload`, and `appdata-backup` directories under `artifacts/msix/debug/1.0.0.0-layout-5a68a80-20260926/`, preserving the signed MSIX. Automatic approval review blocked recursive cleanup after installation; the backup contains local test data and must remain ignored.

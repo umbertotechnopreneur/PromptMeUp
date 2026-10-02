@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
+using System.Reflection;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using PromptMeUp.Views;
@@ -9,6 +10,24 @@ namespace PromptMeUp.Tests;
 
 public sealed class GlobalMemoryViewTests
 {
+    /// <summary>The fullscreen shortcut range follows the visible entries instead of leaking a format placeholder.</summary>
+    [Fact]
+    public void FullscreenFooter_UsesTheMemoryEntryCount()
+    {
+        var harness = Create("it", []);
+        harness.Console.Profile.Height = 35;
+        var view = new MemoryManagerView(harness.Console, harness.Text, harness.Shell);
+        var memories = new[] { Note(false), Note(true) with { Id = new string('b', 32) } };
+        var entries = typeof(MemoryManagerView).GetMethod("Entries", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(view, [memories, MemoryProposalWorkspace.Disabled]);
+
+        typeof(MemoryManagerView).GetMethod("PaintScreen", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(view, [memories, MemoryProposalWorkspace.Disabled, entries, null, false]);
+
+        Assert.Contains("1–3:", harness.Output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", harness.Output.ToString(), StringComparison.Ordinal);
+    }
+
     /// <summary>The unified workspace creates one global saved note directly from its central editor.</summary>
     [Fact]
     public void Choose_CreateNote_ReturnsReviewedText()
@@ -27,7 +46,7 @@ public sealed class GlobalMemoryViewTests
     [Fact]
     public void Choose_ExistingNote_ReturnsInlineEdit()
     {
-        var harness = Create("en", Choose(2).Concat(Choose(1)).Concat(Type("Revised draft text.")));
+        var harness = Create("en", Choose(1).Concat(Choose(1)).Concat(Type("Revised draft text.")));
         var view = new MemoryManagerView(harness.Console, harness.Text, harness.Shell);
         var memory = Note(false);
 
@@ -49,7 +68,7 @@ public sealed class GlobalMemoryViewTests
     [InlineData("vi")]
     public void SavedMemorySurfaces_AllLanguages_OmitScopeMetadata(string language)
     {
-        var harness = Create(language, Choose(2).Concat(Choose(0)).Concat(Choose(4)));
+        var harness = Create(language, Choose(1).Concat(Choose(0)).Concat(Choose(3)));
         var view = new MemoryManagerView(harness.Console, harness.Text, harness.Shell);
         var notes = new[] { Note(false), Note(true) with { Id = new string('b', 32), Text = "Another saved note." } };
 
@@ -61,6 +80,7 @@ public sealed class GlobalMemoryViewTests
         Assert.Null(new MemoryForgetView(deletion.Console, deletion.Text).SelectForDeletion(notes));
         Assert.Contains(notes[0].Text, harness.Output.ToString(), StringComparison.Ordinal);
         Assert.Contains(notes[0].Id, harness.Output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(harness.Text.Text("Lab.ReviewButton") + " (0)", harness.Output.ToString(), StringComparison.Ordinal);
         Assert.Contains(notes[1].Text, deletion.Output.ToString(), StringComparison.Ordinal);
         Assert.Empty(harness.Keys);
         Assert.Empty(deletion.Keys);

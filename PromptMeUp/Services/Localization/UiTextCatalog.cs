@@ -48,6 +48,7 @@ internal static partial class UiTextCatalog
         AddStatusEntries(entries);
         AddSystemIntegrationEntries(entries);
         AddThemeEntries(entries);
+        AddTerminalEntries(entries);
         return entries;
     }
 }

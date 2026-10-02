@@ -33,7 +33,7 @@ internal static class FullscreenFooter
         return new Layout("fullscreen-footer").SplitRows(
             new Layout("notice", new Rows(new Text(" "), Inset(notice))).Size(noticeRows),
             new Layout("actions", new Rows(
-                new Rule { Style = Style.Parse(TerminalTheme.Divider) }, Inset(actions))).Size(ActionsRows),
+                new ThemeSeparator(), Inset(actions))).Size(ActionsRows),
             new Layout("hints", new Rows(new Text(" "), Inset(hints))).Size(HintRows));
     }
 
@@ -44,20 +44,12 @@ internal static class FullscreenFooter
         return new ShortcutLine(value);
     }
 
-    /// <summary>Gives every workspace action the same spacing, focus marker, and selection colors.</summary>
-    internal static IRenderable Button(string label, string color, bool selected) => new ActionButton(
-        $"{(selected ? ">" : " ")} [ {label} ]",
-        Style.Parse(selected ? $"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}" : color));
-
-    /// <summary>Keeps action labels on one row while preserving complete terminal characters.</summary>
-    private sealed class ActionButton(string label, Style style) : IRenderable
+    /// <summary>Chooses the localized compact shortcut row when the full text exceeds the content width.</summary>
+    internal static IRenderable Shortcuts(string value, string compactValue, int availableWidth)
     {
-        /// <summary>Accepts the available action width without requesting wrapped rows.</summary>
-        public Measurement Measure(RenderOptions options, int maxWidth) => new(0, Math.Min(new Segment(label).CellCount(), Math.Max(0, maxWidth)));
-
-        /// <summary>Clips an oversized action with the same ellipsis as sidebar labels.</summary>
-        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) =>
-            maxWidth > 0 ? Segment.SplitOverflow(new Segment(label, style), Overflow.Ellipsis, maxWidth) : [];
+        ArgumentNullException.ThrowIfNull(value);
+        ArgumentNullException.ThrowIfNull(compactValue);
+        return new ShortcutLine(new Segment(value).CellCount() > availableWidth ? compactValue : value);
     }
 
     /// <summary>Matches the horizontal margins of shared fullscreen headings and form fields.</summary>

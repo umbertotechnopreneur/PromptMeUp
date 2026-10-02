@@ -27,6 +27,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
     private readonly Dictionary<string, string> _drafts = new(StringComparer.Ordinal);
     private readonly HashSet<string> _dirty = new(StringComparer.Ordinal);
     private string? _selectedKey;
+    private bool _showEmptyProposals;
     private string? _submittedKey;
     private EditorFocus _focus;
     private int _actionIndex;
@@ -60,6 +61,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         {
             _selectedKey = ProposalsKey;
         }
+        _showEmptyProposals = selectProposals || _selectedKey == ProposalsKey;
         ReconcileDrafts(memories, proposals, feedback, feedbackIsError);
         MemoryManagerSelection selection;
         try
@@ -91,6 +93,8 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _caret = 0;
         _error = null;
         _detailOffset = 0;
+        _selectedKey = null;
+        _showEmptyProposals = false;
     }
 
     /// <summary>Runs the setup-shaped editor in one alternate-buffer lifecycle.</summary>
@@ -101,7 +105,8 @@ public sealed class MemoryManagerView : IMemoryManagerView
         var selected = entries.ToList().FindIndex(entry => string.Equals(entry.Key, _selectedKey, StringComparison.Ordinal));
         if (selected < 0)
         {
-            selected = memories.Count > 0 ? 2 : 0;
+            selected = entries.ToList().FindIndex(entry => entry.Kind == NavigationKind.Memory);
+            if (selected < 0) selected = 0;
         }
         _navigator.Reset(selected, entries.Count, focused: true);
         _selectedKey = entries[selected].Key;
@@ -189,13 +194,25 @@ public sealed class MemoryManagerView : IMemoryManagerView
             switch (key.Key)
             {
                 case ConsoleKey.F6:
+                    _focus = _focus == EditorFocus.Sections ? EditorFocus.Editor : EditorFocus.Sections;
+                    break;
                 case ConsoleKey.Tab:
-                    _focus = _focus switch
-                    {
-                        EditorFocus.Sections => EditorFocus.Editor,
-                        EditorFocus.Editor => EditorFocus.Actions,
-                        _ => EditorFocus.Sections
-                    };
+                    _focus = (key.Modifiers & ConsoleModifiers.Shift) != 0
+                        ? _focus switch
+                        {
+                            EditorFocus.Sections => EditorFocus.Actions,
+                            EditorFocus.Editor => EditorFocus.Sections,
+                            _ => EditorFocus.Editor
+                        }
+                        : _focus switch
+                        {
+                            EditorFocus.Sections => EditorFocus.Editor,
+                            EditorFocus.Editor => EditorFocus.Actions,
+                            _ => EditorFocus.Sections
+                        };
+                    break;
+                case ConsoleKey.LeftArrow when (key.Modifiers & ConsoleModifiers.Control) != 0:
+                    _focus = EditorFocus.Sections;
                     break;
                 case ConsoleKey.Enter:
                     if (_focus == EditorFocus.Sections)
@@ -298,7 +315,8 @@ public sealed class MemoryManagerView : IMemoryManagerView
         var height = frame.Height - 1;
         var width = frame.Width - 1;
         var bodyRows = height - FullscreenHeader.Height - FullscreenFooter.Height();
-        var contentWidth = width - FullscreenWorkspace.SidebarWidth(frame.Width) - 4;
+        var sidebarWidth = MemorySidebarWidth(frame.Width);
+        var contentWidth = width - sidebarWidth - 4;
         var entry = entries[_navigator.SelectedIndex];
         _navigator.IsFocused = _focus == EditorFocus.Sections;
         var renderOptions = new RenderOptions(_console.Profile.Capabilities, new Size(width, height));
@@ -308,20 +326,13 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _visibleRows = Math.Max(1, bodyRows - 2);
         _detailOffset = Math.Clamp(_detailOffset, 0, Math.Max(0, _lineCount - _visibleRows));
         var body = Inset(new Rows(
-            Line(PageTitle(entry, proposals), TerminalTheme.Accent),
-            new Text(" "),
+            FullscreenWorkspace.SectionHeading(PageTitle(entry, proposals), _focus == EditorFocus.Editor),
             new MemoryLines(lines.Skip(_detailOffset).Take(_visibleRows).ToArray())));
         var actions = Actions(entry, proposals);
         _actionIndex = Math.Clamp(_actionIndex, 0, actions.Count - 1);
-        var buttons = new Grid();
-        foreach (var unused in actions)
-        {
-            _ = unused;
-            buttons.AddColumn();
-        }
-        buttons.AddRow(actions.Select((action, index) => FullscreenFooter.Button(
+        var buttons = TerminalActionBar.Create(actions.Select((action, index) => new TerminalAction(
             _text.Text(action.LabelKey), action.Color, _focus == EditorFocus.Actions && index == _actionIndex)).ToArray());
-        var notice = Notice(entry, proposals, feedback, feedbackIsError);
+        var notice = Notice(entry, proposals, feedback, feedbackIsError, width);
         var hintKey = _editing ? "MemoryManager.EditorKeys"
             : _focus == EditorFocus.Sections ? "Form.SectionsFooter"
             : _focus == EditorFocus.Editor ? "MemoryManager.DetailKeys"
@@ -329,17 +340,26 @@ public sealed class MemoryManagerView : IMemoryManagerView
         var footer = FullscreenFooter.Create(
             Line(notice.Text, notice.Color),
             buttons,
-            FullscreenFooter.Shortcuts(_text.Text(hintKey)));
+            FullscreenFooter.Shortcuts(_text.Text(hintKey, entries.Count), _text.Text(hintKey + "Compact"), width - 4));
         _console.Write(FullscreenWorkspace.Create(_text.Text("Settings.Memories"), _shell.Options, frame.Width,
             body, _navigator.Render(entries, NavigationLabel, bodyRows, _text.Text("Form.Sections"),
-                _console.Profile.Capabilities.Unicode), footer, FullscreenFooter.NoticeRows));
+                _console.Profile.Capabilities.Unicode), footer, FullscreenFooter.NoticeRows,
+            sidebarWidth: sidebarWidth));
     }
+
+    /// <summary>Gives saved-note previews enough room to remain distinguishable on ordinary terminals.</summary>
+    private static int MemorySidebarWidth(int terminalWidth) => terminalWidth >= 76
+        ? Math.Min(34, terminalWidth / 3 + 4)
+        : FullscreenWorkspace.SidebarWidth(terminalWidth);
 
     /// <summary>Builds stable create, suggestions, and saved-note entries for the numbered sidebar.</summary>
     private IReadOnlyList<NavigationEntry> Entries(IReadOnlyList<PersistentMemory> memories, MemoryProposalWorkspace proposals) =>
     [
         new(NavigationKind.Create, CreateKey, _text.Text("MemoryManager.Create"), "✨"),
-        new(NavigationKind.Proposals, ProposalsKey, _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})", "💭"),
+        .. (proposals.Proposals.Count > 0 || _showEmptyProposals
+            ? [new NavigationEntry(NavigationKind.Proposals, ProposalsKey,
+                _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})", "💭")]
+            : Array.Empty<NavigationEntry>()),
         .. memories.Select(memory => new NavigationEntry(NavigationKind.Memory, MemoryKey(memory.Id),
             PreviewLabel(memory.Text), "📚", memory.Id))
     ];
@@ -579,7 +599,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         }
         else if (key.Key is ConsoleKey.LeftArrow or ConsoleKey.Backspace && _caret > 0)
         {
-            var previous = PreviousElement(_input, _caret);
+            var previous = TerminalTextElements.Previous(_input, _caret);
             if (key.Key == ConsoleKey.Backspace)
             {
                 _input = _input.Remove(previous, _caret - previous);
@@ -588,7 +608,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         }
         else if (key.Key is ConsoleKey.RightArrow or ConsoleKey.Delete && _caret < _input.Length)
         {
-            var next = NextElement(_input, _caret);
+            var next = TerminalTextElements.Next(_input, _caret);
             if (key.Key == ConsoleKey.Delete)
             {
                 _input = _input.Remove(_caret, next - _caret);
@@ -642,14 +662,6 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _caret = Math.Min(nextStart + column, nextEnd < 0 ? _input.Length : nextEnd);
     }
 
-    /// <summary>Finds the preceding Unicode text element for cursor movement and deletion.</summary>
-    private static int PreviousElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).LastOrDefault(start => start < index);
-
-    /// <summary>Finds the following Unicode text element without splitting a composed character.</summary>
-    private static int NextElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
-
     /// <summary>Changes the proposal shown in the central editor without leaving the suggestions section.</summary>
     private void ChangeProposal(int delta, MemoryProposalWorkspace proposals)
     {
@@ -682,13 +694,28 @@ public sealed class MemoryManagerView : IMemoryManagerView
             AddPair(metadata, _text.Text("MemoryManager.Updated"), memory.UpdatedAt.ToLocalTime().ToString("g", _text.Culture));
             rows.Add(metadata);
         }
+        else if (memories.Count == 0)
+        {
+            rows.Add(new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Muted)));
+            rows.Add(new Text(" "));
+        }
         var draft = _editing ? _input : CurrentDraft(entry, memories, proposals);
         rows.Add(Line((_focus == EditorFocus.Editor ? "> " : string.Empty) + _text.Text("Memory.Note"), TerminalTheme.Accent));
         rows.Add(new Text(" "));
-        rows.Add(new EditorInput(width => EditorValue(draft, width),
-            Style.Parse((_focus == EditorFocus.Editor ? "bold underline " : string.Empty) + TerminalTheme.FieldValue)));
-        rows.Add(new Text(" "));
-        rows.Add(new Text(SafeText(draft), Style.Parse(TerminalTheme.Primary)));
+        if (_editing || entry.Kind == NavigationKind.Create)
+        {
+            rows.Add(new EditorInput(width => EditorValue(draft, width),
+                Style.Parse((_focus == EditorFocus.Editor ? "bold underline " : string.Empty) + TerminalTheme.FieldValue)));
+            if (draft.Contains('\n'))
+            {
+                rows.Add(new Text(" "));
+                rows.Add(new Text(SafeText(draft), Style.Parse(TerminalTheme.Primary)));
+            }
+        }
+        else
+        {
+            rows.Add(new Text(SafeText(draft), Style.Parse(TerminalTheme.Primary)));
+        }
         return new Rows(rows);
     }
 
@@ -760,7 +787,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
 
     /// <summary>Chooses a stable footer notice from validation, confirmation, persistence, or page guidance.</summary>
     private (string Text, string Color) Notice(NavigationEntry entry, MemoryProposalWorkspace proposals,
-        string? feedback, bool feedbackIsError)
+        string? feedback, bool feedbackIsError, int width)
     {
         if (_error is not null)
         {
@@ -783,9 +810,11 @@ public sealed class MemoryManagerView : IMemoryManagerView
         }
         if (entry.Kind == NavigationKind.Proposals && proposals.Proposals.Count == 0)
         {
-            return (_text.Text("Lab.None"), TerminalTheme.Muted);
+            return (_text.Text("MemoryManager.NoProposalsHint"), TerminalTheme.Muted);
         }
-        return (_text.Text(entry.Kind == NavigationKind.Proposals ? "Lab.Proposals" : "MemoryManager.NoteHelp"), TerminalTheme.Muted);
+        var key = entry.Kind == NavigationKind.Proposals ? "Lab.Proposals"
+            : width < 100 ? "MemoryManager.NoteHelpCompact" : "MemoryManager.NoteHelp";
+        return (_text.Text(key), TerminalTheme.Muted);
     }
 
     /// <summary>Returns the current draft for the selected note or proposal.</summary>
@@ -865,11 +894,11 @@ public sealed class MemoryManagerView : IMemoryManagerView
         while (true)
         {
             TerminalTheme.WriteSection(_console, _text.Text("Settings.Memories"), _text.Text("MemoryManager.Help"));
-            var choices = new List<MenuChoice>
+            var choices = new List<MenuChoice> { new(CreateKey, _text.Text("MemoryManager.Create")) };
+            if (proposals.Proposals.Count > 0 || _showEmptyProposals)
             {
-                new(CreateKey, _text.Text("MemoryManager.Create")),
-                new(ProposalsKey, _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})")
-            };
+                choices.Add(new(ProposalsKey, _text.Text("Lab.ReviewButton") + $" ({proposals.Proposals.Count})"));
+            }
             choices.AddRange(memories.Select(memory => new MenuChoice(MemoryKey(memory.Id), PreviewLabel(memory.Text))));
             choices.Add(new("close", _text.Text("Help.Browse.Close")));
             var selected = Prompt(_text.Text("MemoryManager.Choose"), choices);
@@ -989,11 +1018,10 @@ public sealed class MemoryManagerView : IMemoryManagerView
     }
 
     /// <summary>Creates a localized, high-contrast selection menu without interpreting stored note markup.</summary>
-    private MenuChoice Prompt(string title, IReadOnlyList<MenuChoice> choices) => _console.Prompt(new SelectionPrompt<MenuChoice>()
-        .Title(Markup.Escape(title)).PageSize(Math.Clamp(_console.Profile.Height - 6, 3, 10))
-        .MoreChoicesText(Markup.Escape(_text.Text("MemoryManager.More")))
-        .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"))
-        .UseConverter(choice => Markup.Escape(choice.Label)).AddChoices(choices));
+    private MenuChoice Prompt(string title, IReadOnlyList<MenuChoice> choices) => TerminalChoiceMenu.Select(
+        _console, choices.Select(choice => new TerminalMenuChoice<MenuChoice>(choice, choice.Label)).ToArray(),
+        title, pageSize: Math.Clamp(_console.Profile.Height - 6, 3, 10),
+        moreChoicesText: _text.Text("MemoryManager.More"));
 
     /// <summary>Keeps sidebar previews concise while the complete content remains in the editor.</summary>
     private static string PreviewLabel(string value)

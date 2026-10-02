@@ -1,7 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
 using PromptMeUp.Services;
-using System.Globalization;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -159,10 +158,16 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             switch (key.Key)
             {
                 case ConsoleKey.F6:
-                    MoveFocus(items.Count, SelectedHasInput(items), SelectedHasDetails(items));
+                    _focus = _focus == MenuFocus.Groups
+                        ? items.Count > 0 ? MenuFocus.Commands : MenuFocus.Back
+                        : MenuFocus.Groups;
                     break;
                 case ConsoleKey.Tab:
-                    MoveFocus(items.Count, SelectedHasInput(items), SelectedHasDetails(items));
+                    MoveFocus(items.Count, SelectedHasInput(items), SelectedHasDetails(items),
+                        (key.Modifiers & ConsoleModifiers.Shift) != 0 ? -1 : 1);
+                    break;
+                case ConsoleKey.LeftArrow when (key.Modifiers & ConsoleModifiers.Control) != 0:
+                    _focus = MenuFocus.Groups;
                     break;
                 case ConsoleKey.Enter:
                     if (_focus == MenuFocus.Back)
@@ -243,6 +248,12 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
                 case ConsoleKey.PageDown when _focus == MenuFocus.Details:
                     MoveDetails(VisibleDetailRows(), items);
                     break;
+                case ConsoleKey.PageUp when _focus == MenuFocus.Groups:
+                    MoveGroup(-1, groups);
+                    break;
+                case ConsoleKey.PageDown when _focus == MenuFocus.Groups:
+                    MoveGroup(1, groups);
+                    break;
                 case ConsoleKey.PageUp when _focus == MenuFocus.Commands && items.Count > 0:
                     MoveItem(-VisibleItemRows(), items);
                     break;
@@ -254,6 +265,12 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
                     break;
                 case ConsoleKey.End when _focus == MenuFocus.Details:
                     MoveDetails(int.MaxValue, items);
+                    break;
+                case ConsoleKey.Home when _focus == MenuFocus.Groups:
+                    MoveGroup(-_groupNavigator.SelectedIndex, groups);
+                    break;
+                case ConsoleKey.End when _focus == MenuFocus.Groups:
+                    MoveGroup(groups.Count - 1 - _groupNavigator.SelectedIndex, groups);
                     break;
                 case ConsoleKey.Home when _focus == MenuFocus.Commands && items.Count > 0:
                     _selectedItemIndex = 0;
@@ -287,24 +304,18 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         _groupNavigator.IsFocused = _focus == MenuFocus.Groups;
         var active = groups[_groupNavigator.SelectedIndex];
         var content = Content(active, bodyRows);
-        var actions = new Grid().AddColumn();
-        actions.AddRow(FullscreenFooter.Button(
-            TerminalTheme.IconPrefix(options, "↩️", "x") + backLabel,
-            TerminalTheme.Warning,
-            _focus == MenuFocus.Back));
-        var footerKey = _focus == MenuFocus.Editor
-            ? new Segment(text.Text("Lab.MenuEditorFooter")).CellCount() > width - 4
-                ? "Lab.MenuEditorFooterCompact"
-                : "Lab.MenuEditorFooter"
-            : new Segment(text.Text("Lab.MenuFooter", groups.Count)).CellCount() > width - 4
-                ? "Lab.MenuFooterCompact"
-                : "Lab.MenuFooter";
-        var footerText = _focus == MenuFocus.Editor ? text.Text(footerKey) : text.Text(footerKey, groups.Count);
+        var actions = TerminalActionBar.Create(
+        [
+            new TerminalAction(TerminalTheme.IconPrefix(options, "↩️", "x") + backLabel,
+                TerminalTheme.Warning, _focus == MenuFocus.Back)
+        ]);
+        var footerKey = _focus == MenuFocus.Editor ? "Lab.MenuEditorFooter" : "Lab.MenuFooter";
         var footer = FullscreenFooter.Create(
             new FullscreenLine(_editorError ?? SelectedDescription(active),
                 Style.Parse(_editorError is null ? TerminalTheme.Muted : TerminalTheme.Error)),
             actions,
-            FullscreenFooter.Shortcuts(footerText));
+            FullscreenFooter.Shortcuts(text.Text(footerKey, groups.Count),
+                text.Text(footerKey + "Compact", groups.Count), width - 4));
         console.Write(FullscreenWorkspace.Create(title, options, frame.Width, content,
             _groupNavigator.Render(groups, GroupLabel, bodyRows, text.Text("Form.Sections"), console.Profile.Capabilities.Unicode),
             footer, FullscreenFooter.NoticeRows));
@@ -315,8 +326,8 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
     {
         var rows = new List<IRenderable>
         {
-            new FullscreenLine(GroupLabel(group), Style.Parse("bold " + TerminalTheme.Accent)),
-            new Text(" "),
+            FullscreenWorkspace.SectionHeading(GroupLabel(group),
+                _focus is MenuFocus.Commands or MenuFocus.Editor or MenuFocus.Details),
             new FullscreenLine(Safe(group.Description), Style.Parse(TerminalTheme.Primary)),
             new Text(" "),
             new FullscreenLine(text.Text("Lab.Commands"), Style.Parse("bold " + TerminalTheme.Primary))
@@ -419,21 +430,25 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         return string.IsNullOrWhiteSpace(item.Description) ? group.Description : item.Description;
     }
 
-    /// <summary>Moves between the sidebar, central commands, and the single footer action.</summary>
-    private void MoveFocus(int itemCount, bool hasInput, bool hasDetails)
+    /// <summary>Cycles forward or backward through the available content and footer areas.</summary>
+    private void MoveFocus(int itemCount, bool hasInput, bool hasDetails, int direction)
     {
-        _focus = _focus switch
+        var areas = new List<MenuFocus> { MenuFocus.Groups };
+        if (itemCount > 0)
         {
-            MenuFocus.Groups when itemCount > 0 => MenuFocus.Commands,
-            MenuFocus.Groups => MenuFocus.Back,
-            MenuFocus.Commands when hasInput => MenuFocus.Editor,
-            MenuFocus.Commands when hasDetails => MenuFocus.Details,
-            MenuFocus.Commands => MenuFocus.Back,
-            MenuFocus.Editor when hasDetails => MenuFocus.Details,
-            MenuFocus.Editor => MenuFocus.Back,
-            MenuFocus.Details => MenuFocus.Back,
-            _ => MenuFocus.Groups
-        };
+            areas.Add(MenuFocus.Commands);
+        }
+        if (hasInput)
+        {
+            areas.Add(MenuFocus.Editor);
+        }
+        if (hasDetails)
+        {
+            areas.Add(MenuFocus.Details);
+        }
+        areas.Add(MenuFocus.Back);
+        var index = areas.IndexOf(_focus);
+        _focus = areas[(index + direction + areas.Count) % areas.Count];
     }
 
     /// <summary>Moves to another sidebar group and resets its command selection.</summary>
@@ -489,9 +504,15 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             _focus = MenuFocus.Commands;
             return false;
         }
-        if (key.Key is ConsoleKey.F6 or ConsoleKey.Tab)
+        if (key.Key == ConsoleKey.F6)
         {
-            _focus = string.IsNullOrWhiteSpace(item.Details) ? MenuFocus.Back : MenuFocus.Details;
+            _focus = MenuFocus.Groups;
+            return false;
+        }
+        if (key.Key == ConsoleKey.Tab)
+        {
+            _focus = (key.Modifiers & ConsoleModifiers.Shift) != 0 ? MenuFocus.Commands
+                : string.IsNullOrWhiteSpace(item.Details) ? MenuFocus.Back : MenuFocus.Details;
             return false;
         }
         if (key.Key == ConsoleKey.Enter
@@ -532,21 +553,21 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         }
         else if (key.Key == ConsoleKey.LeftArrow && _caret > 0)
         {
-            _caret = PreviousElement(value, _caret);
+            _caret = TerminalTextElements.Previous(value, _caret);
         }
         else if (key.Key == ConsoleKey.RightArrow && _caret < value.Length)
         {
-            _caret = NextElement(value, _caret);
+            _caret = TerminalTextElements.Next(value, _caret);
         }
         else if (key.Key == ConsoleKey.Backspace && _caret > 0)
         {
-            var previous = PreviousElement(value, _caret);
+            var previous = TerminalTextElements.Previous(value, _caret);
             SetDraft(item, value.Remove(previous, _caret - previous));
             _caret = previous;
         }
         else if (key.Key == ConsoleKey.Delete && _caret < value.Length)
         {
-            var next = NextElement(value, _caret);
+            var next = TerminalTextElements.Next(value, _caret);
             SetDraft(item, value.Remove(_caret, next - _caret));
         }
         else if (!char.IsControl(key.KeyChar) && (key.Modifiers & ConsoleModifiers.Control) == 0)
@@ -594,14 +615,6 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         var nextEnd = value.IndexOf('\n', nextStart);
         _caret = Math.Min(nextStart + column, nextEnd < 0 ? value.Length : nextEnd);
     }
-
-    /// <summary>Finds the preceding Unicode text element for cursor movement and deletion.</summary>
-    private static int PreviousElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).LastOrDefault(start => start < index);
-
-    /// <summary>Finds the following Unicode text element without splitting a composed character.</summary>
-    private static int NextElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
 
     /// <summary>Initializes the active field draft after section or command navigation.</summary>
     private void EnsureDraft(IReadOnlyList<FullscreenMenuGroup> groups)

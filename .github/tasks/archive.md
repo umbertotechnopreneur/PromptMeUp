@@ -1,5 +1,35 @@
 ﻿# Task Archive
 
+## 2026-09-28 — Illustrate a practical restart investigation
+
+- Added a four-step ImageGen banner and readable captions to the README, with a read-only Windows investigation goal for `hm --plan`.
+- Reused the illustration on the product website with English, Italian, and Vietnamese captions and a responsive four/two/one-column layout.
+- Kept the copy aligned with implemented behavior: Plan shows checks and expected results; chat provides further interpretation. Recorded image provenance and the full generation prompt.
+
+Validation: inspected the generated artwork, reviewed the scoped diffs and Plan workflow, and checked matching image copies. Builds, automated tests, browser rendering, and publication were not performed.
+
+## 2026-09-26 — Make saved memories useful at a glance
+
+- Reused the shared borderless terminal table to preview saved notes directly in Settings, with a compact layout on narrow terminals and refreshed content after editing.
+- Removed empty suggestion navigation from normal memory browsing, opened on the first saved note, and removed duplicate note text from the editor detail.
+
+Validation: repository preflight, XML method-comment check, full-solution format verification, and warning-free Release build passed. Automated tests and live-terminal interaction were not run.
+
+## 2026-09-26 — Restore responsive inline command choices
+
+- Replaced the live renderer around conversational menus with bounded in-place redraws, preserving keyboard selection, turn-history shortcuts, and terminal scrollback.
+- Added a regression case for selecting a suggested command with Arrow Down and Enter.
+
+Validation: repository preflight, XML method-comment check, full-solution format verification, and warning-free Release build passed. Automated tests and live-terminal interaction were not run.
+
+## 2026-09-26 — Simplify command routing and terminal editor navigation
+
+- Centralized Unicode text-element navigation across the fullscreen form, memory manager, and menu editors.
+- Moved command dispatch into focused AI, memory, information, and setup/installation handlers while keeping common startup and Home routing in the application.
+- Restored the application namespace import required by the earlier service-registration extraction.
+
+Validation: repository preflight, XML method-comment check, scoped whitespace formatting, warning-free Release build, and all 1,016 tests passed. Full-solution format verification still reports existing line-ending, encoding, and whitespace issues in unrelated files. Release build output was cleaned.
+
 ## 2026-09-24 — Accept the bundled command guide in Windows CI packaging
 
 - Fixed the existing Windows installer validation used by the quality gate: allow and require the exact `docs/promptmeup-quick-reference.pdf` payload path, matching the MSIX contract.
@@ -152,6 +182,53 @@ Validation: package signature verification and installed package status passed. 
 - Renamed the menu actions and added a repository rule that prevents project-scoped labels, groups, availability, or configuration from returning to `hm --skills`.
 
 Validation: preflight, restore, XML method-comment check, scoped source search, diff inspection, and warning-free Release build passed; Release output was cleaned. The repository-wide formatting check remains blocked by pre-existing CRLF/BOM violations in unrelated files. Automated tests were not run.
+
+## 2026-09-25 — Install the chat refinements Debug build
+
+- Built a self-contained x64 Debug publish with embedded symbols and version `0.1.8.5` from source commit `41e9171`.
+- Exported notices for 27 packages, then created, signed, and verified the local MSIX and its SHA-256 checksum.
+- Installed `UmbertoGiacobbiDotBiz.PromptMeUp` `0.1.8.5` over `0.1.8.4`. Verified healthy current-user registration, the WindowsApps execution alias, matching published and installed `hm.dll` hashes, and the installed executable's version and commit.
+- Preserved the signed MSIX, checksum, package metadata, and installation record under ignored `artifacts/msix/debug/0.1.8.5/x64`. Debug application-runtime and solution cleanup passed.
+- Automated tests, CLI smoke tests, and interactive UI checks were not run for this installation. Recursive deletion of this build's temporary publish and payload directories was blocked by policy and remains in the task list.
+
+## 2026-09-25 — Test and install the fullscreen refinements Debug build
+
+- Passed all 986 automated tests in Debug from source commit `1f6180d` on `codex/refinements-to-version-1.0-beta`.
+- Built a self-contained x64 Debug publish with embedded symbols and a build-time `0.1.8.4` version override. Exported notices for 27 packages, then created, signed, and verified the local MSIX.
+- Installed `UmbertoGiacobbiDotBiz.PromptMeUp` `0.1.8.4` directly over `0.1.8.3`. Verified healthy registration, the package checksum, matching published and installed `hm.dll` hashes, and a successful `hm --version` call through the execution alias outside the read-only sandbox.
+- Preserved the signed MSIX, checksum, metadata, and installation record under ignored `artifacts/msix/debug/0.1.8.4/x64`. Cleaned the application and test Debug outputs and removed this build's temporary publish and payload directories.
+- The initial solution-wide runtime clean failed because the test project's restored assets lack `net10.0/win-x64`; separate app-runtime and test-default cleans succeeded. No interactive fullscreen UI check was performed.
+
+## 2026-09-25 — Refine shared fullscreen screens for the 1.0 beta
+
+- Create checkpoint `72b9403` for the prior banner and installation details, then work on the owner-requested `codex/refinements-to-version-1.0-beta` branch.
+- Align F6, Shift+Tab, and Ctrl+Left navigation across fullscreen settings, help, command menus, and memory editing. Add sidebar paging and Home/End navigation to command menus.
+- Simplify the shared header with an optional repository link, select compact shortcut rows through the shared footer, and show the current position in overflowing sidebars.
+- Share a content heading with a focus marker and optional divider across fullscreen sections. Reserve warning color for the destructive consent choice while showing retention details in the primary text color.
+- Make a separate local checkpoint commit for each refinement: `d2000ba`, `ee9c36f`, `cb8057e`, `9f24a6e`, `aa389ff`, `7214250`, and `be72dab`.
+- Validation: reviewed scoped diffs and Git whitespace checks. Builds, automated tests, formatters, linters, runtime checks, and installation were not run; the installed Debug package remains the earlier version.
+
+## 2026-09-25 — Share themed product and installation information
+
+- Reuse a banner and localized slogan in About and the first setup page, with artwork colors taken from the active terminal theme and a compact fallback for narrow or non-Unicode terminals.
+- Extract the existing installation details and project links into a shared component with an optional full-width card. Enable the card for first-run setup and show the same details without a frame in About.
+- Keep aligned label-value rows on wider terminals and stack them when space is limited. Add the slogan and installation title in all six supported languages and adapt the existing setup test fixture to the shared content provider.
+- Validation: reviewed the scoped source and diff. No build, tests, formatters, linters, installation, or runtime and visual checks were performed. Changes remain local; the installed Debug package has not been updated.
+
+## 2026-09-24 — Install the settings UI Debug build
+
+- Built and installed signed local Debug x64 MSIX `0.1.8.3` from commit `cfcfce2`, using build-time version overrides and embedded debug symbols.
+- After the owner removed the earlier installations, verified healthy package registration, matching published and installed application DLL hashes, and the `hm.exe` alias pointing to this Debug package.
+- Preserved the signed MSIX, package metadata, checksum, and installation record under ignored `artifacts/msix/debug/0.1.8.3/x64`.
+- Completed Debug solution cleanup and removed this build's temporary publish and payload directories. No automated tests, CLI smoke tests, application launch, or application UI validation were performed.
+
+## 2026-09-24 — Make settings information easier to read
+
+- Split message-collection consent into four titled sections with aligned bullet points, preserving the collection, confirmation, retention, and deletion facts in all six supported languages.
+- Add one context-specific emoji to each Privacy heading through the shared icon helper, including its no-emoji fallback.
+- Embed the shared About artwork and project details in the settings content pane. Reuse the form's scrolling, adapt the content to the pane width, and preserve the selected About section after saving.
+- Update the existing consent-view assertion for the newly separated OpenAI confirmation text.
+- Validation: reviewed the scoped source and diff. Builds, tests, formatters, linters, and runtime or visual checks were not run. A local Debug build and focused settings navigation and layout checks remain useful follow-up work. Changes remain local on the owner-authorized branch.
 
 ## 2026-09-22 — Unify skills and memory editing
 
@@ -1211,6 +1288,58 @@ Validation: repository preflight, restore, format verification, XML comment chec
 
 Validation: preflight, restore, formatting verification, XML comment check, and Release build with warnings treated as errors passed. Automated tests were not run because they were not requested. Release build output was cleaned after validation.
 
+## 2026-09-25 — Show build timestamp and Git commit in version details
+
+- Stamp the full source commit into assembly metadata when building, alongside the existing UTC compilation timestamp.
+- Show the ISO 8601 timestamp with its embedded `+00:00` offset and the full Git commit in the shared About/OOBE installation details and `hm --version`.
+- Keep labels translated in all six languages and use a single-column layout for the new CLI details.
+
+Validation: inspected the scoped diff, checked whitespace, and parsed the MSBuild targets XML. Automated tests and builds were not run because they were not requested for this change.
+
+## 2026-09-25 — Place chat input near the terminal bottom
+
+- Added a reusable opt-out prompt placement helper that adds normal scrollback lines rather than replacing the terminal buffer.
+- Positioned chat input near the bottom when the editor opens and after terminal resize; non-interactive output retains its existing flow.
+
+Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
+
+## 2026-09-25 — Place plan and script choices near the terminal bottom
+
+- Applied the shared prompt placement to plan start and outcome confirmations, script action and save choices, and the script revision prompt.
+- Kept command authorization beside its risk and command preview; query, direct, and diagnose continue into the shared chat input when the user chooses more turns.
+
+Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
+
+## 2026-09-25 — Brighten all built-in theme accents
+
+- Increased accent and information color saturation across all 13 themes, brightened dividers, and matched each selection background to its accent.
+- Kept background, primary text, and status meanings unchanged; updated the built-in default cyan palette and two affected theme descriptions.
+
+Validation: parsed all 13 JSON palettes, reviewed the scoped diff, and calculated text, divider, and selection contrast ratios; all exceed the catalog thresholds. Automated tests and builds were not run because they were not requested for this change.
+
+## 2026-09-25 — Add a bottom prompt bar to AI conversation input
+
+- Added a reusable, theme-aware prompt bar with optional separators, current model, context usage meter, session cost, and measured system/user/assistant/free context categories when the terminal has room. The guide is labeled as part of system tokens; no tool-token count is fabricated.
+- The multi-line editor redraws the bar while typing and removes it on submit, leaving accepted turns in normal scrollback.
+- Chat and its query/diagnostic continuations use the current local session snapshot; diagnostic evidence input begins with the selected model.
+
+Validation: inspected the scoped diff and checked whitespace. Automated tests and builds were not run because they were not requested for this change.
+
+## 2026-09-25 — Show command-result tokens in the chat context bar
+
+- Mark command-result follow-ups locally while preserving their user role in OpenAI requests. Estimate their text tokens separately from human prompts and carry the breakdown into both the active chat bar and the session summary.
+- Give tool output its own colored share and six-language label. At narrow terminal widths, prioritize full labels for system, user, tool, and assistant over abbreviated extra metrics.
+- Built the Debug solution without warnings or errors and launched the updated Italian chat at 80 columns. The bottom bar displayed the four named context categories; no AI request or command was submitted.
+
+Validation: preflight, XML comment check, Debug build, and interactive UI preview passed. Automated tests were not requested. The auto-review rejected `dotnet format --verify-no-changes` because the owner had not explicitly authorized a formatter.
+
+## 2026-09-25 — Keep chat startup compact with on-demand help
+
+- Reduced the initial chat command list to the essential `/run`, `/status`, `/exit`, and `/help` shortcuts so the conversation and bottom prompt bar have more room in an 80-column terminal.
+- Added `/help` as a local command that shows the complete localized chat and memory guide without an AI request. Removed the obsolete intro parameter while keeping the full guide available on demand.
+
+Validation: XML comment check and Debug build passed. Launched the Italian chat, confirmed the compact introduction and full `/help` output, then exited without contacting the AI provider. Automated tests were not requested; Debug outputs were cleaned after the preview.
+
 ## 2026-09-18 — Allow two-digit settings shortcuts
 
 - Extended the first-digit waiting window to one second so section shortcuts such as `12` are reliable without pressing Enter.
@@ -1262,3 +1391,116 @@ Validation: preflight, restore, formatting verification, XML comment check, and 
 - [x] Move legacy skill settings into the global settings table, remove the obsolete table from the local database, and add an idempotent startup migration for older databases.
 
 - [x] Make --reset clear setup and direct-mode flags only, and make --reset all delete/recreate the full SQLite database.
+
+## 2026-09-25 — Share terminal action bars and choice menus
+
+- Extracted reusable terminal action bars with theme-aware focus and optional button brackets, then applied them to fullscreen forms, menus, help, memories, and About.
+- Added shared single-choice, multiple-choice, and numbered menu rendering. First-run setup, compact settings setup, and the home menu now use the same choice presentation while preserving their keyboard flows.
+- Recorded focused checkpoint commits `5abc25a`, `77636b1`, `8a54361`, and `c5a2966`.
+- Validation: scoped source review and `git diff --check`. No build, automated tests, or interactive UI check was run because they were not requested.
+
+## 2026-09-25 — Refine shared terminal controls and audit their callers
+
+- Replaced translation-dependent onboarding choices with typed actions and explicit menu tones.
+- Removed the button state that only looked disabled while keyboard handling remained active.
+- Routed simple script, theme, skills, navigation, and memory prompts through `TerminalChoiceMenu`, retaining the memory pager settings.
+- Removed the unused asynchronous menu wrapper. The fullscreen menu keeps its separate navigation and inline-editor implementation.
+- Validation: scoped caller review and `git diff HEAD~5..HEAD --check` passed. Build, automated tests, and interactive UI checks were not run because they were not requested.
+
+## 2026-09-26 — Add an adaptive OpenAI ASCII logo to onboarding
+
+- Replaced the inline setup mark with a reusable terminal component.
+- Added a detailed woven mark for wide terminals, retained a compact variant at medium widths, and hid the decoration when space is limited.
+- Colored the mark with the existing theme accents and kept the OpenAI label aligned beneath it.
+- Validation: repository preflight, XML comment check, scoped formatting verification, and Release build passed with zero warnings and errors. Automated tests and an interactive UI preview were not run because they were not requested.
+
+## 2026-09-26 — Normalize solution formatting
+
+- Normalized C# files to the repository UTF-8 BOM and CRLF policy.
+- Reflowed the context status pattern in the shared prompt bar to the formatter's canonical layout without changing behavior.
+- Validation: complete solution formatting verification, repository preflight, XML comment check, and Release build passed with zero warnings and errors. Automated tests were not run because they were not requested.
+
+## 2026-09-26 — Shared themed terminal tables
+
+- Added TerminalTable with themed headings, configurable cell padding, optional rounded borders, and optional row separators.
+- Converted plan, script differences, file previews, saved memories, model pricing, and dependency licenses to the shared table factory.
+- Validation: repository preflight, XML comments, solution formatting, and Release build passed. Automated tests and interactive rendering were not run for this visual change.
+
+## 2026-09-26 — Shared waterfall identities and activity rows
+
+- Added reusable TerminalTurnHeader and TerminalActivityRow controls, safe cell-aware text fitting, and console-local presentation state.
+- Unified user, assistant, plan, script, and command-output identities. Replaced the animated two-line progress display with a quiet working row and measured completion, cancellation, or failure.
+- Removed blinking stderr labels; retained all command previews and authorization behavior.
+- Validation: XML comments, complete solution formatting, and Release build passed with zero warnings and errors.
+
+## 2026-09-26 — Responsive session strip and quiet interaction states
+
+- Extracted TerminalSessionStrip into indivisible model, context, state, mode, cost, and elapsed-time blocks.
+- Preserved system, user, tool, and assistant context counts at narrow widths; reused proportional meter allocation and kept the thirteen-cell meter.
+- Added quiet ready, working, and decision states with scoped terminal titles, and made the input dock reserve its actual responsive height.
+- Validation: XML comments, complete solution formatting, and Release build passed with zero warnings and errors.
+
+## 2026-09-26 — On-demand details and retained conversation turns
+
+- Added a bounded memory-only transcript and a read-only alternate-buffer viewer with turn navigation and independent content scrolling.
+- Added F2 details and Ctrl+PageUp/PageDown navigation to the multiline prompt while retaining its draft and caret.
+- Kept complete output inline when an interactive viewer is unavailable. Command errors retain their first error line and exit status; previews and authorization remain fully visible.
+- Reused the Markdown parser for original answers and expanded history instead of adding a second renderer.
+- Validation: Release build and XML check passed; 77 focused rendering, context, input, and component tests passed. Interactive desktop behavior remains to be checked.
+
+## 2026-09-26 — Shared conversation decisions and screen behavior
+
+- Added inline conversation menus with session metrics and history shortcuts for plan, script, command suggestions, and explicit approvals.
+- Preserved default-negative approvals and command selection as a separate step from authorization. Details viewers run after the inline menu releases its rendering scope.
+- Documented reusable controls, optional borders, keyboard navigation, inline/fullscreen behavior, and local retention limits in `docs/terminal-ui.md`.
+- Validation: Release build, XML comments, complete solution formatting, and 152 focused UI, localization, workflow, and authorization tests passed.
+
+## 2026-09-26 — Terminal UI refinement audit and command-flow polish
+
+- Reused the fullscreen viewport and input controls in About, cached expanded turn rendering, and cleared stale session metrics when switching between chat, plan, and script.
+- Aligned wrapped direct-mode notices, active skills, and command-review warnings in the shared conversation column.
+- Showed the opening command tip once per local day, independently of the daily project footer.
+- Added a default-safe command authorization choice that copies the exact previewed command to the Windows clipboard without running it.
+- Validation: Release build, repository preflight, XML comments, formatting verification, and 1,030 tests passed. Interactive desktop rendering and clipboard integration remain unverified.
+
+## 2026-09-26 — Clearer conversation follow-up choices
+
+- Added vertical space around shared inline choices and around the confirmed selection in terminal scrollback.
+- Replaced the mechanical conversation-continuation hint, menu heading, and chat choice with shorter, natural wording in all six supported languages. Simplified the suggested-command safety hint without changing the authorization flow.
+- Validation: repository preflight, XML comments, formatting verification, and Release build passed. Automated tests and interactive rendering were not run for this copy and spacing change.
+
+## 2026-09-26 — Saved-memory layout check in an interactive terminal
+
+- Widened only the saved-memory sidebar when space permits so notes with similar starts remain distinguishable.
+- Added a compact editing hint for narrow terminals and replaced the repeated empty-proposals footer with useful guidance.
+- Checked empty, single-note, multiple-note, and empty-proposal views in an 80-column interactive Windows terminal. Also reviewed settings, skills, and learning layouts for similar issues.
+- Validation: 1,031 tests, formatting verification, repository preflight, XML comments, and Debug and Release builds passed.
+
+## 2026-09-26 — Local Debug MSIX installation for saved-memory layout
+
+- Published and signed the x64 Debug package at version 1.0.0.0 without changing the product version.
+- Replaced the equal-version test installation after Windows rejected an in-place update; preserved the local database and verified the installed payload, package registration, command alias, and About launch.
+- Cleaned the Debug build output. Temporary package staging and a local-data backup remain under ignored artifacts because automatic approval review blocked recursive cleanup.
+
+## 2026-09-26 — About title, settings appearance, and welcome links
+
+- Rendered the installation heading as plain text in the unboxed About separator, while keeping styled markup in the card header.
+- Moved the theme picker and palette preview into Personalization. The `--theme` shortcut opens that combined section.
+- Arranged the four welcome links as centered labels above linked addresses in four columns, with full-address rows on narrow terminals.
+- Validation: repository preflight, XML comments, formatting verification, and Release build passed. Automated tests and CLI smoke tests were not run.
+
+## 2026-09-27 — Verify the settings merge and terminal layouts
+
+- Updated the settings navigation tests for the eleven visible sections after moving Theme into Personalization.
+- Made the section shortcut range follow the actual page count and updated the Personalization help in all six languages to include the color theme.
+- Ran 1,031 tests successfully. Checked the fresh-install welcome at 80 and 160 columns, About, and the `--theme` settings screen in an interactive terminal.
+- Validation: preflight, XML comments, formatting verification, and warning-free Release build passed.
+
+## 2026-09-27 — Refine shared settings and welcome layouts
+
+- Grouped Personalization into Profile and Appearance, shortened field labels in all six languages, and made theme metadata optional without changing saved preferences.
+- Shared label/value alignment between editable controls, wrapped metadata, and palette samples through `TerminalFormRow`. Group headings preserve the focused field in compact viewports.
+- Added `TerminalLinkGrid` with four, two, or one centered columns, always displaying complete addresses even without terminal hyperlink support.
+- Unified the welcome, home, and About wordmark with active theme colors and a compact variant; preserved artwork columns when centering.
+- Fixed the saved-memory footer's section count. Added regressions for theme disclosure, small grouped forms, link layouts, and centered artwork.
+- Validation: 1,043 tests, repository preflight, XML comments, formatting verification, and a warning-free Release build passed. Checked settings at 160×45 and 60×20, including opening, scrolling, and closing theme details; checked the welcome at 120 columns and About at 120×40 in Windows ConPTY. Release output was cleaned after validation.

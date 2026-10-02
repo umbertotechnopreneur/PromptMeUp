@@ -7,6 +7,32 @@ internal static partial class UiTextCatalog
     /// <summary>Adds the shared settings workspace labels and section guidance in all six languages.</summary>
     private static void AddSettingsEntries(Dictionary<string, LocalizedText> entries)
     {
+        entries.Add("Settings.ProfileGroup", new(
+            English: "Profile", Italian: "Profilo", French: "Profil", German: "Profil", Spanish: "Perfil", Vietnamese: "Hồ sơ"));
+        entries.Add("Settings.AppearanceGroup", new(
+            English: "Appearance", Italian: "Aspetto", French: "Apparence", German: "Darstellung", Spanish: "Apariencia", Vietnamese: "Giao diện"));
+        entries.Add("Settings.ProfileName", new(
+            English: "Name", Italian: "Nome", French: "Nom", German: "Name", Spanish: "Nombre", Vietnamese: "Tên"));
+        entries.Add("Settings.PersonalInstructions", new(
+            English: "Personal instructions", Italian: "Istruzioni personali", French: "Instructions personnelles",
+            German: "Persönliche Anweisungen", Spanish: "Instrucciones personales", Vietnamese: "Hướng dẫn cá nhân"));
+        entries.Add("Settings.ShareLocation", new(
+            English: "Share location", Italian: "Condividi posizione", French: "Partager la position",
+            German: "Standort teilen", Spanish: "Compartir ubicación", Vietnamese: "Chia sẻ vị trí"));
+        entries.Add("Settings.ThemeDetails", new(
+            English: "Theme details", Italian: "Dettagli del tema", French: "Détails du thème",
+            German: "Theme-Details", Spanish: "Detalles del tema", Vietnamese: "Chi tiết giao diện"));
+        entries.Add("Settings.DetailsHidden", new(
+            English: "Hidden", Italian: "Nascosti", French: "Masqués", German: "Ausgeblendet", Spanish: "Ocultos", Vietnamese: "Ẩn"));
+        entries.Add("Settings.DetailsShown", new(
+            English: "Visible", Italian: "Visibili", French: "Visibles", German: "Sichtbar", Spanish: "Visibles", Vietnamese: "Hiện"));
+        entries.Add("Settings.ThemeDetailsHelp", new(
+            English: "Show the theme's author, website, description, and file.",
+            Italian: "Mostra autore, sito web, descrizione e file del tema.",
+            French: "Afficher l’auteur, le site, la description et le fichier du thème.",
+            German: "Autor, Website, Beschreibung und Datei des Themes anzeigen.",
+            Spanish: "Muestra el autor, el sitio web, la descripción y el archivo del tema.",
+            Vietnamese: "Hiện tác giả, trang web, mô tả và tệp giao diện."));
         entries.Add("Settings.Title", new(
             English: "Settings",
             Italian: "Impostazioni",
@@ -120,12 +146,12 @@ internal static partial class UiTextCatalog
             Spanish: "Define el tiempo de espera de los comandos y cuánta salida conservar.",
             Vietnamese: "Đặt thời gian chờ của lệnh và lượng đầu ra cần giữ lại."));
         entries.Add("Settings.PersonalizationHelp", new(
-            English: "Add personal instructions and choose whether to share location context.",
-            Italian: "Aggiungi istruzioni personali e scegli se condividere il contesto della posizione.",
-            French: "Ajoutez des instructions personnelles et choisissez de partager ou non le contexte de localisation.",
-            German: "Ergänzen Sie persönliche Anweisungen und wählen Sie, ob Standortkontext geteilt wird.",
-            Spanish: "Añade instrucciones personales y elige si compartes el contexto de ubicación.",
-            Vietnamese: "Thêm hướng dẫn cá nhân và chọn có chia sẻ ngữ cảnh vị trí hay không."));
+            English: "Choose your name, personal instructions, location context, and color theme.",
+            Italian: "Scegli come chiamarti, aggiungi istruzioni personali e regola posizione e tema colori.",
+            French: "Choisissez votre nom, vos instructions personnelles, le partage de votre position et le thème de couleurs.",
+            German: "Legen Sie Ihren Namen, persönliche Anweisungen, den Standortkontext und das Farbthema fest.",
+            Spanish: "Elige tu nombre, instrucciones personales, contexto de ubicación y tema de color.",
+            Vietnamese: "Chọn tên, hướng dẫn cá nhân, ngữ cảnh vị trí và giao diện màu."));
         entries.Add("Settings.ThemeHelp", new(
             English: "Preview a color palette; it becomes permanent only when you save settings.",
             Italian: "Visualizza una palette colori; diventa permanente solo quando salvi le impostazioni.",
@@ -353,6 +379,62 @@ internal static partial class UiTextCatalog
             "Speichern meiner Nachrichten erlauben",
             "Acepto guardar mis mensajes",
             "Tôi đồng ý giữ tin nhắn"));
+        entries.Add("Settings.CaptureLocalInfo", new(
+            "Collection saves copies of your messages on this device with recognizable credentials hidden.",
+            "La raccolta salva sul dispositivo copie dei tuoi messaggi con le credenziali riconoscibili oscurate.",
+            "La collecte conserve sur cet appareil des copies de vos messages en masquant les identifiants secrets reconnaissables.",
+            "Die Erfassung speichert Kopien deiner Nachrichten auf diesem Gerät und verdeckt erkennbare Zugangsdaten.",
+            "La recopilación guarda copias de tus mensajes en este dispositivo ocultando credenciales reconocibles.",
+            "Tính năng thu thập lưu bản sao tin nhắn trên thiết bị này và che thông tin xác thực có thể nhận diện."));
+        entries.Add("Settings.CaptureProviderInfo", new(
+            "Dream sends the displayed messages to OpenAI only after your confirmation.",
+            "Dream invia i messaggi mostrati a OpenAI solo dopo la tua conferma.",
+            "Dream envoie les messages affichés à OpenAI uniquement après votre confirmation.",
+            "Dream sendet die angezeigten Nachrichten erst nach deiner Bestätigung an OpenAI.",
+            "Dream envía los mensajes mostrados a OpenAI solo tras tu confirmación.",
+            "Dream chỉ gửi các tin nhắn hiển thị tới OpenAI sau khi bạn xác nhận."));
+        entries.Add("Settings.CaptureRetention", new(
+            "Retention",
+            "Conservazione",
+            "Conservation",
+            "Aufbewahrung",
+            "Conservación",
+            "Thời gian lưu trữ"));
+        entries.Add("Settings.CaptureLimitInfo", new(
+            "Only the newest 200 collected messages per project are kept.",
+            "Si conservano solo i 200 messaggi raccolti più recenti per progetto.",
+            "Seuls les 200 derniers messages collectés par projet sont conservés.",
+            "Nur die neuesten 200 erfassten Nachrichten je Projekt bleiben erhalten.",
+            "Se conservan solo los 200 mensajes recopilados más recientes por proyecto.",
+            "Chỉ giữ 200 tin nhắn đã thu thập mới nhất mỗi dự án."));
+        entries.Add("Settings.CaptureExpiryInfo", new(
+            "Messages and suggestions older than 30 days are removed when you next use these records.",
+            "Messaggi e suggerimenti oltre 30 giorni vengono rimossi quando usi di nuovo questi dati.",
+            "Messages et suggestions de plus de 30 jours sont supprimés à leur prochaine utilisation.",
+            "Nachrichten und Vorschläge über 30 Tage werden bei der nächsten Nutzung dieser Daten entfernt.",
+            "Los mensajes y sugerencias de más de 30 días se eliminan al volver a usar estos datos.",
+            "Tin nhắn và đề xuất quá 30 ngày được xóa khi bạn dùng lại dữ liệu này."));
+        entries.Add("Settings.CaptureDeleteInfo", new(
+            "Turning collection off deletes collected messages and suggestions. Deleting a message also deletes its linked suggestions.",
+            "Disattivare la raccolta elimina messaggi raccolti e suggerimenti. Cancellare un messaggio elimina anche i suggerimenti collegati.",
+            "Désactiver la collecte supprime messages collectés et suggestions. Supprimer un message efface aussi les suggestions liées.",
+            "Ausschalten der Erfassung löscht erfasste Nachrichten und Vorschläge. Das Löschen einer Nachricht entfernt auch die zugehörigen Vorschläge.",
+            "Desactivar la recopilación borra mensajes recopilados y sugerencias. Borrar un mensaje elimina también sus sugerencias vinculadas.",
+            "Tắt thu thập sẽ xóa tin nhắn đã thu thập và đề xuất. Xóa một tin nhắn cũng xóa các đề xuất liên quan."));
+        entries.Add("Settings.CaptureSavedInfo", new(
+            "Saved memories remain until you delete them.",
+            "I ricordi salvati restano finché non li elimini.",
+            "Les souvenirs enregistrés restent jusqu’à leur suppression.",
+            "Gespeicherte Erinnerungen bleiben, bis du sie löschst.",
+            "Los recuerdos guardados permanecen hasta que los borres.",
+            "Ghi nhớ đã lưu vẫn còn cho đến khi bạn xóa."));
+        entries.Add("Settings.CaptureHistoryInfo", new(
+            "Confirmed OpenAI analyses may remain in ordinary local history.",
+            "Le analisi OpenAI confermate possono restare nella normale cronologia locale.",
+            "Les analyses OpenAI confirmées peuvent rester dans l’historique local habituel.",
+            "Bestätigte OpenAI-Analysen können im normalen lokalen Verlauf verbleiben.",
+            "Los análisis de OpenAI confirmados pueden quedar en el historial local habitual.",
+            "Các phân tích OpenAI đã xác nhận có thể vẫn còn trong lịch sử cục bộ thông thường."));
         entries.Add("Settings.ClearLearningConsent", new(
             "I confirm deletion",
             "Confermo la cancellazione",

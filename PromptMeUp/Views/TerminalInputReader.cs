@@ -29,7 +29,7 @@ internal sealed class TerminalInputReader
     internal TerminalInputEvent Read() => ReadAsync().GetAwaiter().GetResult();
 
     /// <summary>Recognizes raw terminal control prefixes before interpreting ordinary keys.</summary>
-    private async Task<TerminalInputEvent> ReadAsync()
+    internal async Task<TerminalInputEvent> ReadAsync()
     {
         var key = await ReadRawAsync(CancellationToken.None).ConfigureAwait(false)
             ?? throw new InteractiveFlowCanceledException();

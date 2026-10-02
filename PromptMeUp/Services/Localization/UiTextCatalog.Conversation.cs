@@ -151,6 +151,13 @@ internal static partial class UiTextCatalog
             German: "Schließt den interaktiven Chat.",
             Spanish: "Cierra el chat interactivo.",
             Vietnamese: "Đóng chat tương tác."));
+        entries.Add("Chat.Command.Help", new(
+            English: "Show all chat and memory commands.",
+            Italian: "Mostra tutti i comandi della chat e della memoria.",
+            French: "Affiche toutes les commandes du chat et de la mémoire.",
+            German: "Zeigt alle Chat- und Erinnerungsbefehle.",
+            Spanish: "Muestra todos los comandos del chat y la memoria.",
+            Vietnamese: "Hiển thị tất cả lệnh trò chuyện và ghi nhớ."));
         entries.Add("Chat.Command.Forget", new(
             "Delete a saved memory",
             "Elimina un ricordo salvato",

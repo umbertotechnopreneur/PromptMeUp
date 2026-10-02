@@ -240,7 +240,8 @@ public sealed class OpenAiRequestBuilderTests
             new("developer", "Trusted context"),
             new("user", "<recalled-user-notes>Prefer concise answers.</recalled-user-notes>"),
             new("assistant", "Earlier answer"),
-            new("user", "How does PromptMeUp work?")
+            new("user", "How does PromptMeUp work?"),
+            new("user", "Command result: three files") { IsToolOutput = true }
         ];
 
         var estimate = OpenAiRequestBuilder.EstimateContext(instructions, messages, AppSettings.Default.Model, guide);
@@ -249,8 +250,10 @@ public sealed class OpenAiRequestBuilderTests
         Assert.Equal(guide.Tokens, estimate.GuideTokens);
         Assert.True(estimate.SystemInstructionTokens > estimate.GuideTokens);
         Assert.Equal(ContextTokenEstimator.Text(messages[1].Content) + ContextTokenEstimator.Text(messages[3].Content), estimate.UserMessageTokens);
+        Assert.Equal(ContextTokenEstimator.Text(messages[4].Content), estimate.ToolOutputTokens);
         Assert.Equal(ContextTokenEstimator.Text(messages[2].Content), estimate.AssistantMessageTokens);
-        Assert.Equal(estimate.InputTokens, estimate.SystemInstructionTokens + estimate.UserMessageTokens + estimate.AssistantMessageTokens);
+        Assert.Equal(estimate.InputTokens, estimate.SystemInstructionTokens + estimate.UserMessageTokens
+            + estimate.ToolOutputTokens + estimate.AssistantMessageTokens);
         Assert.Equal(ContextTokenEstimator.Text(instructions) + ContextTokenEstimator.Messages(messages) + 8, estimate.InputTokens);
     }
 

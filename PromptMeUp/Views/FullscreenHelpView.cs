@@ -283,8 +283,8 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
         _lineCount = lines.Count;
         _offset = Math.Clamp(_offset, 0, Math.Max(0, _lineCount - _visibleRows));
 
-        var heading = $"{(_focus == HelpFocus.Commands ? "> " : string.Empty)}{SectionTitle(active, compact: false)}";
-        var content = Inset(new Rows(Line(heading, "bold " + TerminalTheme.Accent), new Text(" "),
+        var content = Inset(new Rows(FullscreenWorkspace.SectionHeading(
+                SectionTitle(active, compact: false), _focus == HelpFocus.Commands),
             new HelpLines(lines.Skip(_offset).Take(_visibleRows).ToArray())));
 
         var range = text.Text("Help.Browse.Range", _lineCount == 0 ? 0 : _offset + 1,
@@ -298,9 +298,11 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
                 ?? throw new InvalidOperationException("An actionable help section needs opening guidance.")), TerminalTheme.Primary);
         }
         var closeSelected = _focus == HelpFocus.Close;
-        var actions = new Grid().AddColumn();
-        actions.AddRow(FullscreenFooter.Button(
-            TerminalTheme.IconPrefix(_options, "↩️", "x") + text.Text("Help.Browse.Close"), TerminalTheme.Warning, closeSelected));
+        var actions = TerminalActionBar.Create(
+        [
+            new TerminalAction(TerminalTheme.IconPrefix(_options, "↩️", "x") + text.Text("Help.Browse.Close"),
+                TerminalTheme.Warning, closeSelected)
+        ]);
         var footerKey = _focus switch
         {
             _ when active.Open is not null && _focus != HelpFocus.Close => "Help.Browse.OpenKeys",
@@ -308,11 +310,8 @@ internal sealed class FullscreenHelpView(IAnsiConsole console, ILocalizationServ
             HelpFocus.Commands => "Help.Browse.ScrollKeys",
             _ => "Help.Browse.CloseKeys"
         };
-        if (new Segment(text.Text(footerKey)).CellCount() > width - 4)
-        {
-            footerKey += "Compact";
-        }
-        var footer = FullscreenFooter.Create(message, actions, FullscreenFooter.Shortcuts(text.Text(footerKey)));
+        var footer = FullscreenFooter.Create(message, actions,
+            FullscreenFooter.Shortcuts(text.Text(footerKey), text.Text(footerKey + "Compact"), width - 4));
         console.Write(FullscreenWorkspace.Create(text.Text("Help.Title"), _options, console.Profile.Width,
             content, SectionNavigation(sections, bodyHeight), footer, FullscreenFooter.NoticeRows));
     }

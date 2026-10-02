@@ -27,6 +27,10 @@ public sealed class MemoryManagerWorkflow
         _skillsAndMemory = skillsAndMemory;
     }
 
+    /// <summary>Returns the current saved notes for the compact settings preview.</summary>
+    public Task<IReadOnlyList<PersistentMemory>> ListAsync(CancellationToken cancellationToken) =>
+        _memories.ListAsync(cancellationToken);
+
     /// <summary>Refreshes accessible notes after each operation and keeps recoverable input errors inside the manager.</summary>
     public async Task RunAsync(CancellationToken cancellationToken, bool selectProposals = false)
     {

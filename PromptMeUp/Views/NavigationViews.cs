@@ -41,9 +41,12 @@ public sealed class HelpView(
         RenderStatic();
         if (openGuide is not null && console.Profile.Capabilities.Interactive && console.Profile.Out.IsTerminal)
         {
-            var choice = new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
-                .AddChoices(0, 1).UseConverter(index => text.Text(index == 0 ? "Guide.Finish" : "Guide.Open")).Show(console);
-            if (choice == 1) { openGuide(); }
+            var choice = TerminalChoiceMenu.Select<bool>(console,
+            [
+                new TerminalMenuChoice<bool>(false, text.Text("Guide.Finish"), Tone: TerminalMenuTone.Positive),
+                new TerminalMenuChoice<bool>(true, text.Text("Guide.Open"))
+            ]);
+            if (choice) { openGuide(); }
         }
     }
 
@@ -243,14 +246,15 @@ public sealed class ExecutableLocationView(
             return ExecutableLocationAction.ShowChangeDirectoryCommand;
         }
 
-        return console.Prompt(
-            new SelectionPrompt<ExecutableLocationAction>()
-                .Title(Markup.Escape(text.Text("Where.Action")))
-                .UseConverter(ActionLabel)
-                .AddChoices(
-                    ExecutableLocationAction.DoNothing,
-                    ExecutableLocationAction.ShowChangeDirectoryCommand,
-                    ExecutableLocationAction.OpenContainingFolder));
+        var choices = new[]
+        {
+            ExecutableLocationAction.DoNothing,
+            ExecutableLocationAction.ShowChangeDirectoryCommand,
+            ExecutableLocationAction.OpenContainingFolder
+        }.Select(action => new TerminalMenuChoice<ExecutableLocationAction>(
+            action, ActionLabel(action), Tone: action == ExecutableLocationAction.DoNothing
+                ? TerminalMenuTone.Muted : TerminalMenuTone.Primary)).ToArray();
+        return TerminalChoiceMenu.Select(console, choices, text.Text("Where.Action"));
     }
 
     /// <summary>Previews the exact file-manager invocation and requests explicit authorization.</summary>
@@ -329,10 +333,8 @@ public sealed class ThirdPartyView(
             TerminalTheme.IconPrefix(shell.Options, "⚖", "=") + text.Text("ThirdParty.Title"),
             TerminalTheme.Accent);
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("ThirdParty.Subtitle"))}[/]");
-        var table = new Table().Border(TableBorder.None);
-        table.AddColumn(text.Text("ThirdParty.Package"));
-        table.AddColumn(text.Text("ThirdParty.Version"));
-        table.AddColumn(text.Text("ThirdParty.License"));
+        var table = TerminalTable.Create(text.Text("ThirdParty.Package"), text.Text("ThirdParty.Version"),
+            text.Text("ThirdParty.License"));
         foreach (var package in Packages)
         {
             table.AddRow(Markup.Escape(package.Package), Markup.Escape(package.Version), Markup.Escape(package.License));
@@ -364,15 +366,14 @@ public sealed class PortablePathView(
             console,
             TerminalTheme.IconPrefix(shell.Options, "↔", "<>") + text.Text("Path.Title"),
             TerminalTheme.Accent);
-        return console.Prompt(new SelectionPrompt<PortablePathAction>()
-            .Title(Markup.Escape(text.Text("Path.Action")))
-            .UseConverter(action => action switch
-            {
-                PortablePathAction.Install => text.Text("Path.Install"),
-                PortablePathAction.Remove => text.Text("Path.Remove"),
-                _ => text.Text("Path.Status")
-            })
-            .AddChoices(PortablePathAction.Status, PortablePathAction.Install, PortablePathAction.Remove));
+        return TerminalChoiceMenu.Select<PortablePathAction>(console,
+        [
+            new TerminalMenuChoice<PortablePathAction>(PortablePathAction.Status, text.Text("Path.Status")),
+            new TerminalMenuChoice<PortablePathAction>(PortablePathAction.Install, text.Text("Path.Install"),
+                Tone: TerminalMenuTone.Positive),
+            new TerminalMenuChoice<PortablePathAction>(PortablePathAction.Remove, text.Text("Path.Remove"),
+                Tone: TerminalMenuTone.Caution)
+        ], text.Text("Path.Action"));
     }
 
     /// <summary>Shows the exact persistent target and asks before a mutating PATH operation.</summary>

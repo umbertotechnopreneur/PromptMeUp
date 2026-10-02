@@ -29,9 +29,8 @@ public sealed class SkillsAndMemoryView(IAnsiConsole console, ILocalizationServi
     public int Choose(string title, params string[] choices)
     {
         TerminalTheme.WriteRule(console, title, TerminalTheme.Accent);
-        return console.Prompt(new SelectionPrompt<int>().PageSize(10)
-            .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}")).UseConverter(index => Markup.Escape(Safe(choices[index])))
-            .AddChoices(Enumerable.Range(0, choices.Length)));
+        var menu = choices.Select((label, index) => new TerminalMenuChoice<int>(index, Safe(label))).ToArray();
+        return TerminalChoiceMenu.Select(console, menu, pageSize: 10);
     }
 
     /// <summary>Returns a typed choice so workflow decisions do not rely on a selection index.</summary>

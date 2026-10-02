@@ -3,6 +3,7 @@
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -14,54 +15,17 @@ public interface IFirstRunView
     Task<FirstRunInput<string>> ChooseLanguageAsync(string language, CancellationToken ct);
     Task<FirstRunInput<string?>> ReadKeyAsync(bool configured, bool protectedStorage, CancellationToken ct);
     Task<FirstRunAction> ReadConnectionFailureAsync(string errorKey, CancellationToken ct);
-    Task<FirstRunInput<string>> ReadNameAsync(string current, CancellationToken ct);
-    Task<FirstRunInput<FirstRunMemoryChoice>> ReadMemoryAsync(SkillsAndMemorySettings current, CancellationToken ct);
+    Task<FirstRunInput<FirstRunPreferences>> ReadPreferencesAsync(string currentName,
+        SettingsFeatureOverview overview, CancellationToken ct);
     Task<bool> ChooseDesktopAsync(CancellationToken ct);
     void RenderReady(string name, string guidePath);
     Task<bool> ChooseGuideAsync(CancellationToken ct);
 }
 
-/// <summary>Hosts first-run steps in a disposable viewport when the terminal can redraw them safely.</summary>
-internal interface IFirstRunViewport
-{
-    Task<T> RunStepsAsync<T>(Func<Task<T>> interaction);
-}
-
 /// <summary>Renders an open, scrolling welcome with accessible keyboard actions.</summary>
 public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text,
-    ISensitiveDataRedactor redactor, IConsoleShellView shell) : IFirstRunView, IFirstRunViewport
+    ISensitiveDataRedactor redactor, IConsoleShellView shell) : IFirstRunView
 {
-    private bool _collapsibleSteps;
-    private int _lastStep;
-
-    /// <summary>Uses an alternate buffer so completed prompts can collapse without erasing terminal history.</summary>
-    Task<T> IFirstRunViewport.RunStepsAsync<T>(Func<Task<T>> interaction)
-    {
-        ArgumentNullException.ThrowIfNull(interaction);
-        if (!FullscreenViewport.CanUse(console))
-        {
-            return interaction();
-        }
-
-        T result = default!;
-        FullscreenViewport.Run(console, () =>
-        {
-            _collapsibleSteps = true;
-            _lastStep = 0;
-            console.Cursor.Show();
-            try
-            {
-                result = interaction().GetAwaiter().GetResult();
-            }
-            finally
-            {
-                _collapsibleSteps = false;
-                _lastStep = 0;
-            }
-        });
-        return Task.FromResult(result);
-    }
-
     /// <summary>Introduces the product before asking for the first preference.</summary>
     public void RenderWelcome()
     {
@@ -70,10 +34,19 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         Write("Benefit");
         Write("Journey", TerminalTheme.Muted);
         console.WriteLine();
-        Link(Icon("🔒", ">") + text.Text("Oobe.Privacy"), "https://umbertogiacobbi.biz/privacy/");
-        Link(text.Text("Oobe.Terms"), "https://umbertogiacobbi.biz/terms/");
-        Link(Icon("🔗", ">") + "GitHub", "https://github.com/umbertotechnopreneur/PromptMeUp");
-        Link(Icon("❤️", "<3") + "Made with love by Umberto", "https://umbertogiacobbi.biz");
+        RenderWelcomeLinks();
+    }
+
+    /// <summary>Shares the adaptive label-above-address layout across welcome terminal widths.</summary>
+    private void RenderWelcomeLinks()
+    {
+        console.Write(new TerminalLinkGrid(
+        [
+            new(Icon("🔒", ">") + text.Text("Oobe.Privacy"), "https://umbertogiacobbi.biz/privacy/"),
+            new(text.Text("Oobe.Terms"), "https://umbertogiacobbi.biz/terms/"),
+            new(Icon("🔗", ">") + "GitHub", "https://github.com/umbertotechnopreneur/PromptMeUp"),
+            new(Icon("❤️", "<3") + "Made with love by Umberto", "https://umbertogiacobbi.biz")
+        ]));
     }
 
     /// <summary>Explains how to resume when terminal input is redirected.</summary>
@@ -90,17 +63,21 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         RenderFlag(language);
         var selected = SupportedLanguages.All.Single(item => item.Code == language);
         console.MarkupLine(Markup.Escape(text.Text("Oobe.Detected", selected.NativeName)));
-        var choice = await ChooseAsync([text.Text("Oobe.KeepLanguage", selected.NativeName),
-            text.Text("Oobe.ChangeLanguage"), text.Text("Oobe.Exit")], ct).ConfigureAwait(false);
-        if (choice == 2)
+        var choice = await ChooseAsync<LanguageChoice>(
+        [
+            new(LanguageChoice.Keep, text.Text("Oobe.KeepLanguage", selected.NativeName), Tone: TerminalMenuTone.Positive),
+            new(LanguageChoice.Change, text.Text("Oobe.ChangeLanguage")),
+            new(LanguageChoice.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+        ], ct).ConfigureAwait(false);
+        if (choice == LanguageChoice.Exit)
         {
             return new(FirstRunAction.Exit, language);
         }
-        if (choice == 1)
+        if (choice == LanguageChoice.Change)
         {
             var languages = SupportedLanguages.All.OrderByDescending(item => item.Code == language).ToArray();
-            var index = await ChooseAsync(languages.Select(item => item.NativeName).ToArray(), ct).ConfigureAwait(false);
-            language = languages[index].Code;
+            language = await ChooseAsync(languages.Select(item => new TerminalMenuChoice<string>(
+                item.Code, item.NativeName)).ToArray(), ct).ConfigureAwait(false);
             text.SetLanguage(language);
             RenderFlag(language);
         }
@@ -111,19 +88,25 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     public async Task<FirstRunInput<string?>> ReadKeyAsync(bool configured, bool protectedStorage, CancellationToken ct)
     {
         Step(2, "Connect", "KeyHelp");
-        Write(protectedStorage ? "Vault" : "SessionStorage", TerminalTheme.Muted);
-        Link(text.Text("Oobe.Portal"), "https://platform.openai.com/api-keys");
-        Link(text.Text("Oobe.Guide"), "https://developers.openai.com/api/docs/quickstart#create-and-export-an-api-key");
-        console.WriteLine();
-        Write("Example", TerminalTheme.Muted);
-        Write("Cost", TerminalTheme.Muted);
-        var labels = configured
-            ? new[] { text.Text("Oobe.VerifyExisting"), text.Text("Oobe.ReplaceKey"), text.Text("Oobe.Back"), text.Text("Oobe.Exit") }
-            : new[] { text.Text("Oobe.EnterKey"), text.Text("Oobe.Back"), text.Text("Oobe.Exit") };
-        var choice = await ChooseAsync(labels, ct).ConfigureAwait(false);
-        if (choice == labels.Length - 1) { return new(FirstRunAction.Exit, null); }
-        if (choice == labels.Length - 2) { return new(FirstRunAction.Back, null); }
-        if (configured && choice == 0) { return new(FirstRunAction.Next, null); }
+        RenderConnectionIntro(protectedStorage);
+        TerminalMenuChoice<CredentialChoice>[] choices = configured
+            ?
+            [
+                new(CredentialChoice.VerifyExisting, text.Text("Oobe.VerifyExisting"), Tone: TerminalMenuTone.Positive),
+                new(CredentialChoice.EnterKey, text.Text("Oobe.ReplaceKey")),
+                new(CredentialChoice.Back, text.Text("Oobe.Back"), Tone: TerminalMenuTone.Muted),
+                new(CredentialChoice.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+            ]
+            :
+            [
+                new(CredentialChoice.EnterKey, text.Text("Oobe.EnterKey"), Tone: TerminalMenuTone.Positive),
+                new(CredentialChoice.Back, text.Text("Oobe.Back"), Tone: TerminalMenuTone.Muted),
+                new(CredentialChoice.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+            ];
+        var choice = await ChooseAsync(choices, ct).ConfigureAwait(false);
+        if (choice == CredentialChoice.Exit) { return new(FirstRunAction.Exit, null); }
+        if (choice == CredentialChoice.Back) { return new(FirstRunAction.Back, null); }
+        if (choice == CredentialChoice.VerifyExisting) { return new(FirstRunAction.Next, null); }
         var key = await new TextPrompt<string>($"{Markup.Escape(text.Text("Oobe.KeyLabel").PadLeft(18))}  ")
             .Secret('•').AllowEmpty()
             .Validate(value => string.IsNullOrWhiteSpace(value) || (!value.Contains('*') && OpenAiKeyPolicy.IsPlausible(value.Trim()))
@@ -134,52 +117,143 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
             ? new(FirstRunAction.Back, null) : new(FirstRunAction.Next, key.Trim());
     }
 
+    /// <summary>Places the key guidance beside an adaptive OpenAI ASCII mark on wide terminals.</summary>
+    private void RenderConnectionIntro(bool protectedStorage)
+    {
+        var content = new Rows(
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Oobe." + (protectedStorage ? "Vault" : "SessionStorage")))}[/]"),
+            new Text(" "),
+            new Markup($"[underline {TerminalTheme.Info} link=https://platform.openai.com/api-keys]"
+                + $"{Markup.Escape(text.Text("Oobe.Portal"))}[/]"),
+            new Markup($"[underline {TerminalTheme.Info} link=https://developers.openai.com/api/docs/quickstart#create-and-export-an-api-key]"
+                + $"{Markup.Escape(text.Text("Oobe.Guide"))}[/]"),
+            new Text(" "),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Oobe.Example"))}[/]"),
+            new Markup($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Oobe.Cost"))}[/]"));
+        if (console.Profile.Width >= 110)
+        {
+            var detailed = console.Profile.Width >= 145;
+            var logoWidth = detailed
+                ? OpenAiAsciiLogo.DetailedColumnWidth
+                : OpenAiAsciiLogo.CompactColumnWidth;
+            var grid = new Grid()
+                .AddColumn(new GridColumn { Width = console.Profile.Width - logoWidth - 10 })
+                .AddColumn(new GridColumn { Width = logoWidth });
+            grid.AddRow(content, OpenAiAsciiLogo.Create(detailed));
+            console.Write(grid);
+        }
+        else
+        {
+            console.Write(content);
+        }
+        console.WriteLine();
+    }
+
     /// <summary>Shows a secret-free failure and allows retrying without retyping the key.</summary>
     public async Task<FirstRunAction> ReadConnectionFailureAsync(string errorKey, CancellationToken ct)
     {
         Write(errorKey, TerminalTheme.Warning);
         Link(text.Text("Oobe.Portal"), "https://platform.openai.com/api-keys");
         Link(text.Text("Oobe.Billing"), "https://platform.openai.com/settings/organization/billing/overview");
-        var choice = await ChooseAsync([text.Text("Oobe.Retry"), text.Text("Oobe.ReplaceKey"), text.Text("Oobe.Exit")], ct)
-            .ConfigureAwait(false);
-        return choice switch { 0 => FirstRunAction.Next, 1 => FirstRunAction.Back, _ => FirstRunAction.Exit };
+        return await ChooseAsync<FirstRunAction>(
+        [
+            new(FirstRunAction.Next, text.Text("Oobe.Retry"), Tone: TerminalMenuTone.Positive),
+            new(FirstRunAction.Back, text.Text("Oobe.ReplaceKey"), Tone: TerminalMenuTone.Muted),
+            new(FirstRunAction.Exit, text.Text("Oobe.Exit"), Tone: TerminalMenuTone.Caution)
+        ], ct).ConfigureAwait(false);
     }
 
-    /// <summary>Collects an optional nickname without accepting recognizable credentials.</summary>
-    public async Task<FirstRunInput<string>> ReadNameAsync(string current, CancellationToken ct)
+    /// <summary>Collects the optional name, independent learning consent, command mode, and reviewed skills.</summary>
+    public async Task<FirstRunInput<FirstRunPreferences>> ReadPreferencesAsync(string currentName,
+        SettingsFeatureOverview overview, CancellationToken ct)
     {
-        Step(3, "Name", "TwoLeft");
+        ArgumentNullException.ThrowIfNull(overview);
+        Step(3, "Personalize", "TwoLeft");
+        Section("👋", "Name");
         Write("NameHelp");
         var prompt = new TextPrompt<string>($"{Markup.Escape(text.Text("Oobe.NameLabel").PadLeft(18))}  ")
             .AllowEmpty().Validate(ValidateName);
-        if (!string.IsNullOrEmpty(current)) { prompt.DefaultValue(current); }
+        if (!string.IsNullOrEmpty(currentName)) { prompt.DefaultValue(currentName); }
         var name = await prompt.ShowAsync(console, ct).ConfigureAwait(false);
-        console.WriteLine();
-        return new(await NavigationAsync(ct).ConfigureAwait(false), PreferredNamePolicy.Normalize(name, redactor));
-    }
+        name = PreferredNamePolicy.Normalize(name, redactor);
 
-    /// <summary>Separates memory activation from explicit consent to collect redacted learning material.</summary>
-    public async Task<FirstRunInput<FirstRunMemoryChoice>> ReadMemoryAsync(SkillsAndMemorySettings current, CancellationToken ct)
-    {
-        Step(4, "Memory", "AlmostThere");
+        Section("🧠", "Memory");
         Write("MemoryHelp");
-        var enabled = await YesNoAsync("EnableMemory", current.Enabled, ct).ConfigureAwait(false);
-        Write("DreamHelp");
-        Write("RecordingHelp", TerminalTheme.Muted);
+        var enabled = await YesNoAsync("EnableMemory", overview.Settings.Enabled, ct).ConfigureAwait(false);
+        var capture = false;
+        if (enabled)
+        {
+            Write("RecordingHelp", TerminalTheme.Muted);
+            capture = await YesNoAsync("EnableRecording", false, ct).ConfigureAwait(false);
+        }
+        else
+        {
+            Write("RecordingOff", TerminalTheme.Muted);
+        }
         Write("HistoryNotice", TerminalTheme.Muted);
-        var capture = enabled && await YesNoAsync("EnableRecording", false, ct).ConfigureAwait(false);
-        if (!enabled) { Write("RecordingOff", TerminalTheme.Muted); }
-        if ((current.Enabled && !enabled) || (current.CaptureObservations && !capture))
+        if ((overview.Settings.Enabled && !enabled) || (overview.Settings.CaptureObservations && !capture))
         {
             Write("ClearLearning", TerminalTheme.Warning);
             if (!await YesNoAsync("ConfirmClear", false, ct).ConfigureAwait(false))
             {
-                return new(FirstRunAction.Back, new(enabled, capture, false));
+                return new(FirstRunAction.Back, new(name, enabled, capture, false, []));
             }
         }
+
+        var selectedSkills = Array.Empty<string>();
+        if (enabled)
+        {
+            Section("🧩", "SkillTitle");
+            Write("SkillHelp");
+            var available = overview.Skills.Where(item => item.Skill.Origin == "bundled"
+                && item.Skill.UnavailableReason is null).ToArray();
+            if (available.Length == 0)
+            {
+                Write("SkillsEmpty", TerminalTheme.Muted);
+            }
+            else if (await YesNoAsync("EnableSkills", false, ct).ConfigureAwait(false))
+            {
+                selectedSkills = await SelectSkillsAsync(available, ct).ConfigureAwait(false);
+            }
+        }
+
+        Section("🛡", "CommandMode");
         Write("DirectNotice", TerminalTheme.Muted);
         var confirmCommands = await YesNoAsync("ConfirmCommands", false, ct).ConfigureAwait(false);
-        return new(await NavigationAsync(ct).ConfigureAwait(false), new(enabled, capture, confirmCommands));
+        return new(FirstRunAction.Next, new(name, enabled, capture, confirmCommands, selectedSkills));
+    }
+
+    /// <summary>Separates related onboarding choices with a short theme gradient and an explicit icon.</summary>
+    private void Section(string emoji, string key)
+    {
+        console.WriteLine();
+        console.Write(new ThemeSeparator(Icon(emoji, ">") + text.Text("Oobe." + key),
+            TerminalTheme.Accent, Math.Min(console.Profile.Width, 88)));
+        console.WriteLine();
+    }
+
+    /// <summary>Lists only inspected, usable skill packages and returns exactly the user's checked names.</summary>
+    private async Task<string[]> SelectSkillsAsync(SettingsSkillState[] available, CancellationToken ct)
+    {
+        var choices = available.Select(item => new TerminalMenuChoice<SettingsSkillState>(
+            item, Icon(item.Skill.Icon, "*") + SkillLabel(item.Skill), item.Skill.Name)).ToArray();
+        var selected = await TerminalChoiceMenu.SelectManyAsync(console, choices, ct,
+            text.Text("Oobe.SkillsPrompt"), text.Text("Oobe.SkillsInstructions")).ConfigureAwait(false);
+        var names = selected.Select(item => item.Skill.Name).ToArray();
+        console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(text.Text("Oobe.SkillsSelected", names.Length))}[/]");
+        foreach (var item in selected)
+        {
+            console.MarkupLine($"  [{TerminalTheme.Primary}]{Markup.Escape(Icon(item.Skill.Icon, "*") + SkillLabel(item.Skill))}[/]");
+        }
+        return names;
+    }
+
+    /// <summary>Uses translated bundled names while preserving each skill's stable package identity.</summary>
+    private string SkillLabel(SkillDefinition skill)
+    {
+        var key = "Lab.SkillName." + skill.Name;
+        var label = text.Text(key);
+        return label == key ? skill.Name : label;
     }
 
     /// <summary>Offers an unchecked desktop shortcut option after the privacy choices.</summary>
@@ -187,12 +261,11 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
     {
         console.WriteLine();
         console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Home.DesktopHelp"))}[/]");
-        var selected = await new MultiSelectionPrompt<string>()
-            .Title($"[bold {TerminalTheme.Accent}]{Markup.Escape(TerminalTheme.IconPrefix(shell.Options, "🖥️", ">") + text.Text("Home.Desktop"))}[/]")
-            .NotRequired().InstructionsText(text.Text("Home.CheckboxHelp"))
-            .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-            .AddChoices(text.Text("Home.Desktop"))
-            .ShowAsync(console, ct).ConfigureAwait(false);
+        var label = text.Text("Home.Desktop");
+        var selected = await TerminalChoiceMenu.SelectManyAsync(console,
+            [new TerminalMenuChoice<string>(label, label)], ct,
+            TerminalTheme.IconPrefix(shell.Options, "🖥️", ">") + label,
+            text.Text("Home.CheckboxHelp")).ConfigureAwait(false);
         return selected.Count > 0;
     }
 
@@ -203,33 +276,41 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         TerminalTheme.WriteRule(console, Icon("🎉", "*") + text.Text("Oobe.Ready"), TerminalTheme.Success);
         console.MarkupLine($"[bold {TerminalTheme.Primary}]{Markup.Escape(string.IsNullOrEmpty(name)
             ? text.Text("Oobe.Thanks") : text.Text("Oobe.ThanksName", name))}[/]");
-        Write("StartUsing");
+        Write("StartUsing", TerminalTheme.Muted);
         RenderStarterCommands();
-        Link(Icon("📄", ">") + text.Text("Guide.Title"), new Uri(guidePath).AbsoluteUri);
-        console.MarkupLine($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Guide.Description"))}[/]");
-        Write("Recovery", TerminalTheme.Muted);
-        Write("Skills", TerminalTheme.Muted);
+        console.WriteLine();
+        console.Write(new ThemeSeparator(Icon("📄", ">") + text.Text("Guide.Title"),
+            TerminalTheme.Accent, Math.Min(console.Profile.Width, 88)));
+        console.WriteLine();
+        Link(text.Text("Guide.Title"), new Uri(guidePath).AbsoluteUri, showAddress: false);
+        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text("Guide.Description"))}[/]");
+        console.WriteLine();
         Write("ChangeLater", TerminalTheme.Muted);
         console.WriteLine();
     }
 
     /// <summary>Offers the installed PDF after setup, with finishing selected by default.</summary>
-    public async Task<bool> ChooseGuideAsync(CancellationToken ct) =>
-        await ChooseAsync([text.Text("Guide.Finish"), text.Text("Guide.Open")], ct).ConfigureAwait(false) == 1;
+    public Task<bool> ChooseGuideAsync(CancellationToken ct) => ChooseAsync<bool>(
+    [
+        new(false, text.Text("Guide.Finish"), Tone: TerminalMenuTone.Positive),
+        new(true, text.Text("Guide.Open"))
+    ], ct);
 
     /// <summary>Shows three practical starting points in an open two-column command grid.</summary>
     private void RenderStarterCommands()
     {
         console.WriteLine();
-        console.MarkupLine($"[bold {TerminalTheme.Accent}]{Markup.Escape(text.Text("Oobe.TryFirst"))}[/]");
+        console.Write(new ThemeSeparator(Icon("🚀", ">") + text.Text("Oobe.TryFirst"),
+            TerminalTheme.Accent, Math.Min(console.Profile.Width, 88)));
+        console.WriteLine();
         var grid = new Grid()
-            .AddColumn(new GridColumn().RightAligned())
+            .AddColumn(new GridColumn().LeftAligned())
             .AddColumn(new GridColumn());
-        foreach (var example in new[]
+        foreach (var example in new (string Command, string Description)[]
         {
-            (Command: "hm \"How do I list the largest files here?\"", Description: "TryAsk"),
-            (Command: "hm --chat", Description: "TryChat"),
-            (Command: "hm --diagnose", Description: "TryDiagnose")
+            ($"hm \"{text.Text("Oobe.TryAskCommand")}\"", "TryAsk"),
+            ("hm --chat", "TryChat"),
+            ("hm --diagnose", "TryDiagnose")
         })
         {
             grid.AddRow(
@@ -237,44 +318,16 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
                 new Markup($"[{TerminalTheme.Primary}]{Markup.Escape(text.Text("Oobe." + example.Description))}[/]"));
         }
         console.Write(grid);
-        console.WriteLine();
     }
 
-    /// <summary>Renders one numbered section and collapses earlier prompts only inside a disposable viewport.</summary>
+    /// <summary>Renders one numbered section beneath the completed steps without clearing scrollback.</summary>
     private void Step(int number, string title, string hint)
     {
-        if (_collapsibleSteps && _lastStep > 0)
-        {
-            console.WriteAnsi(writer =>
-            {
-                writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
-                writer.EraseInDisplay(2);
-                writer.CursorHome();
-            });
-            RenderCompletedSteps(number);
-        }
-        else
-        {
-            console.WriteLine();
-        }
-
         var icon = number switch { 1 => "🌍", 2 => "🔑", 3 => "👋", _ => "🧠" };
-        TerminalTheme.WriteGradientRule(console,
+        TerminalTheme.WriteRule(console,
             Icon(icon, ">") + text.Text("Oobe.Step", number) + " · " + text.Text("Oobe." + title), TerminalTheme.Accent);
         Write(hint, TerminalTheme.Muted);
         console.WriteLine();
-        _lastStep = number;
-    }
-
-    /// <summary>Leaves one compact status header for each completed step above the active prompt.</summary>
-    private void RenderCompletedSteps(int activeStep)
-    {
-        var titles = new[] { "Language", "Connect", "Name", "Memory" };
-        for (var index = 1; index < activeStep; index++)
-        {
-            var heading = text.Text("Oobe.Step", index) + " · " + text.Text("Oobe." + titles[index - 1]);
-            console.MarkupLine($"[bold {TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + heading)}[/]");
-        }
     }
 
     /// <summary>Writes escaped localized text in the shared palette.</summary>
@@ -288,50 +341,44 @@ public sealed class FirstRunView(IAnsiConsole console, ILocalizationService text
         {
             copy = copy.Replace(command, $"[bold {TerminalTheme.Info}]{command}[/]", StringComparison.Ordinal);
         }
-        console.MarkupLine($"[{color ?? TerminalTheme.Primary}]{copy}[/]");
+        var line = new Grid().AddColumn(new GridColumn { Width = Math.Min(console.Profile.Width, 104) });
+        line.AddRow(new Markup($"[{color ?? TerminalTheme.Primary}]{copy}[/]"));
+        console.Write(line);
     }
 
     /// <summary>Respects the user's emoji preference and the shared one-space icon convention.</summary>
     private string Icon(string emoji, string fallback) => TerminalTheme.IconPrefix(shell.Options, emoji, fallback);
 
     /// <summary>Renders a terminal hyperlink together with its copyable address.</summary>
-    private void Link(string label, string url) =>
-        console.MarkupLine($"[underline {TerminalTheme.Info} link={url}]{Markup.Escape(label)}[/] [{TerminalTheme.Muted}]{url}[/]");
+    private void Link(string label, string url, bool showAddress = true) =>
+        console.MarkupLine($"[underline {TerminalTheme.Info} link={url}]{Markup.Escape(label)}[/]"
+            + (showAddress ? $" [{TerminalTheme.Muted}]{Markup.Escape(url)}[/]" : string.Empty));
 
     /// <summary>Shows keyboard choices with the terminal's visible focus marker.</summary>
-    private Task<int> ChooseAsync(string[] labels, CancellationToken ct)
+    private async Task<T> ChooseAsync<T>(IReadOnlyList<TerminalMenuChoice<T>> choices, CancellationToken ct)
     {
-        return new SelectionPrompt<int>().HighlightStyle(Style.Parse(TerminalTheme.Accent))
-            .AddChoices(Enumerable.Range(0, labels.Length)).UseConverter(index => ActionLabel(labels[index]))
-            .ShowAsync(console, ct);
-    }
-
-    /// <summary>Uses semantic colors for positive, negative, and navigation choices.</summary>
-    private string ActionLabel(string label)
-    {
-        var color = label == text.Text("Oobe.Exit") || label == text.Text("Common.No")
-            ? TerminalTheme.Warning
-            : label == text.Text("Oobe.Back") ? TerminalTheme.Muted : TerminalTheme.Success;
-        return $"[{color}]{Markup.Escape(label)}[/]";
+        var selected = await TerminalChoiceMenu.SelectChoiceAsync(console, choices, ct).ConfigureAwait(false);
+        console.MarkupLine($"[{TerminalTheme.Success}]{Markup.Escape(Icon("✓", "v") + selected.Label)}[/]");
+        return selected.Value;
     }
 
     /// <summary>Places the intended default first without implicitly accepting consent.</summary>
     private async Task<bool> YesNoAsync(string title, bool initial, CancellationToken ct)
     {
         Write(title, TerminalTheme.Accent);
-        var choices = initial ? new[] { "Common.Yes", "Common.No" } : new[] { "Common.No", "Common.Yes" };
-        var selected = await ChooseAsync(choices.Select(key => text.Text(key)).ToArray(), ct).ConfigureAwait(false);
+        TerminalMenuChoice<bool>[] choices = initial
+            ? [new(true, text.Text("Common.Yes"), Tone: TerminalMenuTone.Positive),
+                new(false, text.Text("Common.No"), Tone: TerminalMenuTone.Caution)]
+            : [new(false, text.Text("Common.No"), Tone: TerminalMenuTone.Caution),
+                new(true, text.Text("Common.Yes"), Tone: TerminalMenuTone.Positive)];
+        var selected = await ChooseAsync(choices, ct).ConfigureAwait(false);
         console.WriteLine();
-        return choices[selected] == "Common.Yes";
+        return selected;
     }
 
-    /// <summary>Offers consistent unboxed continuation, back, and exit actions.</summary>
-    private async Task<FirstRunAction> NavigationAsync(CancellationToken ct)
-    {
-        var selected = await ChooseAsync([text.Text("Oobe.Continue"), text.Text("Oobe.Back"), text.Text("Oobe.Exit")], ct)
-            .ConfigureAwait(false);
-        return selected switch { 0 => FirstRunAction.Next, 1 => FirstRunAction.Back, _ => FirstRunAction.Exit };
-    }
+    private enum LanguageChoice { Keep, Change, Exit }
+
+    private enum CredentialChoice { VerifyExisting, EnterKey, Back, Exit }
 
     /// <summary>Validates a nickname without echoing rejected text.</summary>
     private ValidationResult ValidateName(string value)

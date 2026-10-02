@@ -17,6 +17,49 @@ public sealed class FullscreenFeatureFormTests
     /// <summary>Retains captured frames in test output for human-readable layout review.</summary>
     public FullscreenFeatureFormTests(ITestOutputHelper output) => _output = output;
 
+    /// <summary>Group headings never push the focused control or persistent actions outside a small viewport.</summary>
+    [Theory]
+    [InlineData(60, 20)]
+    [InlineData(100, 24)]
+    [InlineData(160, 40)]
+    public void GroupedFields_KeepEveryFocusedControlVisible(int width, int height)
+    {
+        var output = new StringWriter();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.Yes,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(output)
+        });
+        console.Profile.Width = width;
+        console.Profile.Height = height;
+        var text = new LocalizationService();
+        var form = new FullscreenForm(console, text, new(true, true));
+        var fields = Enumerable.Range(0, 5).Select(index => new FormField("field-" + index, "Settings.ProfileName", () => "VALUE" + index, _ => { })
+        {
+            GroupKey = index < 3 ? "Settings.ProfileGroup" : "Settings.AppearanceGroup"
+        }).ToArray();
+        var pages = new[]
+        {
+            new FormPage("Settings.Personalization", fields) { Overview = () => new Text("Palette\nSuccess\nWarning") },
+            new FormPage("Settings.Privacy", [])
+        };
+        SetField(form, "_allowSectionNavigation", true);
+        for (var focus = 0; focus < fields.Length; focus++)
+        {
+            output.GetStringBuilder().Clear();
+            SetField(form, "_focus", focus);
+
+            Render(form, pages, fields);
+
+            var frame = Plain(output);
+            Assert.Contains("VALUE" + focus, frame, StringComparison.Ordinal);
+            Assert.Contains(text.Text("Form.Save"), frame, StringComparison.Ordinal);
+            Assert.Contains(text.Text("Form.Cancel"), frame, StringComparison.Ordinal);
+            AssertViewport(frame, width, height);
+        }
+    }
+
     /// <summary>Focused package details remain scrollable in bounded compact and ordinary viewports.</summary>
     [Theory]
     [InlineData(60, 20)]

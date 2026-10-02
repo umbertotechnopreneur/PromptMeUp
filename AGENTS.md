@@ -4,7 +4,7 @@ These instructions apply to every change in this repository.
 
 ## Product writing and author voice
 
-- Keep MailMeUp, PromptMeUp, and TrackMeUp visually consistent using [the MeUp style guide](docs/assets/meup/README.md). Use a common README structure and author signature, with a distinct accent color and concrete benefit for each product. Keep the main product purpose ahead of optional extras.
+- Keep AgentInbox, PromptMeUp, and WorkTrail visually consistent using [the MeUp style guide](docs/assets/meup/README.md). Use a common README structure and author signature, with a distinct accent color and concrete benefit for each product. Keep the main product purpose ahead of optional extras.
 
 - Start each README with a headline that says what the app does and what the reader can use it for. Put the product benefit before architecture, branding, or project history.
 - Apply this style throughout repository documentation: plain English, short sentences, concrete actions, and useful examples. Cut filler, vague slogans, hype, corporate language, and formulaic AI-sounding prose.

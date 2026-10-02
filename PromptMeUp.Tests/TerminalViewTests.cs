@@ -31,9 +31,9 @@ public sealed class TerminalViewTests
         }
     }
 
-    /// <summary>Verifies that the localized chat guide explains every slash command without panel borders.</summary>
+    /// <summary>Verifies the chat intro stays short while help preserves the full localized command guide.</summary>
     [Fact]
-    public void ChatIntro_ExplainsEveryCommandWithoutCards()
+    public void ChatIntro_OffersCompactShortcutsAndFullHelpWithoutCards()
     {
         var (console, output) = CreateConsole();
         var text = new LocalizationService();
@@ -43,6 +43,13 @@ public sealed class TerminalViewTests
         var view = new ChatView(console, text, new PoorMarkdownRenderer(console), shell);
 
         view.RenderIntro();
+
+        var intro = output.ToString();
+        Assert.Contains("/help", intro, StringComparison.Ordinal);
+        Assert.DoesNotContain("/clear", intro, StringComparison.Ordinal);
+        Assert.DoesNotContain("/remember", intro, StringComparison.Ordinal);
+
+        view.RenderCommandGuide();
 
         var rendered = output.ToString();
         Assert.Contains("/run <comando>", rendered, StringComparison.Ordinal);
@@ -159,7 +166,7 @@ public sealed class TerminalViewTests
         text.SetLanguage("it");
         var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
         shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: false));
-        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell);
+        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell, new CommandClipboard());
 
         view.RenderExecutionResult(new CommandExecutionResult(
             Command: "git branch --all",
@@ -176,6 +183,73 @@ public sealed class TerminalViewTests
         Assert.Contains("Troncato:", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╭", rendered, StringComparison.Ordinal);
         Assert.DoesNotContain("╮", rendered, StringComparison.Ordinal);
+    }
+
+    /// <summary>Verifies the copy choice transfers the exact previewed command and never authorizes execution.</summary>
+    [Fact]
+    public async Task CommandPreview_CopyChoice_DoesNotAuthorizeExecution()
+    {
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            Out = new AnsiConsoleOutput(new StringWriter())
+        });
+        var text = new LocalizationService();
+        var shell = new ConsoleShellView(console, text, new AlwaysShowProjectBannerSchedule());
+        shell.Configure(new ConsoleRenderOptions(NoAnimation: true, NoEmoji: true));
+        string? copied = null;
+        var clipboard = TestProxy.Create<ICommandClipboard>((method, args) =>
+        {
+            if (method.Name != "TryCopy") throw new NotSupportedException(method.Name);
+            copied = (string?)args![0];
+            return true;
+        });
+        var view = new CommandAuthorizationView(console, text, new PoorMarkdownRenderer(console), shell, clipboard,
+            () => CommandAuthorizationView.CommandDecision.Copy);
+        const string command = "git status --short && echo café";
+        view.RenderPreview(command, new CommandRiskAssessment(5, CommandRiskLevel.Low, "Safe preview.", false, null));
+
+        var authorized = await view.AuthorizeAsync(CommandExecutionMode.Confirm, CancellationToken.None);
+
+        Assert.False(authorized);
+        Assert.Equal(command, copied);
+    }
+
+    /// <summary>Verifies that the inline command menu consumes arrow and Enter keys without a live renderer.</summary>
+    [Fact]
+    public void ConversationMenu_AcceptsKeyboardChoice()
+    {
+        var keys = new Queue<ConsoleKeyInfo>(
+        [
+            new('\0', ConsoleKey.DownArrow, false, false, false),
+            new('\r', ConsoleKey.Enter, false, false, false)
+        ]);
+        var input = TestProxy.Create<IAnsiConsoleInput>((method, _) => method.Name switch
+        {
+            "IsKeyAvailable" => keys.Count > 0,
+            "ReadKey" => keys.Dequeue(),
+            "ReadKeyAsync" => Task.FromResult<ConsoleKeyInfo?>(keys.Dequeue()),
+            _ => throw new NotSupportedException(method.Name)
+        });
+        var output = new StringWriter();
+        var rendering = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.Yes,
+            Interactive = InteractionSupport.Yes,
+            Out = new AnsiConsoleOutput(output)
+        });
+        var console = TestProxy.Create<IAnsiConsole>((method, args) =>
+            method.Name == "get_Input" ? input : method.Invoke(rendering, args));
+
+        var selected = TerminalConversationPrompt.SelectInteractive(console, new LocalizationService(),
+        [
+            new TerminalMenuChoice<int>(0, "Stop"),
+            new TerminalMenuChoice<int>(1, "Inspect git status", "git status")
+        ], "Choose a command", numbered: true);
+
+        Assert.Equal(1, selected);
+        Assert.Empty(keys);
+        Assert.Contains("Inspect git status", output.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>Creates a deterministic colorless Spectre console backed by an in-memory writer.</summary>

@@ -21,9 +21,9 @@ public sealed class FilePreviewView(IAnsiConsole console, ILocalizationService t
         console.Write(new Text(text.Text("Preview.Snapshot"), Style.Parse(TerminalTheme.Info)));
         console.WriteLine();
         console.WriteLine();
-        var table = new Table().Border(TableBorder.Simple)
-            .AddColumn(text.Text("Preview.Source")).AddColumn(text.Text("Preview.Target"))
-            .AddColumn(text.Text("Preview.Bytes")).AddColumn(text.Text("Plan.Status"));
+        var table = TerminalTable.Create(text.Text("Preview.Source"), text.Text("Preview.Target"),
+            text.Text("Preview.Bytes"), text.Text("Plan.Status"));
+        table.Columns[2].RightAligned();
         foreach (var effect in preview.Effects)
         {
             table.AddRow(new Text(effect.Source),

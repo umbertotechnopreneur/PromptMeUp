@@ -7,6 +7,18 @@ namespace PromptMeUp.Tests;
 
 public sealed class ConversationMemoryTests
 {
+    /// <summary>Keeps command-result origin through short-term memory while rejecting non-user tool messages.</summary>
+    [Fact]
+    public void Add_ToolOutput_PreservesOriginWithUserProviderRole()
+    {
+        var memory = new ConversationMemoryService().Create(AppSettings.Default);
+        var update = memory.Add("user", "Command result", isToolOutput: true);
+
+        Assert.True(update.Snapshot.Messages[0].IsToolOutput);
+        Assert.Equal("user", update.Snapshot.Messages[0].Role);
+        Assert.Throws<ArgumentException>(() => memory.Add("assistant", "Not a command result", isToolOutput: true));
+    }
+
     /// <summary>Verifies completed assistant answers are independent of the user-input character limit.</summary>
     [Fact]
     public void Add_AssistantExceedsInputLimit_PreservesCompleteAnswer()

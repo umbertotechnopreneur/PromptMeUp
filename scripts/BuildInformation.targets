@@ -6,7 +6,7 @@
       <PromptMeUpBuildDateLocal Condition="'$(PromptMeUpBuildDateLocal)' == ''">$([System.DateTimeOffset]::Now.ToString('O'))</PromptMeUpBuildDateLocal>
       <PromptMeUpBuildMachine Condition="'$(PromptMeUpBuildMachine)' == ''">$([System.Environment]::MachineName)</PromptMeUpBuildMachine>
     </PropertyGroup>
-    <Exec Command="git rev-parse --short=12 HEAD" ConsoleToMSBuild="true">
+    <Exec Command="git rev-parse --short=12 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="Low" Condition="'$(PromptMeUpBuildGitCommit)' == ''">
       <Output TaskParameter="ConsoleOutput" PropertyName="PromptMeUpBuildGitCommitRaw" />
     </Exec>
     <PropertyGroup>

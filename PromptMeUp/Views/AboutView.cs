@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: MIT
 
-using System.Globalization;
 using PromptMeUp.Models;
 using PromptMeUp.Services;
 using Spectre.Console;
@@ -11,6 +10,7 @@ namespace PromptMeUp.Views;
 public interface IAboutView
 {
     void Render();
+    IRenderable CreateContent(bool renderInstallationCard = false);
 }
 
 /// <summary>Presents the project artwork and information in an adaptive, passive terminal page.</summary>
@@ -20,22 +20,19 @@ public sealed class AboutView(
     IConsoleShellView shell,
     BuildInformation buildInformation) : IAboutView
 {
-    private const string RepositoryUrl = "https://github.com/umbertotechnopreneur/PromptMeUp";
-    private const string AuthorUrl = "https://umbertogiacobbi.biz";
-    private const string PrivacyUrl = "https://umbertogiacobbi.biz/privacy/";
-    private const string TermsUrl = "https://umbertogiacobbi.biz/terms/";
     private int _offset;
     private int _lineCount;
     private int _visibleRows;
-    private (int Width, int Height, string Theme)? _lastFrame;
+    private FullscreenFrame? _lastFrame;
+    private readonly FullscreenInput _input = new(console, text);
 
     /// <summary>Uses a disposable fullscreen buffer when supported and ordinary scrolling output otherwise.</summary>
     public void Render()
     {
-        if (!FullscreenHelpView.CanUse(console))
+        if (!FullscreenViewport.CanUse(console))
         {
             TerminalTheme.WriteRule(console, text.Text("About.Title"));
-            console.Write(CreateContent(console.Profile.Width));
+            console.Write(CreateContent());
             console.WriteLine();
             console.WriteLine();
             return;
@@ -43,70 +40,28 @@ public sealed class AboutView(
 
         _offset = 0;
         _lastFrame = null;
+        _input.Reset();
         try
         {
-            console.AlternateScreen(() =>
-            {
-                console.Cursor.Hide();
-                try
-                {
-                    RunLoop();
-                }
-                finally
-                {
-                    console.WriteAnsi(writer => writer.ResetStyle());
-                    console.Cursor.Show();
-                }
-            });
+            FullscreenViewport.Run(console, RunLoop);
         }
         catch (InteractiveFlowCanceledException)
         {
             // Escape closes this read-only page without canceling the surrounding application.
         }
+        finally
+        {
+            _input.Reset();
+        }
     }
 
-    /// <summary>Combines the invariant artwork with localized product details and literal project links.</summary>
-    private IRenderable CreateContent(int width)
-    {
-        var details = new Grid();
-        details.AddColumn(new GridColumn().RightAligned());
-        details.AddColumn(new GridColumn().LeftAligned());
-        var narrowDetails = new List<IRenderable>();
-        AddDetail(details, narrowDetails, "Footer.Version", buildInformation.Version);
-        AddDetail(details, narrowDetails, "About.BuildDate",
-            buildInformation.BuiltAtLocal.ToString("O", CultureInfo.InvariantCulture));
-        AddDetail(details, narrowDetails, "About.BuildMachine", buildInformation.MachineName);
-        AddDetail(details, narrowDetails, "About.GitCommit", buildInformation.GitCommit);
-        AddDetail(details, narrowDetails, "About.Author", "Umberto Giacobbi");
-        AddDetail(details, narrowDetails, "About.License", "MIT");
-        AddDetail(details, narrowDetails, "About.Platforms", "Windows / Linux / macOS");
-        return new Rows(
-            Align.Center(new HelpMeBanner()),
-            new Text(" "),
-            new Text(text.Text("About.Description"), Style.Parse(TerminalTheme.Primary)),
-            new Text(" "),
-            width >= 30 ? details : new Rows(narrowDetails),
-            new Text(text.Text("About.Repository"), Style.Parse(TerminalTheme.Muted)),
-            new Markup($"[underline {TerminalTheme.Info} link={RepositoryUrl}]{RepositoryUrl}[/]"),
-            new Text(" "),
-            new Text(text.Text("About.Website"), Style.Parse(TerminalTheme.Muted)),
-            new Markup($"[underline {TerminalTheme.Info} link={AuthorUrl}]{AuthorUrl}[/]"),
-            new Text(" "),
-            new Text(text.Text("About.Privacy"), Style.Parse(TerminalTheme.Muted)),
-            new Markup($"[underline {TerminalTheme.Info} link={PrivacyUrl}]{PrivacyUrl}[/]"),
-            new Text(text.Text("About.Terms"), Style.Parse(TerminalTheme.Muted)),
-            new Markup($"[underline {TerminalTheme.Info} link={TermsUrl}]{TermsUrl}[/]"));
-    }
-
-    /// <summary>Separates each right-aligned label and left-aligned value with one trailing blank row.</summary>
-    private void AddDetail(Grid grid, List<IRenderable> narrowRows, string labelKey, string value)
-    {
-        var label = new Text(text.Text(labelKey) + ":", Style.Parse(TerminalTheme.Muted));
-        var renderedValue = new Text(value, Style.Parse(TerminalTheme.Primary));
-        grid.AddRow(label, renderedValue);
-        grid.AddEmptyRow();
-        narrowRows.AddRange([label, renderedValue, new Text(" ")]);
-    }
+    /// <summary>Provides shared product content, with an optional installation card for first-run setup.</summary>
+    public IRenderable CreateContent(bool renderInstallationCard = false) => new Rows(
+        new ProductBanner(text),
+        new Text(" "),
+        new Text(text.Text("About.Description"), Style.Parse(TerminalTheme.Primary)),
+        new Text(" "),
+        new InstallationInfo(text, buildInformation, renderCard: renderInstallationCard));
 
     /// <summary>Scrolls the project information while leaving a permanently focused close action available.</summary>
     private void RunLoop()
@@ -114,7 +69,7 @@ public sealed class AboutView(
         while (true)
         {
             PaintScreen();
-            var key = ReadKey();
+            var key = _input.ReadKey(PaintScreen) ?? throw new IOException(text.Text("Form.EndOfInput"));
             if (key.Key is ConsoleKey.Enter or ConsoleKey.Escape or ConsoleKey.Q)
             {
                 return;
@@ -133,44 +88,10 @@ public sealed class AboutView(
         }
     }
 
-    /// <summary>Keeps shutdown cancellable and repaints the viewport when it is resized while waiting for input.</summary>
-    private ConsoleKeyInfo ReadKey()
-    {
-        var pending = ReadKeyAsync();
-        var dimensions = (console.Profile.Width, console.Profile.Height);
-        while (!pending.IsCompleted)
-        {
-            Task.WhenAny(pending, Task.Delay(100)).GetAwaiter().GetResult();
-            var current = (console.Profile.Width, console.Profile.Height);
-            if (current != dimensions)
-            {
-                dimensions = current;
-                PaintScreen();
-            }
-        }
-        return pending.GetAwaiter().GetResult()
-            ?? throw new IOException(text.Text("Form.EndOfInput"));
-    }
-
-    /// <summary>Reads through the host wrapper so Escape and application cancellation retain their normal behavior.</summary>
-    private async Task<ConsoleKeyInfo?> ReadKeyAsync() =>
-        await console.Input.ReadKeyAsync(true, CancellationToken.None).ConfigureAwait(false);
-
     /// <summary>Fits styled content between the shared fullscreen header and footer without erasing terminal history.</summary>
     private void PaintScreen()
     {
-        var frame = (console.Profile.Width, console.Profile.Height, TerminalTheme.Current.Id);
-        console.WriteAnsi(writer =>
-        {
-            if (_lastFrame != frame)
-            {
-                // This erase is confined to the temporary alternate buffer.
-                writer.Background(Style.Parse(TerminalTheme.Background).Foreground);
-                writer.EraseInDisplay(2);
-            }
-            writer.CursorHome();
-        });
-        _lastFrame = frame;
+        _lastFrame = FullscreenViewport.BeginFrame(console, _lastFrame);
         var width = Math.Max(1, console.Profile.Width - 1);
         var height = Math.Max(1, console.Profile.Height - 1);
         if (console.Profile.Width < 60 || console.Profile.Height < 20)
@@ -182,12 +103,15 @@ public sealed class AboutView(
 
         _visibleRows = height - FullscreenHeader.Height - FullscreenFooter.Height();
         var renderOptions = new RenderOptions(console.Profile.Capabilities, new Size(width, height));
-        var lines = Segment.SplitLines(CreateContent(width - 4).Render(renderOptions, width - 4)).ToList();
+        var lines = Segment.SplitLines(CreateContent().Render(renderOptions, width - 4)).ToList();
         _lineCount = lines.Count;
         _offset = Math.Clamp(_offset, 0, Math.Max(0, _lineCount - _visibleRows));
         var body = new Padder(new VisibleLines(lines.Skip(_offset).Take(_visibleRows).ToArray()), new Padding(2, 0, 2, 0));
-        var close = new Text($"> [ {TerminalTheme.IconPrefix(shell.Options, "↩️", "<")}{text.Text("Help.Browse.Close")} ]",
-            Style.Parse($"bold {TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"));
+        var close = TerminalActionBar.Create(
+        [
+            new TerminalAction(TerminalTheme.IconPrefix(shell.Options, "↩️", "<") + text.Text("Help.Browse.Close"),
+                TerminalTheme.Warning, Selected: true)
+        ]);
         var overflowing = _lineCount > _visibleRows;
         var notice = overflowing
             ? new Text(text.Text("Help.Browse.Range", _offset + 1, Math.Min(_lineCount, _offset + _visibleRows), _lineCount),

@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "midnight",
   "name": "Midnight",
   "author": "PromptMeUp contributors",
@@ -9,13 +9,14 @@
     "background": "#0B0C19",
     "primary": "#F5F5FF",
     "muted": "#C1C3DE",
-    "accent": "#AAAFFF",
-    "info": "#86D6F5",
-    "divider": "#8185A8",
+    "accent": "#929DFF",
+    "accentSecondary": "#F2A4CA",
+    "info": "#5ACDF5",
+    "divider": "#989CC6",
     "success": "#A0E3B5",
     "warning": "#F7D98D",
     "error": "#FCA4B8",
-    "selectionBackground": "#AAAFFF",
+    "selectionBackground": "#929DFF",
     "selectionForeground": "#0B0C19"
   }
 }

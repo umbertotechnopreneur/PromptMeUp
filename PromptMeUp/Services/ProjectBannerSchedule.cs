@@ -11,35 +11,47 @@ public interface IProjectBannerSchedule
 {
     /// <summary>Returns whether the project footer may be shown and records the current local day when it may.</summary>
     bool TryMarkRenderedToday();
+
+    /// <summary>Returns whether the opening tip may be shown and records the current local day when it may.</summary>
+    bool TryMarkOpeningTipRenderedToday();
 }
 
-/// <summary>Coordinates the once-per-local-day project footer across application invocations.</summary>
-public sealed class ProjectBannerSchedule(string statePath, TimeProvider clock, ILogger<ProjectBannerSchedule> logger) : IProjectBannerSchedule
+/// <summary>Coordinates independent once-per-local-day opening and footer banners across invocations.</summary>
+public sealed class ProjectBannerSchedule(string statePath, string openingTipStatePath, TimeProvider clock, ILogger<ProjectBannerSchedule> logger) : IProjectBannerSchedule
 {
     private readonly string _statePath = string.IsNullOrWhiteSpace(statePath)
         ? throw new ArgumentException("A project-banner state path is required.", nameof(statePath))
         : statePath;
+    private readonly string _openingTipStatePath = string.IsNullOrWhiteSpace(openingTipStatePath)
+        ? throw new ArgumentException("An opening-tip state path is required.", nameof(openingTipStatePath))
+        : openingTipStatePath;
 
     /// <summary>Records the current local date unless the same date is already stored.</summary>
-    public bool TryMarkRenderedToday()
+    public bool TryMarkRenderedToday() => TryMarkToday(_statePath, "project banner");
+
+    /// <summary>Records the opening tip separately from the project footer for the current local date.</summary>
+    public bool TryMarkOpeningTipRenderedToday() => TryMarkToday(_openingTipStatePath, "opening tip");
+
+    /// <summary>Persists one independent daily marker, allowing rendering when persistence is unavailable.</summary>
+    private bool TryMarkToday(string path, string label)
     {
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
         var marker = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
         try
         {
-            if (File.Exists(_statePath)
-                && string.Equals(File.ReadAllText(_statePath).Trim(), marker, StringComparison.Ordinal))
+            if (File.Exists(path)
+                && string.Equals(File.ReadAllText(path).Trim(), marker, StringComparison.Ordinal))
             {
                 return false;
             }
 
-            File.WriteAllText(_statePath, marker, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.WriteAllText(path, marker, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return true;
         }
-        catch (IOException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            logger.LogWarning(exception, "Unable to persist the project-banner display date.");
+            logger.LogWarning(exception, "Unable to persist the {BannerLabel} display date.", label);
             return true;
         }
     }

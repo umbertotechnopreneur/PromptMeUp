@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "coffee",
   "name": "Coffee",
   "author": "PromptMeUp contributors",
@@ -9,13 +9,14 @@
     "background": "#211913",
     "primary": "#FFF8EF",
     "muted": "#D9CBBD",
-    "accent": "#EFC18F",
-    "info": "#A9D9E5",
-    "divider": "#A49483",
+    "accent": "#F4B66E",
+    "accentSecondary": "#E7A7D6",
+    "info": "#76D2EA",
+    "divider": "#BDA38E",
     "success": "#B9DDA3",
     "warning": "#F4D88B",
     "error": "#F5ABA3",
-    "selectionBackground": "#EFC18F",
+    "selectionBackground": "#F4B66E",
     "selectionForeground": "#211913"
   }
 }

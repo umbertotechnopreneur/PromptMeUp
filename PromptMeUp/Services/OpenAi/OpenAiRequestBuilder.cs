@@ -177,12 +177,14 @@ internal static class OpenAiRequestBuilder
         ValidateGuideContext(guide);
         var instructionTokens = EstimateTokens(instructions);
         var conversationTokens = ContextTokenEstimator.Messages(messages);
-        var userTokens = messages.Where(message => NormalizeRole(message.Role) == "user")
+        var userTokens = messages.Where(message => NormalizeRole(message.Role) == "user" && !message.IsToolOutput)
+            .Sum(message => EstimateTokens(message.Content));
+        var toolTokens = messages.Where(message => NormalizeRole(message.Role) == "user" && message.IsToolOutput)
             .Sum(message => EstimateTokens(message.Content));
         var assistantTokens = messages.Where(message => NormalizeRole(message.Role) == "assistant")
             .Sum(message => EstimateTokens(message.Content));
-        // Protocol envelopes and developer messages belong to the system share, leaving message text attributable by role.
-        var systemTokens = instructionTokens + conversationTokens + 8 - userTokens - assistantTokens;
+        // Protocol envelopes and developer messages belong to the system share; command-result text has its own share.
+        var systemTokens = instructionTokens + conversationTokens + 8 - userTokens - toolTokens - assistantTokens;
         var latestPromptTokens = messages.LastOrDefault(message => string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase)) is { } latest
             ? EstimateTokens(latest.Content)
             : 0;
@@ -196,6 +198,7 @@ internal static class OpenAiRequestBuilder
             true)
         {
             UserMessageTokens = userTokens,
+            ToolOutputTokens = toolTokens,
             AssistantMessageTokens = assistantTokens,
             GuideTokens = guide?.Tokens ?? 0
         };

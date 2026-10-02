@@ -108,6 +108,10 @@ internal sealed class FullscreenSectionNavigator
         var availableRows = Math.Max(1, bodyRows - 2);
         var spacing = availableRows >= items.Count * 2 ? 2 : 1;
         var capacity = Math.Max(1, availableRows / spacing);
+        if (items.Count > capacity && availableRows > 1)
+        {
+            capacity = Math.Max(1, (availableRows - 1) / spacing);
+        }
         var offset = Math.Clamp(SelectedIndex - capacity + 1, 0, Math.Max(0, items.Count - capacity));
         var rows = new List<IRenderable>();
         for (var index = offset; index < Math.Min(items.Count, offset + capacity); index++)
@@ -123,11 +127,11 @@ internal sealed class FullscreenSectionNavigator
                 rows.Add(new Text(" "));
             }
         }
-        if (items.Count > capacity)
+        if (items.Count > capacity && availableRows > capacity * spacing)
         {
             var above = offset > 0 ? unicode ? "↑ " : "^ " : string.Empty;
             var below = offset + capacity < items.Count ? unicode ? " ↓" : " v" : string.Empty;
-            rows.Add(new FullscreenLine(above + "..." + below, Style.Parse(TerminalTheme.Info)));
+            rows.Add(new FullscreenLine($"{above}{SelectedIndex + 1}/{items.Count}{below}", Style.Parse(TerminalTheme.Info)));
         }
         return new Padder(new Rows(
             new FullscreenLine(heading, Style.Parse(TerminalTheme.Accent)),

@@ -20,7 +20,8 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
     {
         ArgumentNullException.ThrowIfNull(presentation);
         var language = text.Text("Script.Language." + presentation.Language.Language);
-        TerminalTheme.WriteRule(console, text.Text("Script.Help", language), TerminalTheme.Accent);
+        TerminalSession.For(console).SetMode(ConversationDisplayMode.Script);
+        TerminalTurnHeader.Write(console, text, TerminalTurnKind.Script, language);
         console.Write(new Text(presentation.Artifact.Explanation, Style.Parse(TerminalTheme.Primary)));
         console.WriteLine();
         console.Write(new Text(
@@ -36,9 +37,14 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
         console.Write(new Text(presentation.Artifact.Source, Style.Parse(TerminalTheme.Primary)));
         console.WriteLine();
         console.WriteLine();
+        TerminalSession.For(console).History.Add(TerminalTurnKind.Script, language,
+            new Rows(new Text(TerminalText.Safe(presentation.Artifact.Explanation)),
+                new Text(TerminalText.Safe(presentation.OutputPath), Style.Parse(TerminalTheme.Info)),
+                new Text(TerminalText.Safe(presentation.Artifact.Source), Style.Parse(TerminalTheme.Primary))),
+            presentation.Artifact.Explanation.Length + presentation.OutputPath.Length + presentation.Artifact.Source.Length);
         if (presentation.Original is not null && presentation.Original != presentation.Artifact.Source)
         {
-            var diff = new Table().Border(TableBorder.Simple).AddColumn("-").AddColumn("+");
+            var diff = TerminalTable.Create("−", "+");
             var before = presentation.Original.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
             var after = presentation.Artifact.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
             for (var index = 0; index < Math.Max(before.Length, after.Length); index++)
@@ -58,6 +64,7 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
     public ScriptAction Choose(ScriptPresentation presentation)
     {
         ArgumentNullException.ThrowIfNull(presentation);
+        using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         var actions = new List<ScriptAction> { ScriptAction.Save };
         if (presentation.Runtime.IsAvailable)
         {
@@ -69,12 +76,22 @@ public sealed class ScriptView(IAnsiConsole console, ILocalizationService text) 
             actions.Add(ScriptAction.Validate);
         }
         actions.Add(ScriptAction.Revise);
-        return console.Prompt(new SelectionPrompt<ScriptAction>()
-            .Title(text.Text("Script.Action"))
-            .UseConverter(action => text.Text("Script." + action))
-            .AddChoices(actions.ToArray()));
+        TerminalPromptDock.Align(console, reservedRows: actions.Count + 3);
+        var choices = actions.Select(action => new TerminalMenuChoice<ScriptAction>(
+            action, text.Text("Script." + action), Tone: action switch
+            {
+                ScriptAction.Save => TerminalMenuTone.Positive,
+                ScriptAction.DoNothing => TerminalMenuTone.Muted,
+                ScriptAction.Execute => TerminalMenuTone.Caution,
+                _ => TerminalMenuTone.Primary
+            })).ToArray();
+        return TerminalConversationPrompt.Select(console, text, choices, text.Text("Script.Action"));
     }
 
     /// <summary>Confirms the concrete destination after the full source has been displayed.</summary>
-    public bool ConfirmSave(string path) => console.Prompt(new ConfirmationPrompt(Markup.Escape(text.Text("Script.Confirm", path))) { DefaultValue = false });
+    public bool ConfirmSave(string path)
+    {
+        TerminalPromptDock.Align(console, reservedRows: 2);
+        return TerminalConversationPrompt.Confirm(console, text, text.Text("Script.Confirm", path));
+    }
 }

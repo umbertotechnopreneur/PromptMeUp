@@ -38,11 +38,14 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
                 .Append(new PromptAction("save", 0, TerminalTheme.IconPrefix(options, "💾", "+") + text.Text("Form.Save")))
                 .Append(new PromptAction("cancel", 0, TerminalTheme.IconPrefix(options, "↩️", "x") + text.Text("Form.Cancel")))
                 .ToArray();
-            var selected = console.Prompt(new SelectionPrompt<PromptAction>()
-                .Title(Markup.Escape(text.Text(page.HelpKey ?? "Form.Help")))
-                .HighlightStyle(Style.Parse($"{TerminalTheme.SelectionForeground} on {TerminalTheme.SelectionBackground}"))
-                .UseConverter(action => Markup.Escape(action.Label))
-                .AddChoices(actions));
+            var menuChoices = actions.Select(action => new TerminalMenuChoice<PromptAction>(action, action.Label,
+                Tone: action.Kind switch
+                {
+                    "save" => TerminalMenuTone.Positive,
+                    "cancel" => TerminalMenuTone.Caution,
+                    _ => TerminalMenuTone.Primary
+                })).ToArray();
+            var selected = TerminalChoiceMenu.Select(console, menuChoices, text.Text(page.HelpKey ?? "Form.Help"));
             switch (selected.Kind)
             {
                 case "field":
@@ -78,18 +81,22 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
     /// <summary>Shows aligned draft values with blank rows while keeping secret contents hidden.</summary>
     private void RenderFields(IReadOnlyList<FormField> fields)
     {
-        var grid = new Grid().AddColumn(new GridColumn().RightAligned()).AddColumn(new GridColumn().LeftAligned());
+        string? group = null;
         foreach (var field in fields)
         {
+            if (field.GroupKey is not null && field.GroupKey != group)
+            {
+                console.Write(new ThemeSeparator(text.Text(field.GroupKey)));
+            }
+            group = field.GroupKey;
             var value = field.Secret
                 ? field.Display?.Invoke() ?? text.Text("Form.SecretInput")
-                : field.Choices?.Invoke().FirstOrDefault(choice => choice.Value == field.Read())?.Label ?? field.Read();
-            grid.AddRow(
+                : field.Display?.Invoke() ?? field.Choices?.Invoke().FirstOrDefault(choice => choice.Value == field.Read())?.Label ?? field.Read();
+            console.Write(new TerminalFormRow(
                 new Text(FullscreenForm.FieldLabel(field, text), Style.Parse(TerminalTheme.Muted)),
-                new Text(SafeText(value), Style.Parse(field.ValueColor?.Invoke() ?? TerminalTheme.FieldValue)));
-            grid.AddRow(new Text(" "), new Text(" "));
+                _ => new Text(SafeText(value), Style.Parse(field.ValueColor?.Invoke() ?? TerminalTheme.FieldValue))));
+            console.WriteLine();
         }
-        console.Write(grid);
     }
 
     /// <summary>Uses the same choice and validation rules as the fullscreen editor without echoing credentials.</summary>
@@ -114,11 +121,9 @@ internal sealed class SettingsPromptForm(IAnsiConsole console, ILocalizationServ
             {
                 throw new InvalidOperationException("A choice field needs at least one available value.");
             }
-            value = console.Prompt(new SelectionPrompt<FormChoice>()
-                .Title(Markup.Escape(FullscreenForm.FieldLabel(field, text)))
-                .HighlightStyle(Style.Parse(TerminalTheme.Accent))
-                .UseConverter(choice => Markup.Escape(choice.Label))
-                .AddChoices(choices.OrderBy(choice => choice.Value == field.Read() ? 0 : 1))).Value;
+            var ordered = choices.OrderBy(choice => choice.Value == field.Read() ? 0 : 1)
+                .Select(choice => new TerminalMenuChoice<FormChoice>(choice, choice.Label)).ToArray();
+            value = TerminalChoiceMenu.Select(console, ordered, FullscreenForm.FieldLabel(field, text)).Value;
         }
         else
         {

@@ -21,6 +21,13 @@ internal static partial class UiTextCatalog
             German: "Enter: Infoseite öffnen. Schließen führt zurück.",
             Spanish: "Intro: abrir Acerca de. Ciérralo para volver.",
             Vietnamese: "Enter: mở giới thiệu. Đóng để quay lại."));
+        entries.Add("About.SettingsHint", new(
+            English: "Project information.",
+            Italian: "Informazioni sul progetto.",
+            French: "Informations sur le projet.",
+            German: "Informationen zum Projekt.",
+            Spanish: "Información del proyecto.",
+            Vietnamese: "Thông tin dự án."));
         entries.Add("Form.OpenFooter", new(
             English: "Up/Down: navigate | Tab/F6: switch focus | Enter: choose | Esc: cancel",
             Italian: "Su/Giù: naviga | Tab/F6: cambia area | Invio: scegli | Esc: annulla",
@@ -49,6 +56,20 @@ internal static partial class UiTextCatalog
             German: "Enter: öffnen | F6: Bereich wechseln | Esc/Q: schließen",
             Spanish: "Intro: abrir | F6: cambiar área | Esc/Q: cerrar",
             Vietnamese: "Enter: mở | F6: đổi vùng | Esc/Q: đóng"));
+        entries.Add("About.Slogan", new(
+            English: "From your words to terminal commands.",
+            Italian: "Dalle tue parole ai comandi del terminale.",
+            French: "De vos mots aux commandes du terminal.",
+            German: "Von deinen Worten zu Terminalbefehlen.",
+            Spanish: "De tus palabras a los comandos del terminal.",
+            Vietnamese: "Từ lời bạn nói đến lệnh terminal."));
+        entries.Add("About.Installation", new(
+            English: "Installation details",
+            Italian: "Dati dell’installazione",
+            French: "Détails de l’installation",
+            German: "Installationsdetails",
+            Spanish: "Datos de la instalación",
+            Vietnamese: "Thông tin cài đặt"));
         entries.Add("About.Description", new(
             English: "A lightweight, portable terminal assistant. Turn natural-language requests into commands you can review before running.",
             Italian: "Un assistente per il terminale leggero e portatile. Trasforma le richieste in linguaggio naturale in comandi da controllare prima di eseguirli.",
@@ -57,12 +78,19 @@ internal static partial class UiTextCatalog
             Spanish: "Un asistente de terminal ligero y portátil. Convierte tus peticiones en lenguaje natural en comandos que puedes revisar antes de ejecutarlos.",
             Vietnamese: "Trợ lý dòng lệnh gọn nhẹ, có thể mang theo. Biến yêu cầu bằng ngôn ngữ tự nhiên thành các lệnh để bạn xem xét trước khi chạy."));
         entries.Add("About.BuildDate", new(
-            English: "Build date",
-            Italian: "Data di compilazione",
-            French: "Date de compilation",
-            German: "Erstellungsdatum",
-            Spanish: "Fecha de compilación",
+            English: "Built at",
+            Italian: "Compilato il",
+            French: "Compilé le",
+            German: "Kompiliert am",
+            Spanish: "Compilado el",
             Vietnamese: "Thời điểm biên dịch"));
+        entries.Add("About.BuildCommit", new(
+            English: "Git commit",
+            Italian: "Commit Git",
+            French: "Commit Git",
+            German: "Git-Commit",
+            Spanish: "Commit Git",
+            Vietnamese: "Commit Git"));
         entries.Add("About.BuildMachine", new(
             English: "Build machine",
             Italian: "Macchina di compilazione",

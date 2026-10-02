@@ -3,6 +3,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace PromptMeUp.Views;
 
@@ -31,25 +32,37 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
     /// <summary>Renders sanitized Markdown either immediately or with a bounded teletype presentation.</summary>
     private void RenderCore(string markdown, bool animate, CancellationToken cancellationToken)
     {
+        var animationChunkSize = Math.Max(1, (int)Math.Ceiling(markdown.Length / 450d));
+        foreach (var block in Parse(markdown))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ConversationText.Write(_console, block.Content, animate && block.Animate, animationChunkSize, cancellationToken);
+        }
+    }
+
+    /// <summary>Builds the same formatted content for a read-only history or disclosure viewport.</summary>
+    internal static IRenderable Content(string markdown) => new Rows(Parse(markdown).Select(block => block.Content));
+
+    /// <summary>Parses one sanitized Markdown subset into reusable blocks without writing to the terminal.</summary>
+    private static IReadOnlyList<MarkdownBlock> Parse(string markdown)
+    {
+        var blocks = new List<MarkdownBlock>();
         if (string.IsNullOrWhiteSpace(markdown))
         {
-            _console.WriteLine();
-            return;
+            return [new MarkdownBlock(new Text(" "), false)];
         }
 
-        var animationChunkSize = Math.Max(1, (int)Math.Ceiling(markdown.Length / 450d));
         string? codeLanguage = null;
         var codeLines = new List<string>();
         var previousBlank = true;
-        foreach (var rawLine in markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Trim('\n').Split('\n'))
+        foreach (var rawLine in TerminalText.Safe(markdown).Trim('\n').Split('\n'))
         {
-            cancellationToken.ThrowIfCancellationRequested();
             var fence = FencePattern().Match(rawLine);
             if (codeLanguage is not null)
             {
                 if (fence.Success)
                 {
-                    RenderCodeBlock(codeLanguage, codeLines);
+                    blocks.Add(new MarkdownBlock(CodeBlock(codeLanguage, codeLines), false));
                     previousBlank = false;
                     codeLanguage = null;
                     codeLines.Clear();
@@ -72,7 +85,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             {
                 if (!previousBlank)
                 {
-                    _console.WriteLine();
+                    blocks.Add(new MarkdownBlock(new Text(" "), false));
                 }
                 previousBlank = true;
                 continue;
@@ -82,7 +95,7 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             var heading = HeadingPattern().Match(line);
             if (heading.Success)
             {
-                RenderHeading(heading.Groups[1].Value.Length, heading.Groups[2].Value);
+                blocks.Add(new MarkdownBlock(Heading(heading.Groups[1].Value.Length, heading.Groups[2].Value), false));
                 continue;
             }
 
@@ -93,50 +106,44 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
                     ? $"{ordinal}."
                     : "•";
                 var indent = new string(' ', Math.Min(6, list.Groups["indent"].Value.Length));
-                ConversationText.Write(_console, new Markup(
+                blocks.Add(new MarkdownBlock(new Markup(
                     $"{indent}[{TerminalTheme.Accent}]{Markup.Escape(marker)}[/] " +
-                    $"[{TerminalTheme.Primary}]{RenderInline(list.Groups["content"].Value)}[/]"),
-                    animate, animationChunkSize, cancellationToken);
+                    $"[{TerminalTheme.Primary}]{RenderInline(list.Groups["content"].Value)}[/]"), true));
                 continue;
             }
 
             // Markdown table syntax is intentionally not interpreted by this reduced renderer.
-            ConversationText.Write(_console, new Markup(line.TrimStart().StartsWith('|')
+            blocks.Add(new MarkdownBlock(new Markup(line.TrimStart().StartsWith('|')
                 ? $"[{TerminalTheme.Primary}]{Markup.Escape(line)}[/]"
-                : $"[{TerminalTheme.Primary}]{RenderInline(line)}[/]"), animate, animationChunkSize, cancellationToken);
+                : $"[{TerminalTheme.Primary}]{RenderInline(line)}[/]"), true));
         }
 
         if (codeLanguage is not null)
         {
-            RenderCodeBlock(codeLanguage, codeLines);
+            blocks.Add(new MarkdownBlock(CodeBlock(codeLanguage, codeLines), false));
         }
+        return blocks;
     }
 
     /// <summary>Renders one heading level with a stable visual hierarchy for a terminal viewport.</summary>
-    private void RenderHeading(int level, string text)
+    private static IRenderable Heading(int level, string text)
     {
         var inline = RenderInline(text);
-        switch (level)
+        return level switch
         {
-            case 1:
-                ConversationText.Write(_console, new Markup($"[bold {TerminalTheme.Accent}]✦ {inline}[/]"));
-                break;
-            case 2:
-                ConversationText.Write(_console, new Markup($"[{TerminalTheme.Info}]◆[/] [bold {TerminalTheme.Primary}]{inline}[/]"));
-                break;
-            default:
-                ConversationText.Write(_console, new Markup($"[{TerminalTheme.Accent}]▸[/] [bold {TerminalTheme.Primary}]{inline}[/]"));
-                break;
-        }
+            1 => new Markup($"[bold {TerminalTheme.Accent}]✦ {inline}[/]"),
+            2 => new Markup($"[{TerminalTheme.Info}]◆[/] [bold {TerminalTheme.Primary}]{inline}[/]"),
+            _ => new Markup($"[{TerminalTheme.Accent}]▸[/] [bold {TerminalTheme.Primary}]{inline}[/]")
+        };
     }
 
     /// <summary>Renders one literal fenced-code block without allowing its content to become Spectre markup.</summary>
-    private void RenderCodeBlock(string language, IReadOnlyList<string> lines)
+    private static IRenderable CodeBlock(string language, IReadOnlyList<string> lines)
     {
         ArgumentNullException.ThrowIfNull(lines);
         var label = string.IsNullOrWhiteSpace(language) ? "code" : language;
         var content = string.Join(Environment.NewLine, lines);
-        TerminalTheme.WriteSection(_console, $"⌘ {label}", content, TerminalTheme.Info);
+        return new Rows(new ThemeSeparator($"⌘ {label}", TerminalTheme.Info), new Text(content, Style.Parse(TerminalTheme.Primary)));
     }
 
     /// <summary>Converts only bold spans, inline code, and validated HTTP links into Spectre markup.</summary>
@@ -195,5 +202,8 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
     /// <summary>Recognizes bold spans, inline code, and Markdown HTTP links without enabling arbitrary markup.</summary>
     [GeneratedRegex(@"\*\*(?<bold>.+?)\*\*|`(?<code>[^`\r\n]+)`|\[(?<linkText>[^\]\r\n]+)\]\((?<url>https?://[^\s)]+)\)", RegexOptions.IgnoreCase)]
     private static partial Regex InlinePattern();
+
+    /// <summary>Preserves animation policy independently of a block's reusable formatted content.</summary>
+    private sealed record MarkdownBlock(IRenderable Content, bool Animate);
 
 }

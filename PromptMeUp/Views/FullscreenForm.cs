@@ -23,6 +23,7 @@ internal sealed record FormField(string Key, string LabelKey, Func<string> Read,
     public bool DefaultToCurrentValue { get; init; } = true;
     public int MaxLength { get; init; } = 100_000;
     public string? HelpKey { get; init; }
+    public string? GroupKey { get; init; }
 }
 
 internal sealed record FormPage(string TitleKey, IReadOnlyList<FormField> Fields)
@@ -376,7 +377,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
         else if (key.Key is ConsoleKey.LeftArrow or ConsoleKey.Backspace && _caret > 0)
         {
-            var previous = PreviousElement(_input, _caret);
+            var previous = TerminalTextElements.Previous(_input, _caret);
             if (key.Key == ConsoleKey.Backspace)
             {
                 _input = _input.Remove(previous, _caret - previous);
@@ -385,7 +386,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         }
         else if (key.Key is ConsoleKey.RightArrow or ConsoleKey.Delete && _caret < _input.Length)
         {
-            var next = NextElement(_input, _caret);
+            var next = TerminalTextElements.Next(_input, _caret);
             if (key.Key == ConsoleKey.Delete)
             {
                 _input = _input.Remove(_caret, next - _caret);
@@ -407,14 +408,6 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             }
         }
     }
-
-    /// <summary>Finds the preceding Unicode text element for cursor movement and deletion.</summary>
-    private static int PreviousElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).LastOrDefault(start => start < index);
-
-    /// <summary>Finds the following Unicode text element without splitting a composed character.</summary>
-    private static int NextElement(string value, int index) =>
-        StringInfo.ParseCombiningCharacters(value).FirstOrDefault(start => start > index, value.Length);
 
     /// <summary>Draws a fixed viewport with sections, focus, contextual guidance and persistent actions.</summary>
     private void Render(string titleKey, IReadOnlyList<FormPage> pages, IReadOnlyList<FormField> fields)
@@ -455,35 +448,35 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         var section = SectionTitle(pages[_page]);
         var availableRows = BodyRows();
         var reservedOverviewRows = focused?.Overview is null ? 3 : Math.Max(3, (availableRows + 1) / 2);
+        var totalFieldRows = FieldRows(fields, 0, fields.Count, includeGroups: true);
         var fieldRows = overview is null ? availableRows
-            : Math.Min(fields.Count * RowsPerField, Math.Max(RowsPerField, (availableRows - reservedOverviewRows) / RowsPerField * RowsPerField));
-        var fieldBody = FieldsBody(fields, fieldRows);
+            : Math.Min(totalFieldRows, Math.Max(RowsPerField, availableRows - reservedOverviewRows));
+        var fieldBody = FieldsBody(fields, fieldRows, out var renderedFieldRows);
         if (overview is not null)
         {
             var overviewWidth = frame.Width - 5 - (sectionNavigation ? FullscreenWorkspace.SidebarWidth(frame.Width) : 0);
-            var overviewHeight = availableRows - Math.Min(fields.Count, fieldRows / RowsPerField) * RowsPerField;
+            var overviewHeight = availableRows - renderedFieldRows;
             var renderOptions = new RenderOptions(console.Profile.Capabilities, new Size(frame.Width, frame.Height));
             var lines = Segment.SplitLines(overview().Render(renderOptions, overviewWidth)).ToArray();
             _overviewMaximumOffset = Math.Max(0, lines.Length - overviewHeight);
             _overviewOffset = Math.Clamp(_overviewOffset, 0, _overviewMaximumOffset);
             fieldBody = new Rows(fieldBody, new OverviewLines(lines.Skip(_overviewOffset).Take(overviewHeight).ToArray()));
         }
-        if (pages[_page].Preview is { } preview && BodyRows() >= fields.Count * RowsPerField + pages[_page].PreviewRows)
+        if (pages[_page].Preview is { } preview && BodyRows() >= totalFieldRows + pages[_page].PreviewRows)
         {
             fieldBody = new Rows(fieldBody, preview());
         }
-        var content = Inset(new Rows(Styled(section, "bold " + TerminalTheme.Accent), new Text(" "), fieldBody));
+        var content = Inset(new Rows(
+            FullscreenWorkspace.SectionHeading(section, !_sectionNavigator.IsFocused && _focus < fields.Count),
+            fieldBody));
         var footerKey = _editing is not null ? "Form.EditFooter"
             : pages[_page].Open is not null ? "Form.OpenFooter"
             : _sectionNavigator.IsFocused ? "Form.SectionsFooter" : sectionNavigation ? "Form.NavigationFooter" : "Form.Footer";
-        if (Segment.CellCount([new Segment(text.Text(footerKey))]) > frame.Width - 5)
-        {
-            footerKey += "Compact";
-        }
         var footer = FullscreenFooter.Create(
             new Text(SafeText(hint), Style.Parse(_error is null ? TerminalTheme.Muted : TerminalTheme.Error)),
             Actions(fields.Count),
-            FullscreenFooter.Shortcuts(text.Text(footerKey)),
+            FullscreenFooter.Shortcuts(_sectionNavigator.IsFocused ? text.Text(footerKey, pages.Count) : text.Text(footerKey),
+                text.Text(footerKey + "Compact"), frame.Width - 5),
             _messageHeight);
         console.Write(FullscreenWorkspace.Create(text.Text(titleKey), _options, frame.Width, content,
             sectionNavigation ? SectionNavigation(pages) : null, footer, _messageHeight));
@@ -531,22 +524,54 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     internal static string FieldLabel(FormField field, ILocalizationService text) => SafeText(field.Label?.Invoke() ?? text.Text(field.LabelKey));
 
     /// <summary>Renders spaced editable fields while keeping the complete selected field inside the viewport.</summary>
-    private IRenderable FieldsBody(IReadOnlyList<FormField> fields, int availableRows)
+    private IRenderable FieldsBody(IReadOnlyList<FormField> fields, int availableRows, out int renderedRows)
     {
-        var capacity = Math.Max(1, availableRows / RowsPerField);
-        var offset = Math.Clamp(_focus - capacity + 1, 0, Math.Max(0, fields.Count - capacity));
+        var includeGroups = availableRows > RowsPerField;
+        var focused = Math.Clamp(_focus, 0, Math.Max(0, fields.Count - 1));
+        var offset = focused;
+        while (offset > 0 && FieldRows(fields, offset - 1, focused + 1, includeGroups) <= availableRows)
+        {
+            offset--;
+        }
         var rows = new List<IRenderable>();
-        for (var index = offset; index < Math.Min(fields.Count, offset + capacity); index++)
+        renderedRows = 0;
+        for (var index = offset; index < fields.Count; index++)
         {
             var field = fields[index];
+            var showGroup = includeGroups && StartsGroup(fields, index, offset);
+            var rowCount = RowsPerField + (showGroup ? 1 : 0);
+            if (renderedRows + rowCount > availableRows)
+            {
+                break;
+            }
+            if (showGroup)
+            {
+                rows.Add(new ThemeSeparator(text.Text(field.GroupKey!)));
+            }
             var selected = !_sectionNavigator.IsFocused && index == _focus;
             rows.Add(FieldBlock(
                 Styled($"{(selected ? ">" : " ")} {FieldLabel(field, text)}", selected ? TerminalTheme.Accent : TerminalTheme.Primary),
                 width => Styled($"[ {FieldValue(field, width - 4)} ]",
                     (selected ? "bold underline " : string.Empty) + (field.ValueColor?.Invoke() ?? TerminalTheme.FieldValue))));
+            renderedRows += rowCount;
         }
         return new Rows(rows);
     }
+
+    /// <summary>Budgets group headings along with their fields, including the group at a scrolled viewport's start.</summary>
+    private static int FieldRows(IReadOnlyList<FormField> fields, int start, int end, bool includeGroups)
+    {
+        var rows = 0;
+        for (var index = start; index < end; index++)
+        {
+            rows += RowsPerField + (includeGroups && StartsGroup(fields, index, start) ? 1 : 0);
+        }
+        return rows;
+    }
+
+    /// <summary>Repeats a group title when scrolling into its middle so visible fields retain their context.</summary>
+    private static bool StartsGroup(IReadOnlyList<FormField> fields, int index, int start) =>
+        fields[index].GroupKey is not null && (index == start || fields[index].GroupKey != fields[index - 1].GroupKey);
 
     /// <summary>Reads a display value or fits the active editor inside the allocated value column.</summary>
     private string FieldValue(FormField field, int width)
@@ -564,7 +589,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
 
     /// <summary>Pairs a right-aligned label with a left-aligned value and one blank row below the field.</summary>
     private static Rows FieldBlock(IRenderable label, Func<int, IRenderable> value) =>
-        new(new FormPair(label, value), new Text(" "));
+        new(new TerminalFormRow(label, value), new Text(" "));
 
     /// <summary>Fits text around the caret into the value column after reserving its bracket padding.</summary>
     private string InputWindow(int width)
@@ -646,20 +671,14 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private IRenderable Actions(int fieldCount)
     {
         var labels = new[] { "Form.Save", "Form.Cancel" };
-        var row = new Grid();
-        foreach (var label in labels)
-        {
-            row.AddColumn();
-        }
-        row.AddRow(labels.Select((label, index) =>
+        return TerminalActionBar.Create(labels.Select((label, index) =>
         {
             var selected = !_sectionNavigator.IsFocused && _focus == fieldCount + index;
             var icon = label == "Form.Save"
                 ? TerminalTheme.IconPrefix(_options, "💾", "+")
                 : TerminalTheme.IconPrefix(_options, "↩️", "x");
-            return FullscreenFooter.Button(icon + text.Text(label), ActionColor(label), selected);
+            return new TerminalAction(icon + text.Text(label), ActionColor(label), selected);
         }).ToArray());
-        return row;
     }
 
     /// <summary>Assigns navigation, progression, saving, and cancellation their semantic theme colors.</summary>
@@ -687,37 +706,6 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     /// <summary>Flattens line separators and removes terminal control characters before text rendering.</summary>
     private static string SafeText(string value) =>
         new(value.ReplaceLineEndings(" ").Select(character => char.IsControl(character) ? ' ' : character).ToArray());
-
-    /// <summary>Shares exact label and value widths across field rows while preserving each cell's style.</summary>
-    private sealed class FormPair(IRenderable label, Func<int, IRenderable> value) : IRenderable
-    {
-        /// <summary>Uses the full content width so every field's value starts in the same column.</summary>
-        public Measurement Measure(RenderOptions options, int maxWidth)
-        {
-            var width = Math.Max(0, maxWidth);
-            return new Measurement(Math.Min(1, width), width);
-        }
-
-        /// <summary>Right-aligns the label before a fixed gutter and renders the value in its remaining cells.</summary>
-        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
-        {
-            var width = Math.Max(0, maxWidth);
-            var gutter = Math.Min(2, Math.Max(0, width - 2));
-            var labelWidth = Math.Min(32, (width - gutter) * 2 / 5);
-            var valueWidth = width - labelWidth - gutter;
-            var labelSegments = label.Render(options, labelWidth).ToArray();
-            yield return new Segment(new string(' ', Math.Max(0, labelWidth - Segment.CellCount(labelSegments))));
-            foreach (var segment in labelSegments)
-            {
-                yield return segment;
-            }
-            yield return new Segment(new string(' ', gutter));
-            foreach (var segment in value(valueWidth).Render(options, valueWidth))
-            {
-                yield return segment;
-            }
-        }
-    }
 
     /// <summary>Displays a scrollable slice of the general overview without changing its measured columns.</summary>
     private sealed class OverviewLines(IReadOnlyList<SegmentLine> lines) : IRenderable

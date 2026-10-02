@@ -148,7 +148,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                 captureObservation: promptId == "query-system").ConfigureAwait(false);
             if (startChat)
             {
-                _chatView.RenderIntro(includeMemoryHints: !renderQuery);
+                _chatView.RenderIntro();
                 session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
             }
             else
@@ -217,11 +217,17 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                             .ToString("yyyy-MM-dd HH:mm zzz", System.Globalization.CultureInfo.InvariantCulture), reminder.Message)),
                         cancellationToken).ConfigureAwait(false);
                 }
-                var input = _chatView.ReadMessage(settings.MaxMessageCharacters, settings.PreferredName).Trim();
+                var promptStatus = await CreateSessionSnapshotAsync(sessionId, memory, settings, cancellationToken).ConfigureAwait(false);
+                var input = _chatView.ReadMessage(settings.MaxMessageCharacters, settings.PreferredName, promptStatus).Trim();
                 if (input.Equals("/exit", StringComparison.OrdinalIgnoreCase))
                 {
                     _shell.RenderMuted(_text.Text("Chat.Exit"));
                     return AuditSessionOutcome.Completed;
+                }
+                if (input.Equals("/help", StringComparison.OrdinalIgnoreCase))
+                {
+                    _chatView.RenderCommandGuide();
+                    continue;
                 }
                 if (input.Equals("/clear", StringComparison.OrdinalIgnoreCase))
                 {
@@ -272,7 +278,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                             settings,
                             offerChatContinuation: false,
                             "chat-system",
-                            cancellationToken).ConfigureAwait(false);
+                            cancellationToken,
+                            isToolOutput: true).ConfigureAwait(false);
                     }
                     continue;
                 }
@@ -309,10 +316,12 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         string promptId,
         CancellationToken cancellationToken,
         bool classifyDisplayIntent = false,
-        bool captureObservation = false)
+        bool captureObservation = false,
+        bool isToolOutput = false)
     {
         var response = await SendTurnAsync(
-            sessionId, userText, memory, settings, promptId, cancellationToken, classifyDisplayIntent, captureObservation).ConfigureAwait(false);
+            sessionId, userText, memory, settings, promptId, cancellationToken, classifyDisplayIntent, captureObservation,
+            isToolOutput).ConfigureAwait(false);
         return await OfferSuggestedActionsAsync(
             sessionId, response, memory, settings, offerChatContinuation, promptId, cancellationToken).ConfigureAwait(false);
     }
@@ -401,7 +410,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
                         memory,
                         settings,
                         promptId,
-                        cancellationToken).ConfigureAwait(false);
+                        cancellationToken,
+                        isToolOutput: true).ConfigureAwait(false);
                     continue;
                 default:
                     throw new InvalidOperationException("The command suggestion view returned an unsupported action.");
@@ -461,7 +471,8 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         string promptId,
         CancellationToken cancellationToken,
         bool classifyDisplayIntent = false,
-        bool captureObservation = false)
+        bool captureObservation = false,
+        bool isToolOutput = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(promptId);
         memory.SummaryRenderedSinceLastResult = false;
@@ -481,7 +492,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
         {
             _shell.RenderWarning(warning);
         }
-        var update = memory.Memory.Add("user", userText);
+        var update = memory.Memory.Add("user", userText, isToolOutput);
         await AuditPruningAsync(sessionId, update.PrunedMessages, cancellationToken).ConfigureAwait(false);
         var response = await _shell.RunWithStatusAsync(
             _text.Text("Status.Thinking"),
@@ -725,6 +736,7 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             SystemInstructionTokens = response.ContextUsage.SystemInstructionTokens,
             GuideTokens = response.ContextUsage.GuideTokens,
             UserMessageTokens = response.ContextUsage.UserMessageTokens,
+            ToolOutputTokens = response.ContextUsage.ToolOutputTokens,
             AssistantMessageTokens = response.ContextUsage.AssistantMessageTokens,
             HasContextBreakdown = response.ContextUsage.InputBudgetTokens > 0,
             TurnCostUsd = response.RequestCount > 1 ? response.TurnCostUsd : response.EstimatedCostUsd,
@@ -962,13 +974,20 @@ public sealed class AiConversationWorkflow : IAiConversationWorkflow
             SystemInstructionTokens = context.SystemInstructionTokens,
             GuideTokens = context.GuideTokens,
             UserMessageTokens = context.UserMessageTokens,
+            ToolOutputTokens = context.ToolOutputTokens,
             AssistantMessageTokens = context.AssistantMessageTokens,
             HasContextBreakdown = true,
             MemoryTokens = memory.Envelope.Tokens,
             MemoryCount = memory.Envelope.Count,
             SessionInputTokens = accounting.Usage.InputTokens,
             SessionOutputTokens = accounting.Usage.OutputTokens,
-            HasSessionUsage = true
+            HasSessionUsage = true,
+            ConversationMode = memory.PromptId switch
+            {
+                "diagnose-system" => ConversationDisplayMode.Diagnose,
+                "explain-system" => ConversationDisplayMode.Explain,
+                _ => ConversationDisplayMode.Chat
+            }
         };
     }
 

@@ -8,11 +8,13 @@ namespace PromptMeUp.Views;
 
 public interface IChatView
 {
-    void RenderIntro(bool includeMemoryHints = true);
+    void RenderIntro();
+
+    void RenderCommandGuide();
 
     void RenderMemoryHint();
 
-    string ReadMessage(int maximumCharacters, string? userName = null);
+    string ReadMessage(int maximumCharacters, string? userName = null, ShellRuntimeStatus? status = null);
 
     void RenderUser(string text);
 
@@ -42,14 +44,27 @@ public sealed class ChatView : IChatView
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
     }
 
-    /// <summary>Draws the chat heading and its small slash-command vocabulary without clearing prior output.</summary>
-    public void RenderIntro(bool includeMemoryHints = true)
+    /// <summary>Starts chat with its essential shortcuts, leaving the full command guide on demand.</summary>
+    public void RenderIntro()
     {
         _inputHintShown = false;
+        TerminalSession.For(_console).SetMode(ConversationDisplayMode.Chat, hasPromptDock: true);
         var icon = TerminalTheme.IconPrefix(_shell.Options, "💬", ">");
         TerminalTheme.WriteRule(_console, $"{icon}{_text.Text("Chat.Title")}", TerminalTheme.Accent);
+        var shortcuts = new[] { _text.Text("Chat.Command.RunSyntax"), "/status", "/exit", "/help" };
+        _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.CommandsHeading"))}[/] " +
+            string.Join($" [{TerminalTheme.Divider}]·[/] ", shortcuts.Select(shortcut =>
+                $"[bold {TerminalTheme.Info}]{Markup.Escape(shortcut)}[/]")));
+        _console.WriteLine();
+    }
+
+    /// <summary>Shows every chat command and the session-summary explanation when the user asks for help.</summary>
+    public void RenderCommandGuide()
+    {
+        _console.WriteLine();
         _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.CommandsHeading"))}[/]");
         _console.WriteLine();
+        RenderCommandHint("/help", "Chat.Command.Help");
         RenderCommandHint(_text.Text("Chat.Command.RunSyntax"), "Chat.Command.Run");
         RenderCommandHint("/clear", "Chat.Command.Clear");
         RenderCommandHint("/costs", "Chat.Command.Costs");
@@ -59,10 +74,7 @@ public sealed class ChatView : IChatView
         _console.WriteLine();
         _console.MarkupLine($"  [{TerminalTheme.Muted}]{Markup.Escape(_text.Text("Chat.DisplayHint"))}[/]");
         _console.WriteLine();
-        if (includeMemoryHints)
-        {
-            RenderMemoryHint();
-        }
+        RenderMemoryHint();
     }
 
     /// <summary>Shows a compact reminder of saved-memory commands available inside chat.</summary>
@@ -76,12 +88,12 @@ public sealed class ChatView : IChatView
     }
 
     /// <summary>Reads one bounded message while showing the full editing guide only on the first prompt.</summary>
-    public string ReadMessage(int maximumCharacters, string? userName = null)
+    public string ReadMessage(int maximumCharacters, string? userName = null, ShellRuntimeStatus? status = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
         var name = string.IsNullOrWhiteSpace(userName) ? _text.Text("Chat.You") : userName.Trim();
         var label = $"{TerminalTheme.IconPrefix(_shell.Options, "👤", ">")}{name} >";
-        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters, showHint: !_inputHintShown);
+        var input = new MultilineChatPrompt(_console, _text).Read(label, maximumCharacters, status, showHint: !_inputHintShown);
         _inputHintShown = true;
         return input;
     }
@@ -90,13 +102,11 @@ public sealed class ChatView : IChatView
     public void RenderUser(string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        var icon = TerminalTheme.IconPrefix(_shell.Options, "👤", ">");
-        var label = $"{icon}{_text.Text("Chat.You")} › ";
+        TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.User);
+        _console.Write(new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)));
         _console.WriteLine();
-        _console.Write(new Paragraph()
-            .Append(label, Style.Parse($"bold {TerminalTheme.Accent}"))
-            .Append(text, Style.Parse(TerminalTheme.Primary)));
-        _console.WriteLine();
+        TerminalSession.For(_console).History.Add(TerminalTurnKind.User, _text.Text("Terminal.Role.User"),
+            new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)), text.Length);
     }
 
     /// <summary>Renders a model response through the Markdown renderer so formatting never degrades into raw source text.</summary>
@@ -105,17 +115,9 @@ public sealed class ChatView : IChatView
         ArgumentNullException.ThrowIfNull(markdown);
         cancellationToken.ThrowIfCancellationRequested();
         var (heading, body) = SeparateLeadingHeading(markdown);
-        var icon = TerminalTheme.IconPrefix(_shell.Options, "🤖", "AI");
-        _console.WriteLine();
-        _console.Markup($"[bold {TerminalTheme.Success}]{Markup.Escape(icon)}{Markup.Escape(_text.Text("Chat.Assistant"))}[/]");
-        if (!string.IsNullOrWhiteSpace(heading))
-        {
-            _console.MarkupLine($" [{TerminalTheme.Muted}]·[/] [bold {TerminalTheme.Primary}]{Markup.Escape(heading)}[/]");
-        }
-        else
-        {
-            _console.WriteLine();
-        }
+        TerminalSession.For(_console).History.Add(TerminalTurnKind.Assistant, heading ?? string.Empty,
+            PoorMarkdownRenderer.Content(body), markdown.Length);
+        TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.Assistant, heading);
 
         if (!string.IsNullOrWhiteSpace(body))
         {
@@ -130,7 +132,6 @@ public sealed class ChatView : IChatView
         }
 
         _console.WriteLine();
-        _console.Write(new Rule().RuleStyle(TerminalTheme.Divider));
     }
 
     /// <summary>Notifies the user when old active-context messages were pruned but remain in the session ledger.</summary>

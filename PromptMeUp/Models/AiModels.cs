@@ -2,7 +2,11 @@
 
 namespace PromptMeUp.Models;
 
-public sealed record ChatMessage(string Role, string Content);
+public sealed record ChatMessage(string Role, string Content)
+{
+    /// <summary>Marks command results that retain the provider's user role but need separate context accounting.</summary>
+    public bool IsToolOutput { get; init; }
+}
 
 public sealed record AiUsageMetrics(
     long InputTokens,
@@ -42,6 +46,8 @@ public sealed record AiContextUsage(
     public int ReservedOutputTokens { get; init; }
 
     public long UserMessageTokens { get; init; }
+
+    public long ToolOutputTokens { get; init; }
 
     public long AssistantMessageTokens { get; init; }
 

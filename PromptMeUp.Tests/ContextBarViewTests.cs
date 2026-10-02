@@ -18,7 +18,7 @@ public sealed class ContextBarViewTests
 
         var cells = ConsoleShellView.AllocateContextBarCells(status, 36);
 
-        Assert.Equal([9, 9, 9, 9], cells);
+        Assert.Equal([9, 9, 0, 9, 9], cells);
     }
 
     /// <summary>Verifies narrow and wide bars preserve total width while keeping each share within one cell of its ideal size.</summary>
@@ -31,7 +31,7 @@ public sealed class ContextBarViewTests
     public void ContextBar_RoundedShares_PreserveWidthAndProportions(int width)
     {
         var status = CreateStatus(117, 503, 271, 1_001);
-        double[] shares = [117, 503, 271, 110];
+        double[] shares = [117, 503, 0, 271, 110];
 
         var cells = ConsoleShellView.AllocateContextBarCells(status, width);
 
@@ -48,7 +48,7 @@ public sealed class ContextBarViewTests
     {
         var cells = ConsoleShellView.AllocateContextBarCells(CreateStatus(1, 1, 1, 16_000), 36);
 
-        Assert.Equal([0, 0, 0, 36], cells);
+        Assert.Equal([0, 0, 0, 0, 36], cells);
     }
 
     /// <summary>Verifies that an exceeded budget fills the bar in actual category proportions without inventing free space.</summary>
@@ -57,7 +57,20 @@ public sealed class ContextBarViewTests
     {
         var cells = ConsoleShellView.AllocateContextBarCells(CreateStatus(200, 400, 200, 400), 36);
 
-        Assert.Equal([9, 18, 9, 0], cells);
+        Assert.Equal([9, 18, 0, 9, 0], cells);
+    }
+
+    /// <summary>Verifies command-result tokens receive their own share without increasing total context twice.</summary>
+    [Fact]
+    public void ContextBar_ToolOutput_HasSeparateShare()
+    {
+        var status = CreateStatus(400, 400, 400, 2_000) with
+        {
+            ToolOutputTokens = 400,
+            ActiveContextTokens = 1_600
+        };
+
+        Assert.Equal([7, 7, 7, 7, 7], ConsoleShellView.AllocateContextBarCells(status, 35));
     }
 
     /// <summary>Verifies large valid counts cannot overflow during proportional allocation.</summary>
@@ -73,7 +86,7 @@ public sealed class ContextBarViewTests
             HasContextBreakdown = true
         };
 
-        Assert.Equal([12, 12, 12, 0], ConsoleShellView.AllocateContextBarCells(status, 36));
+        Assert.Equal([12, 12, 0, 12, 0], ConsoleShellView.AllocateContextBarCells(status, 36));
     }
 
     /// <summary>Verifies an impossible guide subset is rejected instead of silently misrepresenting the legend.</summary>
@@ -104,6 +117,7 @@ public sealed class ContextBarViewTests
         var compact = Compact(output.ToString());
         Assert.Contains(Compact("[S] " + text.Text("Shell.ContextSystem") + ":" + text.Text("Shell.ContextTokenEstimate", "400")), compact, StringComparison.Ordinal);
         Assert.Contains(Compact("[U] " + text.Text("Shell.ContextUser") + ":" + text.Text("Shell.ContextTokenEstimate", "400")), compact, StringComparison.Ordinal);
+        Assert.Contains(Compact("[T] " + text.Text("Shell.ContextTool") + ":" + text.Text("Shell.ContextTokenEstimate", "0")), compact, StringComparison.Ordinal);
         Assert.Contains(Compact("[A] " + text.Text("Shell.ContextAssistant") + ":" + text.Text("Shell.ContextTokenEstimate", "400")), compact, StringComparison.Ordinal);
         Assert.Contains(Compact("[.] " + text.Text("Shell.ContextFree") + ":" + text.Text("Shell.ContextTokenEstimate", "400")), compact, StringComparison.Ordinal);
         Assert.Contains(Compact(text.Text("Shell.ContextGuideIncluded") + ":" + text.Text("Shell.ContextTokenEstimate", "125")), compact, StringComparison.Ordinal);
