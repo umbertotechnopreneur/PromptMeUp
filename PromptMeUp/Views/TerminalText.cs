@@ -36,4 +36,22 @@ internal static class TerminalText
         }
         return result.Append('…').ToString();
     }
+
+    /// <summary>Shortens a single line in the middle while preserving complete Unicode text elements.</summary>
+    /// <param name="value">The text to display without terminal control characters.</param>
+    /// <param name="maxCharacters">The maximum displayed text elements, including the ellipsis.</param>
+    internal static string ClipMiddle(string value, int maxCharacters)
+    {
+        if (maxCharacters <= 0) return string.Empty;
+        value = Safe(value).Replace('\n', ' ');
+        var elements = StringInfo.ParseCombiningCharacters(value);
+        if (elements.Length <= maxCharacters) return value;
+        if (maxCharacters == 1) return "…";
+
+        var prefixCharacters = maxCharacters / 2;
+        var suffixCharacters = maxCharacters - prefixCharacters - 1;
+        var prefix = value[..elements[prefixCharacters]];
+        var suffix = suffixCharacters == 0 ? string.Empty : value[elements[^suffixCharacters]..];
+        return prefix + "…" + suffix;
+    }
 }

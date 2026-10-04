@@ -3,6 +3,7 @@
 Git, Bash, or PowerShell: describe what you want to do. `hm` is here to help. Available on Windows, Linux, and macOS, using your own OpenAI API account.
 
 <p align="center">
+  <a href="CHANGELOG.md"><strong>What's new</strong></a> ·
   <a href="#meet-hm"><strong>Meet hm</strong></a> ·
   <a href="#get-started"><strong>Get started</strong></a> ·
   <a href="https://umbertogiacobbi.biz/promptmeup/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_product_page"><strong>Product page</strong></a> ·

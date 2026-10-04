@@ -10,8 +10,15 @@ namespace PromptMeUp.Views;
 internal static class TerminalConversationPrompt
 {
     /// <summary>Returns an explicit menu choice while retaining selection when details or previous turns are inspected.</summary>
+    /// <param name="console">The console used to display and read the menu.</param>
+    /// <param name="text">The localized menu text.</param>
+    /// <param name="choices">The available menu choices.</param>
+    /// <param name="title">The heading displayed above the choices.</param>
+    /// <param name="numbered">Whether number keys select choices immediately.</param>
+    /// <param name="echoSelection">Whether the selected label remains in the conversation.</param>
+    /// <exception cref="ArgumentException">Thrown when no choices are provided.</exception>
     internal static T Select<T>(IAnsiConsole console, ILocalizationService text,
-        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false)
+        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false, bool echoSelection = true)
     {
         if (choices.Count == 0) throw new ArgumentException("A conversation menu needs choices.", nameof(choices));
         if (!console.Profile.Capabilities.Interactive || !console.Profile.Capabilities.Ansi
@@ -19,12 +26,19 @@ internal static class TerminalConversationPrompt
         {
             return TerminalChoiceMenu.Select(console, choices, title);
         }
-        return SelectInteractive(console, text, choices, title, numbered);
+        return SelectInteractive(console, text, choices, title, numbered, echoSelection);
     }
 
     /// <summary>Reads an inline decision without holding a live renderer while input is pending.</summary>
+    /// <param name="console">The console used to display and read the menu.</param>
+    /// <param name="text">The localized menu text.</param>
+    /// <param name="choices">The available menu choices.</param>
+    /// <param name="title">The heading displayed above the choices.</param>
+    /// <param name="numbered">Whether number keys select choices immediately.</param>
+    /// <param name="echoSelection">Whether the selected label remains in the conversation.</param>
+    /// <exception cref="InteractiveFlowCanceledException">Thrown when the user cancels the menu.</exception>
     internal static T SelectInteractive<T>(IAnsiConsole console, ILocalizationService text,
-        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false)
+        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false, bool echoSelection = true)
     {
         using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         using var paste = new TerminalPasteScope(console);
@@ -141,9 +155,12 @@ internal static class TerminalConversationPrompt
                 PaintMenu();
             }
             EraseMenu();
-            console.Write(new Text(choices[selected].Label, Style.Parse(TerminalTheme.Info)));
-            console.WriteLine();
-            console.WriteLine();
+            if (echoSelection)
+            {
+                console.Write(new Text(choices[selected].Label, Style.Parse(TerminalTheme.Info)));
+                console.WriteLine();
+                console.WriteLine();
+            }
             return choices[selected].Value;
         }
         finally

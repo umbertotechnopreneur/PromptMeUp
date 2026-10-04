@@ -5,6 +5,7 @@ namespace PromptMeUp.Services;
 internal static partial class UiTextCatalog
 {
     /// <summary>Adds the complete six-language commands UI catalog.</summary>
+    /// <param name="entries">The catalog receiving localized command labels and notices.</param>
     private static void AddCommandsEntries(Dictionary<string, LocalizedText> entries)
     {
         entries.Add("Cli.CommandConflict", new(
@@ -98,6 +99,13 @@ internal static partial class UiTextCatalog
             German: "Diesen exakten Befehl jetzt autorisieren?",
             Spanish: "¿Autorizar ahora este comando exacto?",
             Vietnamese: "Cấp quyền chạy chính xác lệnh này ngay bây giờ?"));
+        entries.Add("Command.Accepted", new(
+            English: "Command accepted: {0}",
+            Italian: "Comando accettato: {0}",
+            French: "Commande acceptée : {0}",
+            German: "Befehl akzeptiert: {0}",
+            Spanish: "Comando aceptado: {0}",
+            Vietnamese: "Đã chấp nhận lệnh: {0}"));
         entries.Add("Command.Copy", new(
             English: "Copy command without running it",
             Italian: "Copia il comando senza eseguirlo",
@@ -154,6 +162,20 @@ internal static partial class UiTextCatalog
             German: "Befehlsausgabe",
             Spanish: "Salida del comando",
             Vietnamese: "Đầu ra lệnh"));
+        entries.Add("Command.NoOutput", new(
+            English: "The command produced no output.",
+            Italian: "Il comando non ha prodotto output.",
+            French: "La commande n’a produit aucune sortie.",
+            German: "Der Befehl hat keine Ausgabe erzeugt.",
+            Spanish: "El comando no produjo ninguna salida.",
+            Vietnamese: "Lệnh không tạo đầu ra."));
+        entries.Add("Command.OutputTruncated", new(
+            English: "Output was truncated at the capture limit.",
+            Italian: "Output troncato al limite di acquisizione.",
+            French: "La sortie a été tronquée à la limite de capture.",
+            German: "Die Ausgabe wurde an der Erfassungsgrenze gekürzt.",
+            Spanish: "La salida se truncó al alcanzar el límite de captura.",
+            Vietnamese: "Đầu ra đã bị cắt tại giới hạn thu thập."));
         entries.Add("Command.Preview", new(
             English: "COMMAND PREVIEW // AUTHORIZATION REQUIRED",
             Italian: "ANTEPRIMA COMANDO // AUTORIZZAZIONE RICHIESTA",

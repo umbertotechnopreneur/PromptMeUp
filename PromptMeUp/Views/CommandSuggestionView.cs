@@ -16,7 +16,12 @@ public sealed class CommandSuggestionView(
     ILocalizationService text,
     IConsoleShellView shell) : ICommandSuggestionView
 {
+    private bool _commandHintShownOnPreviousMenu;
+
     /// <summary>Offers shared inline next-step choices while keeping command selection separate from authorization.</summary>
+    /// <param name="suggestions">The commands available for preview and authorization.</param>
+    /// <param name="offerChatContinuation">Whether to offer continuing the conversation.</param>
+    /// <exception cref="ArgumentNullException">Thrown when suggestions is null.</exception>
     public CommandSuggestionDecision Select(IReadOnlyList<SuggestedCommand> suggestions, bool offerChatContinuation)
     {
         ArgumentNullException.ThrowIfNull(suggestions);
@@ -39,7 +44,15 @@ public sealed class CommandSuggestionView(
             new(CommandSuggestionAction.SelectCommand, command),
             TerminalTheme.IconPrefix(shell.Options, "⌘", ">") + command.Label, command.Command)));
 
-        console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(text.Text(hasSuggestions ? "CommandMenu.Hint" : "CommandMenu.ContinueHint"))}[/]");
+        // Give the safety reminder a one-in-five chance, with a gap after each appearance.
+        var showHint = !hasSuggestions || (!_commandHintShownOnPreviousMenu && Random.Shared.Next(5) == 0);
+        _commandHintShownOnPreviousMenu = hasSuggestions && showHint;
+        if (showHint)
+        {
+            var prefix = hasSuggestions ? "    " + TerminalTheme.IconPrefix(shell.Options, "ℹ️", "i") : string.Empty;
+            var hint = prefix + text.Text(hasSuggestions ? "CommandMenu.Hint" : "CommandMenu.ContinueHint");
+            console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(hint)}[/]");
+        }
         return TerminalConversationPrompt.Select(console, text, choices,
             text.Text(hasSuggestions ? "CommandMenu.Title" : "CommandMenu.ContinueTitle"), numbered: true);
     }

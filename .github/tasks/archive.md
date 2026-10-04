@@ -1,6 +1,51 @@
 ﻿# Task Archive
 
+Add a `Public update:` line to a completed task only when it changes something readers can use. `scripts/Generate-Changelog.ps1` copies those lines into the public `CHANGELOG.md`; keep internal validation and plans out of them.
+
+## 2026-10-03 — Add one-command Debug MSIX installation
+
+- Added `install-debug-msix` to the general script to clear `artifacts`, publish, export notices, build a signed Debug MSIX, install it, verify its version and status, and clean project build output while preserving the new package.
+- Require an explicit four-part version above the installed one; select one trusted matching code-signing certificate or accept its thumbprint.
+
+Validation: PowerShell parsing passed. The command built, signed, installed, and verified Debug x64 version 1.0.6.3 with a valid package signature and `Ok` registration status.
+
+## 2026-10-03 — Install PromptMeUp Debug MSIX 1.0.0.1 for UI review
+
+- Built and signed the current Windows x64 Debug source as package version 1.0.0.1 after Windows rejected a changed 1.0.0.0 package with `0x80073CFB`.
+- Installed the new MSIX and confirmed the current-user package reports x64, version 1.0.0.1, and `Ok` status. Cleaned the project-specific Debug build output; retained the signed package under ignored `artifacts/`.
+- No automated tests or live terminal interaction checks were run for this package.
+
+## 2026-10-03 — Simplify command reminders, approval receipts, and output
+
+- Added an information icon and four spaces of indentation to the existing localized command-safety reminder. It has a one-in-five chance of appearing, with no consecutive appearances.
+- Replaced the normal approval menu's persistent answer with a localized command receipt. Commands longer than 50 text elements are shortened in the middle without splitting Unicode characters.
+- Displayed captured stdout and stderr directly below exit status and elapsed time. Removed the tool heading, collapsed-details prompt, and duplicate metadata while retaining command results in session history.
+- Rendered command-review headings such as `Effects:` without an icon and indented their bullet lists by two additional cells, including wrapped lines. Preserved the advisory position and other Markdown rendering flows.
+- Added explicit notices for empty output and capture truncation in all six languages. Successful stderr messages remain distinct from failed execution.
+
+Validation: manually reviewed the focused source diff and output-rendering flow. Builds, automated tests, live-terminal verification, packaging, installation, and Git delivery were not performed.
+
+## 2026-10-03 — Explain PromptMeUp's maintainer and official links on demand
+
+- Added Umberto Giacobbi's maintainer credit, the company website, and the GitHub source-code and documentation link to the existing local overview chapter in all six languages.
+- Updated single-query and chat instructions to accept product identity questions and request that overview through the existing on-demand guide flow when its facts are missing.
+- Kept answers grounded in the trusted guide, distinguished the assistant from the maintainer and company, and excluded unrelated company or product questions from this chapter request. The existing topic and token limits remain unchanged.
+
+Validation: reviewed the relevant source and focused diffs manually. Builds, automated tests, prompt validation, runtime/provider checks, and Git delivery were not performed.
+
+## 2026-10-02 — Publish selected changes from the task archive
+
+Public update: Find selected product changes from the new What's new link at the top of the README.
+
+- Added a curated public changelog derived only from explicit `Public update:` lines in completed tasks.
+- Added a pull-request quality check that asks contributors to regenerate and include the Markdown file when its source notes change.
+- Kept the task archive and its validation details out of the public changelog.
+
+Validation: changelog generation and consistency check, repository preflight, and scoped diff check passed. The workflow edit was reviewed; remote CI has not run. No build or automated tests were run.
+
 ## 2026-09-28 — Illustrate a practical restart investigation
+
+Public update: The README now shows how to use Plan mode to investigate an unexpected Windows restart, with a four-step illustration and a command you can try.
 
 - Added a four-step ImageGen banner and readable captions to the README, with a read-only Windows investigation goal for `hm --plan`.
 - Reused the illustration on the product website with English, Italian, and Vietnamese captions and a responsive four/two/one-column layout.
@@ -10,12 +55,16 @@ Validation: inspected the generated artwork, reviewed the scoped diffs and Plan 
 
 ## 2026-09-26 — Make saved memories useful at a glance
 
+Public update: Preview saved memories directly in Settings, including on narrow terminals.
+
 - Reused the shared borderless terminal table to preview saved notes directly in Settings, with a compact layout on narrow terminals and refreshed content after editing.
 - Removed empty suggestion navigation from normal memory browsing, opened on the first saved note, and removed duplicate note text from the editor detail.
 
 Validation: repository preflight, XML method-comment check, full-solution format verification, and warning-free Release build passed. Automated tests and live-terminal interaction were not run.
 
 ## 2026-09-26 — Restore responsive inline command choices
+
+Public update: Command choices in conversations now respond to the keyboard while keeping your terminal history visible.
 
 - Replaced the live renderer around conversational menus with bounded in-place redraws, preserving keyboard selection, turn-history shortcuts, and terminal scrollback.
 - Added a regression case for selecting a suggested command with Arrow Down and Enter.
@@ -39,6 +88,8 @@ Validation: PowerShell syntax and scoped diff checks passed. No local builds, in
 
 ## 2026-09-24 — Improve onboarding and add a printable command guide
 
+Public update: First-run setup is easier to follow, and Help can open a two-page offline command guide in six languages.
+
 - Reworked the first-run steps into a disposable, collapsible terminal surface when supported. Completed prompts now leave compact headers, while the active step uses a horizontal cyan-to-pink gradient rule; scrolling terminals keep a simpler fallback without redundant choice separators.
 - Expanded the final welcome with three practical starter commands, localized recovery guidance, and explicit opening of the installed two-page command guide in all six supported languages.
 - Added a print-friendly A4 quick reference with essential commands on page one and advanced workflows, global switches, chat controls, and safety guidance on page two. Both pages carry the official application icon.
@@ -54,6 +105,8 @@ Validation: repository preflight, formatting verification, XML method-comment ch
 Validation: `Get-AppxPackage` reports version 1.0.0.0, x64 architecture, `Ok` status, and a Developer signature for `UmbertoGiacobbiDotBiz.PromptMeUp_1.0.0.0_x64__aa9ddh7dsmn36`.
 
 ## 2026-09-24 — Prepare a redacted email support bundle
+
+Public update: Run `hm --prepare-logs` to create a redacted support ZIP on your desktop for review before you share it.
 
 - Added `hm --prepare-logs` as a standalone local command available before onboarding and database initialization.
 - The command creates a new timestamped ZIP on the current user's desktop with a privacy-limited machine summary, a contents note, and up to the 14 available daily logs. Each log contributes at most its latest 4 MiB.
