@@ -40,6 +40,37 @@ public sealed class CommandCountdownViewTests
         Assert.False(await view.WaitAsync(default));
     }
 
+    /// <summary>Checks that copying cancels the countdown and Ctrl+C never triggers the copy callback.</summary>
+    /// <param name="control">Whether Control is held with the C key.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Countdown_CopyShortcut_NeverApprovesExecution(bool control)
+    {
+        var clock = new AdvancingTimeProvider();
+        var view = CreateView([new ConsoleKeyInfo('c', ConsoleKey.C, false, false, control)], clock);
+        var copyRequested = false;
+
+        var authorized = await view.WaitAsync(default, () => copyRequested = true);
+
+        Assert.False(authorized);
+        Assert.Equal(!control, copyRequested);
+        Assert.Equal(1_000, clock.Timestamp);
+    }
+
+    /// <summary>Lets successful copy-and-exit leave the countdown before it can approve execution.</summary>
+    [Fact]
+    public async Task Countdown_CopyAndExit_PropagatesGracefulExitBeforeDeadline()
+    {
+        var clock = new AdvancingTimeProvider();
+        var view = CreateView([new ConsoleKeyInfo('c', ConsoleKey.C, false, false, false)], clock);
+
+        await Assert.ThrowsAsync<PromptMeUp.Models.ApplicationExitRequestedException>(() =>
+            view.WaitAsync(default, () => throw new PromptMeUp.Models.ApplicationExitRequestedException()));
+
+        Assert.Equal(1_000, clock.Timestamp);
+    }
+
     /// <summary>Honors application shutdown before producing an execution decision.</summary>
     [Fact]
     public async Task Countdown_Shutdown_NeverApproves()

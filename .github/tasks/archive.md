@@ -2,6 +2,64 @@
 
 Add a `Public update:` line to a completed task only when it changes something readers can use. `scripts/Generate-Changelog.ps1` copies those lines into the public `CHANGELOG.md`; keep internal validation and plans out of them.
 
+## 2026-10-07 — Group copy choices for multiple suggested commands
+
+- Keep the direct copy-and-exit choice when there is exactly one suggested command.
+- For multiple suggestions, show one Copy… entry before the final stop choice. Open a numbered submenu containing each command's label and exact text.
+- Return to the parent menu with Back or Escape. Copy only the selected command and retain the existing successful-copy exit behavior.
+- Localize the new labels in all six supported languages. The shared suggestion view covers chat and other suggestion flows; single-command authorization keeps its direct copy choices.
+
+Validation: scoped source and diff review and XML method-comment check only. Automated tests, builds, MSIX packaging, installation, and Git delivery were not performed.
+
+Public update: When several commands are suggested, choose Copy… to pick one in a separate submenu instead of repeating a copy choice beside every command.
+
+## 2026-10-06 — Fix repeated inline conversation menus
+
+- Render the inline menu as one padded layout and count its physical output lines before erasing it. Preserve the existing conversation scrollback.
+- Repaint keyboard navigation only when the selected item changes. Ignore unrelated keys and navigation that leaves the selection unchanged.
+- Add a regression that checks the repaint count and compares the cursor-up distance with the actual initial output height.
+
+Validation: all 20 TerminalViewTests passed in Debug, including the new menu regression. XML method-comment and scoped diff checks passed. Matching Debug build output was cleaned; test results were retained. Physical Windows Terminal behavior and a replacement MSIX were not verified in this change.
+
+Public update: Conversation menus no longer accumulate copies when keyboard input leaves the selection unchanged, and menu redraws erase all rendered rows.
+
+## 2026-10-06 — Stream command output and add VibeWare terminal branding
+
+- Show stdout and stderr while an authorized command runs, including partial lines, simple carriage-return progress, and basic foreground colors. Filter other terminal control sequences; do not launch an external terminal or add an emulator dependency.
+- Let supervised commands run until completion or interruption. Esc stops the active command and returns to chat without starting an automatic AI follow-up. The command timing preference now controls a reminder during output silence.
+- Keep bounded beginning and ending excerpts for redacted audit and AI context. Preserve final diagnostics when applying smaller provider budgets, and discard partial raw trailing lines that could detach credential values from their keys.
+- Show final exit status and elapsed time without repeating streamed output. Add a localized warning-icon link for reporting command-output problems on GitHub.
+- Add a static rendering of the supplied VibeWare symbol at the top right of About and General Setup, using the existing Spectre canvas. Retain the brand name and supplied manifesto link on narrow or colorless terminals. The link was used as supplied without opening it.
+
+Validation: all 1,066 automated tests passed, including real child-process streaming, timeout/cancellation, Escape input, bounded excerpts, and adaptive branding. Debug build passed with zero warnings or errors. Read-only preflight, XML method comments, and scoped formatting checks passed. Build output was cleaned after validation. Live-terminal appearance, MSIX packaging, installation, and Git delivery were not performed.
+
+Public update: Watch command output as it arrives, stop a running command with Esc, and retain its first and last output for AI analysis. About and Setup now include the VibeWare symbol and manifesto link.
+
+## 2026-10-06 — Fix chat input and activity feedback, and add copy-and-exit
+
+- Keep the current input editor open for empty or whitespace-only Enter submissions, before writing a user heading or adding terminal history.
+- Restore an animated indeterminate progress bar, spinner, and elapsed time for interactive operations. Retain visible static status when animations are disabled or output is redirected.
+- Indent the content beneath the interactive-chat heading, including accepted user text, turn headings, input rows, operation status, and decision menus.
+- Highlight decision and history shortcut keys with semantic colors and spaced icons, preserving text-only preferences and terminal-width limits.
+- Add a localized copy-command-and-exit choice beside each suggested command and in command authorization. Offer C during direct countdowns; successful copying requests a graceful application exit without executing the command, while copy failure leaves the application open and refuses execution.
+- Add regression coverage for clipboard success and failure, early countdown exit, and Ctrl+C cancellation. Update existing cost-refresh mocks, command-output expectations, and packaged prompt-version assertions to match the current source.
+
+Validation: XML method-comment check and scoped diff check passed. Debug build completed with zero warnings or errors; all 1,048 automated tests passed. Build intermediates were cleaned. Live-terminal appearance, the physical Windows clipboard, MSIX packaging, installation, and Git delivery were not performed.
+
+## 2026-10-06 — Refine command authorization emphasis
+
+- Added a blank line between the command-preview heading and the exact command, and rendered the command in bold.
+- Kept the risk label in regular weight while emphasizing only the numeric score and localized risk level.
+
+Validation: focused source and diff review only. Builds, automated tests, live-terminal verification, packaging, installation, and Git delivery were not performed.
+
+## 2026-10-06 — Clarify automatic daily cost synchronization
+
+- Added blank lines around the OpenAI pricing refresh status and a muted, two-cell-indented explanation that synchronization runs once daily without user action.
+- Localized the explanation in all six supported interface languages.
+
+Validation: focused source review only. Builds, automated tests, live-terminal verification, packaging, installation, and Git delivery were not performed.
+
 ## 2026-10-03 — Add one-command Debug MSIX installation
 
 - Added `install-debug-msix` to the general script to clear `artifacts`, publish, export notices, build a signed Debug MSIX, install it, verify its version and status, and clean project build output while preserving the new package.

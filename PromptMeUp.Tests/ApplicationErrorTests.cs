@@ -11,6 +11,7 @@ namespace PromptMeUp.Tests;
 public sealed class ApplicationErrorTests
 {
     /// <summary>Verifies that explicit cost refresh failures show authentication guidance when appropriate and still render cached costs.</summary>
+    /// <param name="statusCode">The simulated provider HTTP status code.</param>
     [Theory]
     [InlineData(401)]
     [InlineData(503)]
@@ -42,7 +43,7 @@ public sealed class ApplicationErrorTests
             }
             return method.Name switch
             {
-                "Configure" or "RenderHeader" => null,
+                "Configure" or "RenderHeader" or "WriteLine" or "RenderMuted" => null,
                 "RunWithStatusAsync" => ((Func<Task<PricingRefreshResult>>)args[1]!)(),
                 _ => throw new NotSupportedException(method.Name)
             };

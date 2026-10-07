@@ -2,6 +2,15 @@
 
 Selected user-facing changes to PromptMeUp. These are task completion dates, not release dates. See [GitHub Releases](https://github.com/umbertotechnopreneur/PromptMeUp/releases) for published versions.
 
+## 2026-10-07
+
+- When several commands are suggested, choose Copy… to pick one in a separate submenu instead of repeating a copy choice beside every command.
+
+## 2026-10-06
+
+- Conversation menus no longer accumulate copies when keyboard input leaves the selection unchanged, and menu redraws erase all rendered rows.
+- Watch command output as it arrives, stop a running command with Esc, and retain its first and last output for AI analysis. About and Setup now include the VibeWare symbol and manifesto link.
+
 ## 2026-10-02
 
 - Find selected product changes from the new What's new link at the top of the README.

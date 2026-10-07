@@ -11,7 +11,9 @@ public interface ICommandExecutionService
     Task<CommandExecutionResult> ExecuteAsync(
         ApprovedCommand command,
         TimeSpan timeout,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        Action<CommandOutputUpdate>? output = null,
+        CancellationToken stopToken = default);
 }
 
 public sealed class CommandExecutionService : ICommandExecutionService
@@ -23,10 +25,18 @@ public sealed class CommandExecutionService : ICommandExecutionService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     /// <summary>Runs a recently authorized command in non-elevated PowerShell and captures bounded output.</summary>
+    /// <param name="command">The exact command authorized by the user.</param>
+    /// <param name="timeout">Total deadline, or InfiniteTimeSpan for supervised foreground execution.</param>
+    /// <param name="cancellationToken">Application cancellation.</param>
+    /// <param name="output">Receives normalized live output while the process is running.</param>
+    /// <param name="stopToken">Stops only this command and returns its partial result.</param>
+    /// <exception cref="InvalidOperationException">The authorization is missing or expired.</exception>
     public async Task<CommandExecutionResult> ExecuteAsync(
         ApprovedCommand command,
         TimeSpan timeout,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<CommandOutputUpdate>? output = null,
+        CancellationToken stopToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         if (string.IsNullOrWhiteSpace(command.AuthorizationId)
@@ -38,7 +48,7 @@ public sealed class CommandExecutionService : ICommandExecutionService
         var streamSource = command.Text.Length > 8_000;
         _logger.LogInformation("Authorized command starting. AuthorizationId={AuthorizationId}, RiskScore={RiskScore}", command.AuthorizationId, command.Assessment.Score);
         var result = await BoundedProcessRunner.RunAsync(BuildStartInfo(command.Text), command.Text, timeout, cancellationToken,
-            streamSource ? command.Text : null).ConfigureAwait(false);
+            streamSource ? command.Text : null, output, stopToken).ConfigureAwait(false);
         _logger.LogInformation("Authorized command completed. AuthorizationId={AuthorizationId}, ExitCode={ExitCode}, TimedOut={TimedOut}, ElapsedMs={ElapsedMs}",
             command.AuthorizationId, result.ExitCode, result.TimedOut, result.ElapsedMilliseconds);
         return result;

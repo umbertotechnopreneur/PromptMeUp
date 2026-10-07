@@ -19,6 +19,7 @@ internal sealed class TerminalSession
     internal ShellRuntimeStatus? LastStatus { get; set; }
     internal TerminalTranscript History { get; } = new();
     internal bool HasPromptDock { get; set; }
+    internal int ChatIndent => ModeKey == "Terminal.Mode.Chat" && HasPromptDock ? 2 : 0;
 
     /// <summary>Finds the console-local presentation state without coupling views to application services.</summary>
     internal static TerminalSession For(IAnsiConsole console) => Sessions.GetValue(console, _ => new TerminalSession());

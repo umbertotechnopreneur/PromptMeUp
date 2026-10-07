@@ -56,8 +56,9 @@ public sealed class AboutView(
     }
 
     /// <summary>Provides shared product content, with an optional installation card for first-run setup.</summary>
+    /// <param name="renderInstallationCard">Whether to emphasize installation details during first-run setup.</param>
     public IRenderable CreateContent(bool renderInstallationCard = false) => new Rows(
-        new ProductBanner(text),
+        new VibeWareBrand(console, new ProductBanner(text)),
         new Text(" "),
         new Text(text.Text("About.Description"), Style.Parse(TerminalTheme.Primary)),
         new Text(" "),

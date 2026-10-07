@@ -12,6 +12,11 @@ internal enum TerminalTurnKind { User, Assistant, Plan, Script, Tool }
 internal static class TerminalTurnHeader
 {
     /// <summary>Writes a role, optional title and optional divider without enclosing the turn in a panel.</summary>
+    /// <param name="console">The console receiving the turn heading.</param>
+    /// <param name="text">The localized role labels.</param>
+    /// <param name="kind">The source of the turn.</param>
+    /// <param name="title">An optional title after the role.</param>
+    /// <param name="showSeparator">Whether to display a divider beside the heading.</param>
     internal static void Write(IAnsiConsole console, ILocalizationService text, TerminalTurnKind kind,
         string? title = null, bool showSeparator = true)
     {
@@ -29,11 +34,12 @@ internal static class TerminalTurnHeader
         console.WriteLine();
         if (showSeparator)
         {
-            console.Write(new ThemeSeparator(heading, color));
+            console.Write(new Padder(new ThemeSeparator(heading, color),
+                new Padding(TerminalSession.For(console).ChatIndent, 0, 0, 0)));
         }
         else
         {
-            console.MarkupLine($"[bold {color}]{Markup.Escape(heading)}[/]");
+            console.MarkupLine($"{new string(' ', TerminalSession.For(console).ChatIndent)}[bold {color}]{Markup.Escape(heading)}[/]");
         }
     }
 }

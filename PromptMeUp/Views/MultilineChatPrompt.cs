@@ -18,6 +18,12 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
     private ShellRuntimeStatus? _status;
 
     /// <summary>Collects bounded pasted or typed text, preserving line breaks until a separate Enter key submits it.</summary>
+    /// <param name="label">The label displayed beside the active input line.</param>
+    /// <param name="maximumCharacters">The maximum number of characters accepted in the draft.</param>
+    /// <param name="status">The runtime status displayed above the input.</param>
+    /// <param name="showHint">Whether to show the full editing guide.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The character limit is not positive.</exception>
+    /// <exception cref="InvalidOperationException">The terminal does not support paste-aware input.</exception>
     internal string Read(string label, int maximumCharacters, ShellRuntimeStatus? status = null, bool showHint = true)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumCharacters);
@@ -36,7 +42,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var hint = text.Text(
             showHint ? "Chat.MultilineHint" : "Chat.InputShortHint",
             KeyPrefix("Enter"), KeyPrefix("Newline"), KeyPrefix("Arrows"), KeyPrefix("Escape"));
-        console.MarkupLine($"[{TerminalTheme.Muted}]{hint}[/]");
+        console.MarkupLine($"  [{TerminalTheme.Muted}]{hint}[/]");
         TerminalPromptDock.Align(console, reservedRows: ReservedRows());
         console.Cursor.Hide();
         try
@@ -63,10 +69,13 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
                     }
                     if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                     {
+                        if (string.IsNullOrWhiteSpace(buffer.Text))
+                        {
+                            continue;
+                        }
                         EraseDraft();
                         TerminalTurnHeader.Write(console, text, TerminalTurnKind.User);
-                        console.Write(new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
-                        console.WriteLine();
+                        ConversationText.Write(console, new Text(SafeDisplay(buffer.Text), Style.Parse(TerminalTheme.Primary)));
                         session.History.Add(TerminalTurnKind.User, text.Text("Terminal.Role.User"),
                             new Text(TerminalText.Safe(buffer.Text), Style.Parse(TerminalTheme.Primary)), buffer.Text.Length);
                         return buffer.Text;
@@ -91,6 +100,9 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         $"[bold {TerminalTheme.Info}]{Markup.Escape(text.Text("Chat.Key." + key))}[/] ";
 
     /// <summary>Redraws only owned input rows; resizing starts a fresh area without touching earlier scrollback.</summary>
+    /// <param name="buffer">The editable draft and its caret.</param>
+    /// <param name="error">An optional input error.</param>
+    /// <param name="maximumCharacters">The draft's character limit.</param>
     private void Paint(ChatInputBuffer buffer, string? error, int maximumCharacters)
     {
         var size = (console.Profile.Width, console.Profile.Height);
@@ -104,7 +116,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
             _paintedRows = 0;
             TerminalPromptDock.Align(console, reservedRows: ReservedRows());
         }
-        var width = Math.Max(1, size.Width - 1);
+        var width = Math.Max(1, size.Width - 1 - TerminalSession.For(console).ChatIndent);
         var bar = new TerminalPromptBar(text, _status,
             showBorders: size.Height >= 8, showStatus: size.Height >= 4,
             showBreakdown: size.Height >= 8, session: TerminalSession.For(console));
@@ -157,7 +169,7 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
         var height = console.Profile.Height;
         var bar = new TerminalPromptBar(text, _status, height >= 8, height >= 4, height >= 8,
             TerminalSession.For(console));
-        var width = Math.Max(1, console.Profile.Width - 1);
+        var width = Math.Max(1, console.Profile.Width - 1 - TerminalSession.For(console).ChatIndent);
         return bar.Header(width).Count + bar.Footer(width).Count + 1 + (NavigationHint(width) is null ? 0 : 1);
     }
 
@@ -173,10 +185,11 @@ internal sealed class MultilineChatPrompt(IAnsiConsole console, ILocalizationSer
     }
 
     /// <summary>Clears one owned row before writing its already width-bounded contents.</summary>
+    /// <param name="markup">The styled contents of the input row.</param>
     private void WriteRow(string markup)
     {
         console.WriteAnsi(writer => writer.EraseInLine(2));
-        console.MarkupLine(markup);
+        console.MarkupLine(new string(' ', TerminalSession.For(console).ChatIndent) + markup);
     }
 
     /// <summary>Removes the editing viewport before printing the accepted text into normal terminal history.</summary>

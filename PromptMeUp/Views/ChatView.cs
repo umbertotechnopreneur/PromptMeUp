@@ -99,12 +99,13 @@ public sealed class ChatView : IChatView
     }
 
     /// <summary>Renders the user label above an indented text column, matching the typed-input rhythm.</summary>
+    /// <param name="text">The accepted user message.</param>
+    /// <exception cref="ArgumentException">The message is blank.</exception>
     public void RenderUser(string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         TerminalTurnHeader.Write(_console, _text, TerminalTurnKind.User);
-        _console.Write(new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)));
-        _console.WriteLine();
+        ConversationText.Write(_console, new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)));
         TerminalSession.For(_console).History.Add(TerminalTurnKind.User, _text.Text("Terminal.Role.User"),
             new Text(TerminalText.Safe(text), Style.Parse(TerminalTheme.Primary)), text.Length);
     }

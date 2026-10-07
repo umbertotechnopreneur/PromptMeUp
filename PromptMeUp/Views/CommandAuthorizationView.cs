@@ -13,6 +13,8 @@ public interface ICommandAuthorizationView
 
     Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken);
 
+    ICommandOutputSession BeginExecution(TimeSpan silenceNoticeInterval);
+
     void RenderExecutionResult(CommandExecutionResult result);
 }
 
@@ -60,13 +62,19 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         ArgumentNullException.ThrowIfNull(assessment);
         _previewedCommand = command;
         var color = RiskColor(assessment.Level);
-        TerminalTheme.WriteSection(
+        TerminalTheme.WriteRule(
             _console,
             $"{TerminalTheme.IconPrefix(_shell.Options, "🚦", ">")}{_text.Text("Command.Preview")}",
-            command,
             TerminalTheme.Info);
+        _console.WriteLine();
+        foreach (var line in command.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        {
+            _console.MarkupLine($"  [bold {TerminalTheme.Primary}]{Markup.Escape(line)}[/]");
+        }
+
+        _console.WriteLine();
         _console.MarkupLine(
-            $" [bold {color}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: {assessment.Score}/100 · {Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/]");
+            $" [{color}]{Markup.Escape(RiskIcon(assessment.Level))}{Markup.Escape(_text.Text("Command.Risk"))}: [bold]{assessment.Score}/100[/] · [bold]{Markup.Escape(_text.Text($"Command.Risk.{assessment.Level}"))}[/][/]");
         _console.WriteLine();
         var reviewIcon = TerminalTheme.IconPrefix(_shell.Options, assessment.UsedAi ? "🤖" : "🛡", assessment.UsedAi ? "AI" : "!");
         _console.MarkupLine($"[{TerminalTheme.Muted}]{Markup.Escape(reviewIcon)}{Markup.Escape(assessment.UsedAi ? _text.Text("Command.AiReview") : _text.Text("Command.LocalReview"))}[/]");
@@ -83,6 +91,10 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     }
 
     /// <summary>Chooses the normal confirmation or direct countdown without performing execution or risk review.</summary>
+    /// <param name="executionMode">The command confirmation or direct countdown mode.</param>
+    /// <param name="cancellationToken">The token used to cancel the interaction.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The execution mode is unsupported.</exception>
+    /// <exception cref="ApplicationExitRequestedException">The user successfully copied the command and requested exit.</exception>
     public async Task<bool> AuthorizeAsync(CommandExecutionMode executionMode, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -90,24 +102,26 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         return await (executionMode switch
         {
             CommandExecutionMode.Confirm => Task.FromResult(Confirm()),
-            CommandExecutionMode.Direct => new CommandCountdownView(_console, _text).WaitAsync(cancellationToken),
+            CommandExecutionMode.Direct => new CommandCountdownView(_console, _text).WaitAsync(cancellationToken,
+                () => CommandCopyView.Copy(_console, _text, _clipboard, _previewedCommand, exitAfterCopy: true)),
             _ => throw new ArgumentOutOfRangeException(nameof(executionMode))
         }).ConfigureAwait(false);
     }
 
     /// <summary>Asks for default-negative approval and leaves a compact receipt for the accepted command.</summary>
+    /// <exception cref="ApplicationExitRequestedException">The user successfully copied the command and requested exit.</exception>
     private bool Confirm()
     {
         var choice = _decisionOverride?.Invoke() ?? TerminalConversationPrompt.Select(_console, _text,
         [
             new TerminalMenuChoice<CommandDecision>(CommandDecision.Cancel, _text.Text("Common.No"), Tone: TerminalMenuTone.Muted),
             new TerminalMenuChoice<CommandDecision>(CommandDecision.Execute, _text.Text("Common.Yes"), Tone: TerminalMenuTone.Caution),
-            new TerminalMenuChoice<CommandDecision>(CommandDecision.Copy, _text.Text("Command.Copy"))
+            new TerminalMenuChoice<CommandDecision>(CommandDecision.Copy, _text.Text("Command.Copy")),
+            new TerminalMenuChoice<CommandDecision>(CommandDecision.CopyAndExit, _text.Text("Command.CopyAndExit"))
         ], _text.Text("Command.Authorize"), echoSelection: false);
-        if (choice == CommandDecision.Copy)
+        if (choice is CommandDecision.Copy or CommandDecision.CopyAndExit)
         {
-            var copied = _previewedCommand is not null && _clipboard.TryCopy(_previewedCommand);
-            _console.MarkupLine($"  [{(copied ? TerminalTheme.Success : TerminalTheme.Warning)}]{Markup.Escape(_text.Text(copied ? "Command.Copied" : "Command.CopyFailed"))}[/]");
+            CommandCopyView.Copy(_console, _text, _clipboard, _previewedCommand, exitAfterCopy: choice == CommandDecision.CopyAndExit);
             return false;
         }
         var authorized = choice == CommandDecision.Execute;
@@ -128,7 +142,11 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         return authorized;
     }
 
-    internal enum CommandDecision { Cancel, Execute, Copy }
+    internal enum CommandDecision { Cancel, Execute, Copy, CopyAndExit }
+
+    /// <summary>Creates a passive live-output view that can request local command interruption.</summary>
+    /// <param name="silenceNoticeInterval">How long silence lasts before displaying an elapsed-time notice.</param>
+    public ICommandOutputSession BeginExecution(TimeSpan silenceNoticeInterval) => new TerminalCommandOutput(_console, _text, silenceNoticeInterval);
 
     /// <summary>Shows bounded stdout, stderr, timeout, and exit metadata after an authorized command finishes.</summary>
     /// <param name="result">The captured output and execution status of the authorized command.</param>
@@ -136,22 +154,23 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
     public void RenderExecutionResult(CommandExecutionResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        var succeeded = result.ExitCode == 0 && !result.TimedOut;
-        var exitLabel = result.TimedOut ? _text.Text("Command.Timeout") : result.ExitCode?.ToString() ?? _text.Text("Command.Timeout");
+        var succeeded = result.ExitCode == 0 && !result.TimedOut && !result.Cancelled;
+        var exitLabel = result.Cancelled ? _text.Text("Command.Interrupted")
+            : result.TimedOut ? _text.Text("Command.Timeout") : result.ExitCode?.ToString() ?? _text.Text("Command.Timeout");
         var summary = _text.Text("Command.Output") + " · " + _text.Text("Command.ExitCode") + ": " + exitLabel;
         var details = new List<IRenderable>
         {
             new TerminalActivityRow(summary,
-                succeeded ? TerminalActivityState.Completed : TerminalActivityState.Failed,
+                result.Cancelled ? TerminalActivityState.Cancelled : succeeded ? TerminalActivityState.Completed : TerminalActivityState.Failed,
                 TimeSpan.FromMilliseconds(result.ElapsedMilliseconds), !_shell.Options.NoEmoji)
         };
-        if (!string.IsNullOrWhiteSpace(result.StandardOutput))
+        if (!result.OutputWasStreamed && !string.IsNullOrWhiteSpace(result.StandardOutput))
         {
             details.Add(new Text("STDOUT", Style.Parse(TerminalTheme.Muted)));
             details.Add(new Text(TerminalText.Safe(result.StandardOutput), Style.Parse(TerminalTheme.Primary)));
         }
 
-        if (!string.IsNullOrWhiteSpace(result.StandardError))
+        if (!result.OutputWasStreamed && !string.IsNullOrWhiteSpace(result.StandardError))
         {
             // Successful commands can also write progress and informational messages to stderr.
             var errorColor = succeeded ? TerminalTheme.Warning : TerminalTheme.Error;
@@ -167,10 +186,19 @@ public sealed class CommandAuthorizationView : ICommandAuthorizationView
         {
             details.Add(new Text(_text.Text("Command.OutputTruncated"), Style.Parse(TerminalTheme.Warning)));
         }
-        var title = _text.Text("Command.Output") + ": " + TerminalText.Safe(result.Command);
-        TerminalDisclosure.Write(_console, _text, TerminalTurnKind.Tool, title, new Rows(details),
-            result.Command.Length + result.StandardOutput.Length + result.StandardError.Length,
-            collapse: false);
+        _console.Write(new Rows(details));
+        _console.WriteLine();
+        WriteOutputIssueLink();
+    }
+
+    /// <summary>Offers the public issue tracker without attaching command text or output.</summary>
+    private void WriteOutputIssueLink()
+    {
+        const string issuesUrl = "https://github.com/umbertotechnopreneur/PromptMeUp/issues";
+        _console.WriteLine();
+        _console.MarkupLine($"[{TerminalTheme.Warning}]{TerminalTheme.IconPrefix(_shell.Options, "⚠️", "!")}{Markup.Escape(_text.Text("Command.ReportOutputProblem"))}[/]");
+        _console.MarkupLine($"  [{TerminalTheme.Info} link={issuesUrl}]{issuesUrl}[/]");
+        _console.WriteLine();
     }
 
     /// <summary>Maps risk severity to the active theme while retaining separate labels and indicators.</summary>

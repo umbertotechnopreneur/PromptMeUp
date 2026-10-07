@@ -129,7 +129,8 @@ public enum CommandSuggestionAction
 {
     DoNotExecute,
     StartChat,
-    SelectCommand
+    SelectCommand,
+    CopyAndExit
 }
 
 public sealed record CommandSuggestionDecision(

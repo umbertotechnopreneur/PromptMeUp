@@ -139,12 +139,12 @@ internal static partial class UiTextCatalog
             Spanish: "Al desactivarlo, el resumen aparece solo al terminar un flujo. /status, /context y un aviso al 80 % del contexto siempre lo muestran.",
             Vietnamese: "Khi tắt, bảng tóm tắt chỉ hiện khi quy trình kết thúc. /status, /context và cảnh báo ngữ cảnh 80% luôn hiển thị nó."));
         entries.Add("Settings.CommandsHelp", new(
-            English: "Set the command timeout and how much output to retain.",
-            Italian: "Imposta il timeout dei comandi e quanto output conservare.",
-            French: "Définissez le délai d'exécution des commandes et la quantité de sortie à conserver.",
-            German: "Legen Sie das Befehlszeitlimit und die Menge der gespeicherten Ausgabe fest.",
-            Spanish: "Define el tiempo de espera de los comandos y cuánta salida conservar.",
-            Vietnamese: "Đặt thời gian chờ của lệnh và lượng đầu ra cần giữ lại."));
+            English: "Set the silence reminder and how much output to retain for AI analysis. Foreground commands continue until completion or interruption.",
+            Italian: "Imposta l'avviso senza nuovo output e quanto testo conservare per l'AI. I comandi continuano fino al completamento o all'interruzione.",
+            French: "Réglez le rappel sans nouvelle sortie et le texte conservé pour l'IA. Les commandes continuent jusqu'à la fin ou l'interruption.",
+            German: "Legen Sie den Hinweis ohne neue Ausgabe und die Textmenge für die KI fest. Befehle laufen bis zum Abschluss oder Abbruch.",
+            Spanish: "Configura el aviso sin nueva salida y el texto conservado para la IA. Los comandos siguen hasta terminar o interrumpirse.",
+            Vietnamese: "Đặt lời nhắc khi không có đầu ra mới và lượng văn bản giữ cho AI. Lệnh chạy đến khi hoàn tất hoặc bị dừng."));
         entries.Add("Settings.PersonalizationHelp", new(
             English: "Choose your name, personal instructions, location context, and color theme.",
             Italian: "Scegli come chiamarti, aggiungi istruzioni personali e regola posizione e tema colori.",

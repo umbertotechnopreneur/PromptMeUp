@@ -145,25 +145,50 @@ public sealed class ConsoleShellView : IConsoleShellView
         _console.WriteLine();
     }
 
-    /// <summary>Shows one quiet working row and retains the operation's measured outcome in scrollback.</summary>
+    /// <summary>Shows indeterminate progress while working and retains the measured outcome in scrollback.</summary>
+    /// <typeparam name="T">The operation's result type.</typeparam>
+    /// <param name="message">The localized description of the running operation.</param>
+    /// <param name="action">The asynchronous operation to execute.</param>
+    /// <exception cref="ArgumentException">The operation description is blank.</exception>
+    /// <exception cref="ArgumentNullException">The operation callback is missing.</exception>
     public async Task<T> RunWithStatusAsync<T>(string message, Func<Task<T>> action)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         ArgumentNullException.ThrowIfNull(action);
         var session = TerminalSession.For(_console);
+        var indent = session.ChatIndent;
         using var state = new TerminalStateScope(_console, _text, TerminalActivityState.Working);
         var elapsed = Stopwatch.StartNew();
         var outcome = TerminalActivityState.Completed;
         var row = new TerminalActivityRow(message, TerminalActivityState.Working, useSymbols: !Options.NoEmoji);
         try
         {
-            if (!_console.Profile.Capabilities.Interactive || Console.IsOutputRedirected)
+            if (Options.NoAnimation || !_console.Profile.Capabilities.Interactive || Console.IsOutputRedirected)
             {
-                _console.Write(row);
+                _console.Write(new Padder(row, new Padding(indent, 0, 0, 0)));
                 _console.WriteLine();
                 return await action().ConfigureAwait(false);
             }
-            return await _console.Live(row).AutoClear(true).StartAsync(_ => action()).ConfigureAwait(false);
+            return await _console.Progress()
+                .AutoClear(true)
+                .Columns(
+                    new TaskDescriptionColumn(),
+                    new SpinnerColumn(),
+                    new ProgressBarColumn { Width = 16 },
+                    new ElapsedTimeColumn())
+                .StartAsync(async context =>
+                {
+                    var task = context.AddTask(new string(' ', indent) + Markup.Escape(message));
+                    task.IsIndeterminate = true;
+                    try
+                    {
+                        return await action().ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        task.StopTask();
+                    }
+                }).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -180,7 +205,8 @@ public sealed class ConsoleShellView : IConsoleShellView
             session.State = outcome;
             if (typeof(T) != typeof(CommandExecutionResult) || outcome != TerminalActivityState.Completed)
             {
-                _console.Write(new TerminalActivityRow(message, outcome, elapsed.Elapsed, !Options.NoEmoji));
+                _console.Write(new Padder(new TerminalActivityRow(message, outcome, elapsed.Elapsed, !Options.NoEmoji),
+                    new Padding(indent, 0, 0, 0)));
                 _console.WriteLine();
             }
         }

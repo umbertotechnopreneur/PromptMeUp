@@ -331,6 +331,8 @@ public sealed class FullscreenSetupView : ISetupView
     }
 
     /// <summary>Introduces first-run setup with shared product details, then shows draft status and cached usage after setup.</summary>
+    /// <param name="draft">The settings currently being edited.</param>
+    /// <param name="state">The saved installation state and cached usage.</param>
     private IRenderable CreateGeneralOverview(SetupDraft draft, SetupViewState state)
     {
         if (!state.Settings.SetupCompleted)
@@ -352,11 +354,11 @@ public sealed class FullscreenSetupView : ISetupView
         AddOverviewMetric(usage, "Costs.Requests", costs?.RequestsToday.ToString("N0", _text.Culture) ?? unavailable);
         AddOverviewMetric(usage, "Costs.Tokens", costs?.TotalTokensToday.ToString("N0", _text.Culture) ?? unavailable);
         AddOverviewMetric(usage, "Costs.LastSync", costs?.LastPricingSync?.ToLocalTime().ToString("g", _text.Culture) ?? unavailable);
-        return new Rows(
+        return new VibeWareBrand(_console, new Rows(
             new Text(TerminalTheme.IconPrefix(_shell.Options, "🪞", "=") + _text.Text("Settings.DraftStatus"), Style.Parse("bold " + TerminalTheme.Accent)),
             status, new Text(" "),
             new Text(TerminalTheme.IconPrefix(_shell.Options, "📊", "=") + _text.Text("Main.Costs"), Style.Parse("bold " + TerminalTheme.Accent)),
-            usage);
+            usage));
     }
 
     /// <summary>Builds ordinary skill preference fields from the inspected snapshot without reading files.</summary>

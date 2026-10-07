@@ -15,13 +15,21 @@ internal sealed class CommandCountdownView(
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
     /// <summary>Shows a five-second progress bar and returns early for Enter or cancellation without clearing scrollback.</summary>
-    internal async Task<bool> WaitAsync(CancellationToken cancellationToken)
+    /// <param name="cancellationToken">The token used to cancel the countdown.</param>
+    /// <param name="copyAndExit">An optional action for copying the command and closing the application.</param>
+    /// <exception cref="InvalidOperationException">The terminal is not interactive.</exception>
+    /// <exception cref="OperationCanceledException">The countdown was cancelled.</exception>
+    internal async Task<bool> WaitAsync(CancellationToken cancellationToken, Action? copyAndExit = null)
     {
         if (!(isInteractive ?? console.Profile.Capabilities.Interactive))
         {
             throw new InvalidOperationException(text.Text("Error.InteractiveRequired"));
         }
         ConversationText.Write(console, new Markup($"[{TerminalTheme.Warning}]{Markup.Escape(text.Text("Direct.Keys"))}[/]"));
+        if (copyAndExit is not null)
+        {
+            ConversationText.Write(console, new Markup($"[bold {TerminalTheme.Info}]C[/] [{TerminalTheme.Primary}]{Markup.Escape(text.Text("Command.CopyAndExit"))}[/]"));
+        }
         console.WriteLine();
         return await console.Progress().AutoClear(false).HideCompleted(false)
             .Columns(new TaskDescriptionColumn(), new ProgressBarColumn
@@ -41,6 +49,13 @@ internal sealed class CommandCountdownView(
                     while (console.Input.IsKeyAvailable())
                     {
                         var key = await console.Input.ReadKeyAsync(true, cancellationToken).ConfigureAwait(false);
+                        if (key is { Key: ConsoleKey.C, Modifiers: 0 } && copyAndExit is not null)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            task.StopTask();
+                            copyAndExit();
+                            return false;
+                        }
                         var decision = InterpretKey(key);
                         if (decision.HasValue)
                         {

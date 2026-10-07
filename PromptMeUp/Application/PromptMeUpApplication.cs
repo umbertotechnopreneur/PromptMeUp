@@ -72,6 +72,9 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     }
 
     /// <summary>Parses one invocation, initializes local state, and dispatches the selected CLI or interactive flow.</summary>
+    /// <param name="args">The command-line arguments for the invocation.</param>
+    /// <param name="cancellationToken">The token used to cancel application work.</param>
+    /// <exception cref="ArgumentNullException">The argument collection is null.</exception>
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(args);
@@ -161,6 +164,10 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
                 ? await RunHomeAsync(options, promptCount, cancellationToken).ConfigureAwait(false)
                 : await _commands.DispatchAsync(options, settings, promptCount, cancellationToken).ConfigureAwait(false);
             return exitCode;
+        }
+        catch (ApplicationExitRequestedException)
+        {
+            return 0;
         }
         catch (InteractiveFlowCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -289,6 +296,7 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
     /// <summary>Refreshes official pricing and optional organization costs without blocking unrelated app work on failure.</summary>
     private async Task TryRefreshPricingAsync(AppSettings settings, bool force, CancellationToken cancellationToken)
     {
+        _shell.WriteLine();
         try
         {
             var result = await _shell.RunWithStatusAsync(
@@ -311,6 +319,11 @@ public sealed class PromptMeUpApplication : IPromptMeUpApplication
             {
                 _shell.RenderWarning(FormatErrorMessage(exception, _text, OperatingSystem.IsWindows()));
             }
+        }
+        finally
+        {
+            _shell.RenderMuted("  " + _text.Text("Costs.DailySyncHint"));
+            _shell.WriteLine();
         }
     }
 
