@@ -37,8 +37,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
     private int _visibleRows;
     private MemoryManagerAction? _pending;
     private bool _editing;
-    private string _input = string.Empty;
-    private int _caret;
+    private readonly TerminalEditorBuffer _editor = new();
     private string? _error;
     private FullscreenFrame? _lastFrame;
 
@@ -89,8 +88,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         _submittedKey = null;
         _pending = null;
         _editing = false;
-        _input = string.Empty;
-        _caret = 0;
+        _editor.Clear();
         _error = null;
         _detailOffset = 0;
         _selectedKey = null;
@@ -129,7 +127,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         {
             _inputReader.Reset();
             _editing = false;
-            _input = string.Empty;
+            _editor.Clear();
         }
     }
 
@@ -156,7 +154,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
             var entry = entries[_navigator.SelectedIndex];
             if (_editing)
             {
-                Edit(entry, memories, proposals, key);
+                Edit(entry, proposals, key);
                 continue;
             }
             if (key.Key == ConsoleKey.Escape)
@@ -542,124 +540,40 @@ public sealed class MemoryManagerView : IMemoryManagerView
             _focus = EditorFocus.Actions;
             return;
         }
-        _input = CurrentDraft(entry, memories, proposals);
-        _caret = _input.Length;
+        _editor.SetText(CurrentDraft(entry, memories, proposals));
         _editing = true;
         _error = null;
     }
 
     /// <summary>Edits multiline text in place; Ctrl+Enter accepts the field and Escape discards the current edit.</summary>
-    private void Edit(NavigationEntry entry, IReadOnlyList<PersistentMemory> memories, MemoryProposalWorkspace proposals,
-        ConsoleKeyInfo key)
+    private void Edit(NavigationEntry entry, MemoryProposalWorkspace proposals, ConsoleKeyInfo key)
     {
-        _ = memories;
         _error = null;
         if (key.Key == ConsoleKey.Escape)
         {
             _editing = false;
-            _input = string.Empty;
+            _editor.Clear();
             return;
         }
         if (key.Key == ConsoleKey.Enter && (key.Modifiers & ConsoleModifiers.Control) != 0)
         {
-            if (ValidateEditorText(entry, _input) is { } error)
+            if (ValidateEditorText(entry, _editor.Text) is { } error)
             {
                 _error = error;
                 return;
             }
             var keyName = DraftKey(entry, proposals);
-            _drafts[keyName] = _input;
+            _drafts[keyName] = _editor.Text;
             _dirty.Add(keyName);
             _editing = false;
-            _input = string.Empty;
+            _editor.Clear();
             _detailOffset = 0;
             return;
         }
-        if (key.Key == ConsoleKey.Enter)
-        {
-            Insert("\n");
-        }
-        else if (key.Key == ConsoleKey.U && (key.Modifiers & ConsoleModifiers.Control) != 0)
-        {
-            _input = string.Empty;
-            _caret = 0;
-        }
-        else if (key.Key == ConsoleKey.Home)
-        {
-            _caret = _input.LastIndexOf('\n', Math.Max(0, _caret - 1)) + 1;
-        }
-        else if (key.Key == ConsoleKey.End)
-        {
-            var end = _input.IndexOf('\n', _caret);
-            _caret = end < 0 ? _input.Length : end;
-        }
-        else if (key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow)
-        {
-            MoveCaretVertically(key.Key == ConsoleKey.UpArrow ? -1 : 1);
-        }
-        else if (key.Key is ConsoleKey.LeftArrow or ConsoleKey.Backspace && _caret > 0)
-        {
-            var previous = TerminalTextElements.Previous(_input, _caret);
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                _input = _input.Remove(previous, _caret - previous);
-            }
-            _caret = previous;
-        }
-        else if (key.Key is ConsoleKey.RightArrow or ConsoleKey.Delete && _caret < _input.Length)
-        {
-            var next = TerminalTextElements.Next(_input, _caret);
-            if (key.Key == ConsoleKey.Delete)
-            {
-                _input = _input.Remove(_caret, next - _caret);
-            }
-            else
-            {
-                _caret = next;
-            }
-        }
-        else if (!char.IsControl(key.KeyChar) && (key.Modifiers & ConsoleModifiers.Control) == 0)
-        {
-            Insert(key.KeyChar.ToString());
-        }
-    }
-
-    /// <summary>Inserts bounded editor text without splitting the current caret position.</summary>
-    private void Insert(string value)
-    {
-        if (_input.Length + value.Length > PersistentMemoryService.MaximumCharacters)
+        if (!_editor.Apply(key, multiline: true, PersistentMemoryService.MaximumCharacters))
         {
             _error = _text.Text("Memory.TooLong", PersistentMemoryService.MaximumCharacters);
-            return;
         }
-        _input = _input.Insert(_caret, value);
-        _caret += value.Length;
-    }
-
-    /// <summary>Moves the caret to the closest column on the adjacent logical line.</summary>
-    private void MoveCaretVertically(int delta)
-    {
-        var lineStart = _input.LastIndexOf('\n', Math.Max(0, _caret - 1)) + 1;
-        var column = _caret - lineStart;
-        if (delta < 0)
-        {
-            if (lineStart == 0)
-            {
-                return;
-            }
-            var previousEnd = lineStart - 1;
-            var previousStart = _input.LastIndexOf('\n', Math.Max(0, previousEnd - 1)) + 1;
-            _caret = Math.Min(previousStart + column, previousEnd);
-            return;
-        }
-        var currentEnd = _input.IndexOf('\n', _caret);
-        if (currentEnd < 0)
-        {
-            return;
-        }
-        var nextStart = currentEnd + 1;
-        var nextEnd = _input.IndexOf('\n', nextStart);
-        _caret = Math.Min(nextStart + column, nextEnd < 0 ? _input.Length : nextEnd);
     }
 
     /// <summary>Changes the proposal shown in the central editor without leaving the suggestions section.</summary>
@@ -699,7 +613,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
             rows.Add(new Text(_text.Text("Memory.None"), Style.Parse(TerminalTheme.Muted)));
             rows.Add(new Text(" "));
         }
-        var draft = _editing ? _input : CurrentDraft(entry, memories, proposals);
+        var draft = _editing ? _editor.Text : CurrentDraft(entry, memories, proposals);
         rows.Add(Line((_focus == EditorFocus.Editor ? "> " : string.Empty) + _text.Text("Memory.Note"), TerminalTheme.Accent));
         rows.Add(new Text(" "));
         if (_editing || entry.Kind == NavigationKind.Create)
@@ -731,7 +645,7 @@ public sealed class MemoryManagerView : IMemoryManagerView
         {
             return new Text(_text.Text("Lab.None"), Style.Parse(TerminalTheme.Primary));
         }
-        var reviewed = _editing ? _input : _drafts.GetValueOrDefault(ProposalKey(proposal.Id), NormalizeEditorText(proposal.Text));
+        var reviewed = _editing ? _editor.Text : _drafts.GetValueOrDefault(ProposalKey(proposal.Id), NormalizeEditorText(proposal.Text));
         var before = proposal.Targets.Count == 0 ? _text.Text("Lab.NoPrevious")
             : string.Join("\n\n", proposal.Targets.Select(target => target.Id + " · "
                 + target.UpdatedAt.ToString("u", CultureInfo.InvariantCulture) + "\n" + target.Text));
@@ -869,9 +783,9 @@ public sealed class MemoryManagerView : IMemoryManagerView
         {
             return "|";
         }
-        var sourceCaret = Math.Clamp(_caret, 0, _input.Length);
-        var beforeCaret = SafeSingleLine(_input[..sourceCaret]);
-        var afterCaret = SafeSingleLine(_input[sourceCaret..]);
+        var sourceCaret = Math.Clamp(_editor.Caret, 0, _editor.Text.Length);
+        var beforeCaret = SafeSingleLine(_editor.Text[..sourceCaret]);
+        var afterCaret = SafeSingleLine(_editor.Text[sourceCaret..]);
         var safe = beforeCaret + afterCaret;
         var caret = beforeCaret.Length;
         var budget = Math.Max(1, width - 3);

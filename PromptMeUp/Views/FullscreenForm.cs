@@ -49,8 +49,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     private bool _allowSectionNavigation;
     private string? _error;
     private FormField? _editing;
-    private string _input = string.Empty;
-    private int _caret;
+    private readonly TerminalEditorBuffer _editor = new();
     private int _messageHeight = FullscreenFooter.NoticeRows;
     private int _overviewOffset;
     private int _overviewMaximumOffset;
@@ -93,14 +92,14 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
                 _pendingOpen = null;
                 _lastFrame = null;
                 FullscreenViewport.Run(console, () => saved = RunLoop(titleKey, pages, validate));
-                // Child pages own their alternate buffer after this form restores the main buffer.
+                // The terminal has one alternate buffer; put this page away before opening its child.
                 _pendingOpen?.Invoke();
             }
             while (_pendingOpen is not null);
         }
         finally
         {
-            _input = string.Empty;
+            _editor.Clear();
             _editing = null;
             _inputReader.Reset();
         }
@@ -133,6 +132,13 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             var key = readKey.Value;
             if (key.Key == ConsoleKey.Escape)
             {
+                if (_editing is not null)
+                {
+                    _editing = null;
+                    _editor.Clear();
+                    _error = null;
+                    continue;
+                }
                 throw new InteractiveFlowCanceledException();
             }
             if (console.Profile.Width < 60 || console.Profile.Height < 20)
@@ -343,8 +349,7 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
             return;
         }
         _editing = field;
-        _input = field.Read();
-        _caret = _input.Length;
+        _editor.SetText(field.Read());
     }
 
     /// <summary>Edits text locally, never echoing secret values or their lengths.</summary>
@@ -354,58 +359,17 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         _error = null;
         if (key.Key == ConsoleKey.Enter)
         {
-            _error = field.Validate?.Invoke(_input);
+            _error = field.Validate?.Invoke(_editor.Text);
             if (_error is null)
             {
-                field.Write(_input);
+                field.Write(_editor.Text);
                 _editing = null;
-                _input = string.Empty;
+                _editor.Clear();
             }
         }
-        else if (key.Key == ConsoleKey.U && (key.Modifiers & ConsoleModifiers.Control) != 0)
+        else if (!_editor.Apply(key, multiline: false, field.MaxLength))
         {
-            _input = string.Empty;
-            _caret = 0;
-        }
-        else if (key.Key == ConsoleKey.Home)
-        {
-            _caret = 0;
-        }
-        else if (key.Key == ConsoleKey.End)
-        {
-            _caret = _input.Length;
-        }
-        else if (key.Key is ConsoleKey.LeftArrow or ConsoleKey.Backspace && _caret > 0)
-        {
-            var previous = TerminalTextElements.Previous(_input, _caret);
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                _input = _input.Remove(previous, _caret - previous);
-            }
-            _caret = previous;
-        }
-        else if (key.Key is ConsoleKey.RightArrow or ConsoleKey.Delete && _caret < _input.Length)
-        {
-            var next = TerminalTextElements.Next(_input, _caret);
-            if (key.Key == ConsoleKey.Delete)
-            {
-                _input = _input.Remove(_caret, next - _caret);
-            }
-            else
-            {
-                _caret = next;
-            }
-        }
-        else if (!char.IsControl(key.KeyChar) && (key.Modifiers & ConsoleModifiers.Control) == 0)
-        {
-            if (_input.Length >= field.MaxLength)
-            {
-                _error = text.Text("Form.InputTooLong", field.MaxLength);
-            }
-            else
-            {
-                _input = _input.Insert(_caret++, key.KeyChar.ToString());
-            }
+            _error = text.Text("Form.InputTooLong", field.MaxLength);
         }
     }
 
@@ -598,8 +562,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         {
             return "|";
         }
-        var elements = StringInfo.ParseCombiningCharacters(_input);
-        var caretElement = Array.BinarySearch(elements, Math.Clamp(_caret, 0, _input.Length));
+        var elements = StringInfo.ParseCombiningCharacters(_editor.Text);
+        var caretElement = Array.BinarySearch(elements, Math.Clamp(_editor.Caret, 0, _editor.Text.Length));
         if (caretElement < 0)
         {
             caretElement = ~caretElement;
@@ -650,8 +614,8 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
         var start = InputElementOffset(elements, startElement);
         var caret = InputElementOffset(elements, caretElement);
         var end = InputElementOffset(elements, endElement);
-        return (start > 0 ? "…" : string.Empty) + _input[start..caret] + "|" + _input[caret..end]
-            + (end < _input.Length ? "…" : string.Empty);
+        return (start > 0 ? "…" : string.Empty) + _editor.Text[start..caret] + "|" + _editor.Text[caret..end]
+            + (end < _editor.Text.Length ? "…" : string.Empty);
     }
 
     /// <summary>Measures one complete text element after applying the form's control-character sanitization.</summary>
@@ -659,13 +623,13 @@ internal sealed class FullscreenForm(IAnsiConsole console, ILocalizationService 
     {
         var start = InputElementOffset(elements, element);
         var end = InputElementOffset(elements, element + 1);
-        var visible = SafeText(_input[start..end]);
+        var visible = SafeText(_editor.Text[start..end]);
         return new Segment(visible).CellCount();
     }
 
     /// <summary>Maps a grapheme boundary or the final boundary to a valid UTF-16 offset.</summary>
     private int InputElementOffset(int[] elements, int element) =>
-        element < elements.Length ? elements[element] : _input.Length;
+        element < elements.Length ? elements[element] : _editor.Text.Length;
 
     /// <summary>Builds semantic navigation buttons with contrasting focus colors and an explicit focus marker.</summary>
     private IRenderable Actions(int fieldCount)

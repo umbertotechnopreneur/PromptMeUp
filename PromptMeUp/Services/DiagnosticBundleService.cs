@@ -131,17 +131,43 @@ public sealed class DiagnosticBundleService(AppPaths paths, ISensitiveDataRedact
         """;
 
     /// <summary>Reads at most the recent bounded portion of a shared log and marks a truncated prefix.</summary>
+    /// <param name="path">Log file to read while allowing its writer to continue.</param>
+    /// <param name="cancellationToken">Cancels the snapshot read.</param>
+    /// <exception cref="IOException">The log could not be opened or read.</exception>
+    /// <exception cref="OperationCanceledException">The read was cancelled.</exception>
     private static async Task<string> ReadLogTailAsync(string path, CancellationToken cancellationToken)
     {
         await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete, 64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var truncated = stream.Length > MaximumBytesPerLog;
-        if (truncated)
-        {
-            stream.Seek(-MaximumBytesPerLog, SeekOrigin.End);
-        }
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true,
-            bufferSize: 64 * 1024, leaveOpen: false);
+        return await ReadLogTailAsync(stream, MaximumBytesPerLog, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Reads a fixed byte window so a growing log cannot extend the snapshot.</summary>
+    /// <param name="stream">Caller-owned seekable log stream.</param>
+    /// <param name="maximumBytes">Maximum source bytes retained before decoding and redaction.</param>
+    /// <param name="cancellationToken">Cancels reading or decoding.</param>
+    /// <exception cref="ArgumentNullException">The stream is missing.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The byte limit is not positive.</exception>
+    /// <exception cref="IOException">The snapshot could not be read.</exception>
+    /// <exception cref="NotSupportedException">The stream does not support seeking or reading.</exception>
+    /// <exception cref="OperationCanceledException">The read was cancelled.</exception>
+    internal static async Task<string> ReadLogTailAsync(Stream stream, int maximumBytes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumBytes);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var snapshotEnd = stream.Length;
+        var byteCount = (int)Math.Min(snapshotEnd, maximumBytes);
+        var truncated = snapshotEnd > byteCount;
+        stream.Seek(snapshotEnd - byteCount, SeekOrigin.Begin);
+
+        // The writer can keep going. This read stops at the original end of the log.
+        var bytes = new byte[byteCount];
+        var bytesRead = await stream.ReadAtLeastAsync(bytes, byteCount, throwOnEndOfStream: false,
+            cancellationToken).ConfigureAwait(false);
+        using var snapshot = new MemoryStream(bytes, 0, bytesRead, writable: false);
+        using var reader = new StreamReader(snapshot, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         if (truncated)
         {
             await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);

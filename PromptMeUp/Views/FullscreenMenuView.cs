@@ -33,7 +33,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
     private int _detailOffset;
     private readonly Dictionary<(int Group, int Item), string> _drafts = [];
     private int _selectedGroupIndex;
-    private int _caret;
+    private readonly TerminalEditorBuffer _editor = new();
     private string? _editorError;
     private FullscreenFrame? _lastFrame;
 
@@ -58,7 +58,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         _focus = MenuFocus.Groups;
         ResetItems();
         _drafts.Clear();
-        _caret = 0;
+        _editor.Clear();
         _editorError = null;
         EnsureDraft(groups);
         _lastFrame = null;
@@ -482,7 +482,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         _selectedItemIndex = 0;
         _itemOffset = 0;
         _detailOffset = 0;
-        _caret = 0;
+        _editor.Clear();
         _editorError = null;
     }
 
@@ -490,7 +490,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
     private void BeginEdit(FullscreenMenuItem item)
     {
         EnsureDraft(item);
-        _caret = CurrentDraft(item).Length;
+        _editor.SetText(CurrentDraft(item));
         _editorError = null;
         _focus = MenuFocus.Editor;
     }
@@ -525,95 +525,13 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
             }
             return true;
         }
-        if (key.Key == ConsoleKey.Enter)
-        {
-            InsertInput(item, "\n");
-            return false;
-        }
-        if (key.Key == ConsoleKey.U && (key.Modifiers & ConsoleModifiers.Control) != 0)
-        {
-            SetDraft(item, string.Empty);
-            _caret = 0;
-            return false;
-        }
-
-        var value = CurrentDraft(item);
-        if (key.Key == ConsoleKey.Home)
-        {
-            _caret = item.MultilineInput ? value.LastIndexOf('\n', Math.Max(0, _caret - 1)) + 1 : 0;
-        }
-        else if (key.Key == ConsoleKey.End)
-        {
-            var end = item.MultilineInput ? value.IndexOf('\n', _caret) : -1;
-            _caret = end < 0 ? value.Length : end;
-        }
-        else if (item.MultilineInput && key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow)
-        {
-            MoveCaretVertically(value, key.Key == ConsoleKey.UpArrow ? -1 : 1);
-        }
-        else if (key.Key == ConsoleKey.LeftArrow && _caret > 0)
-        {
-            _caret = TerminalTextElements.Previous(value, _caret);
-        }
-        else if (key.Key == ConsoleKey.RightArrow && _caret < value.Length)
-        {
-            _caret = TerminalTextElements.Next(value, _caret);
-        }
-        else if (key.Key == ConsoleKey.Backspace && _caret > 0)
-        {
-            var previous = TerminalTextElements.Previous(value, _caret);
-            SetDraft(item, value.Remove(previous, _caret - previous));
-            _caret = previous;
-        }
-        else if (key.Key == ConsoleKey.Delete && _caret < value.Length)
-        {
-            var next = TerminalTextElements.Next(value, _caret);
-            SetDraft(item, value.Remove(_caret, next - _caret));
-        }
-        else if (!char.IsControl(key.KeyChar) && (key.Modifiers & ConsoleModifiers.Control) == 0)
-        {
-            InsertInput(item, key.KeyChar.ToString());
-        }
-        return false;
-    }
-
-    /// <summary>Inserts bounded text at the current Unicode-safe caret position.</summary>
-    private void InsertInput(FullscreenMenuItem item, string addition)
-    {
-        var value = CurrentDraft(item);
-        if (value.Length + addition.Length > 4096)
+        if (!_editor.Apply(key, item.MultilineInput, 4096))
         {
             _editorError = text.Text("Lab.Invalid");
-            return;
+            return false;
         }
-        SetDraft(item, value.Insert(_caret, addition));
-        _caret += addition.Length;
-    }
-
-    /// <summary>Moves the textarea caret to the closest column on an adjacent logical line.</summary>
-    private void MoveCaretVertically(string value, int delta)
-    {
-        var lineStart = value.LastIndexOf('\n', Math.Max(0, _caret - 1)) + 1;
-        var column = _caret - lineStart;
-        if (delta < 0)
-        {
-            if (lineStart == 0)
-            {
-                return;
-            }
-            var previousEnd = lineStart - 1;
-            var previousStart = value.LastIndexOf('\n', Math.Max(0, previousEnd - 1)) + 1;
-            _caret = Math.Min(previousStart + column, previousEnd);
-            return;
-        }
-        var currentEnd = value.IndexOf('\n', _caret);
-        if (currentEnd < 0)
-        {
-            return;
-        }
-        var nextStart = currentEnd + 1;
-        var nextEnd = value.IndexOf('\n', nextStart);
-        _caret = Math.Min(nextStart + column, nextEnd < 0 ? value.Length : nextEnd);
+        SetDraft(_editor.Text);
+        return false;
     }
 
     /// <summary>Initializes the active field draft after section or command navigation.</summary>
@@ -642,10 +560,9 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         return _drafts.GetValueOrDefault((_groupNavigator.SelectedIndex, _selectedItemIndex), string.Empty);
     }
 
-    /// <summary>Updates the draft associated with the current group and command.</summary>
-    private void SetDraft(FullscreenMenuItem item, string value)
+    /// <summary>Keeps an unsaved value when focus moves between menu groups.</summary>
+    private void SetDraft(string value)
     {
-        _ = item;
         _drafts[(_groupNavigator.SelectedIndex, _selectedItemIndex)] = NormalizeInput(value);
     }
 
@@ -657,7 +574,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
         {
             return Safe(value);
         }
-        var sourceCaret = Math.Clamp(_caret, 0, value.Length);
+        var sourceCaret = Math.Clamp(_editor.Caret, 0, value.Length);
         var beforeCaret = Safe(value[..sourceCaret]);
         var afterCaret = Safe(value[sourceCaret..]);
         var safe = beforeCaret + afterCaret;
@@ -674,7 +591,7 @@ internal sealed class FullscreenMenuView(IAnsiConsole console, ILocalizationServ
     private IRenderable TextArea(FullscreenMenuItem item, int visibleRows, Style style)
     {
         var value = CurrentDraft(item);
-        var sourceCaret = Math.Clamp(_caret, 0, value.Length);
+        var sourceCaret = Math.Clamp(_editor.Caret, 0, value.Length);
         var marked = _focus == MenuFocus.Editor ? value.Insert(sourceCaret, "|") : value;
         var lines = SafeDetails(marked).Split('\n');
         var caretLine = value[..sourceCaret].Count(character => character == '\n');
