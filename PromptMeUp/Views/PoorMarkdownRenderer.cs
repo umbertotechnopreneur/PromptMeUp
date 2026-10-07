@@ -11,6 +11,8 @@ public interface IPoorMarkdownRenderer
 {
     void Render(string markdown);
 
+    void RenderCommandReview(string markdown);
+
     void RenderAnimated(string markdown, CancellationToken cancellationToken);
 
     void Render(MarkdownDocument document, bool animate, CancellationToken cancellationToken);
@@ -28,6 +30,16 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
     /// <param name="markdown">Source text to parse and render.</param>
     /// <exception cref="ArgumentNullException">The source is missing.</exception>
     public void Render(string markdown) => Render(Parse(markdown), animate: false, CancellationToken.None);
+
+    /// <summary>Renders command-review headings without icons and indents their lists by two extra cells.</summary>
+    /// <param name="markdown">The command-review description to display.</param>
+    /// <exception cref="ArgumentNullException">Thrown when markdown is null.</exception>
+    public void RenderCommandReview(string markdown)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+        Render(new MarkdownDocument(ParseBlocks(markdown, commandReview: true), markdown.Length),
+            animate: false, CancellationToken.None);
+    }
 
     /// <summary>Renders the readable Markdown subset progressively without ever exposing raw formatting markers.</summary>
     /// <param name="markdown">Source text to parse and render.</param>
@@ -70,7 +82,8 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
 
     /// <summary>Parses one sanitized Markdown subset into reusable blocks without writing to the terminal.</summary>
     /// <param name="markdown">Non-null source text supplied by the parser entry point.</param>
-    private static IReadOnlyList<MarkdownBlock> ParseBlocks(string markdown)
+    /// <param name="commandReview">Whether to use compact headings and indented command-review lists.</param>
+    private static IReadOnlyList<MarkdownBlock> ParseBlocks(string markdown, bool commandReview = false)
     {
         var blocks = new List<MarkdownBlock>();
         if (string.IsNullOrWhiteSpace(markdown))
@@ -121,7 +134,10 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
             var heading = HeadingPattern().Match(line);
             if (heading.Success)
             {
-                blocks.Add(new MarkdownBlock(Heading(heading.Groups[1].Value.Length, heading.Groups[2].Value), false));
+                var headingContent = commandReview
+                    ? new Markup($"[bold {TerminalTheme.Primary}]{RenderInline(heading.Groups[2].Value.TrimEnd(':'))}:[/]")
+                    : Heading(heading.Groups[1].Value.Length, heading.Groups[2].Value);
+                blocks.Add(new MarkdownBlock(headingContent, false));
                 continue;
             }
 
@@ -132,9 +148,15 @@ public sealed partial class PoorMarkdownRenderer : IPoorMarkdownRenderer
                     ? $"{ordinal}."
                     : "•";
                 var indent = new string(' ', Math.Min(6, list.Groups["indent"].Value.Length));
-                blocks.Add(new MarkdownBlock(new Markup(
+                IRenderable listContent = new Markup(
                     $"{indent}[{TerminalTheme.Accent}]{Markup.Escape(marker)}[/] " +
-                    $"[{TerminalTheme.Primary}]{RenderInline(list.Groups["content"].Value)}[/]"), true));
+                    $"[{TerminalTheme.Primary}]{RenderInline(list.Groups["content"].Value)}[/]");
+                if (commandReview)
+                {
+                    // Padding keeps wrapped list lines aligned with the indented bullet.
+                    listContent = new Padder(listContent, new Padding(2, 0, 0, 0));
+                }
+                blocks.Add(new MarkdownBlock(listContent, true));
                 continue;
             }
 

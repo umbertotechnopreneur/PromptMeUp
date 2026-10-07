@@ -3,6 +3,7 @@
 Git, Bash, or PowerShell: describe what you want to do. `hm` is here to help. Available on Windows, Linux, and macOS, using your own OpenAI API account.
 
 <p align="center">
+  <a href="CHANGELOG.md"><strong>What's new</strong></a> ·
   <a href="#meet-hm"><strong>Meet hm</strong></a> ·
   <a href="#get-started"><strong>Get started</strong></a> ·
   <a href="https://umbertogiacobbi.biz/promptmeup/?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=promptmeup&amp;utm_content=readme_product_page"><strong>Product page</strong></a> ·
@@ -243,3 +244,28 @@ I built PromptMeUp with help from contributors, and I’m grateful to the people
 <p align="center"><sub>Brand mark, not an app icon. <a href="docs/assets/meup/README.md">Visual style and image credits</a>.</sub></p>
 
 <p align="center">I’m Umberto Giacobbi. I built and maintain PromptMeUp with help from contributors.<br />Find me on <a href="https://www.linkedin.com/in/umbertogiacobbi/">LinkedIn</a> or at <a href="https://umbertogiacobbi.biz/">umbertogiacobbi.biz</a>.</p>
+
+---
+
+<p align="center">
+  <a href="https://umbertogiacobbi.biz/vibeware/manifesto">
+    <img src="https://raw.githubusercontent.com/umbertotechnopreneur/VibeWare/main/Branding/vibeware-logo.png" alt="VibeWare" width="160">
+  </a>
+</p>
+
+<p align="center">
+  <strong>VibeWare</strong><br>
+  <em>Human intent, AI, and plenty of tokens ;-)</em>
+</p>
+
+### What is VibeWare?
+
+VibeWare is a term coined by [Umberto Giacobbi](https://umbertogiacobbi.biz) and an open initiative for developers who build with AI and care about the craft. It challenges the assumption that vibe coding is synonymous with low-quality code. It openly acknowledges the weaknesses and risks of AI-generated software: experienced developers must guide the process, test carefully, check security and take responsibility for the result. A VibeWare footer simply says: this software was developed with AI, and it deserves to be judged by the quality of the work.
+
+<p align="center">
+  <a href="https://umbertogiacobbi.biz/vibeware/manifesto"><strong>Read the VibeWare manifesto</strong></a>
+</p>
+
+<p align="center">
+  <em>You are welcome to explore, adapt and reuse the open-source VibeWare materials under the project license — my contribution to the developer community.</em>
+</p>

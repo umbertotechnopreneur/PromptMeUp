@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\assets\lenna.rgb.gz" LogicalName="PromptMeUp.Assets.lenna.rgb.gz" />
+    <EmbeddedResource Include="..\assets\vibeware-symbol.rgb" LogicalName="PromptMeUp.Assets.vibeware-symbol.rgb" />
     <Content Include="..\output\pdf\promptmeup-quick-reference.pdf" Link="docs\promptmeup-quick-reference.pdf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\assets\PromptMeUp.ico" Link="PromptMeUp.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\prompt\*.yaml" Link="prompt\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

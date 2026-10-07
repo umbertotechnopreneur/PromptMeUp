@@ -74,6 +74,7 @@ COMMANDS
   release-artifacts            Build or plan the legacy release artifact set.
   windows-installer            Package a prepared portable Windows payload.
   msix                         Package a prepared Windows publish directory as MSIX.
+  install-debug-msix           Build, sign, install, and check a Debug MSIX for -Version.
   store-msix                   Build unsigned x64 and ARM64 Store MSIX packages.
   help                         Show this reference.
 
@@ -87,6 +88,7 @@ EXAMPLES
   pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command format -Verify
   pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command notices -Runtime win-x64 -OutputDirectory .\artifacts\notices
   pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command msix -PublishDirectory .\artifacts\publish -Architecture x64 -Channel Debug -CertificateThumbprint <thumbprint>
+  pwsh -NoProfile -File .\scripts\PromptMeUp.ps1 -Command install-debug-msix -Version 1.0.0.2
 '@ | Write-Host
 }
 
@@ -210,6 +212,14 @@ function Get-PromptMeUpCommandArguments {
             Add-PromptMeUpValueArgument $arguments 'SdkBinDirectory' $SdkBinDirectory
             Add-PromptMeUpValueArgument $arguments 'TimestampServer' $TimestampServer
         }
+        'install-debug-msix' {
+            Assert-PromptMeUpParameter 'Version' $Version
+            Add-PromptMeUpValueArgument $arguments 'Version' $Version
+            Add-PromptMeUpValueArgument $arguments 'Architecture' $Architecture
+            Add-PromptMeUpValueArgument $arguments 'CertificateThumbprint' $CertificateThumbprint
+            Add-PromptMeUpValueArgument $arguments 'SdkBinDirectory' $SdkBinDirectory
+            Add-PromptMeUpValueArgument $arguments 'TimestampServer' $TimestampServer
+        }
         'store-msix' {
             Add-PromptMeUpValueArgument $arguments 'Version' $Version
             Add-PromptMeUpValueArgument $arguments 'SdkBinDirectory' $SdkBinDirectory
@@ -243,6 +253,7 @@ function Resolve-PromptMeUpCommand {
         'build-windows-installer' { return [pscustomobject]@{ Name = 'windows-installer'; Script = 'build-windows-installer.ps1' } }
         'msix' { return [pscustomobject]@{ Name = 'msix'; Script = 'package-msix.ps1' } }
         'package-msix' { return [pscustomobject]@{ Name = 'msix'; Script = 'package-msix.ps1' } }
+        'install-debug-msix' { return [pscustomobject]@{ Name = 'install-debug-msix'; Script = 'install-debug-msix.ps1' } }
         'store-msix' { return [pscustomobject]@{ Name = 'store-msix'; Script = 'build-store-msix.ps1' } }
         'build-store-msix' { return [pscustomobject]@{ Name = 'store-msix'; Script = 'build-store-msix.ps1' } }
         default { throw "Unknown PromptMeUp command '$Value'. Use -Command help." }

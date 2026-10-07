@@ -58,4 +58,13 @@ public sealed record CommandExecutionResult(
     string StandardError,
     bool TimedOut,
     bool OutputTruncated,
-    long ElapsedMilliseconds);
+    long ElapsedMilliseconds)
+{
+    public bool Cancelled { get; init; }
+
+    public bool OutputWasStreamed { get; init; }
+}
+
+public sealed record CommandOutputSpan(string Text, int Foreground, bool Bold);
+
+public sealed record CommandOutputUpdate(IReadOnlyList<CommandOutputSpan> Spans, bool IsError, bool CompleteLine);

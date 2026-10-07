@@ -1,5 +1,105 @@
 ﻿# Task Archive
 
+Add a `Public update:` line to a completed task only when it changes something readers can use. `scripts/Generate-Changelog.ps1` copies those lines into the public `CHANGELOG.md`; keep internal validation and plans out of them.
+
+## 2026-10-07 — Group copy choices for multiple suggested commands
+
+- Keep the direct copy-and-exit choice when there is exactly one suggested command.
+- For multiple suggestions, show one Copy… entry before the final stop choice. Open a numbered submenu containing each command's label and exact text.
+- Return to the parent menu with Back or Escape. Copy only the selected command and retain the existing successful-copy exit behavior.
+- Localize the new labels in all six supported languages. The shared suggestion view covers chat and other suggestion flows; single-command authorization keeps its direct copy choices.
+
+Validation: scoped source and diff review and XML method-comment check only. Automated tests, builds, MSIX packaging, installation, and Git delivery were not performed.
+
+Public update: When several commands are suggested, choose Copy… to pick one in a separate submenu instead of repeating a copy choice beside every command.
+
+## 2026-10-06 — Fix repeated inline conversation menus
+
+- Render the inline menu as one padded layout and count its physical output lines before erasing it. Preserve the existing conversation scrollback.
+- Repaint keyboard navigation only when the selected item changes. Ignore unrelated keys and navigation that leaves the selection unchanged.
+- Add a regression that checks the repaint count and compares the cursor-up distance with the actual initial output height.
+
+Validation: all 20 TerminalViewTests passed in Debug, including the new menu regression. XML method-comment and scoped diff checks passed. Matching Debug build output was cleaned; test results were retained. Physical Windows Terminal behavior and a replacement MSIX were not verified in this change.
+
+Public update: Conversation menus no longer accumulate copies when keyboard input leaves the selection unchanged, and menu redraws erase all rendered rows.
+
+## 2026-10-06 — Stream command output and add VibeWare terminal branding
+
+- Show stdout and stderr while an authorized command runs, including partial lines, simple carriage-return progress, and basic foreground colors. Filter other terminal control sequences; do not launch an external terminal or add an emulator dependency.
+- Let supervised commands run until completion or interruption. Esc stops the active command and returns to chat without starting an automatic AI follow-up. The command timing preference now controls a reminder during output silence.
+- Keep bounded beginning and ending excerpts for redacted audit and AI context. Preserve final diagnostics when applying smaller provider budgets, and discard partial raw trailing lines that could detach credential values from their keys.
+- Show final exit status and elapsed time without repeating streamed output. Add a localized warning-icon link for reporting command-output problems on GitHub.
+- Add a static rendering of the supplied VibeWare symbol at the top right of About and General Setup, using the existing Spectre canvas. Retain the brand name and supplied manifesto link on narrow or colorless terminals. The link was used as supplied without opening it.
+
+Validation: all 1,066 automated tests passed, including real child-process streaming, timeout/cancellation, Escape input, bounded excerpts, and adaptive branding. Debug build passed with zero warnings or errors. Read-only preflight, XML method comments, and scoped formatting checks passed. Build output was cleaned after validation. Live-terminal appearance, MSIX packaging, installation, and Git delivery were not performed.
+
+Public update: Watch command output as it arrives, stop a running command with Esc, and retain its first and last output for AI analysis. About and Setup now include the VibeWare symbol and manifesto link.
+
+## 2026-10-06 — Fix chat input and activity feedback, and add copy-and-exit
+
+- Keep the current input editor open for empty or whitespace-only Enter submissions, before writing a user heading or adding terminal history.
+- Restore an animated indeterminate progress bar, spinner, and elapsed time for interactive operations. Retain visible static status when animations are disabled or output is redirected.
+- Indent the content beneath the interactive-chat heading, including accepted user text, turn headings, input rows, operation status, and decision menus.
+- Highlight decision and history shortcut keys with semantic colors and spaced icons, preserving text-only preferences and terminal-width limits.
+- Add a localized copy-command-and-exit choice beside each suggested command and in command authorization. Offer C during direct countdowns; successful copying requests a graceful application exit without executing the command, while copy failure leaves the application open and refuses execution.
+- Add regression coverage for clipboard success and failure, early countdown exit, and Ctrl+C cancellation. Update existing cost-refresh mocks, command-output expectations, and packaged prompt-version assertions to match the current source.
+
+Validation: XML method-comment check and scoped diff check passed. Debug build completed with zero warnings or errors; all 1,048 automated tests passed. Build intermediates were cleaned. Live-terminal appearance, the physical Windows clipboard, MSIX packaging, installation, and Git delivery were not performed.
+
+## 2026-10-06 — Refine command authorization emphasis
+
+- Added a blank line between the command-preview heading and the exact command, and rendered the command in bold.
+- Kept the risk label in regular weight while emphasizing only the numeric score and localized risk level.
+
+Validation: focused source and diff review only. Builds, automated tests, live-terminal verification, packaging, installation, and Git delivery were not performed.
+
+## 2026-10-06 — Clarify automatic daily cost synchronization
+
+- Added blank lines around the OpenAI pricing refresh status and a muted, two-cell-indented explanation that synchronization runs once daily without user action.
+- Localized the explanation in all six supported interface languages.
+
+Validation: focused source review only. Builds, automated tests, live-terminal verification, packaging, installation, and Git delivery were not performed.
+
+## 2026-10-03 — Add one-command Debug MSIX installation
+
+- Added `install-debug-msix` to the general script to clear `artifacts`, publish, export notices, build a signed Debug MSIX, install it, verify its version and status, and clean project build output while preserving the new package.
+- Require an explicit four-part version above the installed one; select one trusted matching code-signing certificate or accept its thumbprint.
+
+Validation: PowerShell parsing passed. The command built, signed, installed, and verified Debug x64 version 1.0.6.3 with a valid package signature and `Ok` registration status.
+
+## 2026-10-03 — Install PromptMeUp Debug MSIX 1.0.0.1 for UI review
+
+- Built and signed the current Windows x64 Debug source as package version 1.0.0.1 after Windows rejected a changed 1.0.0.0 package with `0x80073CFB`.
+- Installed the new MSIX and confirmed the current-user package reports x64, version 1.0.0.1, and `Ok` status. Cleaned the project-specific Debug build output; retained the signed package under ignored `artifacts/`.
+- No automated tests or live terminal interaction checks were run for this package.
+
+## 2026-10-03 — Simplify command reminders, approval receipts, and output
+
+- Added an information icon and four spaces of indentation to the existing localized command-safety reminder. It has a one-in-five chance of appearing, with no consecutive appearances.
+- Replaced the normal approval menu's persistent answer with a localized command receipt. Commands longer than 50 text elements are shortened in the middle without splitting Unicode characters.
+- Displayed captured stdout and stderr directly below exit status and elapsed time. Removed the tool heading, collapsed-details prompt, and duplicate metadata while retaining command results in session history.
+- Rendered command-review headings such as `Effects:` without an icon and indented their bullet lists by two additional cells, including wrapped lines. Preserved the advisory position and other Markdown rendering flows.
+- Added explicit notices for empty output and capture truncation in all six languages. Successful stderr messages remain distinct from failed execution.
+
+Validation: manually reviewed the focused source diff and output-rendering flow. Builds, automated tests, live-terminal verification, packaging, installation, and Git delivery were not performed.
+
+## 2026-10-03 — Explain PromptMeUp's maintainer and official links on demand
+
+- Added Umberto Giacobbi's maintainer credit, the company website, and the GitHub source-code and documentation link to the existing local overview chapter in all six languages.
+- Updated single-query and chat instructions to accept product identity questions and request that overview through the existing on-demand guide flow when its facts are missing.
+- Kept answers grounded in the trusted guide, distinguished the assistant from the maintainer and company, and excluded unrelated company or product questions from this chapter request. The existing topic and token limits remain unchanged.
+
+Validation: reviewed the relevant source and focused diffs manually. Builds, automated tests, prompt validation, runtime/provider checks, and Git delivery were not performed.
+
+## 2026-10-02 — Publish selected changes from the task archive
+
+Public update: Find selected product changes from the new What's new link at the top of the README.
+
+- Added a curated public changelog derived only from explicit `Public update:` lines in completed tasks.
+- Added a pull-request quality check that asks contributors to regenerate and include the Markdown file when its source notes change.
+- Kept the task archive and its validation details out of the public changelog.
+
+Validation: changelog generation and consistency check, repository preflight, and scoped diff check passed. The workflow edit was reviewed; remote CI has not run. No build or automated tests were run.
 ## 2026-10-02 — Resolve the SDK exactly in CI
 
 - Selected the published .NET SDK 10.0.401 in the shared `global.json`.
@@ -32,6 +132,8 @@ Validation: repository preflight, XML method-comment check, and scoped diff chec
 
 ## 2026-09-28 — Illustrate a practical restart investigation
 
+Public update: The README now shows how to use Plan mode to investigate an unexpected Windows restart, with a four-step illustration and a command you can try.
+
 - Added a four-step ImageGen banner and readable captions to the README, with a read-only Windows investigation goal for `hm --plan`.
 - Reused the illustration on the product website with English, Italian, and Vietnamese captions and a responsive four/two/one-column layout.
 - Kept the copy aligned with implemented behavior: Plan shows checks and expected results; chat provides further interpretation. Recorded image provenance and the full generation prompt.
@@ -40,12 +142,16 @@ Validation: inspected the generated artwork, reviewed the scoped diffs and Plan 
 
 ## 2026-09-26 — Make saved memories useful at a glance
 
+Public update: Preview saved memories directly in Settings, including on narrow terminals.
+
 - Reused the shared borderless terminal table to preview saved notes directly in Settings, with a compact layout on narrow terminals and refreshed content after editing.
 - Removed empty suggestion navigation from normal memory browsing, opened on the first saved note, and removed duplicate note text from the editor detail.
 
 Validation: repository preflight, XML method-comment check, full-solution format verification, and warning-free Release build passed. Automated tests and live-terminal interaction were not run.
 
 ## 2026-09-26 — Restore responsive inline command choices
+
+Public update: Command choices in conversations now respond to the keyboard while keeping your terminal history visible.
 
 - Replaced the live renderer around conversational menus with bounded in-place redraws, preserving keyboard selection, turn-history shortcuts, and terminal scrollback.
 - Added a regression case for selecting a suggested command with Arrow Down and Enter.
@@ -69,6 +175,8 @@ Validation: PowerShell syntax and scoped diff checks passed. No local builds, in
 
 ## 2026-09-24 — Improve onboarding and add a printable command guide
 
+Public update: First-run setup is easier to follow, and Help can open a two-page offline command guide in six languages.
+
 - Reworked the first-run steps into a disposable, collapsible terminal surface when supported. Completed prompts now leave compact headers, while the active step uses a horizontal cyan-to-pink gradient rule; scrolling terminals keep a simpler fallback without redundant choice separators.
 - Expanded the final welcome with three practical starter commands, localized recovery guidance, and explicit opening of the installed two-page command guide in all six supported languages.
 - Added a print-friendly A4 quick reference with essential commands on page one and advanced workflows, global switches, chat controls, and safety guidance on page two. Both pages carry the official application icon.
@@ -84,6 +192,8 @@ Validation: repository preflight, formatting verification, XML method-comment ch
 Validation: `Get-AppxPackage` reports version 1.0.0.0, x64 architecture, `Ok` status, and a Developer signature for `UmbertoGiacobbiDotBiz.PromptMeUp_1.0.0.0_x64__aa9ddh7dsmn36`.
 
 ## 2026-09-24 — Prepare a redacted email support bundle
+
+Public update: Run `hm --prepare-logs` to create a redacted support ZIP on your desktop for review before you share it.
 
 - Added `hm --prepare-logs` as a standalone local command available before onboarding and database initialization.
 - The command creates a new timestamped ZIP on the current user's desktop with a privacy-limited machine summary, a contents note, and up to the 14 available daily logs. Each log contributes at most its latest 4 MiB.

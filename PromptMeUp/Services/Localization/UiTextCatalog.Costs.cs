@@ -112,6 +112,13 @@ internal static partial class UiTextCatalog
             German: "OpenAI-Preise und Kosten werden aktualisiert...",
             Spanish: "Actualizando precios y costes de OpenAI...",
             Vietnamese: "Đang cập nhật giá và chi phí OpenAI..."));
+        entries.Add("Costs.DailySyncHint", new(
+            English: "Sync runs once a day. You don't need to do anything.",
+            Italian: "Viene fatto il sync una volta al dì. Non devi fare nulla.",
+            French: "La synchronisation a lieu une fois par jour. Vous n'avez rien à faire.",
+            German: "Die Synchronisierung erfolgt einmal täglich. Sie müssen nichts tun.",
+            Spanish: "La sincronización se realiza una vez al día. No tienes que hacer nada.",
+            Vietnamese: "Quá trình đồng bộ diễn ra mỗi ngày một lần. Bạn không cần làm gì."));
         entries.Add("Costs.Requests", new(
             English: "Requests today",
             Italian: "Richieste oggi",

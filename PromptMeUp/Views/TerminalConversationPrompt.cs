@@ -10,8 +10,15 @@ namespace PromptMeUp.Views;
 internal static class TerminalConversationPrompt
 {
     /// <summary>Returns an explicit menu choice while retaining selection when details or previous turns are inspected.</summary>
+    /// <param name="console">The console used to display and read the menu.</param>
+    /// <param name="text">The localized menu text.</param>
+    /// <param name="choices">The available menu choices.</param>
+    /// <param name="title">The heading displayed above the choices.</param>
+    /// <param name="numbered">Whether number keys select choices immediately.</param>
+    /// <param name="echoSelection">Whether the selected label remains in the conversation.</param>
+    /// <exception cref="ArgumentException">Thrown when no choices are provided.</exception>
     internal static T Select<T>(IAnsiConsole console, ILocalizationService text,
-        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false)
+        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false, bool echoSelection = true)
     {
         if (choices.Count == 0) throw new ArgumentException("A conversation menu needs choices.", nameof(choices));
         if (!console.Profile.Capabilities.Interactive || !console.Profile.Capabilities.Ansi
@@ -19,12 +26,19 @@ internal static class TerminalConversationPrompt
         {
             return TerminalChoiceMenu.Select(console, choices, title);
         }
-        return SelectInteractive(console, text, choices, title, numbered);
+        return SelectInteractive(console, text, choices, title, numbered, echoSelection);
     }
 
     /// <summary>Reads an inline decision without holding a live renderer while input is pending.</summary>
+    /// <param name="console">The console used to display and read the menu.</param>
+    /// <param name="text">The localized menu text.</param>
+    /// <param name="choices">The available menu choices.</param>
+    /// <param name="title">The heading displayed above the choices.</param>
+    /// <param name="numbered">Whether number keys select choices immediately.</param>
+    /// <param name="echoSelection">Whether the selected label remains in the conversation.</param>
+    /// <exception cref="InteractiveFlowCanceledException">Thrown when the user cancels the menu.</exception>
     internal static T SelectInteractive<T>(IAnsiConsole console, ILocalizationService text,
-        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false)
+        IReadOnlyList<TerminalMenuChoice<T>> choices, string title, bool numbered = false, bool echoSelection = true)
     {
         using var state = new TerminalStateScope(console, text, TerminalActivityState.NeedsInput);
         using var paste = new TerminalPasteScope(console);
@@ -35,7 +49,7 @@ internal static class TerminalConversationPrompt
 
         IReadOnlyList<IRenderable> Render()
         {
-            var width = Math.Max(1, console.Profile.Width - 1);
+            var width = Math.Max(1, console.Profile.Width - 1 - session.ChatIndent);
             var rows = new List<IRenderable>();
             if (console.Profile.Height >= 10)
             {
@@ -60,9 +74,11 @@ internal static class TerminalConversationPrompt
             }
             rows.Add(new Text(" "));
             var hint = text.Text("Terminal.ChoiceKeys", selected + 1, choices.Count);
-            rows.Add(new Text(TerminalText.Clip(hint, width), Style.Parse(TerminalTheme.Muted)));
+            rows.Add(new TerminalShortcutHint(hint, session.Options,
+                ["↕️", "✅", "❌"], [TerminalTheme.Info, TerminalTheme.Success, TerminalTheme.Warning], width));
             if (FullscreenViewport.CanUse(console) && session.History.Turns.Count > 0)
-                rows.Add(new Text(TerminalText.Clip(text.Text("Terminal.NavigationKeys"), width), Style.Parse(TerminalTheme.Muted)));
+                rows.Add(new TerminalShortcutHint(text.Text("Terminal.NavigationKeys"), session.Options,
+                    ["📖", "🔎"], [TerminalTheme.Info, TerminalTheme.Accent], width));
             return rows;
         }
 
@@ -97,12 +113,13 @@ internal static class TerminalConversationPrompt
         {
             EraseMenu();
             paintedSize = (console.Profile.Width, console.Profile.Height);
-            foreach (var row in Render())
-            {
-                console.Write(row);
-                console.WriteLine();
-                paintedRows++;
-            }
+            var menu = new Padder(new Rows(Render()), new Padding(session.ChatIndent, 0, 0, 0));
+            var options = new RenderOptions(console.Profile.Capabilities, new Size(paintedSize.Width, paintedSize.Height));
+            // Count physical output lines, including renderer-added spacing, rather than logical menu items.
+            paintedRows = ((IRenderable)menu).Render(options, paintedSize.Width)
+                .Sum(segment => segment.Text.Count(character => character == '\n')) + 1;
+            console.Write(menu);
+            console.WriteLine();
         }
 
         console.Cursor.Hide();
@@ -129,7 +146,7 @@ internal static class TerminalConversationPrompt
                     break;
                 }
                 if (key.Key == ConsoleKey.Enter && key.Modifiers == 0) break;
-                selected = key.Key switch
+                var nextSelected = key.Key switch
                 {
                     ConsoleKey.UpArrow => (selected + choices.Count - 1) % choices.Count,
                     ConsoleKey.DownArrow => (selected + 1) % choices.Count,
@@ -138,12 +155,19 @@ internal static class TerminalConversationPrompt
                     ConsoleKey.End => choices.Count - 1,
                     _ => selected
                 };
-                PaintMenu();
+                if (nextSelected != selected)
+                {
+                    selected = nextSelected;
+                    PaintMenu();
+                }
             }
             EraseMenu();
-            console.Write(new Text(choices[selected].Label, Style.Parse(TerminalTheme.Info)));
-            console.WriteLine();
-            console.WriteLine();
+            if (echoSelection)
+            {
+                console.Write(new Text(choices[selected].Label, Style.Parse(TerminalTheme.Info)));
+                console.WriteLine();
+                console.WriteLine();
+            }
             return choices[selected].Value;
         }
         finally

@@ -10,6 +10,35 @@ namespace PromptMeUp.Tests;
 
 public sealed class AuthorizedCommandWorkflowTests
 {
+    /// <summary>A user interruption renders the partial result and prevents an automatic AI follow-up.</summary>
+    [Fact]
+    public async Task RunAsync_InterruptedCommand_ReturnsToUser()
+    {
+        var result = new CommandExecutionResult("Get-Location", null, "partial", "", false, true, 25)
+        {
+            Cancelled = true,
+            OutputWasStreamed = true
+        };
+        var fixture = new WorkflowFixture(true, result);
+        Assert.Null(await fixture.Workflow.RunAsync("stopped", "Get-Location", AppSettings.Default, default));
+        Assert.Same(result, fixture.CommandView.RenderedResult);
+        Assert.Contains("event:command_output", fixture.Audit.Calls);
+    }
+
+    /// <summary>Retains final diagnostics after applying the smaller provider evidence budget.</summary>
+    [Fact]
+    public async Task RunForResultAsync_LargeOutput_KeepsFinalDiagnostics()
+    {
+        var result = new CommandExecutionResult("Get-Location", 1,
+            "START\n" + new string('x', 40_000) + "\nFINAL detail", "failure", false, false, 25);
+        var fixture = new WorkflowFixture(true, result);
+        var prepared = await fixture.Workflow.RunForResultAsync("large", "Get-Location",
+            AppSettings.Default with { MaxCommandOutputCharacters = 1000 }, default);
+        Assert.NotNull(prepared);
+        Assert.StartsWith("START", prepared.StandardOutput);
+        Assert.EndsWith("FINAL detail", prepared.StandardOutput);
+        Assert.True(prepared.StandardOutput.Length <= 1000);
+    }
     /// <summary>Returns exactly the same sanitized streams as the audit while leaving the local command and result intact.</summary>
     [Fact]
     public async Task RunForResultAsync_PreparesEvidenceOnceWithoutChangingLocalPreview()
@@ -239,7 +268,7 @@ public sealed class AuthorizedCommandWorkflowTests
         Assert.Contains("[redacted-bearer-token]", followUp, StringComparison.Ordinal);
         Assert.True(ExtractSection(followUp, "Standard output:", "Standard error:").Length <= streamLimit);
         Assert.True(ExtractSection(followUp, "Standard error:", "Analyze this result").Length <= streamLimit);
-        Assert.Equal(2, CountOccurrences(followUp, "[truncated by PromptMeUp]"));
+        Assert.Equal(2, CountOccurrences(followUp, "characters omitted"));
     }
 
     /// <summary>Verifies that the complete provider follow-up never exceeds the configured message boundary.</summary>
@@ -270,7 +299,7 @@ public sealed class AuthorizedCommandWorkflowTests
 
         Assert.NotNull(followUp);
         Assert.Equal(messageLimit, followUp.Length);
-        Assert.EndsWith("[truncated by PromptMeUp]", followUp, StringComparison.Ordinal);
+        Assert.Contains("characters omitted", followUp, StringComparison.Ordinal);
     }
 
     /// <summary>Extracts and trims text between two stable follow-up labels.</summary>
@@ -380,10 +409,14 @@ public sealed class AuthorizedCommandWorkflowTests
         public Task<CommandExecutionResult> ExecuteAsync(
             ApprovedCommand command,
             TimeSpan timeout,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Action<CommandOutputUpdate>? output = null,
+            CancellationToken stopToken = default)
         {
             CallCount++;
             ExecutedCommand = command.Text;
+            Assert.Equal(Timeout.InfiniteTimeSpan, timeout);
+            Assert.NotNull(output);
             return Task.FromResult(_result);
         }
     }
@@ -448,6 +481,10 @@ public sealed class AuthorizedCommandWorkflowTests
 
         public CommandExecutionResult? RenderedResult { get; private set; }
 
+        /// <summary>Provides an in-memory output scope without terminal polling.</summary>
+        /// <param name="silenceNoticeInterval">The requested status-notice interval.</param>
+        public ICommandOutputSession BeginExecution(TimeSpan silenceNoticeInterval) => new FakeOutputSession();
+
         /// <summary>Records the unredacted command that precedes either authorization mode.</summary>
         public void RenderPreview(string command, CommandRiskAssessment assessment) => PreviewedCommand = command;
 
@@ -468,6 +505,18 @@ public sealed class AuthorizedCommandWorkflowTests
             RenderCount++;
             RenderedResult = result;
         }
+    }
+
+    private sealed class FakeOutputSession : ICommandOutputSession
+    {
+        public CancellationToken StopToken => CancellationToken.None;
+
+        /// <summary>Accepts fixture output without rendering.</summary>
+        /// <param name="update">The synthetic normalized update.</param>
+        public void Write(CommandOutputUpdate update) { }
+
+        /// <summary>Ends the in-memory scope.</summary>
+        public void Dispose() { }
     }
 
     private sealed class FakeConsoleShellView : IConsoleShellView

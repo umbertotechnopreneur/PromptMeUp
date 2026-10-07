@@ -136,12 +136,13 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
             cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         var approved = ApprovedCommand.Create(command, assessment);
-        var result = await _shell.RunWithStatusAsync(
-            _text.Text("Command.Running"),
-            () => _commandExecution.ExecuteAsync(
-                approved,
-                TimeSpan.FromSeconds(settings.CommandTimeoutSeconds),
-                cancellationToken)).ConfigureAwait(false);
+        CommandExecutionResult result;
+        using (var output = _commandView.BeginExecution(TimeSpan.FromSeconds(settings.CommandTimeoutSeconds)))
+        {
+            // Foreground commands remain visible and interruptible, including long or silent transfers.
+            result = await _commandExecution.ExecuteAsync(approved, Timeout.InfiniteTimeSpan,
+                cancellationToken, output.Write, output.StopToken).ConfigureAwait(false);
+        }
         _commandView.RenderExecutionResult(result);
         var prepared = PrepareResult(result, settings.MaxCommandOutputCharacters);
         await _audit.AppendSessionEventAsync(
@@ -154,11 +155,13 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
                 standardOutput = prepared.StandardOutput,
                 standardError = prepared.StandardError,
                 prepared.TimedOut,
+                prepared.Cancelled,
                 prepared.OutputTruncated,
                 prepared.ElapsedMilliseconds
             },
             cancellationToken).ConfigureAwait(false);
-        return prepared;
+        // Interrupting a command returns control to the user instead of continuing an automatic AI chain.
+        return prepared.Cancelled ? null : prepared;
     }
 
     /// <summary>Prepares evidence once after local rendering so audit and follow-up share identical privacy and size boundaries.</summary>
@@ -185,16 +188,7 @@ public sealed class AuthorizedCommandWorkflow : IAuthorizedCommandWorkflow
     }
 
     /// <summary>Limits output retained and transmitted after an authorized command.</summary>
-    private static string Limit(string value, int maximumCharacters)
-    {
-        if (value.Length <= maximumCharacters)
-        {
-            return value;
-        }
-
-        const string suffix = "\n[truncated by PromptMeUp]";
-        return maximumCharacters <= suffix.Length
-            ? value[..maximumCharacters]
-            : value[..(maximumCharacters - suffix.Length)] + suffix;
-    }
+    /// <param name="value">Already-redacted text.</param>
+    /// <param name="maximumCharacters">The final character budget.</param>
+    private static string Limit(string value, int maximumCharacters) => CommandOutputExcerpt.Limit(value, maximumCharacters);
 }

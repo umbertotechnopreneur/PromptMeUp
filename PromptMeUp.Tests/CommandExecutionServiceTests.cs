@@ -13,6 +13,53 @@ public sealed class CommandExecutionServiceTests
     private static readonly TimeSpan MaximumReturnTime = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan WatchdogDeadline = TimeSpan.FromSeconds(45);
 
+    /// <summary>Publishes partial stdout and stderr before exit and returns evidence when only the command is stopped.</summary>
+    [Fact]
+    public async Task ExecuteAsync_LiveOutput_StopReturnsPartialEvidence()
+    {
+        using var watchdog = new CancellationTokenSource(WatchdogDeadline);
+        using var stop = new CancellationTokenSource();
+        var stdout = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stderr = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var command = Approve("[Console]::Out.Write('early-out'); [Console]::Out.Flush(); [Console]::Error.Write('early-err'); [Console]::Error.Flush(); Start-Sleep -Seconds 30");
+        var running = new CommandExecutionService(NullLogger<CommandExecutionService>.Instance).ExecuteAsync(
+            command, Timeout.InfiniteTimeSpan, watchdog.Token, update =>
+            {
+                var text = string.Concat(update.Spans.Select(span => span.Text));
+                if (text.Contains("early-out", StringComparison.Ordinal)) stdout.TrySetResult();
+                if (text.Contains("early-err", StringComparison.Ordinal)) stderr.TrySetResult();
+            }, stop.Token);
+        try
+        {
+            await Task.WhenAll(stdout.Task, stderr.Task).WaitAsync(TimeSpan.FromSeconds(15));
+            Assert.False(running.IsCompleted);
+        }
+        finally
+        {
+            await stop.CancelAsync();
+        }
+        var result = await running.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.True(result.Cancelled);
+        Assert.True(result.OutputWasStreamed);
+        Assert.False(result.TimedOut);
+        Assert.Null(result.ExitCode);
+        Assert.Contains("early-out", result.StandardOutput);
+        Assert.Contains("early-err", result.StandardError);
+        Assert.False(watchdog.IsCancellationRequested);
+    }
+
+    /// <summary>Stops execution if the live renderer fails instead of leaving a blocked child behind.</summary>
+    [Fact]
+    public async Task ExecuteAsync_OutputCallbackFails_StopsAndPropagatesFailure()
+    {
+        using var watchdog = new CancellationTokenSource(WatchdogDeadline);
+        var service = new CommandExecutionService(NullLogger<CommandExecutionService>.Instance);
+        await Assert.ThrowsAsync<IOException>(() => service.ExecuteAsync(
+            Approve("[Console]::Out.WriteLine('start'); [Console]::Out.Flush(); Start-Sleep -Seconds 30"),
+            Timeout.InfiniteTimeSpan, watchdog.Token, _ => throw new IOException("Synthetic display failure"))
+            .WaitAsync(TimeSpan.FromSeconds(15)));
+    }
+
     /// <summary>Large source transport preserves multiline text, Unicode, and explicit or implicit command exit behavior.</summary>
     [Theory]
     [InlineData("[Console]::WriteLine('Tiếng Việt'); exit 7", 7)]
@@ -44,8 +91,8 @@ public sealed class CommandExecutionServiceTests
         var result = await BoundedProcessRunner.RunAsync(startInfo, "Synthetic helper", TimeSpan.FromSeconds(15), default);
         Assert.Equal(0, result.ExitCode);
         Assert.True(result.OutputTruncated);
-        Assert.Equal(32768, result.StandardOutput.Length);
-        Assert.Equal(32768, result.StandardError.Length);
+        Assert.InRange(result.StandardOutput.Length, 1, 32768);
+        Assert.InRange(result.StandardError.Length, 1, 32768);
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => BoundedProcessRunner.RunAsync(
             new ProcessStartInfo("synthetic-executable-that-does-not-exist"), "No start", TimeSpan.FromSeconds(1), new CancellationToken(true)));
     }

@@ -5,6 +5,7 @@ namespace PromptMeUp.Services;
 internal static partial class UiTextCatalog
 {
     /// <summary>Adds the complete six-language commands UI catalog.</summary>
+    /// <param name="entries">The catalog receiving localized command labels and notices.</param>
     private static void AddCommandsEntries(Dictionary<string, LocalizedText> entries)
     {
         entries.Add("Cli.CommandConflict", new(
@@ -98,6 +99,13 @@ internal static partial class UiTextCatalog
             German: "Diesen exakten Befehl jetzt autorisieren?",
             Spanish: "¿Autorizar ahora este comando exacto?",
             Vietnamese: "Cấp quyền chạy chính xác lệnh này ngay bây giờ?"));
+        entries.Add("Command.Accepted", new(
+            English: "Command accepted: {0}",
+            Italian: "Comando accettato: {0}",
+            French: "Commande acceptée : {0}",
+            German: "Befehl akzeptiert: {0}",
+            Spanish: "Comando aceptado: {0}",
+            Vietnamese: "Đã chấp nhận lệnh: {0}"));
         entries.Add("Command.Copy", new(
             English: "Copy command without running it",
             Italian: "Copia il comando senza eseguirlo",
@@ -105,6 +113,26 @@ internal static partial class UiTextCatalog
             German: "Befehl kopieren, ohne ihn auszuführen",
             Spanish: "Copiar el comando sin ejecutarlo",
             Vietnamese: "Sao chép lệnh mà không chạy"));
+        entries.Add("Command.CopyAndExit", new(
+            English: "Copy command to clipboard and exit",
+            Italian: "Copia comando negli appunti e chiudi",
+            French: "Copier la commande dans le presse-papiers et quitter",
+            German: "Befehl in die Zwischenablage kopieren und beenden",
+            Spanish: "Copiar el comando al portapapeles y salir",
+            Vietnamese: "Sao chép lệnh vào bảng nhớ tạm và thoát"));
+        entries.Add("Command.CopyMenu", new(
+            English: "Copy…", Italian: "Copia…", French: "Copier…",
+            German: "Kopieren…", Spanish: "Copiar…", Vietnamese: "Sao chép…"));
+        entries.Add("Command.CopyMenuTitle", new(
+            English: "Choose a command to copy to the clipboard and exit",
+            Italian: "Scegli il comando da copiare negli appunti e chiudi",
+            French: "Choisissez la commande à copier dans le presse-papiers et quittez",
+            German: "Befehl zum Kopieren in die Zwischenablage und Beenden wählen",
+            Spanish: "Elige el comando que copiar al portapapeles y salir",
+            Vietnamese: "Chọn lệnh để sao chép vào bảng nhớ tạm và thoát"));
+        entries.Add("Command.CopyMenuBack", new(
+            English: "Back", Italian: "Indietro", French: "Retour",
+            German: "Zurück", Spanish: "Volver", Vietnamese: "Quay lại"));
         entries.Add("Command.Copied", new(
             English: "Command copied. Nothing was executed.",
             Italian: "Comando copiato. Non è stato eseguito nulla.",
@@ -154,6 +182,44 @@ internal static partial class UiTextCatalog
             German: "Befehlsausgabe",
             Spanish: "Salida del comando",
             Vietnamese: "Đầu ra lệnh"));
+        entries.Add("Command.NoOutput", new(
+            English: "The command produced no output.",
+            Italian: "Il comando non ha prodotto output.",
+            French: "La commande n’a produit aucune sortie.",
+            German: "Der Befehl hat keine Ausgabe erzeugt.",
+            Spanish: "El comando no produjo ninguna salida.",
+            Vietnamese: "Lệnh không tạo đầu ra."));
+        entries.Add("Command.ReportOutputProblem", new(
+            English: "Report a problem with the command output",
+            Italian: "Segnala un problema con l'output del comando",
+            French: "Signaler un problème avec la sortie de la commande",
+            German: "Ein Problem mit der Befehlsausgabe melden",
+            Spanish: "Informar de un problema con la salida del comando",
+            Vietnamese: "Báo cáo sự cố với đầu ra lệnh"));
+        entries.Add("Command.LiveKeys", new(
+            English: "Esc: stop this command · No automatic time limit",
+            Italian: "Esc: interrompi questo comando · Nessun limite automatico di durata",
+            French: "Échap : arrêter cette commande · Aucune limite de durée automatique",
+            German: "Esc: Diesen Befehl stoppen · Kein automatisches Zeitlimit",
+            Spanish: "Esc: detener este comando · Sin límite de tiempo automático",
+            Vietnamese: "Esc: dừng lệnh này · Không giới hạn thời gian tự động"));
+        entries.Add("Command.Interrupted", new(
+            English: "interrupted", Italian: "interrotto", French: "interrompue",
+            German: "abgebrochen", Spanish: "interrumpido", Vietnamese: "đã dừng"));
+        entries.Add("Command.Quiet", new(
+            English: "Command still running · {0} · Waiting for new output",
+            Italian: "Comando ancora in esecuzione · {0} · In attesa di nuovo output",
+            French: "Commande toujours en cours · {0} · En attente de nouvelle sortie",
+            German: "Befehl läuft noch · {0} · Warten auf neue Ausgabe",
+            Spanish: "Comando en ejecución · {0} · Esperando nueva salida",
+            Vietnamese: "Lệnh vẫn đang chạy · {0} · Đang chờ đầu ra mới"));
+        entries.Add("Command.OutputTruncated", new(
+            English: "The retained output is incomplete; first and last excerpts are used for AI analysis.",
+            Italian: "L'output conservato è incompleto; per l'analisi AI vengono usati gli estratti iniziale e finale.",
+            French: "La sortie conservée est incomplète ; les extraits initial et final servent à l'analyse IA.",
+            German: "Die gespeicherte Ausgabe ist unvollständig; Anfang und Ende werden für die KI-Analyse verwendet.",
+            Spanish: "La salida conservada está incompleta; se usan los extractos inicial y final para el análisis de IA.",
+            Vietnamese: "Đầu ra được lưu không đầy đủ; phần đầu và cuối được dùng để phân tích AI."));
         entries.Add("Command.Preview", new(
             English: "COMMAND PREVIEW // AUTHORIZATION REQUIRED",
             Italian: "ANTEPRIMA COMANDO // AUTORIZZAZIONE RICHIESTA",

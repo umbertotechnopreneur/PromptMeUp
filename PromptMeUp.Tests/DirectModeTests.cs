@@ -212,6 +212,11 @@ public sealed class DirectModeTests
         new SensitiveDataRedactor(),
         TestProxy.Create<ICommandAuthorizationView>((method, args) =>
         {
+            if (method.Name == "BeginExecution")
+            {
+                return TestProxy.Create<ICommandOutputSession>((member, _) =>
+                    member.Name == "get_StopToken" ? CancellationToken.None : null);
+            }
             if (method.Name == "AuthorizeAsync")
             {
                 calls.Add($"authorize:{args[0]}");

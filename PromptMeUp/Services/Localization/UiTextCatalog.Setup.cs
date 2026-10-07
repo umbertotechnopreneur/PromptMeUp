@@ -183,12 +183,12 @@ internal static partial class UiTextCatalog
             Spanish: "¿Usar la revisión de IA opcional antes de autorizar comandos?",
             Vietnamese: "Dùng đánh giá AI tùy chọn trước khi cấp quyền chạy lệnh?"));
         entries.Add("Setup.CommandTimeout", new(
-            English: "Command timeout in seconds",
-            Italian: "Timeout comando in secondi",
-            French: "Délai d'expiration des commandes en secondes",
-            German: "Befehlszeitlimit in Sekunden",
-            Spanish: "Tiempo de espera del comando en segundos",
-            Vietnamese: "Thời gian chờ lệnh tính bằng giây"));
+            English: "Silence reminder after (seconds)",
+            Italian: "Avviso senza nuovo output dopo (secondi)",
+            French: "Rappel sans nouvelle sortie après (secondes)",
+            German: "Hinweis ohne neue Ausgabe nach (Sekunden)",
+            Spanish: "Aviso sin nueva salida tras (segundos)",
+            Vietnamese: "Nhắc khi không có đầu ra mới sau (giây)"));
         entries.Add("Setup.ScriptLanguage", new(
             English: "Preferred script language",
             Italian: "Linguaggio script preferito",

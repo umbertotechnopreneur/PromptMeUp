@@ -102,6 +102,16 @@ public sealed partial class AiConversationWorkflow : IAiConversationWorkflow
     }
 
     /// <summary>Runs a single-turn session and offers a safe continuation into chat after the model response.</summary>
+    /// <param name="query">The user's question.</param>
+    /// <param name="settings">The active application settings.</param>
+    /// <param name="renderQuery">Whether to display the user's question.</param>
+    /// <param name="cancellationToken">The token used to cancel conversation work.</param>
+    /// <param name="promptId">The system prompt for the conversation.</param>
+    /// <param name="executionMode">The command authorization mode.</param>
+    /// <param name="directModeOverride">Whether direct mode was explicitly selected for this invocation.</param>
+    /// <exception cref="ArgumentException">The query is blank or a direct override uses confirmation mode.</exception>
+    /// <exception cref="ArgumentNullException">The settings are null.</exception>
+    /// <exception cref="ApplicationExitRequestedException">The user successfully copied a command and requested exit.</exception>
     public async Task RunQueryAsync(
         string query,
         AppSettings settings,
@@ -156,6 +166,11 @@ public sealed partial class AiConversationWorkflow : IAiConversationWorkflow
                 session.Outcome = AuditSessionOutcome.Completed;
             }
         }
+        catch (ApplicationExitRequestedException)
+        {
+            session.Outcome = AuditSessionOutcome.Completed;
+            throw;
+        }
         finally
         {
             await RenderFinalSnapshotAsync(session.Id, memory, settings).ConfigureAwait(false);
@@ -163,6 +178,10 @@ public sealed partial class AiConversationWorkflow : IAiConversationWorkflow
     }
 
     /// <summary>Runs a short interactive session with slash commands and a mandatory command-authorization gate.</summary>
+    /// <param name="settings">The active application settings.</param>
+    /// <param name="cancellationToken">The token used to cancel conversation work.</param>
+    /// <exception cref="ArgumentNullException">The settings are null.</exception>
+    /// <exception cref="ApplicationExitRequestedException">The user successfully copied a command and requested exit.</exception>
     public async Task RunChatAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -191,6 +210,11 @@ public sealed partial class AiConversationWorkflow : IAiConversationWorkflow
                 }
             }
             session.Outcome = await RunChatLoopAsync(session.Id, memory, settings, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ApplicationExitRequestedException)
+        {
+            session.Outcome = AuditSessionOutcome.Completed;
+            throw;
         }
         finally
         {
