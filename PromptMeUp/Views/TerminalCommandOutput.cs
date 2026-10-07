@@ -119,7 +119,10 @@ internal sealed class TerminalCommandOutput : ICommandOutputSession
                 {
                     while (_console.Input.IsKeyAvailable())
                     {
-                        var key = await _console.Input.ReadKeyAsync(true, _shutdown.Token).ConfigureAwait(false);
+                        // Escape belongs to this command session rather than the surrounding chat flow.
+                        var key = await (_console.Input is EscapeAwareConsoleInput wrapped
+                            ? wrapped.ReadRawKeyAsync(true, _shutdown.Token)
+                            : _console.Input.ReadKeyAsync(true, _shutdown.Token)).ConfigureAwait(false);
                         if (key is { Key: ConsoleKey.Escape })
                         {
                             await _stop.CancelAsync().ConfigureAwait(false);

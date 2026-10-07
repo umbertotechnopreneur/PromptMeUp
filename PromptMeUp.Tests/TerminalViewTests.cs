@@ -11,8 +11,11 @@ namespace PromptMeUp.Tests;
 public sealed class TerminalViewTests
 {
     /// <summary>Escape cancels only the active command and releases input polling before the next prompt.</summary>
-    [Fact]
-    public async Task CommandOutput_EscapeRequestsLocalStop()
+    /// <param name="wrapped">Whether input uses the application's general Escape cancellation wrapper.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CommandOutput_EscapeRequestsLocalStop(bool wrapped)
     {
         var keys = new Queue<ConsoleKeyInfo>([new('\u001b', ConsoleKey.Escape, false, false, false)]);
         var input = TestProxy.Create<IAnsiConsoleInput>((method, _) => method.Name switch
@@ -27,8 +30,12 @@ public sealed class TerminalViewTests
             Interactive = InteractionSupport.Yes,
             Out = new AnsiConsoleOutput(new StringWriter())
         });
+        rendering.Profile.Capabilities.Interactive = true;
+        IAnsiConsoleInput sessionInput = wrapped
+            ? new EscapeAwareConsoleInput(input, CancellationToken.None)
+            : input;
         var console = TestProxy.Create<IAnsiConsole>((method, args) =>
-            method.Name == "get_Input" ? input : method.Invoke(rendering, args));
+            method.Name == "get_Input" ? sessionInput : method.Invoke(rendering, args));
         using (var live = new TerminalCommandOutput(console, new LocalizationService(), TimeSpan.FromSeconds(30)))
         {
             var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
