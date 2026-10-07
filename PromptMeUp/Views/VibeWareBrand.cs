@@ -17,20 +17,22 @@ internal sealed class VibeWareBrand(IAnsiConsole console, IRenderable content) :
     /// <summary>Measures the adaptive content using the same layout as rendering.</summary>
     /// <param name="options">Terminal rendering capabilities.</param>
     /// <param name="maxWidth">Available terminal columns.</param>
-    public Measurement Measure(RenderOptions options, int maxWidth) => CreateContent(maxWidth).Measure(options, maxWidth);
+    public Measurement Measure(RenderOptions options, int maxWidth) => CreateContent(options, maxWidth).Measure(options, maxWidth);
 
     /// <summary>Renders a small static logo on wide color terminals and text on other terminals.</summary>
     /// <param name="options">Terminal rendering capabilities.</param>
     /// <param name="maxWidth">Available terminal columns.</param>
-    public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) => CreateContent(maxWidth).Render(options, maxWidth);
+    public IEnumerable<Segment> Render(RenderOptions options, int maxWidth) => CreateContent(options, maxWidth).Render(options, maxWidth);
 
     /// <summary>Keeps artwork at the top right without reserving space on narrow or colorless terminals.</summary>
+    /// <param name="options">Terminal rendering capabilities.</param>
     /// <param name="width">Available terminal columns.</param>
-    private IRenderable CreateContent(int width)
+    private IRenderable CreateContent(RenderOptions options, int width)
     {
         var name = new Markup($"[bold {TerminalTheme.Info} link={ManifestoUrl}]VibeWare[/]");
         var link = new Markup($"[{TerminalTheme.Muted} link={ManifestoUrl}]{ManifestoUrl}[/]");
-        if (width < 88 || !console.Profile.Capabilities.Ansi || !console.Profile.Capabilities.Unicode
+        var requiredWidth = Math.Max(88, content.Measure(options, width).Min + ImageSize + 2);
+        if (width < requiredWidth || !console.Profile.Capabilities.Ansi || !console.Profile.Capabilities.Unicode
             || !console.Profile.Supports(ColorSystem.Legacy))
             return new Rows(content, Text.Empty, name, link);
 

@@ -67,6 +67,11 @@ public sealed class TerminalViewTests
         Assert.Contains(VibeWareBrand.ManifestoUrl, Regex.Replace(rendered, @"\s+", ""));
         Assert.All(rendered.Split('\n'), line => Assert.True(line.TrimEnd('\r').Length <= width));
         Assert.Equal(color && width >= 88, rendered.Contains('▀'));
+        if (color && width >= 88)
+        {
+            Assert.All(rendered.Split('\n').Where(line => line.Contains('▀')),
+                line => Assert.True(line.IndexOf('▀') >= width - 20));
+        }
     }
 
     /// <summary>Verifies that icon labels have no leading space and keep a separator after emoji or ASCII prefixes.</summary>
