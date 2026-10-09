@@ -1,0 +1,134 @@
+name: Microsoft Store MSIX
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Three-part source version; the Store package adds a final .0
+        required: true
+        type: string
+        default: '1.0.0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promptmeup-store-msix
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify Store source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      package_version: ${{ steps.version.outputs.package_version }}
+      source_sha: ${{ steps.version.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require main and match the source version
+        id: version
+        shell: pwsh
+        env:
+          SOURCE_REF: ${{ github.ref_name }}
+          STORE_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:SOURCE_REF -cne 'main') { throw 'Run Store packaging from main.' }
+          git merge-base --is-ancestor HEAD origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Store packages must come from a main commit.' }
+          if ($env:STORE_VERSION -notmatch '^[1-9][0-9]*\.[0-9]+\.[0-9]+$') {
+            throw 'Use a three-part version with a nonzero major component.'
+          }
+          foreach ($part in $env:STORE_VERSION.Split('.')) {
+            $number = 0
+            if (-not [int]::TryParse($part, [ref]$number) -or $number -gt 65535) {
+              throw 'Every version component must be between 0 and 65535.'
+            }
+          }
+          [xml]$project = Get-Content PromptMeUp/PromptMeUp.csproj -Raw
+          $sourceVersion = [string]$project.Project.PropertyGroup.Version
+          if ($sourceVersion -cne $env:STORE_VERSION) {
+            throw 'The requested Store version must match the source version on main.'
+          }
+          $sourceSha = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $sourceSha -notmatch '^[0-9a-f]{40}$') {
+            throw 'Cannot identify the Store source commit.'
+          }
+          "version=$env:STORE_VERSION" >> $env:GITHUB_OUTPUT
+          "package_version=$env:STORE_VERSION.0" >> $env:GITHUB_OUTPUT
+          "source_sha=$sourceSha" >> $env:GITHUB_OUTPUT
+
+  quality:
+    name: Store quality
+    needs: verify
+    uses: ./.github/workflows/quality.yml
+
+  package:
+    name: Package Store x64 and ARM64
+    needs: [verify, quality]
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
+          persist-credentials: false
+      - name: Set up .NET
+        id: dotnet
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Build unsigned Microsoft Store submission packages
+        shell: pwsh
+        env:
+          STORE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          pwsh -NoProfile -File ./scripts/PromptMeUp.ps1 -Command store-msix -Version $env:STORE_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Store MSIX packaging failed.' }
+      - name: Preserve Store submission files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: PromptMeUp-Store-${{ needs.verify.outputs.package_version }}
+          path: |
+            artifacts/store/${{ needs.verify.outputs.package_version }}/x64/*.msix
+            artifacts/store/${{ needs.verify.outputs.package_version }}/x64/SHA256SUMS.txt
+            artifacts/store/${{ needs.verify.outputs.package_version }}/x64/package.json
+            artifacts/store/${{ needs.verify.outputs.package_version }}/arm64/*.msix
+            artifacts/store/${{ needs.verify.outputs.package_version }}/arm64/SHA256SUMS.txt
+            artifacts/store/${{ needs.verify.outputs.package_version }}/arm64/package.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Summarize the submission bundle
+        shell: pwsh
+        env:
+          PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
+          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
+        run: |
+          @"
+          ### Microsoft Store submission bundle
+          - Version: $env:PACKAGE_VERSION
+          - Source commit: $env:SOURCE_SHA
+          - Architectures: x64 and ARM64
+          - Minimum OS: Windows 11
+          - Packages are unsigned for Partner Center submission.
+          - This workflow does not upload or publish to Microsoft Store.
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+      - name: Clean build output
+        if: always() && steps.dotnet.outcome == 'success'
+        shell: pwsh
+        env:
+          PACKAGE_VERSION: ${{ needs.verify.outputs.package_version }}
+        run: |
+          $failed = $false
+          foreach ($architecture in @('x64', 'arm64')) {
+            $publishPath = [IO.Path]::GetFullPath("artifacts/store/$env:PACKAGE_VERSION/publish/$architecture")
+            dotnet clean ./PromptMeUp/PromptMeUp.csproj --configuration Release --runtime "win-$architecture" "-p:PublishDir=$publishPath"
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+          }
+          dotnet clean ./PromptMeUp.slnx --configuration Release
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          if ($failed) { throw 'Store build cleanup failed.' }
