@@ -229,6 +229,12 @@ Your ordinary PromptMeUp data directory remains separate from the package. Remov
 
 ## Build MSIX packages for Microsoft Store
 
+Release submission packages must be built by GitHub Actions. Run the **Microsoft Store MSIX** workflow from `main` with the three-part source version, such as `1.0.0`. The workflow requires that version to match `PromptMeUp.csproj`, runs the existing quality gate, and packages the verified source commit for x64 and ARM64.
+
+Download the `PromptMeUp-Store-1.0.0.0` artifact for that version. It contains the unsigned MSIX packages, package metadata, and SHA-256 checksums for both architectures. Review those files and upload the two MSIX packages in Partner Center **Packages**. The workflow does not upload, submit, or publish the app.
+
+For local packaging diagnostics, use the following script. Local output is not a release submission artifact.
+
 On a Windows machine with the .NET 10 SDK and Windows SDK packaging tools, run the local script for a three-part version such as `1.0.0`:
 
 ```powershell
