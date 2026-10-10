@@ -2,6 +2,14 @@
 
 Add a `Public update:` line to a completed task only when it changes something readers can use. `scripts/Generate-Changelog.ps1` copies those lines into the public `CHANGELOG.md`; keep internal validation and plans out of them.
 
+## 2026-10-10 — Explain the everyday problem behind PromptMeUp
+
+- Open the README with my difficulty remembering Git commands and the growing role of CLI tools in my daily work, including my preference for the terminal over web portals for many Azure and AWS tasks.
+- Follow the problem with how I use PromptMeUp, a concrete Git question, and first-person screenshot and illustration captions.
+- Reinforce the same first-person, problem-first writing rule in AgentInbox, PromptMeUp, and WorkTrail, including captions and provenance notes.
+
+Validation: scoped documentation diff review only. No tests, builds, packaging, installation, or Git delivery were performed.
+
 ## 2026-10-07 — Group copy choices for multiple suggested commands
 
 - Keep the direct copy-and-exit choice when there is exactly one suggested command.

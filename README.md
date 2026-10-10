@@ -1,6 +1,18 @@
 # PromptMeUp — Can't remember that command?
 
-Git, Bash, or PowerShell: describe what you want to do. `hm` is here to help. Available on Windows, Linux, and macOS, using your own OpenAI API account.
+I use Git every day, and I still can't keep its commands in my head. You'd think they'd have stuck by now. They haven't.
+
+But Git is only part of it. In the daily trenches, I work with more and more tools that offer a CLI. For more of my everyday tasks, I find the terminal simpler than clicking through web portals such as Azure or AWS. I can stay where I'm working, repeat a command, and put the steps in a script. The catch? Every tool brings another set of commands and options to remember.
+
+## How I solved it
+
+I built PromptMeUp so I can describe what I want to do instead of trying to remember the syntax. Its command is `hm`, short for **help me**. I ask a question in plain language, read the explanation, and inspect the suggested commands. If I need more context, I keep the conversation going in the same terminal.
+
+```powershell
+hm "How do I undo my last local commit without losing my changes?"
+```
+
+You can use it for Git, Bash, PowerShell, and other CLI tools, with your own OpenAI API account. The examples below show how I use it for a quick question or a longer investigation.
 
 <p align="center">
   <a href="CHANGELOG.md"><strong>What's new</strong></a> ·
@@ -13,7 +25,7 @@ Git, Bash, or PowerShell: describe what you want to do. `hm` is here to help. Av
 
 [![PromptMeUp answering a Git question in Italian, with session usage and a choice to inspect a suggested command or run nothing](docs/assets/promptmeup-command-it-framed-v1.png)](docs/assets/promptmeup-command-it-framed-v1.png)
 
-*Actual app screenshot supplied by the author, shown in Italian. Cropped and framed; the personal path is hidden. Select it to view at full size.*
+*This is my screenshot of the app in Italian. I've cropped and framed it and hidden my personal path. Select it to view at full size.*
 
 ## Your PC restarted unexpectedly. Why?
 
@@ -36,7 +48,7 @@ hm --plan "Help me investigate why my Windows PC restarted unexpectedly. Start w
 
 Plan saves your progress, so you can pause and resume. It shows commands and their expected results; you still review each action before it runs. For an output you don't understand, open `hm --chat` and share the relevant lines, removing private details first. Logs can provide clues, but they may not reveal a definite cause.
 
-*Conceptual illustration generated with ImageGen, not an app screenshot.*
+*I generated this conceptual illustration with ImageGen; it is not an app screenshot.*
 
 ## Get started
 
@@ -260,7 +272,7 @@ I built PromptMeUp with help from contributors, and I’m grateful to the people
 
 ### What is VibeWare?
 
-VibeWare is a term coined by [Umberto Giacobbi](https://umbertogiacobbi.biz) and an open initiative for developers who build with AI and care about the craft. It challenges the assumption that vibe coding is synonymous with low-quality code. It openly acknowledges the weaknesses and risks of AI-generated software: experienced developers must guide the process, test carefully, check security and take responsibility for the result. A VibeWare footer simply says: this software was developed with AI, and it deserves to be judged by the quality of the work.
+I coined the term [VibeWare](https://umbertogiacobbi.biz) and started an open initiative for developers who build with AI and care about the craft. I challenge the assumption that vibe coding is synonymous with low-quality code, while openly acknowledging the weaknesses and risks of AI-generated software: experienced developers must guide the process, test carefully, check security and take responsibility for the result. With this footer, I acknowledge that I developed this software with AI and ask you to judge the quality of the work.
 
 <p align="center">
   <a href="https://umbertogiacobbi.biz/vibeware/manifesto"><strong>Read the VibeWare manifesto</strong></a>
