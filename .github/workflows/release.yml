@@ -122,7 +122,7 @@ jobs:
         env:
           TARGET_RUNTIME: ${{ matrix.runtime }}
         run: pwsh -NoProfile -File ./scripts/PromptMeUp.ps1 -Command portable -Runtime $env:TARGET_RUNTIME
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: portable-${{ matrix.runtime }}
           path: artifacts/portable/packages/*
@@ -180,7 +180,7 @@ jobs:
         with:
           subject-path: release/*
       - name: Keep the complete delivery bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-bundle
           path: release/*
