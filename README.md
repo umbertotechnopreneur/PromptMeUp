@@ -229,7 +229,7 @@ Documentation and contributions are in English; the app supports all six interfa
 | For users | For contributors |
 | --- | --- |
 | [Command guide](docs/CLI_REFERENCE.md) | [How the code is organized](docs/ARCHITECTURE.md) |
-| [Privacy](docs/PRIVACY.md) | [Build and testing guide](docs/VALIDATION.md) |
+| [Privacy](docs/PRIVACY.md) | [Build and testing guide](CONTRIBUTING.md#get-a-local-build-running) |
 | [Costs and conversation memory](docs/OPENAI_COSTS_AND_CACHING.md) | [Release process](docs/RELEASING.md) |
 | [Support](SUPPORT.md) | [How the project is run](GOVERNANCE.md) |
 

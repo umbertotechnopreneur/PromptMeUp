@@ -20,7 +20,6 @@ The [printable manual](PromptMeUp-CLI-Manual.pdf) is an older edition under the 
 
 - [Contributing](../CONTRIBUTING.md) covers the local build and contribution process.
 - [Architecture](ARCHITECTURE.md) explains where the code lives and how questions, data, and command approvals move through it.
-- [Validation](VALIDATION.md) lists the build checks and things to look for when testing.
 - [Releasing](RELEASING.md) explains how to build portable packages and prepare a GitHub release.
 - [Windows packaging](WINDOWS_PACKAGING.md) covers optional MSI, MSIX, and WinGet packages.
 

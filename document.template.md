@@ -20,10 +20,6 @@
 - Trade-off: {{TRADE_OFF}}
 - Follow-up: {{FOLLOW_UP}}
 
-## Evidence
-
-Link builds, tests, screenshots, or official documentation here.
-
 ## AI assistance
 
 AI tools may have assisted with drafting. The owner is responsible for final verification and approval.
