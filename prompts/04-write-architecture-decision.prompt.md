@@ -10,6 +10,6 @@ Use this structure:
 4. decision;
 5. alternatives considered;
 6. consequences and risks;
-7. validation evidence and next boundary.
+7. next steps, if any.
 
 Separate verified facts from inference. For Windows integration, state whether code runs inside or outside `explorer.exe`, how named pipes or COM boundaries are secured, and which x64/ARM64 paths are supported. Keep the record implementation-neutral unless the decision explicitly selects a framework.

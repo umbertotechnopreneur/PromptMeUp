@@ -10,7 +10,9 @@ These instructions apply to every change in this repository.
 - Apply this style throughout repository documentation: plain English, short sentences, concrete actions, and useful examples. Cut filler, vague slogans, hype, corporate language, and formulaic AI-sounding prose.
 - Speak to the reader as "you". When speaking as the author, use "I", "me", and "my", never a company-style "we", "us", or "our", or third-person labels such as "the author" or "the developer". Apply this voice to captions and provenance notes too. Umberto is the solo maintainer, with help from a few contributors; keep their credits accurate.
 - Keep technical detail in the relevant reference guides. Preserve exact commands, UI labels, privacy facts, limitations, and the distinction between implemented, tested, and planned features. Do not promise unlimited capacity or untested compatibility.
-- Preserve third-party quotations, license text, and historical records; these writing preferences apply to original project copy.
+- Preserve third-party quotations and license text; these writing preferences apply to original project copy.
+- Document current behavior, useful instructions, and known limitations. Do not add work-session narratives, PR numbers, CI run histories, or build/test evidence to general documentation.
+- Keep only the latest completed work summary and the latest user-facing changelog entry. Replace previous entries instead of accumulating them. Do not create standalone historical review or validation reports.
 
 ## Distribution and build defaults
 
@@ -26,7 +28,7 @@ These instructions apply to every change in this repository.
 - Keep UI mockups, design explorations, product roadmaps and internal product decisions in the owner's Obsidian product notes, not in this repository. Retain shipped assets, real screenshots, asset provenance and documentation needed to use, build or contribute to the software.
 
 - Keep pricing, commercial strategy, launch plans, future product proposals, OAuth verification preparation, Store account procedures and owner checkpoints in the owner's Obsidian vault under `40_Business/Products/PromptMeUp/`. Shared MeUp decisions belong in `40_Business/Products/MeUp/`. Do not create or mirror these notes in public repositories.
-- Keep current user and contributor documentation, public privacy policies and terms, licenses, attribution, build instructions, technical validation records and files required by code or CI in the repository. Split documents that mix public technical guidance with internal planning.
+- Keep current user and contributor documentation, public privacy policies and terms, licenses, attribution, build instructions and files required by code or CI in the repository. Split documents that mix public technical guidance with internal planning.
 - For publication or Store listing work, first read `40_Business/Products/MeUp/Business decisions.md` and the relevant product notes. The owner-approved purchase notice is preserved there; proposals and approved wording are not evidence of implemented licensing.
 - Keep raw Store account exports outside Git. Do not add credentials, private data or machine-specific vault paths to repository files.
 
@@ -114,7 +116,7 @@ These instructions apply to every change in this repository.
 - Fail fast on invalid input and unsupported state; do not conceal failures with silent fallbacks.
 - Run automated tests and CLI smoke tests only when the user explicitly requests them. Implementation, review, commit, and push requests do not authorize test execution.
 - If this task attempted a build, follow Mandatory artifact cleanup after the last build, requested test, packaging, or installation step, including after failure and before handoff. Use `dotnet clean .\HelpMe.slnx` with the matching configuration, runtime, and output paths, then remove leftover task-owned intermediates. Preserve pending deliverables and unrelated artifacts. Commit or push alone does not require cleanup.
-- Record active work in `.github/tasks/todo.md` and move completed work to `.github/tasks/archive.md`.
+- Record active work in `.github/tasks/todo.md`. On completion, replace `.github/tasks/archive.md` with a brief summary of that task only. Keep unresolved tasks actionable and omit narratives of earlier attempts.
 
 ## Required validation
 
